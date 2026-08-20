@@ -40,6 +40,8 @@ const MIME = {
   '.css':  'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.md':   'text/markdown; charset=utf-8',
+  '.wasm': 'application/wasm',
+  '.gz':   'application/octet-stream',   // traineddata.gz 는 tesseract 가 직접 푼다
   '.svg':  'image/svg+xml',
   '.png':  'image/png',
   '.jpg':  'image/jpeg',
@@ -106,9 +108,13 @@ async function handleStatic(req, res) {
   }
   try {
     const buf = await readFile(path);
+    /* 앱 파일은 고치는 족족 반영돼야 하므로 캐시 금지.
+       vendor/ 의 인식 엔진(약 5MB)은 바뀌지 않으므로 오래 캐시한다 —
+       안 그러면 이미지를 넣을 때마다 5MB를 다시 받는다. */
+    const isVendor = rel.startsWith('/vendor/');
     res.writeHead(200, {
       'Content-Type': MIME[extname(path).toLowerCase()] || 'application/octet-stream',
-      'Cache-Control': 'no-store',
+      'Cache-Control': isVendor ? 'public, max-age=31536000, immutable' : 'no-store',
     });
     res.end(buf);
   } catch {
