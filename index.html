@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>방탈출 스케줄러</title>
+<meta name="description" content="방탈출 테마별 회차 시간을 넣으면 겹치지 않는 조합을 전부 계산해 주는 도구">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🗝️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#15110E; --panel:#1E1815; --panel2:#2A221B; --line:#3B2F25;
+  --brass:#C99A4C; --brass-dim:#8C6A32;
+  --paper:#EDE4D6; --muted:#9A8B79;
+  --sage:#7FA88A; --brick:#C4574A;
+  --r:3px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ink); color:var(--paper);
+  font-family:'IBM Plex Sans KR',system-ui,sans-serif;
+  font-size:14px; line-height:1.55;
+  padding:0 0 80px;
+}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+/* ── header ── */
+header{border-bottom:1px solid var(--line);padding:34px 0 24px;margin-bottom:28px}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h1 .dim{color:var(--brass)}
+header p{margin:0;color:var(--muted);font-size:13px;max-width:52ch}
+
+/* ── sections ── */
+.sec{margin-bottom:30px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.sec-head h2{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);margin:0}
+.sec-head span{font-size:12px;color:var(--muted)}
+
+/* ── theme cards ── */
+.themes{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.card.drag{border-color:var(--brass);background:var(--panel2)}
+.card-top{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--brass-dim);width:22px;flex:none}
+input,textarea,select{
+  background:var(--ink);border:1px solid var(--line);color:var(--paper);
+  border-radius:var(--r);padding:7px 9px;font-family:inherit;font-size:13px;
+}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brass)}
+.i-name{flex:1;min-width:120px}
+.i-dur{width:78px}
+.unit{color:var(--muted);font-size:12px;margin-left:-4px}
+textarea{width:100%;min-height:60px;resize:vertical;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.7}
+.card-foot{display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+.chip b{color:var(--sage);font-weight:600}
+.chip i{color:var(--brick);font-style:normal}
+
+/* ── buttons ── */
+button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--paper);padding:7px 13px;font-size:12.5px}
+.btn:hover{border-color:var(--brass-dim)}
+.btn-x{background:none;border:1px solid transparent;color:var(--muted);padding:4px 8px;font-size:16px;line-height:1}
+.btn-x:hover{color:var(--brick);border-color:var(--line)}
+.btn-go{
+  background:var(--brass);border:1px solid var(--brass);color:#1A1208;
+  padding:11px 30px;font-size:14px;font-weight:700;letter-spacing:.02em;
+}
+.btn-go:hover{background:#DCAA55}
+.btn-go:disabled{opacity:.45;cursor:default}
+
+/* ── options ── */
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.opt label{display:block;font-size:11px;color:var(--muted);letter-spacing:.06em;margin-bottom:4px}
+.opt input,.opt select{width:100%}
+.checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
+.chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--paper);cursor:pointer}
+.chk input{width:14px;height:14px;accent-color:var(--brass)}
+.run{display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}
+.run .note{font-size:12px;color:var(--muted)}
+
+/* ── sort ── */
+.sorts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.sortbtn{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 12px;font-size:12px}
+.sortbtn.on{background:var(--brass);border-color:var(--brass);color:#1A1208;font-weight:600}
+
+/* ── results ── */
+.res{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.res.best{border-color:var(--brass-dim)}
+.res-head{display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.rank{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--brass);font-weight:600;width:26px;flex:none}
+.stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted)}
+.stat b{color:var(--paper);font-weight:600}
+.stat.warn b{color:var(--brick)}
+.stat.good b{color:var(--sage)}
+.res-body{padding:14px}
+
+/* signature: timeline */
+.tl{position:relative;height:46px;margin-bottom:6px}
+.blk{position:absolute;top:0;height:34px;background:var(--panel2);border:1px solid var(--brass-dim);border-radius:2px;overflow:hidden;display:flex;align-items:center;padding:0 7px}
+.blk span{font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk small{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-left:6px;flex:none}
+.blk.so{border-style:dashed;border-color:var(--brick);opacity:.72}
+.gap{position:absolute;top:9px;height:16px;display:flex;align-items:center;justify-content:center}
+.gap em{font-family:'IBM Plex Mono',monospace;font-size:10px;font-style:normal;color:var(--muted);background:var(--panel);padding:0 3px}
+.gap.tight em{color:var(--brick)}
+.gap::before{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px dotted var(--line)}
+.axis{position:relative;height:16px;border-top:1px solid var(--line)}
+.tick{position:absolute;top:2px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--brass-dim);transform:translateX(-50%)}
+.tick::before{content:'';position:absolute;left:50%;top:-3px;height:3px;border-left:1px solid var(--line)}
+.seq{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:9px}
+.seq b{color:var(--paper);font-weight:600}
+
+/* ── misc ── */
+.empty{color:var(--muted);font-size:13px;padding:26px 0;text-align:center;border:1px dashed var(--line);border-radius:var(--r)}
+.err{color:var(--brick);font-size:12.5px;margin-top:8px}
+.busy{color:var(--brass);font-size:12px}
+@media(max-width:560px){
+  .card-top{gap:7px}.i-name{min-width:90px}
+  .res-head{gap:9px}
+  h1{font-size:21px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>방탈출 <span class="dim">스케줄러</span></h1>
+  <p>테마별 회차 시간을 넣으면 겹치지 않는 조합을 전부 계산해서, 공백이 어디에 얼마나 생기는지 보여줍니다.</p>
+</header>
+
+<section class="sec">
+  <div class="sec-head">
+    <h2>테마</h2>
+    <span>예약 화면을 캡처해서 회차 칸에 붙여넣으면 시간을 읽어옵니다</span>
+  </div>
+  <div class="themes" id="themes"></div>
+  <button class="btn" id="addTheme" style="margin-top:12px">＋ 테마 추가</button>
+</section>
+
+<section class="sec">
+  <div class="sec-head"><h2>조건</h2></div>
+  <div class="opts">
+    <div class="opt"><label>가장 이른 시작</label><input class="mono" id="oStart" placeholder="13:00"></div>
+    <div class="opt"><label>가장 늦은 종료</label><input class="mono" id="oEnd" placeholder="22:00"></div>
+    <div class="opt"><label>최소 공백 (분)</label><input class="mono" id="oMinGap" value="10"></div>
+    <div class="opt"><label>최대 공백 (분)</label><input class="mono" id="oMaxGap" placeholder="90"></div>
+  </div>
+  <div class="checks">
+    <label class="chk"><input type="checkbox" id="oSold" checked> 매진 회차 제외</label>
+    <label class="chk"><input type="checkbox" id="oPartial"> 일부 테마만 넣은 조합도 보기</label>
+  </div>
+  <div class="run">
+    <button class="btn-go" id="go">조합 계산</button>
+    <span class="note" id="runNote"></span>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head"><h2>결과</h2><span id="resCount"></span></div>
+  <div class="sorts" id="sorts"></div>
+  <div id="results"><div class="empty">테마 회차를 넣고 계산을 눌러주세요.</div></div>
+</section>
+
+</div>
+
+<script>
+/* ══ @core:start ══════════════════════════════════════════════════
+   DOM에 의존하지 않는 순수 로직 구간.
+   test/acceptance.mjs가 이 구간만 잘라내 그대로 실행하므로,
+   여기에는 document/window를 참조하는 코드를 넣지 않는다.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── 시간 유틸 ── */
+const pad = n => String(n).padStart(2,'0');
+const fmt = m => pad(Math.floor(m/60)%24)+':'+pad(m%60);
+function parseClock(s){
+  const m = String(s||'').trim().match(/^(\d{1,2})\s*:\s*(\d{2})$/);
+  if(!m) return null;
+  const h=+m[1], mi=+m[2];
+  if(h>29||mi>59) return null;
+  return h*60+mi;
+}
+
+/* ── 회차 텍스트 파싱 ── */
+/* "오전 10:30 매진 오후 12:00 매진 …" 또는 "10:30, 12:00, 1:30" 모두 처리 */
+function parseSessions(text){
+  const out=[];
+  const toks = String(text||'').split(/[\s,·|\n\r\t]+/).filter(Boolean);
+  let mer=null, sawMer=false;
+  for(const tk of toks){
+    if(/오전|AM/i.test(tk) && !/\d{1,2}:\d{2}/.test(tk)){ mer='am'; sawMer=true; continue; }
+    if(/오후|PM/i.test(tk) && !/\d{1,2}:\d{2}/.test(tk)){ mer='pm'; sawMer=true; continue; }
+    const hit = tk.match(/(오전|오후|AM|PM)?\s*(\d{1,2}):(\d{2})/i);
+    if(hit){
+      let lm = mer;
+      if(hit[1]){ lm = /오전|AM/i.test(hit[1]) ? 'am':'pm'; sawMer=true; }
+      let h=+hit[2], mi=+hit[3];
+      if(lm==='pm' && h<12) h+=12;
+      if(lm==='am' && h===12) h=0;
+      out.push({t:h*60+mi, soldout:false});
+      mer=null;
+      continue;
+    }
+    if(/매진|마감|SOLD/i.test(tk) && out.length) out[out.length-1].soldout=true;
+  }
+  /* 같은 시각이 두 번 잡히면 먼저 하나로 접는다 (매진 표시는 OR).
+     12시간 보정보다 반드시 앞에 와야 한다 — 나중에 접으면 중복이
+     "이전보다 작거나 같다"로 걸려 +12시간 튀어 없는 회차가 만들어진다. */
+  const byT=new Map(), uniq=[];
+  for(const s of out){
+    const prev=byT.get(s.t);
+    if(prev){ prev.soldout = prev.soldout || s.soldout; continue; }
+    byT.set(s.t,s); uniq.push(s);
+  }
+  /* 오전/오후 표기가 전혀 없으면 오름차순 가정하고 12시간 보정 */
+  if(!sawMer){
+    for(let i=1;i<uniq.length;i++){
+      while(uniq[i].t <= uniq[i-1].t) uniq[i].t += 12*60;
+    }
+  }
+  return uniq.sort((a,b)=>a.t-b.t);
+}
+function sessionsToText(ss){
+  return ss.map(s=>fmt(s.t)+(s.soldout?' 매진':'')).join('  ');
+}
+
+/* ── 조합 탐색 ── */
+/* 폭주 방지용 상한. 요구 범위(테마 3~5개)는 상한에 걸리지 않고 전수 탐색된다 —
+   테마 5개 / 회차 9~10개가 약 1.1만 조합, 10ms 수준.
+   상한에 걸리면 결과 개수 옆에 "탐색 한도 도달"로 표시한다(조용히 자르지 않는다). */
+const NODE_CAP=800000, KEEP_CAP=50000;
+function search(list, o){
+  const n=list.length, used=new Array(n).fill(false), path=[], out=[];
+  let nodes=0, capped=false;
+  function record(){
+    const gaps=[];
+    for(let i=1;i<path.length;i++) gaps.push(path[i].start-path[i-1].end);
+    const total=gaps.reduce((a,b)=>a+b,0);
+    const avg=gaps.length?total/gaps.length:0;
+    const varc=gaps.length?Math.sqrt(gaps.reduce((a,g)=>a+(g-avg)**2,0)/gaps.length):0;
+    out.push({
+      steps:path.map(p=>({...p})), count:path.length,
+      start:path[0].start, end:path[path.length-1].end,
+      total, gaps, varc, minGap:gaps.length?Math.min(...gaps):Infinity
+    });
+  }
+  function dfs(curEnd){
+    if(out.length>=KEEP_CAP||nodes>NODE_CAP){capped=true;return;}
+    if(path.length>=o.minCount) record();
+    for(let i=0;i<n;i++){
+      if(used[i])continue;
+      const th=list[i];
+      for(const s of th.sessions){
+        if(o.excludeSoldout&&s.soldout)continue;
+        if(o.startMin!=null&&s.t<o.startMin)continue;
+        if(path.length){
+          const g=s.t-curEnd;
+          if(g<o.minGap)continue;
+          if(o.maxGap!=null&&g>o.maxGap)continue;
+        }
+        const end=s.t+th.dur;
+        if(o.endMax!=null&&end>o.endMax)continue;
+        nodes++;
+        used[i]=true; path.push({i,name:th.name||('테마 '+(i+1)),dur:th.dur,start:s.t,end,soldout:s.soldout});
+        dfs(end);
+        path.pop(); used[i]=false;
+        if(nodes>NODE_CAP){capped=true;return;}
+      }
+    }
+  }
+  dfs(null);
+  return {out,capped};
+}
+
+/* ── 정렬 ── */
+const SORTS=[
+  {k:'gap',   label:'공백 적은 순',  f:(a,b)=>b.count-a.count||a.total-b.total||a.end-b.end},
+  {k:'end',   label:'빨리 끝나는 순',f:(a,b)=>b.count-a.count||a.end-b.end||a.total-b.total},
+  {k:'even',  label:'공백 고른 순',  f:(a,b)=>b.count-a.count||a.varc-b.varc||a.total-b.total},
+  {k:'late',  label:'늦게 시작 순',  f:(a,b)=>b.count-a.count||b.start-a.start||a.total-b.total},
+  {k:'safe',  label:'여유 있는 순',  f:(a,b)=>b.count-a.count||b.minGap-a.minGap||a.total-b.total},
+];
+
+/* ══ @core:end ══════════════════════════════════════════════════ */
+
+/* ── 상태 ── */
+let themes=[], nextId=1;
+function blank(name){ return {id:nextId++, name:name||'', dur:70, raw:'', sessions:[], busy:false, err:''}; }
+themes = [blank(''),blank(''),blank('')];
+
+/* ── 테마 렌더 ── */
+const elThemes = document.getElementById('themes');
+function renderThemes(){
+  elThemes.innerHTML='';
+  themes.forEach((th,i)=>{
+    const c=document.createElement('div');
+    c.className='card';
+    const avail=th.sessions.filter(s=>!s.soldout).length;
+    const sold=th.sessions.length-avail;
+    c.innerHTML=`
+      <div class="card-top">
+        <span class="idx">${pad(i+1)}</span>
+        <input class="i-name" placeholder="테마 이름" value="${esc(th.name)}" data-k="name">
+        <input class="i-dur mono" value="${th.dur}" data-k="dur" inputmode="numeric">
+        <span class="unit">분</span>
+        <button class="btn-x" data-k="del" title="삭제">×</button>
+      </div>
+      <textarea data-k="raw" placeholder="회차 캡처를 여기에 붙여넣기 (Ctrl+V) — 또는 시간 직접 입력">${esc(th.raw)}</textarea>
+      <div class="card-foot">
+        <span class="chip">${th.sessions.length? `회차 <b>${avail}</b>${sold?` · 매진 <i>${sold}</i>`:''}` : '회차 없음'}</span>
+        ${th.busy?'<span class="busy">이미지 읽는 중…</span>':''}
+        ${th.err?`<span class="err">${esc(th.err)}</span>`:''}
+      </div>`;
+    c.querySelector('[data-k=name]').oninput = e => th.name=e.target.value;
+    c.querySelector('[data-k=dur]').oninput  = e => th.dur=Math.max(1,parseInt(e.target.value)||0);
+    c.querySelector('[data-k=del]').onclick  = ()=>{ themes=themes.filter(x=>x!==th); renderThemes(); };
+    const ta=c.querySelector('[data-k=raw]');
+    ta.oninput = e => { th.raw=e.target.value; th.sessions=parseSessions(th.raw); th.err=''; refreshChip(c,th); };
+    ta.onpaste = e => handlePaste(e, th);
+    c.addEventListener('dragover', e=>{e.preventDefault();c.classList.add('drag')});
+    c.addEventListener('dragleave',()=>c.classList.remove('drag'));
+    c.addEventListener('drop', e=>{
+      e.preventDefault(); c.classList.remove('drag');
+      const f=[...(e.dataTransfer.files||[])].find(f=>f.type.startsWith('image/'));
+      if(f) readImage(f, th);
+    });
+    elThemes.appendChild(c);
+  });
+}
+function refreshChip(card, th){
+  const avail=th.sessions.filter(s=>!s.soldout).length;
+  const sold=th.sessions.length-avail;
+  const chip=card.querySelector('.chip');
+  chip.innerHTML = th.sessions.length? `회차 <b>${avail}</b>${sold?` · 매진 <i>${sold}</i>`:''}` : '회차 없음';
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+document.getElementById('addTheme').onclick=()=>{ themes.push(blank('')); renderThemes(); };
+
+/* ── 이미지 → 회차 (OCR) ── */
+/* 브라우저에서 api.anthropic.com을 직접 호출하면 CORS로 차단되고 API 키도 노출된다.
+   따라서 같은 출처의 프록시(/api/ocr)로 보내고, 키는 서버(serve.mjs)가 붙인다.
+   프록시 없이 정적 호스팅만 하는 경우 OCR은 비활성 — 시간 직접 입력으로 대체된다. */
+const OCR_ENDPOINT='/api/ocr';
+const OCR_MODEL='claude-opus-5';
+
+function handlePaste(e, th){
+  const items=[...(e.clipboardData?.items||[])];
+  const img=items.find(it=>it.type.startsWith('image/'));
+  if(!img) return;              // 텍스트 붙여넣기는 그대로 통과
+  e.preventDefault();
+  readImage(img.getAsFile(), th);
+}
+function readImage(file, th){
+  const r=new FileReader();
+  r.onload=()=>ocr(r.result.split(',')[1], file.type, th);
+  r.onerror=()=>{ th.err='이미지를 읽지 못했습니다.'; renderThemes(); };
+  r.readAsDataURL(file);
+}
+const OCR_PROMPT = `이 방탈출 예약 화면에서 회차 시간을 전부 읽어줘.
+규칙:
+- "오전/오후"를 24시간제로 변환할 것 (오후 1:30 → 13:30, 오후 12:00 → 12:00)
+- 각 시간 바로 아래/옆의 "매진" 표시 여부를 함께 판단할 것 ("1매", "2매" 등은 예약 가능)
+- 달력 영역의 날짜 숫자는 회차가 아니므로 제외할 것
+- 테마명이 화면에 보이면 theme에 넣고, 없으면 빈 문자열
+JSON만 출력. 설명·마크다운 금지:
+{"theme":"","sessions":[{"time":"10:30","soldout":true}]}`;
+
+async function ocr(b64, mime, th){
+  th.busy=true; th.err=''; renderThemes();
+  try{
+    const res=await fetch(OCR_ENDPOINT,{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:OCR_MODEL, max_tokens:4096,
+        output_config:{effort:"low"},
+        messages:[{role:"user",content:[
+          {type:"image",source:{type:"base64",media_type:mime||"image/png",data:b64}},
+          {type:"text",text:OCR_PROMPT}
+        ]}]
+      })
+    });
+    if(res.status===404) throw new Error('OCR 프록시 없음');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(data.stop_reason==='refusal') throw new Error('모델이 응답을 거절했습니다');
+    const txt=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    const clean=txt.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    const ss=(parsed.sessions||[]).map(s=>({t:parseClock(s.time),soldout:!!s.soldout}))
+                                  .filter(s=>s.t!==null).sort((a,b)=>a.t-b.t);
+    if(!ss.length) throw new Error('회차를 찾지 못했습니다');
+    th.sessions=ss; th.raw=sessionsToText(ss);
+    if(!th.name && parsed.theme) th.name=parsed.theme;
+  }catch(err){
+    th.err='읽기 실패 — 시간을 직접 입력해주세요. ('+err.message+')';
+  }finally{
+    th.busy=false; renderThemes();
+  }
+}
+
+/* ── 정렬 버튼 ── */
+let sortKey='gap', found=[];
+const elSorts=document.getElementById('sorts');
+function renderSorts(){
+  elSorts.innerHTML='';
+  SORTS.forEach(s=>{
+    const b=document.createElement('button');
+    b.className='sortbtn'+(s.k===sortKey?' on':'');
+    b.textContent=s.label;
+    b.onclick=()=>{sortKey=s.k;renderSorts();renderResults();};
+    elSorts.appendChild(b);
+  });
+}
+
+/* ── 결과 렌더 ── */
+const elRes=document.getElementById('results'), elCount=document.getElementById('resCount');
+const SHOW=12;
+function renderResults(){
+  if(!found.length){
+    elRes.innerHTML='<div class="empty">조건을 만족하는 조합이 없습니다. 최소 공백을 줄이거나 시간 범위를 넓혀보세요.</div>';
+    return;
+  }
+  const list=[...found].sort(SORTS.find(s=>s.k===sortKey).f).slice(0,SHOW);
+  const lo=Math.min(...list.map(r=>r.start)), hi=Math.max(...list.map(r=>r.end));
+  const span=Math.max(hi-lo,60), pct=m=>((m-lo)/span)*100;
+
+  elRes.innerHTML='';
+  list.forEach((r,ri)=>{
+    const d=document.createElement('div');
+    d.className='res'+(ri===0?' best':'');
+    const tight=r.minGap<10;
+    d.innerHTML=`
+      <div class="res-head">
+        <span class="rank">${pad(ri+1)}</span>
+        <span class="stat"><b class="mono">${fmt(r.start)} → ${fmt(r.end)}</b></span>
+        <span class="stat">총 <b class="mono">${Math.round((r.end-r.start)/60*10)/10}h</b></span>
+        <span class="stat ${r.total<=30?'good':''}">공백 <b class="mono">${r.total}분</b></span>
+        <span class="stat ${tight?'warn':''}">최소 <b class="mono">${r.minGap===Infinity?'—':r.minGap+'분'}</b></span>
+        ${r.count<themesReady.length?`<span class="stat">테마 <b>${r.count}/${themesReady.length}</b></span>`:''}
+      </div>
+      <div class="res-body">
+        <div class="tl">${
+          r.steps.map(s=>{
+            const l=pct(s.start), w=pct(s.end)-pct(s.start);
+            return `<div class="blk${s.soldout?' so':''}" style="left:${l}%;width:${w}%" title="${esc(s.name)} ${fmt(s.start)}→${fmt(s.end)}">
+              <span>${esc(s.name)}</span><small>${s.dur}</small></div>`;
+          }).join('') +
+          r.steps.slice(1).map((s,k)=>{
+            const p=r.steps[k], g=s.start-p.end;
+            if(g<=0) return '';
+            const l=pct(p.end), w=pct(s.start)-pct(p.end);
+            return `<div class="gap${g<10?' tight':''}" style="left:${l}%;width:${w}%"><em>${g}</em></div>`;
+          }).join('')
+        }</div>
+        <div class="axis">${axisTicks(lo,hi,span)}</div>
+        <div class="seq">${r.steps.map(s=>`<b>${fmt(s.start)}</b> ${esc(s.name)}`).join('  →  ')}  →  <b>${fmt(r.end)}</b> 종료</div>
+      </div>`;
+    elRes.appendChild(d);
+  });
+}
+function axisTicks(lo,hi,span){
+  const step=span>420?120:span>240?60:30;
+  let s=Math.ceil(lo/step)*step, out='';
+  for(let t=s;t<=hi;t+=step){
+    out+=`<span class="tick" style="left:${((t-lo)/span)*100}%">${fmt(t)}</span>`;
+  }
+  return out;
+}
+
+/* ── 실행 ── */
+let themesReady=[];
+document.getElementById('go').onclick=()=>{
+  const note=document.getElementById('runNote');
+  themesReady=themes.filter(t=>t.sessions.length&&t.dur>0)
+                    .map((t,i)=>({name:t.name||('테마 '+(i+1)),dur:t.dur,sessions:t.sessions}));
+  if(themesReady.length<2){ note.textContent='회차가 있는 테마가 2개 이상 필요합니다.'; found=[]; renderResults(); elCount.textContent=''; return; }
+
+  const partial=document.getElementById('oPartial').checked;
+  const o={
+    startMin: parseClock(document.getElementById('oStart').value),
+    endMax:   parseClock(document.getElementById('oEnd').value),
+    minGap:   parseInt(document.getElementById('oMinGap').value)||0,
+    maxGap:   (document.getElementById('oMaxGap').value.trim()==='')?null:(parseInt(document.getElementById('oMaxGap').value)||null),
+    excludeSoldout: document.getElementById('oSold').checked,
+    minCount: partial?2:themesReady.length
+  };
+  const t0=performance.now();
+  const {out,capped}=search(themesReady,o);
+  found=out;
+  const ms=Math.round(performance.now()-t0);
+  elCount.textContent=`${out.length.toLocaleString()}개 조합${capped?' (탐색 한도 도달)':''}`;
+  note.textContent=`${ms}ms · 상위 ${Math.min(SHOW,out.length)}개 표시`;
+  renderResults();
+};
+
+/* ── init ── */
+renderThemes(); renderSorts();
+</script>
+</body>
+</html>

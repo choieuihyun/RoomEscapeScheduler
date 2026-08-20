@@ -1,0 +1,13 @@
+{
+  "name": "room-escape-scheduler",
+  "version": "1.0.0",
+  "description": "방탈출 스케줄러 — 테마별 회차 조합 계산기",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node serve.mjs",
+    "start": "node serve.mjs",
+    "test": "node test/acceptance.mjs"
+  },
+  "engines": { "node": ">=18" }
+}
