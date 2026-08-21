@@ -21,12 +21,12 @@
 
   --ink:#191F28;         /* 본문 */
   --ink2:#4E5968;        /* 보조 */
-  --ink3:#8B95A1;        /* 흐린 설명 */
+  --ink3:#626C7A;        /* 흐린 설명 */
 
-  --blue:#3182F6; --blue-press:#1B64DA; --blue-soft:#E8F3FF; --blue-line:#B6D8FF;
-  --green:#00B26B; --green-soft:#E4F8EF;
-  --red:#F04452;   --red-soft:#FFECEE;  --red-line:#FFC9CF;
-  --amber:#E08700; --amber-soft:#FFF3E0; --amber-line:#FFD79A;
+  --blue:#2670EB; --blue-press:#1B64DA; --blue-soft:#E8F3FF; --blue-line:#B6D8FF;
+  --green:#00B26B; --green-text:#00734B; --green-soft:#E4F8EF;
+  --red:#F04452;   --red-text:#D92B39;  --red-soft:#FFECEE;  --red-line:#FFC9CF;
+  --amber:#E08700; --amber-text:#B4530A; --amber-soft:#FFF3E0; --amber-line:#FFD79A;
 
   --r:16px; --r-sm:10px; --r-xs:8px; --pill:999px;
   --sh:0 1px 2px rgba(25,31,40,.04), 0 4px 16px rgba(25,31,40,.05);
@@ -62,7 +62,7 @@ header p{margin:0;color:var(--ink3);font-size:14px;max-width:52ch}
 .sec-head h2{font-size:18px;font-weight:700;letter-spacing:-.03em;color:var(--ink);margin:0}
 .sec-head span{font-size:13px;color:var(--ink3)}
 .sec-head .hi{color:var(--ink2);font-weight:600}
-.sec-head .count{font-size:12.5px;color:var(--blue);font-weight:700;
+.sec-head .count{font-size:12.5px;color:var(--blue-press);font-weight:700;
   background:var(--blue-soft);border:none;border-radius:var(--pill);padding:3px 11px}
 
 /* ── theme cards ── */
@@ -80,7 +80,7 @@ input,textarea,select{
   border-radius:var(--r-sm);padding:10px 12px;font-family:inherit;font-size:14px;
   transition:border-color .13s,box-shadow .13s,background .13s;
 }
-input::placeholder,textarea::placeholder{color:#B0B8C1}
+input::placeholder,textarea::placeholder{color:#98A2AE}
 input:focus,textarea:focus,select:focus{outline:none;background:var(--surface);
   border-color:var(--blue);box-shadow:var(--ring)}
 .i-name{flex:1;min-width:120px;font-weight:600}
@@ -102,17 +102,17 @@ textarea{width:100%;min-height:66px;resize:vertical;
   font-weight:600;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);
   border-radius:var(--pill);padding:3px 10px}
 .parsed .t.fix{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue-press)}
-.parsed .t.so{background:var(--red-soft);border-color:var(--red-line);color:var(--red);
+.parsed .t.so{background:var(--red-soft);border-color:var(--red-line);color:var(--red-text);
   text-decoration:line-through}
-.parsed .t.over{background:var(--red-soft);border-color:var(--red-line);color:var(--red)}
+.parsed .t.over{background:var(--red-soft);border-color:var(--red-line);color:var(--red-text)}
 .parsed .hint{font-size:12.5px;color:var(--ink3)}
 .parsed .note{flex-basis:100%;font-size:12.5px;color:var(--ink3);margin-top:2px}
-.parsed .warn{flex-basis:100%;font-size:13px;color:var(--red);margin-top:3px;line-height:1.55}
-.parsed .warn b{color:var(--red);font-weight:700}
+.parsed .warn{flex-basis:100%;font-size:13px;color:var(--red-text);margin-top:3px;line-height:1.55}
+.parsed .warn b{color:var(--red-text);font-weight:700}
 .chip{font-size:12.5px;color:var(--ink3)}
 .chip .src{color:var(--ink3)}
 .chip b{color:var(--ink);font-weight:700}
-.chip i{color:var(--red);font-style:normal;font-weight:600}
+.chip i{color:var(--red-text);font-style:normal;font-weight:600}
 
 /* ── buttons ── */
 button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.13s;
@@ -120,7 +120,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .btn{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);
   padding:9px 15px;font-size:13.5px;font-weight:500}
 .btn:hover{background:var(--line);border-color:var(--line2);color:var(--ink)}
-.btn-x{background:none;border:1px solid transparent;color:#B0B8C1;padding:5px 9px;
+.btn-x{background:none;border:1px solid transparent;color:var(--ink3);padding:5px 9px;
   font-size:17px;line-height:1;border-radius:var(--r-xs)}
 .btn-x:hover{color:var(--red);background:var(--red-soft)}
 .btn-go{
@@ -139,7 +139,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   letter-spacing:0;margin-bottom:6px;font-weight:500}
 .opt input,.opt select{width:100%}
 .checks{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px}
-.mini{background:var(--blue-soft);border:none;color:var(--blue);font-size:11.5px;
+.mini{background:var(--blue-soft);border:none;color:var(--blue-press);font-size:11.5px;
   font-weight:600;padding:3px 9px;margin-left:7px;border-radius:var(--pill)}
 .mini:hover{background:var(--blue-line)}
 .mealrow{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;
@@ -198,11 +198,11 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   border-bottom:1px solid var(--line);flex-wrap:wrap}
 .rank{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12.5px;
   font-weight:700;color:var(--ink3);width:auto;min-width:24px;flex:none}
-.res.best .rank{color:var(--blue)}
+.res.best .rank{color:var(--blue-press)}
 .stat{font-size:13px;color:var(--ink3)}
 .stat b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
-.stat.warn b{color:var(--red)}
-.stat.good b{color:var(--green)}
+.stat.warn b{color:var(--red-text)}
+.stat.good b{color:var(--green-text)}
 .res-body{padding:18px}
 
 /* 블록 폭은 소요시간에 비례해야 하므로 이름 길이로 늘릴 수 없다 (시간축이 거짓말이 된다).
@@ -227,8 +227,8 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .blk .rng{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:11px;
   font-weight:500;color:var(--ink2);white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
 .blk.so{border-style:dashed;border-color:var(--red-line);background:var(--red-soft)}
-.blk.so .nm i{color:var(--red)}
-.blk.so .rng{color:var(--red)}
+.blk.so .nm i{color:var(--red-text)}
+.blk.so .rng{color:var(--red-text)}
 
 /* 공백: 막대에는 채운 띠만, 숫자는 막대 아래에 둔다.
    흰 배경에서는 옅은 빗금이 사라지므로 불투명한 색으로 칠한다 —
@@ -243,12 +243,12 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .gaplab{position:absolute;top:53px;height:19px;display:flex;align-items:center;justify-content:center}
 .gaplab em{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:11.5px;
   font-style:normal;font-weight:700;color:var(--ink3);white-space:nowrap}
-.gaplab.big em{color:var(--amber)}
-.gaplab.tight em{color:var(--red)}
+.gaplab.big em{color:var(--amber-text)}
+.gaplab.tight em{color:var(--red-text)}
 
 .axis{position:relative;height:18px;border-top:1px solid var(--line)}
 .tick{position:absolute;top:3px;font-family:var(--num);font-variant-numeric:tabular-nums;
-  font-size:10.5px;color:#B0B8C1;transform:translateX(-50%)}
+  font-size:11px;color:var(--ink3);transform:translateX(-50%)}
 .tick::before{content:'';position:absolute;left:50%;top:-4px;height:4px;border-left:1px solid var(--line2)}
 .seq{font-size:13px;color:var(--ink3);margin-top:12px;line-height:1.7}
 .seq b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
@@ -256,7 +256,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 /* ── misc ── */
 .empty{color:var(--ink3);font-size:14px;padding:36px 0;text-align:center;
   background:var(--surface);border:none;border-radius:var(--r);box-shadow:var(--sh)}
-.err{color:var(--red);font-size:13px;margin-top:8px;font-weight:500}
+.err{color:var(--red-text);font-size:13px;margin-top:8px;font-weight:500}
 .busy{color:var(--blue);font-size:13px;font-weight:500}
 @media(max-width:560px){
   body{font-size:14px}
@@ -300,7 +300,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   border-radius:var(--r-xs);font-weight:500}
 .mseg button.on{background:var(--surface);color:var(--ink);font-weight:700;
   box-shadow:0 1px 3px rgba(25,31,40,.1)}
-.merr{font-size:13px;color:var(--red);min-height:18px;line-height:1.45;font-weight:500}
+.merr{font-size:13px;color:var(--red-text);min-height:18px;line-height:1.45;font-weight:500}
 .mbtns{display:flex;gap:8px;margin-top:8px}
 .mbtns .btn-go{flex:1;padding:13px 0;font-size:15px}
 .mbtns .btn{padding:13px 18px;font-size:14px}
@@ -318,8 +318,8 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   color:var(--ink);font-weight:700}
 .tag{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:var(--pill);
   border:none;flex:none}
-.tag.done{color:var(--green);background:var(--green-soft)}
-.tag.wish{color:var(--blue);background:var(--blue-soft)}
+.tag.done{color:var(--green-text);background:var(--green-soft)}
+.tag.wish{color:var(--blue-press);background:var(--blue-soft)}
 .plan .pspan{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;
   color:var(--ink3)}
 .plan .pmemo{font-size:13px;color:var(--ink3);flex:1 1 100%;margin:0}
@@ -777,7 +777,13 @@ let ocrWorker=null, ocrLoading=null;
 const OCR_THRESHOLD=235;
 /* 인식 시간은 화소 수에 비례한다. 확대는 작은 캡처의 인식률을 올리지만
    무한정 키우면 몇 분씩 걸린다 — 가로 목표치와 총 화소 상한을 함께 건다. */
-const OCR_TARGET_W=1200, OCR_MAX_PIXELS=3.2e6, OCR_TIMEOUT_MS=120000;
+/* 폰은 CPU 도 메모리도 한참 아래다. 같은 화소 예산을 주면 몇 분씩 끌다 시간 초과가 난다.
+   다행히 폰 캡처는 고해상도라 글자가 크게 찍혀 있어, 많이 줄여도 tesseract 가 읽을 만한
+   글자 높이(20~30px)가 남는다. 예산을 절반으로 줄이고 시간은 넉넉히 준다. */
+const OCR_MOBILE = matchMedia('(pointer:coarse)').matches || innerWidth < 700;
+const OCR_TARGET_W=1200;
+const OCR_MAX_PIXELS = OCR_MOBILE ? 1.6e6 : 3.2e6;
+const OCR_TIMEOUT_MS = OCR_MOBILE ? 210000 : 120000;
 
 function preprocess(file){
   return new Promise((res,rej)=>{
@@ -807,9 +813,21 @@ function preprocess(file){
         a[i]=a[i+1]=a[i+2]=v; a[i+3]=255;
       }
       cx.putImageData(d,0,0);
-      cv.toBlob(b=> b?res(b):rej(new Error('이미지 변환 실패')), 'image/png');
+      cv.toBlob(b=>{
+        if(!b) return rej(new Error('이미지 변환 실패 — 사진이 너무 큽니다'));
+        b._dim = img.width+'×'+img.height+'→'+cv.width+'×'+cv.height;
+        res(b);
+      }, 'image/png');
     };
-    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('이미지를 열지 못했습니다')); };
+    img.onerror=()=>{
+      URL.revokeObjectURL(url);
+      /* 아이폰에서 파일 앱을 거쳐 고르면 HEIC 가 그대로 올라올 때가 있다.
+         크롬·사파리 모두 캔버스로 못 그리므로 여기서 걸린다 — 원인을 분명히 말해 준다. */
+      const heic=/heic|heif/i.test(file.type||'') || /\.(heic|heif)$/i.test(file.name||'');
+      rej(new Error(heic
+        ? 'HEIC 사진은 못 읽습니다 — 캡처(스크린샷)를 넣거나 JPG 로 바꿔 주세요'
+        : '이미지를 열지 못했습니다 ('+(file.type||'형식 불명')+')'));
+    };
     img.src=url;
   });
 }
@@ -870,6 +888,8 @@ async function getOcrWorker(onStep){
 
 async function ocr(file, th){
   th.err=''; th.busy='엔진 준비 중…'; renderThemes();
+  const t0=performance.now();
+  let shot='';                       /* 실제로 넘긴 크기 — 실패 원인 추적용 */
   try{
     const step=m=>{
       const label=OCR_STEP[m.status];
@@ -878,6 +898,7 @@ async function ocr(file, th){
     const w=await getOcrWorker(step);
     setBusy(th,'이미지 다듬는 중…');
     const prepared=await preprocess(file);
+    shot=prepared._dim||'';
     setBusy(th,'글자 읽는 중…');
     const { data:{ text } } = await Promise.race([
       w.recognize(prepared, {}, { text:true }),
@@ -887,7 +908,9 @@ async function ocr(file, th){
     if(!ss.length) throw new Error('시간을 찾지 못했습니다');
     th.sessions=ss; th.raw=sessionsToText(ss); th.source='image';
   }catch(err){
-    th.err='읽기 실패 — 시간을 직접 입력해 주세요. ('+err.message+')';
+    const sec=Math.round((performance.now()-t0)/1000);
+    th.err='읽기 실패 — 시간을 직접 입력해 주세요. ('+err.message
+         + (shot?' · '+shot:'') + ' · '+sec+'초)';
     /* 멈춰서 시간 초과된 워커를 그대로 두면 다음 시도도 똑같이 막힌다. 버리고 새로 만들게 한다.
        (단순 인식 실패는 워커 잘못이 아니므로 그대로 재사용한다) */
     if(/시간 초과|엔진/.test(err.message)){
