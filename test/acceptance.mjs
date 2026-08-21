@@ -10,8 +10,8 @@ import { readFile } from 'node:fs/promises';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const m = html.match(/@core:start[\s\S]*?\*\/([\s\S]*?)\/\*[\s\S]{0,80}?@core:end/);
 if (!m) { console.error('index.html에서 @core 구간을 찾지 못했습니다.'); process.exit(1); }
-const core = new Function(m[1] + '\nreturn {pad,fmt,parseClock,parseSessions,sessionsToText,search,SORTS,moveCost};')();
-const { fmt, parseSessions, search, SORTS, moveCost } = core;
+const core = new Function(m[1] + '\nreturn {pad,fmt,parseClock,parseSessions,sessionsToText,search,SORTS,moveCost,pairKey};')();
+const { fmt, parseSessions, search, SORTS, moveCost, pairKey } = core;
 
 let fail = 0;
 const ok = (cond, name, extra='') => {
@@ -199,6 +199,31 @@ ok(both.every(r => r.minWait >= 10),
 ok(moved.some(r => r.moveTotal > 0) && moved.every(r =>
      r.moveTotal === r.steps.reduce((a, x) => a + (x.move || 0), 0)),
    'moveTotal 은 각 구간 이동의 합이다');
+
+// 쌍마다 다른 값 — A↔B 10분, B↔C 7분 처럼
+eq(pairKey('A','B'), pairKey('B','A'), '쌍 키는 방향에 상관없다 (걷는 시간은 대칭이다)');
+const MAP = { [pairKey('A','B')]: 30, [pairKey('B','C')]: 5 };
+eq(moveCost('A','B', 99, MAP), 30, '지정한 쌍은 그 값을 쓴다');
+eq(moveCost('B','A', 99, MAP), 30, '반대 방향도 같은 값');
+eq(moveCost('B','C', 99, MAP), 5,  '다른 쌍은 다른 값');
+eq(moveCost('A','C', 99, MAP), 99, '지정 안 한 쌍은 기본값으로 떨어진다');
+eq(moveCost('A','A', 99, MAP), 0,  '같은 매장이면 표에 있든 없든 0분');
+eq(moveCost('A','B', 0, { [pairKey('A','B')]: 20 }), 20,
+   '기본값이 0이어도 지정한 쌍은 살아 있다');
+
+// 세 매장짜리 탐색에서 쌍별 값이 실제로 지켜지는가
+const three = [P(themes[0],'A'), P(themes[1],'B'), P(themes[2],'C')];
+const perPair = search(three, { ...opts, minGap: 0, moveMin: 0,
+                                moveMap: { [pairKey('A','B')]: 30, [pairKey('B','C')]: 5 } }).out;
+ok(perPair.length > 0, `쌍별 이동시간으로도 조합이 남는다 (${perPair.length}개)`);
+ok(perPair.every(r => r.steps.every((s, i) => {
+     if (!i) return true;
+     const g = s.start - r.steps[i - 1].end;
+     const k = pairKey(r.steps[i - 1].place, s.place);
+     const need = r.steps[i - 1].place === s.place ? 0
+                : ({ [pairKey('A','B')]: 30, [pairKey('B','C')]: 5 }[k] ?? 0);
+     return g >= need && s.move === need;
+   })), 'A↔B 는 30분, B↔C 는 5분, A↔C 는 0분이 각각 지켜진다');
 
 // 매장을 아무도 안 적으면 이동시간 설정이 있어도 아무 일이 없어야 한다
 eq(search(themes, { ...opts, minGap: 0, moveMin: 60 }).out.length,

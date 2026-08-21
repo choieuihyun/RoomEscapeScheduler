@@ -350,6 +350,23 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .mvstat b{color:var(--amber-text)}
 .mvtag{font-style:normal;font-size:12px;font-weight:700;color:var(--amber-text);
   background:var(--amber-soft);border-radius:var(--pill);padding:2px 9px;white-space:nowrap}
+
+.pairs{margin-top:12px;background:var(--surface);border-radius:var(--r);
+  padding:14px 16px;box-shadow:var(--sh)}
+.pairhead{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:10px;
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pairhead span{font-size:12px;font-weight:400;color:var(--ink3)}
+.pair{display:flex;align-items:center;gap:8px;padding:5px 0;flex-wrap:wrap}
+.pair .pn{font-size:13.5px;color:var(--ink2);font-weight:500}
+.pair .parr{color:var(--ink3);font-size:13px;flex:none}
+.pair .pv{width:74px;text-align:center;margin-left:auto}
+.pair.set .pv{border-color:var(--amber-line);background:var(--amber-soft);
+  color:var(--amber-text);font-weight:700}
+.pair.set .pn{color:var(--ink)}
+@media(max-width:560px){
+  .pair .pn{font-size:13px}
+  .pair .pv{width:64px}
+}
 </style>
 </head>
 <body>
@@ -382,9 +399,10 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
     <div class="opt"><label>가장 늦은 종료</label><input class="mono" id="oEnd" placeholder="22:00"></div>
     <div class="opt"><label>최소 공백 (분)</label><input class="mono" id="oMinGap" value="10"></div>
     <div class="opt"><label>최대 공백 (분)</label><input class="mono" id="oMaxGap" placeholder="90"></div>
-    <div class="opt"><label>매장이 다르면 이동 (분)</label><input class="mono" id="oMove" value="10"></div>
+    <div class="opt"><label>기본 이동시간 (분)</label><input class="mono" id="oMove" value="10"></div>
   </div>
   <p class="movehint" id="moveHint"></p>
+  <div class="pairs" id="pairs" hidden></div>
   <div class="checks">
     <label class="chk"><input type="checkbox" id="oPartial"> 일부 테마만 넣은 조합도 계산</label>
     <label class="chk"><input type="checkbox" id="oMeal"> 식사 시간 확보</label>
@@ -551,14 +569,25 @@ function sessionsToText(ss){
    테마 5개 / 회차 9~10개가 약 1.1만 조합, 10ms 수준.
    상한에 걸리면 결과 개수 옆에 "탐색 한도 도달"로 표시한다(조용히 자르지 않는다). */
 const NODE_CAP=800000, KEEP_CAP=50000;
+/* 매장 쌍의 키. 걷는 시간은 방향에 상관없으므로 정렬해서 한 칸만 쓴다
+   (A↔B 를 두 번 적게 하면 입력만 두 배가 되고 서로 어긋날 여지가 생긴다). */
+function pairKey(a,b){
+  const x=(a||'').trim(), y=(b||'').trim();
+  return x<y ? x+'\u0000'+y : y+'\u0000'+x;
+}
+
 /* 앞 테마에서 이 테마로 오는 데 드는 이동시간.
+   쌍마다 적어둔 값이 있으면 그것을 쓰고, 없으면 기본값으로 떨어진다.
    매장을 적지 않은 테마는 "모른다" 이므로 0 으로 둔다 —
    모르는 것을 지어내면 조합이 조용히 사라진다. 빈칸은 제약이 아니어야 한다. */
-function moveCost(fromPlace, toPlace, moveMin){
-  if(!moveMin) return 0;
+function moveCost(fromPlace, toPlace, moveMin, moveMap){
   const a=(fromPlace||'').trim(), b=(toPlace||'').trim();
-  if(!a || !b) return 0;
-  return a===b ? 0 : moveMin;
+  if(!a || !b || a===b) return 0;
+  if(moveMap){
+    const v=moveMap[pairKey(a,b)];
+    if(v!=null) return v;
+  }
+  return moveMin||0;
 }
 
 function search(list, o){
@@ -608,7 +637,7 @@ function search(list, o){
         if(o.startMin!=null&&s.t<o.startMin)continue;
         /* 이동시간은 "후보를 줄이는" 제약이라 가지치기로 처리한다 (식사 공백과 반대다).
            최소 공백 위에 얹는다 — 최소 공백은 정리·여유이고 이동은 그 위의 실제 소요다. */
-        const move = path.length ? moveCost(path[path.length-1].place, th.place, o.moveMin) : 0;
+        const move = path.length ? moveCost(path[path.length-1].place, th.place, o.moveMin, o.moveMap) : 0;
         if(path.length){
           const g=s.t-curEnd;
           if(g < o.minGap + move) continue;
@@ -700,10 +729,10 @@ function renderThemes(){
         <span class="err">${th.err?esc(th.err):''}</span>
       </div>`;
     c.querySelector('[data-k=name]').oninput = e => th.name=e.target.value;
-    c.querySelector('[data-k=place]').oninput = e => { th.place=e.target.value; refreshMoveHint(); };
+    c.querySelector('[data-k=place]').oninput = e => { th.place=e.target.value; renderPairs(); refreshMoveHint(); };
     c.querySelector('[data-k=dur]').oninput  = e => th.dur=Math.max(1,parseInt(e.target.value)||0);
     c.querySelector('[data-k=lock]').onclick = ()=>{ th.lock=!th.lock; renderThemes(); };
-    c.querySelector('[data-k=del]').onclick  = ()=>{ themes=themes.filter(x=>x!==th); renderThemes(); refreshMoveHint(); };
+    c.querySelector('[data-k=del]').onclick  = ()=>{ themes=themes.filter(x=>x!==th); renderThemes(); renderPairs(); refreshMoveHint(); };
     const ta=c.querySelector('[data-k=raw]');
     ta.oninput = e => {
       th.raw=e.target.value;
@@ -795,9 +824,9 @@ function refreshFoot(card, th){
   card.querySelector('.err').textContent = th.err || '';
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-document.getElementById('addTheme').onclick=()=>{ themes.push(blank('')); renderThemes(); refreshMoveHint(); };
+document.getElementById('addTheme').onclick=()=>{ themes.push(blank('')); renderThemes(); renderPairs(); refreshMoveHint(); };
 document.getElementById('seedBtn').onclick=()=>{
-  themes=seed();
+  themes=seed(); moveMap={};
   if(location.hash) history.replaceState(null,'',location.pathname);  // 남은 링크 상태도 털어낸다
   renderThemes();
 };
@@ -1231,6 +1260,38 @@ const $ = id => document.getElementById(id);
 /* 식사 시간 입력칸은 켰을 때만 보인다 */
 /* 이동시간이 지금 실제로 걸리는지 한 줄로 알려 준다.
    매장을 안 적으면 조용히 0 이 되는데, 그걸 모르면 "왜 안 붙지" 가 된다. */
+/* 매장 쌍마다 이동시간을 따로 받는다. 쌍은 매장 목록에서 자동으로 생기고,
+   손대지 않은 쌍은 기본값을 따라간다 — 실제로 다른 쌍만 고치면 된다. */
+let moveMap = {};
+function placeList(){
+  return [...new Set(themes.map(t=>(t.place||'').trim()).filter(Boolean))]
+         .sort((a,b)=>a.localeCompare(b,'ko'));
+}
+function renderPairs(){
+  const box=$('pairs'), ps=placeList();
+  if(ps.length<2){ box.hidden=true; box.innerHTML=''; return; }
+  const def=parseInt($('oMove').value)||0;
+  let rows='';
+  for(let i=0;i<ps.length;i++) for(let j=i+1;j<ps.length;j++){
+    const v=moveMap[pairKey(ps[i],ps[j])];
+    const set=v!=null;
+    rows+=`<div class="pair${set?' set':''}">`
+       + `<span class="pn">${esc(ps[i])}</span><span class="parr">↔</span><span class="pn">${esc(ps[j])}</span>`
+       + `<input class="mono pv" data-i="${i}" data-j="${j}" inputmode="numeric" value="${set?v:def}">`
+       + `<span class="unit">분</span></div>`;
+  }
+  box.hidden=false;
+  box.innerHTML=`<div class="pairhead">매장 간 이동시간 <span>손대지 않은 칸은 기본값(${def}분)을 따라갑니다</span></div>${rows}`;
+  box.querySelectorAll('.pv').forEach(el=>{
+    el.oninput=e=>{
+      const t=e.target;
+      moveMap[pairKey(ps[+t.dataset.i], ps[+t.dataset.j])]=Math.max(0,parseInt(t.value)||0);
+      t.closest('.pair').classList.add('set');
+      refreshMoveHint();
+    };
+  });
+}
+
 function refreshMoveHint(){
   const el=$('moveHint'); if(!el) return;
   const named=themes.filter(t=>(t.place||'').trim());
@@ -1248,11 +1309,16 @@ function refreshMoveHint(){
   }else{
     el.className='movehint on';
     const blank=themes.length-named.length;
-    el.innerHTML=`매장 <b>${places.size}곳</b> · 매장이 바뀌는 자리마다 <b>${m}분</b>이 붙습니다`
-      + (blank?` <span class="dimhint">(매장을 안 적은 테마 ${blank}개는 제외)</span>`:'');
+    const ps=placeList(); let n=0, set=0;
+    for(let i=0;i<ps.length;i++) for(let j=i+1;j<ps.length;j++){
+      n++; if(moveMap[pairKey(ps[i],ps[j])]!=null) set++;
+    }
+    el.innerHTML=`매장 <b>${places.size}곳</b> · 쌍 <b>${n}개</b>`
+      + (set?` (<b>${set}개</b>는 따로 지정)`:` · 전부 <b>${m}분</b>`)
+      + (blank?` <span class="dimhint">· 매장을 안 적은 테마 ${blank}개는 제외</span>`:'');
   }
 }
-$('oMove').oninput = refreshMoveHint;
+$('oMove').oninput = ()=>{ renderPairs(); refreshMoveHint(); };
 $('oMeal').onchange = e => $('mealRow').classList.toggle('on', e.target.checked);
 /* 당일 즉흥으로 짤 때 시작 하한을 현재 시각으로 */
 $('nowBtn').onclick = () => { const d=new Date(); $('oStart').value = pad(d.getHours())+':'+pad(d.getMinutes()); };
@@ -1265,6 +1331,7 @@ function readOptions(){
     minGap:   parseInt($('oMinGap').value)||0,
     maxGap:   ($('oMaxGap').value.trim()==='')?null:(parseInt($('oMaxGap').value)||null),
     moveMin:  parseInt($('oMove').value)||0,
+    moveMap:  moveMap,
     /* 매진 회차는 애초에 예약할 수 없으므로 선택지로 두지 않는다.
        "매진" 이 붙어 들어온 회차만 여기서 걸러지고, 나머지는 사용자가 빼고 넣는다. */
     excludeSoldout: true,
@@ -1324,6 +1391,12 @@ function serialize(){
   return b64e(JSON.stringify({
     v:3,
     t: themes.map(t=>[t.name, t.dur, t.raw, t.lock?1:0, t.place||'']),
+    /* 지금 화면에 있는 매장 쌍만 담는다 — 지운 매장의 값까지 링크에 끌고 다닐 이유가 없다 */
+    m: (()=>{ const ps=placeList(), out=[];
+        for(let i=0;i<ps.length;i++) for(let j=i+1;j<ps.length;j++){
+          const v=moveMap[pairKey(ps[i],ps[j])];
+          if(v!=null) out.push([ps[i],ps[j],v]);
+        } return out; })(),
     o: [$('oStart').value, $('oEnd').value, $('oMinGap').value, $('oMaxGap').value,
         1, $('oPartial').checked?1:0,
         $('oMeal').checked?1:0, $('oMealFrom').value, $('oMealTo').value, $('oMealMin').value,
@@ -1347,7 +1420,9 @@ function restore(hash){
   $('oMeal').checked=!!me; $('mealRow').classList.toggle('on',!!me);
   $('oMealFrom').value=mf; $('oMealTo').value=mt; $('oMealMin').value=mm;
   if(mv!==undefined) $('oMove').value=mv;
-  refreshMoveHint();
+  moveMap={};
+  if(Array.isArray(d.m)) for(const [a,b,v] of d.m) moveMap[pairKey(a,b)]=v;
+  renderPairs(); refreshMoveHint();
   if(d.k) sortKey=d.k;
 }
 
@@ -1623,7 +1698,7 @@ if(location.hash.startsWith('#s=')){
     themes=seed();
   }
 }
-renderThemes(); renderSorts(); renderAcct(); refreshMoveHint();
+renderThemes(); renderSorts(); renderAcct(); renderPairs(); refreshMoveHint();
 </script>
 </body>
 </html>
