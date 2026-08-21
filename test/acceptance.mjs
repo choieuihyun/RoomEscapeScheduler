@@ -125,24 +125,34 @@ ok(meal.length < out.length, `식사 공백은 조합을 줄인다 (${out.length
 eq(search(themes, { ...opts, meal: MEAL, maxGap: 20 }).out.length, 0,
    '최대 공백 20분 + 식사 공백 40분 → 모순이라 결과 없음');
 
-const pinFirst = themes.map((t, i) => i === 0 ? { ...t, pin: 'first' } : t);
-const pf = search(pinFirst, opts).out;
-ok(pf.length > 0 && pf.every(r => r.steps[0].name === '범계'),
-   `첫 타 고정 → 전부 범계로 시작 (${pf.length}개)`);
-ok(pf.length < out.length, '순서 고정은 조합을 줄인다');
+// 자리 잠금: lockPos 는 0부터 센 순서. 개념 하나로 첫 타·마지막·가운데·전체 고정을 다 덮는다.
+const lockAt = (...pos) => themes.map((t, i) => pos.includes(i) ? { ...t, lockPos: i } : t);
 
-const pinLast = themes.map((t, i) => i === 2 ? { ...t, pin: 'last' } : t);
-const pl = search(pinLast, opts).out;
-ok(pl.length > 0 && pl.every(r => r.steps[r.steps.length - 1].name === '몽'),
-   `마지막 고정 → 전부 몽으로 끝 (${pl.length}개)`);
-ok(pl.every(r => r.steps.slice(0, -1).every(s => s.name !== '몽')),
-   '고정된 테마가 중간에 끼는 조합은 생기지 않는다');
+const lf = search(lockAt(0), opts).out;
+ok(lf.length > 0 && lf.every(r => r.steps[0].name === '범계'),
+   `0번 자리 잠금 → 전부 범계로 시작 (${lf.length}개)`);
+ok(lf.length < out.length, '자리 잠금은 조합을 줄인다');
 
-// 둘을 같이 걸어도 성립해야 한다
-const both = themes.map((t, i) => i === 0 ? { ...t, pin: 'first' } : i === 2 ? { ...t, pin: 'last' } : t);
-const bo = search(both, { ...opts, meal: MEAL }).out;
-ok(bo.every(r => r.steps[0].name === '범계' && r.steps[r.steps.length - 1].name === '몽' && hasMealGap(r)),
-   `순서 고정 + 식사 공백 동시 적용 (${bo.length}개)`);
+const ll = search(lockAt(2), opts).out;
+ok(ll.length > 0 && ll.every(r => r.steps[r.steps.length - 1].name === '몽'),
+   `마지막 자리 잠금 → 전부 몽으로 끝 (${ll.length}개)`);
+ok(ll.every(r => r.steps.slice(0, -1).every(s => s.name !== '몽')),
+   '잠근 테마가 다른 자리에 끼는 조합은 생기지 않는다');
+
+// 드롭다운(첫 타/마지막)으로는 표현할 수 없던 것 — 가운데 자리 고정
+const lm = search(lockAt(1), opts).out;
+ok(lm.length > 0 && lm.every(r => r.steps[1].name === '에이트립'),
+   `가운데 자리 잠금 → 전부 2번째가 에이트립 (${lm.length}개)`);
+
+// 전부 잠그면 "이 순서 그대로" 가 된다
+const la = search(lockAt(0, 1, 2), opts).out;
+ok(la.length > 0 && la.every(r => r.steps.map(s => s.name).join('>') === '범계>에이트립>몽'),
+   `전부 잠금 → 순서 그대로, 회차만 탐색 (${la.length}개)`);
+
+// 잠금 + 식사 공백 동시 적용
+const bo = search(lockAt(0, 2), { ...opts, meal: MEAL }).out;
+ok(bo.every(r => r.steps[0].name === '범계' && r.steps[2].name === '몽' && hasMealGap(r)),
+   `자리 잠금 + 식사 공백 동시 적용 (${bo.length}개)`);
 
 /* ── 4. 비기능 요구 (§2.4) ── */
 console.log('\n[4] 비기능 요구');
