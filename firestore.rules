@@ -9,9 +9,21 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /* 자기 문서만. 로그인하지 않았거나 uid 가 다르면 읽기조차 막힌다 */
+    /* 자기 문서만. 로그인하지 않았거나 uid 가 다르면 읽기조차 막힌다.
+     *
+     * 마지막 줄은 "우리 화면을 거친 계정인가" 를 본다.
+     * apiKey 는 페이지 소스에 그대로 있으므로 누구나 REST 로 직접
+     * accounts:signUp 을 불러 아무 이메일로나 계정을 만들 수 있다 —
+     * 화면의 아이디 형식 검사는 화면에서만 돌기 때문이다.
+     * 그렇게 만든 계정은 남의 문서를 못 보지만(위 두 줄), 자기 uid 밑에
+     * 쓰기를 퍼부어 하루 한도를 태울 수는 있다. 도메인을 묶어 그 길을 좁힌다.
+     *
+     * 주의: 나중에 구글 로그인을 붙이면 이 줄을 함께 고쳐야 한다.
+     */
     match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid
+                         && request.auth.token.email.matches('.*@user[.]resched');
     }
 
     /* 그 밖의 모든 경로는 차단 */
