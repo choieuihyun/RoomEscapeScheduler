@@ -59,7 +59,20 @@ textarea{width:100%;min-height:60px;resize:vertical;font-family:'IBM Plex Mono',
 .btn-img{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);color:var(--paper);padding:5px 11px;font-size:12px;border-radius:var(--r);cursor:pointer}
 .btn-img:hover{border-color:var(--brass-dim)}
 .btn-img input{display:none}
+/* 입력한 것이 어떻게 해석됐는지 바로 보여주는 줄.
+   12시간 보정은 조용히 일어나면 사고가 되므로(순서가 섞이면 엉뚱한 값이 된다) 눈에 보이게 한다. */
+.parsed{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:8px}
+.parsed .t{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper);
+  background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:1px 7px}
+.parsed .t.fix{border-color:var(--brass-dim);color:var(--brass)}
+.parsed .t.so{color:var(--brick);border-color:var(--brick);opacity:.85}
+.parsed .t.over{border-color:var(--brick);color:var(--brick)}
+.parsed .hint{font-size:11px;color:var(--muted)}
+.parsed .note{flex-basis:100%;font-size:11px;color:var(--muted);margin-top:1px}
+.parsed .warn{flex-basis:100%;font-size:11.5px;color:var(--brick);margin-top:2px;line-height:1.5}
+.parsed .warn b{color:var(--paper)}
 .chip{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+.chip .src{color:var(--brass-dim)}
 .chip b{color:var(--sage);font-weight:600}
 .chip i{color:var(--brick);font-style:normal}
 
@@ -243,10 +256,14 @@ function parseSessions(text){
     if(prev && prev.t===s.t){ prev.soldout = prev.soldout || s.soldout; continue; }
     seq.push(s);
   }
-  /* 2) 오전/오후 표기가 전혀 없으면 오름차순 가정하고 12시간 보정 */
+  /* 2) 오전/오후 표기가 전혀 없으면 오름차순 가정하고 12시간 보정.
+        보정한 항목에는 표시를 남긴다 — 화면에서 "내가 친 것과 다르게 읽혔다" 를
+        보여주기 위해서다. 이 보정은 순서가 뒤섞이면 엉뚱한 값을 만들므로 숨기면 안 된다. */
   if(!sawMer){
     for(let i=1;i<seq.length;i++){
+      const before=seq[i].t;
       while(seq[i].t <= seq[i-1].t) seq[i].t += 12*60;
+      if(seq[i].t!==before) seq[i].fixed=true;
     }
   }
   /* 3) 보정이 끝난 절대시각 기준으로 최종 중복 제거 */
@@ -323,7 +340,7 @@ const SORTS=[
 
 /* ── 상태 ── */
 let themes=[], nextId=1;
-function blank(name){ return {id:nextId++, name:name||'', dur:70, raw:'', sessions:[], busy:false, err:''}; }
+function blank(name){ return {id:nextId++, name:name||'', dur:70, raw:'', sessions:[], busy:'', err:'', source:''}; }
 themes = [blank(''),blank(''),blank('')];
 
 /* ── 테마 렌더 ── */
@@ -333,8 +350,6 @@ function renderThemes(){
   themes.forEach((th,i)=>{
     const c=document.createElement('div');
     c.className='card';
-    const avail=th.sessions.filter(s=>!s.soldout).length;
-    const sold=th.sessions.length-avail;
     c.innerHTML=`
       <div class="card-top">
         <span class="idx">${pad(i+1)}</span>
@@ -343,10 +358,11 @@ function renderThemes(){
         <span class="unit">분</span>
         <button class="btn-x" data-k="del" title="삭제">×</button>
       </div>
-      <textarea data-k="raw" placeholder="회차 캡처를 여기에 붙여넣기 (Ctrl+V) — 또는 시간 직접 입력">${esc(th.raw)}</textarea>
+      <textarea data-k="raw" placeholder="10:00  13:10  15:40  17:20  ← 이렇게 (쉼표·줄바꿈도 됨)&#10;또는 예약 화면 캡처를 붙여넣기 (Ctrl+V)">${esc(th.raw)}</textarea>
+      <div class="parsed">${parsedHTML(th)}</div>
       <div class="card-foot">
         <label class="btn-img">이미지 첨부<input type="file" accept="image/*" data-k="file"></label>
-        <span class="chip">${th.sessions.length? `회차 <b>${avail}</b>${sold?` · 매진 <i>${sold}</i>`:''}` : '회차 없음'}</span>
+        <span class="chip">${chipHTML(th)}</span>
         <span class="busy">${th.busy?esc(th.busy):''}</span>
         <span class="err">${th.err?esc(th.err):''}</span>
       </div>`;
@@ -354,7 +370,13 @@ function renderThemes(){
     c.querySelector('[data-k=dur]').oninput  = e => th.dur=Math.max(1,parseInt(e.target.value)||0);
     c.querySelector('[data-k=del]').onclick  = ()=>{ themes=themes.filter(x=>x!==th); renderThemes(); };
     const ta=c.querySelector('[data-k=raw]');
-    ta.oninput = e => { th.raw=e.target.value; th.sessions=parseSessions(th.raw); th.err=''; refreshFoot(c,th); };
+    ta.oninput = e => {
+      th.raw=e.target.value;
+      th.sessions=parseSessions(th.raw);
+      th.source = th.source.startsWith('image') ? 'image-edited' : 'manual';
+      th.err='';
+      refreshFoot(c,th);
+    };
     ta.onpaste = e => handlePaste(e, th);
     /* 모바일·윈도우용 첨부 경로. 폰에서는 앨범/카메라가 열린다.
        같은 파일을 다시 골라도 change 가 뜨도록 value 를 비운다. */
@@ -373,14 +395,41 @@ function renderThemes(){
     elThemes.appendChild(c);
   });
 }
-/* 카드 하단(회차 개수 + 에러 문구)을 다시 그린다.
-   에러 칸을 빼먹으면 사용자가 시간을 직접 입력해 문제를 해결한 뒤에도
-   옛 에러 문구가 화면에 남아 "아직 안 됐나?" 로 읽힌다. */
-function refreshFoot(card, th){
+/* 자정을 넘긴 값은 fmt 가 24로 나눈 나머지를 주므로 25:10 이 01:10 로 보인다.
+   그대로 두면 "왜 새벽 1시가 있지?" 가 되므로 넘김을 밝혀서 표시한다. */
+function fmtDay(t){ return t>=24*60 ? '다음날 '+fmt(t) : fmt(t); }
+
+function chipHTML(th){
   const avail=th.sessions.filter(s=>!s.soldout).length;
   const sold=th.sessions.length-avail;
-  card.querySelector('.chip').innerHTML =
-    th.sessions.length? `회차 <b>${avail}</b>${sold?` · 매진 <i>${sold}</i>`:''}` : '회차 없음';
+  const src = th.source==='image' ? '사진에서 읽음'
+            : th.source==='image-edited' ? '사진 → 수정함'
+            : th.sessions.length ? '직접 입력' : '';
+  const cnt = th.sessions.length ? `회차 <b>${avail}</b>${sold?` · 매진 <i>${sold}</i>`:''} ` : '회차 없음';
+  return (src ? `<span class="src">${esc(src)}</span> · ` : '') + cnt;
+}
+/* 입력한 것이 어떻게 해석됐는지 그대로 보여준다. 계산을 누르기 전에 확인할 수 있어야 한다. */
+function parsedHTML(th){
+  if(!th.sessions.length)
+    return '<span class="hint">시간을 넣으면 해석 결과가 여기 표시됩니다</span>';
+  const over = th.sessions.some(s=>s.t>=24*60);
+  const fixed = th.sessions.some(s=>s.fixed);
+  let out = th.sessions.map(s=>{
+    const cls = 't' + (s.t>=24*60?' over':'') + (s.fixed?' fix':'') + (s.soldout?' so':'');
+    const tip = s.fixed ? ' title="오전/오후 표기가 없어 12시간 보정된 값입니다"' : '';
+    return `<span class="${cls}"${tip}>${fmtDay(s.t)}${s.soldout?' 매진':''}</span>`;
+  }).join('');
+  if(over) out += `<span class="warn">자정을 넘긴 회차가 있습니다. 이른 시간부터 순서대로 넣었는지 확인해 주세요 — 순서가 섞였다면 <b>오전</b>/<b>오후</b>를 붙이면 순서와 무관하게 정확해집니다.</span>`;
+  else if(fixed) out += `<span class="note">황동색은 12시간 보정된 값입니다 (예: 1:10 → 13:10)</span>`;
+  return out;
+}
+
+/* 카드 하단을 다시 그린다.
+   에러 칸을 빼먹으면 사용자가 직접 입력해 문제를 해결한 뒤에도 옛 에러 문구가 남아
+   "아직 안 됐나?" 로 읽힌다. */
+function refreshFoot(card, th){
+  card.querySelector('.chip').innerHTML = chipHTML(th);
+  card.querySelector('.parsed').innerHTML = parsedHTML(th);
   card.querySelector('.err').textContent = th.err || '';
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
@@ -516,7 +565,7 @@ async function ocr(file, th){
     ]);
     const ss=parseSessions(text);
     if(!ss.length) throw new Error('시간을 찾지 못했습니다');
-    th.sessions=ss; th.raw=sessionsToText(ss);
+    th.sessions=ss; th.raw=sessionsToText(ss); th.source='image';
   }catch(err){
     th.err='읽기 실패 — 시간을 직접 입력해 주세요. ('+err.message+')';
     /* 멈춰서 시간 초과된 워커를 그대로 두면 다음 시도도 똑같이 막힌다. 버리고 새로 만들게 한다.

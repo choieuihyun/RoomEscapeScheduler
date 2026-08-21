@@ -49,6 +49,20 @@ eq(parseSessions('8. 22 2026.8 20 21 22 23 24 25 10:30 12:00 1:30').map(s => fmt
 
 eq(parseSessions('').map(s => fmt(s.t)), [], '빈 입력');
 
+// 보정한 항목에는 표시가 남아야 한다 — 화면에서 "친 것과 다르게 읽혔다" 를 알려주는 근거다.
+eq(parseSessions('10:00 1:10 3:40').map(s => !!s.fixed), [false, true, true],
+   '12시간 보정된 항목에 fixed 표시');
+eq(parseSessions('10:00 13:10 15:40').map(s => !!s.fixed), [false, false, false],
+   '보정이 필요 없으면 표시 없음');
+eq(parseSessions('오전 10:00 오후 1:10').map(s => !!s.fixed), [false, false],
+   '오전/오후 표기가 있으면 보정 자체를 하지 않음');
+
+// 순서를 섞어 넣으면 자정을 넘는 값이 나온다 — 화면이 경고할 수 있어야 한다.
+ok(parseSessions('15:40 10:00 13:10').some(s => s.t >= 24 * 60),
+   '순서가 섞이면 자정을 넘긴 값이 생김 (화면 경고 근거)');
+ok(!parseSessions('10:00 13:10 15:40').some(s => s.t >= 24 * 60),
+   '순서대로면 자정을 넘지 않음');
+
 /* ── 2. 인수 기준: requirements.md §7 기준 조합 ── */
 console.log('\n[2] 인수 기준 (§7 검증 케이스)');
 const T = (name, dur, times) => ({ name, dur, sessions: times.map(t => {
