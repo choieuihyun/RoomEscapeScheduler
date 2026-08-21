@@ -331,6 +331,25 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   .plan .pbtns{margin-left:0;flex:1 1 100%}
   .plan .pbtns .btn{flex:1}
 }
+
+/* ── 매장 · 이동시간 ─────────────────────────────────── */
+.placerow{display:flex;align-items:center;gap:9px;margin:0 0 10px}
+.plb{font-size:12.5px;color:var(--ink3);flex:none;font-weight:500}
+.i-place{flex:1;min-width:120px;font-size:13.5px}
+.movehint{margin:12px 0 0;font-size:12.5px;color:var(--ink3);line-height:1.6}
+.movehint b{color:var(--ink2);font-weight:700}
+.movehint.on{color:var(--ink2)}
+.movehint.on b{color:var(--amber-text)}
+.movehint .dimhint{color:var(--ink3);font-weight:400}
+
+/* 이동 구간은 공백 앞쪽에 겹쳐 칠한다 — "끝나자마자 걷는다" 가 눈에 보이게 */
+.mv{position:absolute;top:0;height:50px;border-radius:var(--r-xs) 0 0 var(--r-xs);
+  border:1px solid var(--amber-line);border-right:none;
+  background:repeating-linear-gradient(-45deg,#FFE7BF 0 5px,#FFD79A 5px 10px)}
+.gaplab em u{text-decoration:none;color:var(--amber-text);font-weight:800}
+.mvstat b{color:var(--amber-text)}
+.mvtag{font-style:normal;font-size:12px;font-weight:700;color:var(--amber-text);
+  background:var(--amber-soft);border-radius:var(--pill);padding:2px 9px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -363,7 +382,9 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
     <div class="opt"><label>가장 늦은 종료</label><input class="mono" id="oEnd" placeholder="22:00"></div>
     <div class="opt"><label>최소 공백 (분)</label><input class="mono" id="oMinGap" value="10"></div>
     <div class="opt"><label>최대 공백 (분)</label><input class="mono" id="oMaxGap" placeholder="90"></div>
+    <div class="opt"><label>매장이 다르면 이동 (분)</label><input class="mono" id="oMove" value="10"></div>
   </div>
+  <p class="movehint" id="moveHint"></p>
   <div class="checks">
     <label class="chk"><input type="checkbox" id="oPartial"> 일부 테마만 넣은 조합도 계산</label>
     <label class="chk"><input type="checkbox" id="oMeal"> 식사 시간 확보</label>
@@ -530,6 +551,16 @@ function sessionsToText(ss){
    테마 5개 / 회차 9~10개가 약 1.1만 조합, 10ms 수준.
    상한에 걸리면 결과 개수 옆에 "탐색 한도 도달"로 표시한다(조용히 자르지 않는다). */
 const NODE_CAP=800000, KEEP_CAP=50000;
+/* 앞 테마에서 이 테마로 오는 데 드는 이동시간.
+   매장을 적지 않은 테마는 "모른다" 이므로 0 으로 둔다 —
+   모르는 것을 지어내면 조합이 조용히 사라진다. 빈칸은 제약이 아니어야 한다. */
+function moveCost(fromPlace, toPlace, moveMin){
+  if(!moveMin) return 0;
+  const a=(fromPlace||'').trim(), b=(toPlace||'').trim();
+  if(!a || !b) return 0;
+  return a===b ? 0 : moveMin;
+}
+
 function search(list, o){
   const n=list.length, used=new Array(n).fill(false), path=[], out=[];
   let nodes=0, capped=false;
@@ -545,15 +576,21 @@ function search(list, o){
       }
       if(!ok) return;
     }
-    const gaps=[];
-    for(let i=1;i<path.length;i++) gaps.push(path[i].start-path[i-1].end);
+    const gaps=[], waits=[];
+    for(let i=1;i<path.length;i++){
+      const g=path[i].start-path[i-1].end;
+      gaps.push(g);
+      waits.push(g-(path[i].move||0));   /* 이동을 뺀, 실제로 쉬는 시간 */
+    }
     const total=gaps.reduce((a,b)=>a+b,0);
     const avg=gaps.length?total/gaps.length:0;
     const varc=gaps.length?Math.sqrt(gaps.reduce((a,g)=>a+(g-avg)**2,0)/gaps.length):0;
     out.push({
       steps:path.map(p=>({...p})), count:path.length,
       start:path[0].start, end:path[path.length-1].end,
-      total, gaps, varc, minGap:gaps.length?Math.min(...gaps):Infinity
+      total, gaps, varc, minGap:gaps.length?Math.min(...gaps):Infinity,
+      moveTotal: path.reduce((a,p)=>a+(p.move||0),0),
+      minWait: waits.length?Math.min(...waits):Infinity
     });
   }
   function dfs(curEnd){
@@ -569,15 +606,19 @@ function search(list, o){
       for(const s of th.sessions){
         if(o.excludeSoldout&&s.soldout)continue;
         if(o.startMin!=null&&s.t<o.startMin)continue;
+        /* 이동시간은 "후보를 줄이는" 제약이라 가지치기로 처리한다 (식사 공백과 반대다).
+           최소 공백 위에 얹는다 — 최소 공백은 정리·여유이고 이동은 그 위의 실제 소요다. */
+        const move = path.length ? moveCost(path[path.length-1].place, th.place, o.moveMin) : 0;
         if(path.length){
           const g=s.t-curEnd;
-          if(g<o.minGap)continue;
+          if(g < o.minGap + move) continue;
           if(o.maxGap!=null&&g>o.maxGap)continue;
         }
         const end=s.t+th.dur;
         if(o.endMax!=null&&end>o.endMax)continue;
         nodes++;
-        used[i]=true; path.push({i,name:th.name||('테마 '+(i+1)),dur:th.dur,start:s.t,end,soldout:s.soldout});
+        used[i]=true; path.push({i,name:th.name||('테마 '+(i+1)),place:th.place||'',dur:th.dur,
+                                 start:s.t,end,soldout:s.soldout,move});
         dfs(end);
         path.pop(); used[i]=false;
         if(nodes>NODE_CAP){capped=true;return;}
@@ -601,18 +642,18 @@ const SORTS=[
 
 /* ── 상태 ── */
 let themes=[], nextId=1;
-function blank(name){ return {id:nextId++, name:name||'', dur:70, raw:'', sessions:[], busy:'', err:'', source:'', lock:false}; }
+function blank(name){ return {id:nextId++, name:name||'', place:'', dur:70, raw:'', sessions:[], busy:'', err:'', source:'', lock:false}; }
 
 /* 시작할 때 채워두는 기본 데이터. 매번 손으로 넣지 않고 바로 눌러볼 수 있게 한다.
    지우고 쓰면 되고, 공유 링크로 들어오면 이 값은 덮어써진다. */
 const SEED=[
-  ['범계',      75, '10:30  12:00  13:30  15:00  16:30  18:00  19:30  21:00  22:30'],
-  ['몽',        70, '10:50  12:10  13:30  14:50  16:10  17:30  18:50  20:10  21:30  22:50'],
-  ['왓 어 트립', 70, '10:20  11:45  13:10  14:35  16:00  17:25  18:50  20:15  21:40  23:05'],
+  ['범계',      75, '10:30  12:00  13:30  15:00  16:30  18:00  19:30  21:00  22:30', ''],
+  ['몽',        70, '10:50  12:10  13:30  14:50  16:10  17:30  18:50  20:10  21:30  22:50', ''],
+  ['왓 어 트립', 70, '10:20  11:45  13:10  14:35  16:00  17:25  18:50  20:15  21:40  23:05', ''],
 ];
 function seed(){
-  return SEED.map(([name,dur,raw])=>{
-    const th=blank(name); th.dur=dur; th.raw=raw;
+  return SEED.map(([name,dur,raw,place])=>{
+    const th=blank(name); th.dur=dur; th.raw=raw; th.place=place||'';
     th.sessions=parseSessions(raw); th.source='manual';
     return th;
   });
@@ -645,6 +686,11 @@ function renderThemes(){
           title="이 카드를 지금 자리에 고정합니다. 잠그지 않은 카드는 도구가 알아서 배치합니다">${th.lock?'자리 고정됨':'자리 고정'}</button>
         <button class="btn-x" data-k="del" title="삭제">×</button>
       </div>
+      <div class="placerow">
+        <span class="plb">매장</span>
+        <input class="i-place" placeholder="비워두면 이동시간을 안 붙입니다" value="${esc(th.place)}" data-k="place"
+          title="같은 매장끼리는 이동시간이 0 입니다. 매장이 다르면 조건의 이동시간이 붙습니다">
+      </div>
       <textarea data-k="raw" placeholder="10:00  13:10  15:40  17:20  ← 예약 가능한 회차만 (쉼표·줄바꿈도 됨)&#10;또는 예약 화면 캡처를 붙여넣기 (Ctrl+V)">${esc(th.raw)}</textarea>
       <div class="parsed">${parsedHTML(th)}</div>
       <div class="card-foot">
@@ -654,9 +700,10 @@ function renderThemes(){
         <span class="err">${th.err?esc(th.err):''}</span>
       </div>`;
     c.querySelector('[data-k=name]').oninput = e => th.name=e.target.value;
+    c.querySelector('[data-k=place]').oninput = e => { th.place=e.target.value; refreshMoveHint(); };
     c.querySelector('[data-k=dur]').oninput  = e => th.dur=Math.max(1,parseInt(e.target.value)||0);
     c.querySelector('[data-k=lock]').onclick = ()=>{ th.lock=!th.lock; renderThemes(); };
-    c.querySelector('[data-k=del]').onclick  = ()=>{ themes=themes.filter(x=>x!==th); renderThemes(); };
+    c.querySelector('[data-k=del]').onclick  = ()=>{ themes=themes.filter(x=>x!==th); renderThemes(); refreshMoveHint(); };
     const ta=c.querySelector('[data-k=raw]');
     ta.oninput = e => {
       th.raw=e.target.value;
@@ -748,7 +795,7 @@ function refreshFoot(card, th){
   card.querySelector('.err').textContent = th.err || '';
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-document.getElementById('addTheme').onclick=()=>{ themes.push(blank('')); renderThemes(); };
+document.getElementById('addTheme').onclick=()=>{ themes.push(blank('')); renderThemes(); refreshMoveHint(); };
 document.getElementById('seedBtn').onclick=()=>{
   themes=seed();
   if(location.hash) history.replaceState(null,'',location.pathname);  // 남은 링크 상태도 털어낸다
@@ -1066,14 +1113,15 @@ function renderResults(){
   list.forEach((r,ri)=>{
     const d=document.createElement('div');
     d.className='res'+(ri===0?' best':'');
-    const tight=r.minGap<10;
+    const tight=r.minWait<10;
     d.innerHTML=`
       <div class="res-head">
         <span class="rank">${pad(ri+1)}</span>
         <span class="stat"><b class="mono">${fmt(r.start)} → ${fmt(r.end)}</b></span>
         <span class="stat">총 <b class="mono">${Math.round((r.end-r.start)/60*10)/10}h</b></span>
         <span class="stat ${r.total<=30?'good':''}">공백 <b class="mono">${r.total}분</b></span>
-        <span class="stat ${tight?'warn':''}">최소 <b class="mono">${r.minGap===Infinity?'—':r.minGap+'분'}</b></span>
+        <span class="stat ${tight?'warn':''}">최소 <b class="mono">${r.minWait===Infinity?'—':r.minWait+'분'}</b></span>
+        ${r.moveTotal?`<span class="stat mvstat">이동 <b>${r.moveTotal}분</b></span>`:''}
         ${r.count<themesReady.length?`<span class="stat">테마 <b>${r.count}/${themesReady.length}</b></span>`:''}
         <button class="btn-copy" type="button">복사</button>
         ${CLOUD_ON?'<button class="btn-copy btn-save" type="button">저장</button>':''}
@@ -1089,15 +1137,35 @@ function renderResults(){
           r.steps.slice(1).map((s,k)=>{
             const p=r.steps[k], g=s.start-p.end;
             if(g<=0) return '';
+            const mv=s.move||0, wait=g-mv;
             const l=pct(p.end), w=pct(s.start)-pct(p.end);
-            const cls = g<10 ? ' tight' : (g>=40 ? ' big' : '');
-            return `<div class="gap${cls}" style="left:${l}%;width:${w}%" title="공백 ${g}분"></div>`
-                 + `<div class="gaplab${cls}" style="left:${l}%;width:${w}%"><em>${g}분</em></div>`;
+            /* 좁음/넓음 판정은 "노는 시간" 으로 한다. 이동 10분이 낀 15분 공백은
+               여유가 5분뿐이라 빠듯한 것이지, 15분 쉬는 게 아니다. */
+            const cls = wait<10 ? ' tight' : (wait>=40 ? ' big' : '');
+            const tip = mv ? `${esc(p.place)} → ${esc(s.place)} 이동 ${mv}분 + 여유 ${wait}분` : `공백 ${g}분`;
+            let h=`<div class="gap${cls}" style="left:${l}%;width:${w}%" title="${tip}"></div>`;
+            if(mv>0){
+              /* 이동은 앞 테마가 끝나자마자 일어난다 — 공백의 앞쪽을 따로 칠한다 */
+              const mw=pct(p.end+mv)-pct(p.end);
+              h+=`<div class="mv" style="left:${l}%;width:${mw}%" title="${tip}"></div>`;
+            }
+            h+=`<div class="gaplab${cls}" style="left:${l}%;width:${w}%">`
+             + (mv?`<em><u>이동 ${mv}</u> · ${wait}분</em>`:`<em>${g}분</em>`)
+             + `</div>`;
+            return h;
           }).join('')
         }</div>
         <div class="axis">${axisTicks(lo,hi,span)}</div>
         </div></div>
-        <div class="seq">${r.steps.map(s=>`<b>${fmt(s.start)}</b> ${esc(s.name)}`).join('  →  ')}  →  <b>${fmt(r.end)}</b> 종료</div>
+        <div class="seq">${(()=>{
+          const parts=[];
+          r.steps.forEach((s,i)=>{
+            if(i && s.move) parts.push(`<i class="mvtag">이동 ${s.move}분</i>`);
+            parts.push(`<b>${fmt(s.start)}</b> ${esc(s.name)}`);
+          });
+          parts.push(`<b>${fmt(r.end)}</b> 종료`);
+          return parts.join('  →  ');
+        })()}</div>
       </div>`;
     /* 이 조합 한 건을 텍스트로 — 카톡에 그대로 붙여넣을 수 있게 */
     d.querySelector('.btn-copy').onclick = async e => {
@@ -1161,6 +1229,30 @@ function axisTicks(lo,hi,span){
 /* ── 실행 ── */
 const $ = id => document.getElementById(id);
 /* 식사 시간 입력칸은 켰을 때만 보인다 */
+/* 이동시간이 지금 실제로 걸리는지 한 줄로 알려 준다.
+   매장을 안 적으면 조용히 0 이 되는데, 그걸 모르면 "왜 안 붙지" 가 된다. */
+function refreshMoveHint(){
+  const el=$('moveHint'); if(!el) return;
+  const named=themes.filter(t=>(t.place||'').trim());
+  const places=new Set(named.map(t=>t.place.trim()));
+  const m=parseInt($('oMove').value)||0;
+  if(!named.length){
+    el.className='movehint';
+    el.innerHTML='테마에 <b>매장</b>을 적으면 매장이 바뀌는 자리에 이동시간이 붙습니다. 지금은 안 붙습니다.';
+  }else if(places.size<2){
+    el.className='movehint';
+    el.innerHTML=`매장이 <b>${esc([...places][0])}</b> 한 곳이라 이동시간이 붙지 않습니다.`;
+  }else if(!m){
+    el.className='movehint';
+    el.innerHTML=`매장 <b>${places.size}곳</b> — 이동시간이 <b>0분</b>이라 붙지 않습니다.`;
+  }else{
+    el.className='movehint on';
+    const blank=themes.length-named.length;
+    el.innerHTML=`매장 <b>${places.size}곳</b> · 매장이 바뀌는 자리마다 <b>${m}분</b>이 붙습니다`
+      + (blank?` <span class="dimhint">(매장을 안 적은 테마 ${blank}개는 제외)</span>`:'');
+  }
+}
+$('oMove').oninput = refreshMoveHint;
 $('oMeal').onchange = e => $('mealRow').classList.toggle('on', e.target.checked);
 /* 당일 즉흥으로 짤 때 시작 하한을 현재 시각으로 */
 $('nowBtn').onclick = () => { const d=new Date(); $('oStart').value = pad(d.getHours())+':'+pad(d.getMinutes()); };
@@ -1172,6 +1264,7 @@ function readOptions(){
     endMax:   parseClock($('oEnd').value),
     minGap:   parseInt($('oMinGap').value)||0,
     maxGap:   ($('oMaxGap').value.trim()==='')?null:(parseInt($('oMaxGap').value)||null),
+    moveMin:  parseInt($('oMove').value)||0,
     /* 매진 회차는 애초에 예약할 수 없으므로 선택지로 두지 않는다.
        "매진" 이 붙어 들어온 회차만 여기서 걸러지고, 나머지는 사용자가 빼고 넣는다. */
     excludeSoldout: true,
@@ -1194,6 +1287,7 @@ $('go').onclick=()=>{
      회차가 없는 카드는 애초에 일정에 안 들어가므로 걸러낸 뒤의 인덱스를 쓴다. */
   themesReady=themes.filter(t=>t.sessions.length&&t.dur>0)
                     .map((t,i)=>({name:t.name||('테마 '+(i+1)),dur:t.dur,sessions:t.sessions,
+                                  place:t.place||'',
                                   lockPos: t.lock ? i : null}));
   if(themesReady.length<2){ note.textContent='회차가 있는 테마가 2개 이상 필요합니다.'; found=[]; renderResults(); elCount.textContent=''; return; }
 
@@ -1228,28 +1322,32 @@ const b64d = str => new TextDecoder().decode(
 
 function serialize(){
   return b64e(JSON.stringify({
-    v:2,
-    t: themes.map(t=>[t.name, t.dur, t.raw, t.lock?1:0]),
+    v:3,
+    t: themes.map(t=>[t.name, t.dur, t.raw, t.lock?1:0, t.place||'']),
     o: [$('oStart').value, $('oEnd').value, $('oMinGap').value, $('oMaxGap').value,
         1, $('oPartial').checked?1:0,
-        $('oMeal').checked?1:0, $('oMealFrom').value, $('oMealTo').value, $('oMealMin').value],
+        $('oMeal').checked?1:0, $('oMealFrom').value, $('oMealTo').value, $('oMealMin').value,
+        $('oMove').value],
     k: sortKey
   }));
 }
 function restore(hash){
   const d=JSON.parse(b64d(hash));
-  if(d.v!==1 && d.v!==2) throw new Error('알 수 없는 링크 형식');
-  themes = d.t.map(([name,dur,raw,lock])=>{
+  if(d.v!==1 && d.v!==2 && d.v!==3) throw new Error('알 수 없는 링크 형식');
+  themes = d.t.map(([name,dur,raw,lock,place])=>{
     const th=blank(name); th.dur=dur; th.raw=raw||'';
     th.lock=!!lock;                 // v1 의 'first'/'last' 문자열도 참으로 읽혀 자리 고정이 된다
+    th.place=place||'';             // v1·v2 링크에는 없다 — 빈칸이면 이동시간이 안 붙는다
     th.sessions=parseSessions(th.raw); th.source=th.raw?'manual':'';
     return th;
   });
-  const [a,b,c2,dd,so,pt,me,mf,mt,mm]=d.o;
+  const [a,b,c2,dd,so,pt,me,mf,mt,mm,mv]=d.o;
   $('oStart').value=a; $('oEnd').value=b; $('oMinGap').value=c2; $('oMaxGap').value=dd;
   $('oPartial').checked=!!pt;   // so 슬롯은 옛 링크 호환용으로 남겨두고 쓰지 않는다
   $('oMeal').checked=!!me; $('mealRow').classList.toggle('on',!!me);
   $('oMealFrom').value=mf; $('oMealTo').value=mt; $('oMealMin').value=mm;
+  if(mv!==undefined) $('oMove').value=mv;
+  refreshMoveHint();
   if(d.k) sortKey=d.k;
 }
 
@@ -1286,9 +1384,11 @@ function resultToText(r){
   const dur = m => (m>=60 ? Math.floor(m/60)+'시간 '+(m%60?(m%60)+'분':'') : m+'분').trim();
   const head = `${r.count}연방 · ${fmt(r.start)} → ${fmt(r.end)} (${dur(r.end-r.start)}, 공백 ${r.total}분)`;
   const body = r.steps.map((s,i)=>{
-    const line = `${fmt(s.start)}–${fmt(s.end)}  ${s.name} (${s.dur}분)`;
-    const g = i<r.steps.length-1 ? r.steps[i+1].start - s.end : null;
-    return g===null ? line : line + `\n     ↓ 공백 ${g}분`;
+    const line = `${fmt(s.start)}–${fmt(s.end)}  ${s.name}${s.place?` @${s.place}`:''} (${s.dur}분)`;
+    const nx = r.steps[i+1];
+    if(!nx) return line;
+    const g = nx.start - s.end, mv = nx.move||0;
+    return line + (mv ? `\n     ↓ 이동 ${mv}분 + 여유 ${g-mv}분` : `\n     ↓ 공백 ${g}분`);
   }).join('\n');
   return head + '\n\n' + body;
 }
@@ -1523,7 +1623,7 @@ if(location.hash.startsWith('#s=')){
     themes=seed();
   }
 }
-renderThemes(); renderSorts(); renderAcct();
+renderThemes(); renderSorts(); renderAcct(); refreshMoveHint();
 </script>
 </body>
 </html>

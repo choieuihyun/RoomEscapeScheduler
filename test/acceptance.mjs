@@ -10,8 +10,8 @@ import { readFile } from 'node:fs/promises';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const m = html.match(/@core:start[\s\S]*?\*\/([\s\S]*?)\/\*[\s\S]{0,80}?@core:end/);
 if (!m) { console.error('index.html에서 @core 구간을 찾지 못했습니다.'); process.exit(1); }
-const core = new Function(m[1] + '\nreturn {pad,fmt,parseClock,parseSessions,sessionsToText,search,SORTS};')();
-const { fmt, parseSessions, search, SORTS } = core;
+const core = new Function(m[1] + '\nreturn {pad,fmt,parseClock,parseSessions,sessionsToText,search,SORTS,moveCost};')();
+const { fmt, parseSessions, search, SORTS, moveCost } = core;
 
 let fail = 0;
 const ok = (cond, name, extra='') => {
@@ -153,6 +153,57 @@ ok(la.length > 0 && la.every(r => r.steps.map(s => s.name).join('>') === '범계
 const bo = search(lockAt(0, 2), { ...opts, meal: MEAL }).out;
 ok(bo.every(r => r.steps[0].name === '범계' && r.steps[2].name === '몽' && hasMealGap(r)),
    `자리 잠금 + 식사 공백 동시 적용 (${bo.length}개)`);
+
+/* ── 3.6 매장 간 이동시간 ── */
+console.log('\n[3.6] 매장 간 이동시간');
+
+// moveCost 단독
+eq(moveCost('키이스', '키이스', 10), 0, '같은 매장 → 0분');
+eq(moveCost('키이스', '넥스트', 10), 10, '다른 매장 → 10분');
+eq(moveCost('', '넥스트', 10), 0, '매장을 안 적은 쪽이 있으면 0분 (모르는 것을 지어내지 않는다)');
+eq(moveCost('키이스', '', 10), 0, '반대 방향도 마찬가지');
+eq(moveCost('키이스', '넥스트', 0), 0, '이동시간 0분 설정이면 안 붙는다');
+eq(moveCost(' 키이스 ', '키이스', 10), 0, '앞뒤 공백은 같은 매장으로 본다');
+
+// 매장을 붙인 테마로 탐색
+const P = (t, place) => ({ ...t, place });
+const placed = [P(themes[0], 'A'), P(themes[1], 'B'), P(themes[2], 'A')];   // 범계=A, 왓어트립=B, 몽=A
+const base = search(placed, { ...opts, minGap: 0, moveMin: 0 }).out;
+const moved = search(placed, { ...opts, minGap: 0, moveMin: 30 }).out;
+
+ok(moved.length > 0, `이동 30분을 걸어도 조합은 남는다 (${moved.length}개)`);
+ok(moved.length < base.length, `이동시간은 조합을 줄인다 (${base.length} → ${moved.length})`);
+
+// 매장이 바뀌는 자리마다 실제로 30분 이상 비어 있어야 한다
+const gapOK = r => r.steps.every((s, i) => {
+  if (!i) return true;
+  const g = s.start - r.steps[i - 1].end;
+  const need = r.steps[i - 1].place === s.place ? 0 : 30;
+  return g >= need;
+});
+ok(moved.every(gapOK), '매장이 바뀌는 자리는 전부 30분 이상 확보된다');
+
+// 같은 매장끼리는 이동이 안 붙는다
+ok(moved.every(r => r.steps.every((s, i) => i === 0 || (r.steps[i - 1].place === s.place ? s.move === 0 : s.move === 30))),
+   'step.move 는 매장이 바뀔 때만 채워진다');
+
+// 최소 공백과 더해진다 (대체가 아니라 누적)
+const both = search(placed, { ...opts, minGap: 10, moveMin: 30 }).out;
+ok(both.every(r => r.steps.every((s, i) =>
+     i === 0 || (s.start - r.steps[i - 1].end) >= 10 + (s.move || 0))),
+   '최소 공백 10분 + 이동 30분 → 매장이 바뀌면 40분 이상');
+
+// minWait: 이동을 뺀 "실제로 쉬는 시간"
+ok(both.every(r => r.minWait >= 10),
+   'minWait 는 이동을 뺀 값이라 최소 공백(10분) 이상이다');
+ok(moved.some(r => r.moveTotal > 0) && moved.every(r =>
+     r.moveTotal === r.steps.reduce((a, x) => a + (x.move || 0), 0)),
+   'moveTotal 은 각 구간 이동의 합이다');
+
+// 매장을 아무도 안 적으면 이동시간 설정이 있어도 아무 일이 없어야 한다
+eq(search(themes, { ...opts, minGap: 0, moveMin: 60 }).out.length,
+   search(themes, { ...opts, minGap: 0, moveMin: 0 }).out.length,
+   '매장을 안 적으면 이동시간 설정은 결과를 바꾸지 않는다');
 
 /* ── 4. 비기능 요구 (§2.4) ── */
 console.log('\n[4] 비기능 요구');
