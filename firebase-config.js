@@ -13,5 +13,5 @@ window.FIREBASE_CONFIG = {
   apiKey:            "AIzaSyDSmp0yCSN2fqc7jvlzgLh4LliFi-XwoAk",
   authDomain:        "roomescapescheduler.firebaseapp.com",
   projectId:         "roomescapescheduler",
-  appId:             "1:13772151522:web:a4ec3801e170a78a845cbb",
+  appId:             "1:13772151522:web:b0ce0adfb766fa81845cbb",
 };
