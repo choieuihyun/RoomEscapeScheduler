@@ -125,6 +125,16 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s
 .run{display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}
 .run .note{font-size:12px;color:var(--muted)}
 
+/* ── result tabs ── */
+.tabrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tabrow.sets{margin-bottom:12px;padding-left:2px}
+.tab{background:none;border:1px solid var(--line);color:var(--muted2);padding:5px 12px;font-size:12px}
+.tab b{color:var(--paper);font-weight:600;margin-left:3px}
+.tab:hover{border-color:var(--brass-dim)}
+.tab.on{background:var(--panel2);border-color:var(--brass);color:var(--paper)}
+.tab.on b{color:var(--brass)}
+.tabrow.sets .tab{font-size:11.5px;padding:3px 10px}
+
 /* ── sort ── */
 .sorts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .sortbtn{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 12px;font-size:12px}
@@ -227,7 +237,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s
     <div class="opt"><label>최대 공백 (분)</label><input class="mono" id="oMaxGap" placeholder="90"></div>
   </div>
   <div class="checks">
-    <label class="chk"><input type="checkbox" id="oPartial"> 일부 테마만 넣은 조합도 보기</label>
+    <label class="chk"><input type="checkbox" id="oPartial"> 일부 테마만 넣은 조합도 계산</label>
     <label class="chk"><input type="checkbox" id="oMeal"> 식사 시간 확보</label>
   </div>
   <div class="mealrow" id="mealRow">
@@ -247,6 +257,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s
 
 <section class="sec">
   <div class="sec-head"><h2>결과</h2><span id="resCount"></span></div>
+  <div id="tabs"></div>
   <div class="sorts" id="sorts"></div>
   <div id="results"><div class="empty">테마 회차를 넣고 계산을 눌러주세요.</div></div>
 </section>
@@ -403,7 +414,22 @@ const SORTS=[
 /* ── 상태 ── */
 let themes=[], nextId=1;
 function blank(name){ return {id:nextId++, name:name||'', dur:70, raw:'', sessions:[], busy:'', err:'', source:'', lock:false}; }
-themes = [blank(''),blank(''),blank('')];
+
+/* 시작할 때 채워두는 기본 데이터. 매번 손으로 넣지 않고 바로 눌러볼 수 있게 한다.
+   지우고 쓰면 되고, 공유 링크로 들어오면 이 값은 덮어써진다. */
+const SEED=[
+  ['범계',      75, '10:30  12:00  13:30  15:00  16:30  18:00  19:30  21:00  22:30'],
+  ['몽',        70, '10:50  12:10  13:30  14:50  16:10  17:30  18:50  20:10  21:30  22:50'],
+  ['왓 어 트립', 70, '10:20  11:45  13:10  14:35  16:00  17:25  18:50  20:15  21:40  23:05'],
+];
+function seed(){
+  return SEED.map(([name,dur,raw])=>{
+    const th=blank(name); th.dur=dur; th.raw=raw;
+    th.sessions=parseSessions(raw); th.source='manual';
+    return th;
+  });
+}
+themes = seed();
 
 /* ── 테마 렌더 ── */
 const elThemes = document.getElementById('themes');
@@ -697,12 +723,62 @@ function renderSorts(){
 /* ── 결과 렌더 ── */
 const elRes=document.getElementById('results'), elCount=document.getElementById('resCount');
 const SHOW=12;
+
+/* 어떤 테마들로 이루어진 조합인지를 나타내는 키. 부분 조합을 묶어 보여줄 때 쓴다. */
+const setKey = r => r.steps.map(s=>s.i).sort((a,b)=>a-b).join(',');
+const setLabel = k => k.split(',').map(i=>(themesReady[+i]||{}).name || ('테마 '+(+i+1))).join(' + ');
+
+let tabCount=null, tabSet=null;
+
+/* 부분 조합은 정렬 1차 키가 "테마 수 내림차순" 이라 전체 조합 아래에 파묻힌다.
+   개수별로 탭을 나눠야 비로소 보인다. 조합 칩은 그 안에서 어느 테마 묶음인지 고르는 것. */
+function renderTabs(){
+  const el=document.getElementById('tabs');
+  if(!found.length){ el.innerHTML=''; return; }
+  const counts=[...new Set(found.map(r=>r.count))].sort((a,b)=>b-a);
+  const maxC=counts[0];
+  if(tabCount==null || !counts.includes(tabCount)) tabCount=maxC;
+  let html='';
+  if(counts.length>1){
+    html += '<div class="tabrow">' + counts.map(c=>{
+      const n=found.filter(r=>r.count===c).length;
+      return `<button class="tab${c===tabCount?' on':''}" data-c="${c}">테마 ${c}개${c===maxC?' 전부':''}<b>${n.toLocaleString()}</b></button>`;
+    }).join('') + '</div>';
+  }
+  if(tabCount<maxC){
+    const inTab=found.filter(r=>r.count===tabCount);
+    const sets=new Map();
+    inTab.forEach(r=>{ const k=setKey(r); sets.set(k,(sets.get(k)||0)+1); });
+    if(tabSet!=null && !sets.has(tabSet)) tabSet=null;
+    html += '<div class="tabrow sets">'
+      + `<button class="tab${tabSet==null?' on':''}" data-s="">전체<b>${inTab.length.toLocaleString()}</b></button>`
+      + [...sets.entries()].sort((a,b)=>b[1]-a[1]).map(([k,n])=>
+          `<button class="tab${k===tabSet?' on':''}" data-s="${k}">${esc(setLabel(k))}<b>${n.toLocaleString()}</b></button>`).join('')
+      + '</div>';
+  } else tabSet=null;
+  el.innerHTML=html;
+  el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ tabCount=+b.dataset.c; tabSet=null; renderTabs(); renderResults(); });
+  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ tabSet=b.dataset.s||null; renderTabs(); renderResults(); });
+}
+
+function currentList(){
+  let list=found;
+  if(tabCount!=null) list=list.filter(r=>r.count===tabCount);
+  if(tabSet!=null)   list=list.filter(r=>setKey(r)===tabSet);
+  return list;
+}
+
 function renderResults(){
   if(!found.length){
     elRes.innerHTML='<div class="empty">조건을 만족하는 조합이 없습니다. 최소 공백을 줄이거나 시간 범위를 넓혀보세요.</div>';
     return;
   }
-  const list=[...found].sort(SORTS.find(s=>s.k===sortKey).f).slice(0,SHOW);
+  const pool=currentList();
+  if(!pool.length){
+    elRes.innerHTML='<div class="empty">이 묶음에는 조합이 없습니다.</div>';
+    return;
+  }
+  const list=[...pool].sort(SORTS.find(s=>s.k===sortKey).f).slice(0,SHOW);
   const lo=Math.min(...list.map(r=>r.start)), hi=Math.max(...list.map(r=>r.end));
   const span=Math.max(hi-lo,60), pct=m=>((m-lo)/span)*100;
 
@@ -843,8 +919,10 @@ $('go').onclick=()=>{
   const {out,capped}=search(themesReady,o);
   found=out;
   const ms=Math.round(performance.now()-t0);
+  tabCount=null; tabSet=null;      // 새로 계산하면 탭 선택을 초기화한다
   elCount.textContent=`${out.length.toLocaleString()}개 조합${capped?' (탐색 한도 도달)':''}`;
-  note.textContent=`${ms}ms · 상위 ${Math.min(SHOW,out.length)}개 표시`;
+  note.textContent=`${ms}ms · 상위 ${Math.min(SHOW,currentList().length||out.length)}개 표시`;
+  renderTabs();
   renderResults();
 };
 

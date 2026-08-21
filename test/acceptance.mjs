@@ -71,7 +71,7 @@ const T = (name, dur, times) => ({ name, dur, sessions: times.map(t => {
 
 const themes = [
   T('범계',     75, ['10:30','12:00','13:30','15:00','16:30','18:00','19:30','21:00','22:30']),
-  T('에이트립', 70, ['10:20','11:45','13:10','14:35','16:00','17:25','18:50','20:15','21:40','23:05']),
+  T('왓 어 트립', 70, ['10:20','11:45','13:10','14:35','16:00','17:25','18:50','20:15','21:40','23:05']),
   T('몽',       70, ['10:50','12:10','13:30','14:50','16:10','17:30','18:50','20:10','21:30','22:50']),
 ];
 const opts = { startMin: null, endMax: null, minGap: 0, maxGap: null, excludeSoldout: false, minCount: 3 };
@@ -86,7 +86,7 @@ ok(!capped, '탐색 한도 미도달');
 const best = [...out].sort(SORTS.find(s => s.k === 'gap').f)[0];
 const seq = best.steps.map(s => `${fmt(s.start)} ${s.name}`).join(' → ');
 
-eq(seq, '13:30 범계 → 14:50 몽 → 16:00 에이트립', '"공백 적은 순" 1위 = 검증된 최적해');
+eq(seq, '13:30 범계 → 14:50 몽 → 16:00 왓 어 트립', '"공백 적은 순" 1위 = 검증된 최적해');
 eq(best.total, 5,   '공백 총합 5분');
 eq(best.gaps, [5, 0], '개별 공백 [5, 0]');
 eq(fmt(best.end), '17:10', '종료 17:10');
@@ -141,12 +141,12 @@ ok(ll.every(r => r.steps.slice(0, -1).every(s => s.name !== '몽')),
 
 // 드롭다운(첫 타/마지막)으로는 표현할 수 없던 것 — 가운데 자리 고정
 const lm = search(lockAt(1), opts).out;
-ok(lm.length > 0 && lm.every(r => r.steps[1].name === '에이트립'),
-   `가운데 자리 잠금 → 전부 2번째가 에이트립 (${lm.length}개)`);
+ok(lm.length > 0 && lm.every(r => r.steps[1].name === '왓 어 트립'),
+   `가운데 자리 잠금 → 전부 2번째가 왓 어 트립 (${lm.length}개)`);
 
 // 전부 잠그면 "이 순서 그대로" 가 된다
 const la = search(lockAt(0, 1, 2), opts).out;
-ok(la.length > 0 && la.every(r => r.steps.map(s => s.name).join('>') === '범계>에이트립>몽'),
+ok(la.length > 0 && la.every(r => r.steps.map(s => s.name).join('>') === '범계>왓 어 트립>몽'),
    `전부 잠금 → 순서 그대로, 회차만 탐색 (${la.length}개)`);
 
 // 잠금 + 식사 공백 동시 적용
