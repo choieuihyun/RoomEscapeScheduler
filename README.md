@@ -33,6 +33,6 @@ npm test        # 인수 테스트 (44개 검사)
 
 ```
 index.html           앱 전체 (마크업 + 스타일 + 로직)
-serve.mjs            개발 서버 + OCR 프록시 (Node 내장 모듈만)
+serve.mjs            개발 서버 (Node 내장 모듈만, 정적 서빙 전용)
 test/acceptance.mjs  인수 테스트 — index.html 의 로직을 직접 실행
 ```

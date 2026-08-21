@@ -12,14 +12,9 @@
  * 폰에서 열어보는 등 같은 망에 일부러 노출하고 싶을 때만:
  *   HOST=0.0.0.0 node serve.mjs
  *
- * 하는 일 두 가지:
- *   1) 정적 파일 서빙 (index.html)
- *   2) POST /api/ocr → api.anthropic.com/v1/messages 프록시
- *      브라우저는 CORS 때문에 Anthropic API를 직접 부를 수 없고,
- *      부를 수 있다 해도 API 키가 프론트에 노출된다.
- *      키는 여기서만 읽고(ANTHROPIC_API_KEY) 브라우저로는 절대 내려가지 않는다.
- *
- * 키가 없으면 /api/ocr 은 503을 돌려주고, 앱은 "시간 직접 입력"으로 자연히 대체된다.
+ * 하는 일은 정적 파일 서빙 하나뿐이다.
+ * 이미지 인식은 브라우저 안에서 돌므로(vendor/tesseract) 서버가 할 일이 없다.
+ * 예전에 있던 /api/ocr 프록시는 AI 비전 API를 쓰던 시절의 잔재라 걷어냈다.
  */
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -29,9 +24,6 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT) || 5173;
 const HOST = process.env.HOST || '127.0.0.1';   // 루프백 고정 — 위 주석 참조
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const API_VERSION = '2023-06-01';
-const MAX_BODY = 12 * 1024 * 1024;          // 스크린샷 base64 여유분
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -52,49 +44,6 @@ const json = (res, code, obj) => {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(obj));
 };
-
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let size = 0;
-    req.on('data', c => {
-      size += c.length;
-      if (size > MAX_BODY) { reject(new Error('요청 본문이 너무 큽니다')); req.destroy(); return; }
-      chunks.push(c);
-    });
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    req.on('error', reject);
-  });
-}
-
-async function handleOcr(req, res) {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
-    return json(res, 503, { error: 'ANTHROPIC_API_KEY 미설정 — OCR 비활성' });
-  }
-  let body;
-  try {
-    body = await readBody(req);
-  } catch (err) {
-    return json(res, 413, { error: err.message });
-  }
-  try {
-    const upstream = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': API_VERSION,
-      },
-      body,
-    });
-    const text = await upstream.text();
-    res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(text);
-  } catch (err) {
-    json(res, 502, { error: 'upstream 요청 실패: ' + err.message });
-  }
-}
 
 async function handleStatic(req, res) {
   const url = new URL(req.url, 'http://localhost');
@@ -124,10 +73,6 @@ async function handleStatic(req, res) {
 }
 
 const handler = (req, res) => {
-  if (req.url.split('?')[0] === '/api/ocr') {
-    if (req.method !== 'POST') return json(res, 405, { error: 'POST만 허용' });
-    return handleOcr(req, res);
-  }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'GET만 허용' });
   handleStatic(req, res);
 };
@@ -147,10 +92,8 @@ const report = () => {
     console.error(`포트 ${PORT} 바인딩 실패 — 이미 사용 중인지 확인해 주세요.`);
     process.exit(1);
   }
-  const ocr = process.env.ANTHROPIC_API_KEY ? '켜짐' : '꺼짐 (ANTHROPIC_API_KEY 미설정)';
   const localOnly = bound.every(h => h === '127.0.0.1' || h === '::1' || h === 'localhost');
   console.log(`방탈출 스케줄러 →  http://localhost:${PORT}`);
-  console.log(`OCR 프록시      →  ${ocr}`);
   console.log(localOnly
     ? `접속 범위       →  이 컴퓨터에서만 (${bound.join(', ')})`
     : `접속 범위       →  ⚠ 같은 네트워크의 다른 기기도 접속 가능 (${bound.join(', ')})`);
