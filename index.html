@@ -14,6 +14,8 @@
   --ink:#15110E; --panel:#1E1815; --panel2:#2A221B; --line:#3B2F25;
   --brass:#C99A4C; --brass-dim:#8C6A32;
   --paper:#EDE4D6; --muted:#9A8B79;
+  --muted2:#BCAB94;              /* 결과 화면의 보조 텍스트 — 기존 muted 는 어두워 잘 안 읽힌다 */
+  --blk:#3A2E22; --blk-line:#B08843;   /* 타임라인 블록: 배경과 테두리 모두 한 단계 밝게 */
   --sage:#7FA88A; --brick:#C4574A;
   --r:3px;
 }
@@ -111,49 +113,57 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s
 
 /* ── results ── */
 .res{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
-.res.best{border-color:var(--brass-dim)}
+.res.best{border-color:var(--brass)}
 .res-head{display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .rank{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--brass);font-weight:600;width:26px;flex:none}
-.stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted)}
+.stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2)}
 .stat b{color:var(--paper);font-weight:600}
 .stat.warn b{color:var(--brick)}
 .stat.good b{color:var(--sage)}
 .res-body{padding:14px}
 
-/* signature: timeline */
-.tl{position:relative;height:50px;margin-bottom:6px}
-.blk{position:absolute;top:0;height:34px;background:var(--panel2);border:1px solid var(--brass-dim);border-radius:2px;overflow:hidden;display:flex;align-items:center;padding:0 7px}
-.blk .nm{flex:1;min-width:0;overflow:hidden;white-space:nowrap}
-.blk .nm i{display:inline-block;font-style:normal;font-size:11.5px;font-weight:600}
+/* 블록 폭은 소요시간에 비례해야 하므로 이름 길이로 늘릴 수 없다 (시간축이 거짓말이 된다).
+   대신 타임라인 전체를 필요한 만큼 넓히고 가로로 스크롤한다 — 비율은 그대로, 이름은 다 들어간다. */
+.tlwrap{overflow-x:auto;overflow-y:hidden}
+.tlinner{min-width:100%}
+.tlwrap::-webkit-scrollbar{height:6px}
+.tlwrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+
+/* signature: timeline
+   위: 테마 블록(이름 + 시작–종료)   아래: 공백 라벨   그 아래: 시간축 */
+.tl{position:relative;height:68px;margin-bottom:4px}
+.blk{position:absolute;top:0;height:44px;background:var(--blk);border:1px solid var(--blk-line);
+  border-radius:3px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;
+  padding:0 8px;gap:1px}
+.blk .nm{overflow:hidden;white-space:nowrap}
+.blk .nm i{display:inline-block;font-style:normal;font-size:12px;font-weight:600;color:var(--paper)}
 /* 이름이 블록보다 길면 잘라내지 않고 좌우로 천천히 훑는다 (--shift = 넘친 만큼) */
 .blk .nm.roll i{animation:roll 6s ease-in-out infinite alternate}
 @keyframes roll{from{transform:translateX(0)}to{transform:translateX(var(--shift,0))}}
-.blk small{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-left:6px;flex:none}
-.blk.so{border-style:dashed;border-color:var(--brick);opacity:.72}
+.blk .rng{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--brass);
+  white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
+.blk.so{border-style:dashed;border-color:var(--brick)}
+.blk.so .rng{color:var(--brick)}
 
-/* 공백 = 비어 있는 시간. 블록과 같은 높이의 빗금 영역으로 그려서
-   "얼마나 비었는지"가 폭으로 바로 읽히게 한다. */
-.gap{position:absolute;top:0;height:34px;display:flex;align-items:center;justify-content:center;
-  border-radius:2px;border-left:1px dashed var(--line);border-right:1px dashed var(--line);
-  background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(154,139,121,.15) 4px 8px)}
-.gap em{font-family:'IBM Plex Mono',monospace;font-size:11px;font-style:normal;font-weight:600;
-  color:var(--paper);background:var(--panel);border:1px solid var(--line);
-  padding:1px 6px;border-radius:10px;white-space:nowrap;line-height:1.6}
-.gap.big{background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(201,154,76,.20) 4px 8px);
+/* 공백: 막대에는 빗금 영역만, 숫자는 막대 아래에 둔다 */
+.gap{position:absolute;top:0;height:44px;border-radius:3px;
+  border-left:1px dashed var(--line);border-right:1px dashed var(--line);
+  background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(188,171,148,.18) 4px 8px)}
+.gap.big{background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(201,154,76,.26) 4px 8px);
   border-color:var(--brass-dim)}
-.gap.big em{color:var(--brass);border-color:var(--brass-dim)}
-.gap.tight{background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(196,87,74,.22) 4px 8px);
+.gap.tight{background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(196,87,74,.30) 4px 8px);
   border-color:var(--brick)}
-.gap.tight em{color:var(--brick);border-color:var(--brick)}
-/* 라벨이 공백 폭보다 넓으면 옆 블록의 이름을 덮어버린다. 그런 경우에만 막대 아래로 내린다. */
-.gap.narrow{overflow:visible}
-.gap.narrow em{position:absolute;top:33px;font-size:10px;padding:0 4px;border:0;background:var(--panel);border-radius:0}
-.axis{position:relative;height:16px;border-top:1px solid var(--line)}
-.tick{position:absolute;top:2px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--brass-dim);transform:translateX(-50%)}
-.tick::before{content:'';position:absolute;left:50%;top:-3px;height:3px;border-left:1px solid var(--line)}
-.seq{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:9px}
-.seq b{color:var(--paper);font-weight:600}
+.gaplab{position:absolute;top:46px;height:18px;display:flex;align-items:center;justify-content:center}
+.gaplab em{font-family:'IBM Plex Mono',monospace;font-size:11px;font-style:normal;font-weight:600;
+  color:var(--muted2);white-space:nowrap}
+.gaplab.big em{color:var(--brass)}
+.gaplab.tight em{color:var(--brick)}
 
+.axis{position:relative;height:16px;border-top:1px solid var(--line)}
+.tick{position:absolute;top:2px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted2);transform:translateX(-50%)}
+.tick::before{content:'';position:absolute;left:50%;top:-3px;height:3px;border-left:1px solid var(--brass-dim)}
+.seq{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted2);margin-top:9px}
+.seq b{color:var(--paper);font-weight:600}
 /* ── misc ── */
 .empty{color:var(--muted);font-size:13px;padding:26px 0;text-align:center;border:1px dashed var(--line);border-radius:var(--r)}
 .err{color:var(--brick);font-size:12.5px;margin-top:8px}
@@ -637,27 +647,54 @@ function renderResults(){
         ${r.count<themesReady.length?`<span class="stat">테마 <b>${r.count}/${themesReady.length}</b></span>`:''}
       </div>
       <div class="res-body">
+        <div class="tlwrap"><div class="tlinner">
         <div class="tl">${
           r.steps.map(s=>{
             const l=pct(s.start), w=pct(s.end)-pct(s.start);
-            return `<div class="blk${s.soldout?' so':''}" style="left:${l}%;width:${w}%" title="${esc(s.name)} ${fmt(s.start)}→${fmt(s.end)}">
-              <span class="nm"><i>${esc(s.name)}</i></span><small>${s.dur}</small></div>`;
+            return `<div class="blk${s.soldout?' so':''}" style="left:${l}%;width:${w}%" title="${esc(s.name)} ${fmt(s.start)}→${fmt(s.end)} (${s.dur}분)">
+              <span class="nm"><i>${esc(s.name)}</i></span><span class="rng" data-s="${fmt(s.start)}">${fmt(s.start)}–${fmt(s.end)}</span></div>`;
           }).join('') +
           r.steps.slice(1).map((s,k)=>{
             const p=r.steps[k], g=s.start-p.end;
             if(g<=0) return '';
             const l=pct(p.end), w=pct(s.start)-pct(p.end);
             const cls = g<10 ? ' tight' : (g>=40 ? ' big' : '');
-            return `<div class="gap${cls}" style="left:${l}%;width:${w}%" title="공백 ${g}분"><em>${g}분</em></div>`;
+            return `<div class="gap${cls}" style="left:${l}%;width:${w}%" title="공백 ${g}분"></div>`
+                 + `<div class="gaplab${cls}" style="left:${l}%;width:${w}%"><em>${g}분</em></div>`;
           }).join('')
         }</div>
         <div class="axis">${axisTicks(lo,hi,span)}</div>
+        </div></div>
         <div class="seq">${r.steps.map(s=>`<b>${fmt(s.start)}</b> ${esc(s.name)}`).join('  →  ')}  →  <b>${fmt(r.end)}</b> 종료</div>
       </div>`;
     elRes.appendChild(d);
   });
   /* appendChild 뒤에야 실제 폭이 잡힌다. 넘치는 이름에만 훑기를 건다 —
      안 넘치는 이름까지 움직이면 눈만 피곤하다. */
+  /* 1) 이름이 안 들어가는 블록이 있으면 타임라인 전체를 그 비율만큼 넓힌다.
+        블록은 % 로 배치돼 있어 컨테이너만 넓히면 시간 비율을 유지한 채 전부 커진다.
+        무한정 넓히면 스크롤이 과해지므로 4배에서 끊고, 나머지는 이름 훑기로 넘긴다. */
+  elRes.querySelectorAll('.tlinner').forEach(inner=>{
+    let factor=1;
+    inner.querySelectorAll('.blk').forEach(b=>{
+      const nm=b.querySelector('.nm i'), rng=b.querySelector('.rng');
+      const need=Math.max(nm?nm.scrollWidth:0, rng?rng.scrollWidth:0)+18;
+      const cur=b.clientWidth;
+      if(cur>0 && need>cur) factor=Math.max(factor, need/cur);
+    });
+    factor=Math.min(factor,4);
+    if(factor>1.01) inner.style.width=(factor*100)+'%';
+  });
+
+  /* 2) 그래도 좁으면 "13:30–14:45" 가 "13:30–1" 로 잘린다. 잘린 시각은 없느니만 못하므로
+        들어갈 만큼만 남긴다: 시작–종료 → 시작만 → (그래도 안 되면) 생략. */
+  elRes.querySelectorAll('.blk .rng').forEach(el=>{
+    if(el.scrollWidth > el.clientWidth+1){
+      el.textContent = el.dataset.s;
+      if(el.scrollWidth > el.clientWidth+1) el.textContent = '';
+    }
+  });
+  /* 3) 4배 상한에 걸려 여전히 넘치는 이름만 좌우로 훑는다 */
   elRes.querySelectorAll('.blk .nm').forEach(el=>{
     const inner=el.firstElementChild;
     const over=inner.scrollWidth-el.clientWidth;
@@ -665,11 +702,6 @@ function renderResults(){
       el.classList.add('roll');
       el.style.setProperty('--shift', (-over-2)+'px');
     }
-  });
-  /* 좁은 공백은 라벨이 안 들어가 옆 블록을 덮는다 → 막대 아래로 내린다 */
-  elRes.querySelectorAll('.gap').forEach(g=>{
-    const em=g.firstElementChild;
-    if(em && em.offsetWidth > g.clientWidth-2) g.classList.add('narrow');
   });
 }
 function axisTicks(lo,hi,span){
