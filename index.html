@@ -6,201 +6,266 @@
 <title>방탈출 스케줄러</title>
 <meta name="description" content="방탈출 테마별 회차 시간을 넣으면 겹치지 않는 조합을 전부 계산해 주는 도구">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🗝️</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<meta name="theme-color" content="#F2F4F6">
 <style>
+/* ── 토큰 ──────────────────────────────────────────────
+   밝은 배경 + 파란 포인트 + 큰 라운드 + 테두리 대신 그림자.
+   색은 역할로만 부르고 값은 여기서만 정한다. */
 :root{
-  --ink:#15110E; --panel:#1E1815; --panel2:#2A221B; --line:#3B2F25;
-  --brass:#C99A4C; --brass-dim:#8C6A32;
-  --paper:#EDE4D6; --muted:#9A8B79;
-  --muted2:#BCAB94;              /* 결과 화면의 보조 텍스트 — 기존 muted 는 어두워 잘 안 읽힌다 */
-  --blk:#3A2E22; --blk-line:#B08843;   /* 타임라인 블록: 배경과 테두리 모두 한 단계 밝게 */
-  --sage:#7FA88A; --brick:#C4574A;
-  --r:3px;
+  --bg:#F2F4F6;          /* 페이지 바닥 */
+  --surface:#FFFFFF;     /* 카드 */
+  --surface2:#F7F8FA;    /* 입력칸처럼 안으로 파인 면 */
+  --line:#E8EBED; --line2:#D5DADF;
+
+  --ink:#191F28;         /* 본문 */
+  --ink2:#4E5968;        /* 보조 */
+  --ink3:#8B95A1;        /* 흐린 설명 */
+
+  --blue:#3182F6; --blue-press:#1B64DA; --blue-soft:#E8F3FF; --blue-line:#B6D8FF;
+  --green:#00B26B; --green-soft:#E4F8EF;
+  --red:#F04452;   --red-soft:#FFECEE;  --red-line:#FFC9CF;
+  --amber:#E08700; --amber-soft:#FFF3E0; --amber-line:#FFD79A;
+
+  --r:16px; --r-sm:10px; --r-xs:8px; --pill:999px;
+  --sh:0 1px 2px rgba(25,31,40,.04), 0 4px 16px rgba(25,31,40,.05);
+  --sh-up:0 4px 12px rgba(25,31,40,.08), 0 12px 32px rgba(25,31,40,.08);
+  --ring:0 0 0 3px rgba(49,130,246,.14);
+
+  --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,
+         'Apple SD Gothic Neo','Segoe UI','Malgun Gothic',system-ui,sans-serif;
+  --num:ui-monospace,SFMono-Regular,'SF Mono',Menlo,monospace;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
-  background:var(--ink); color:var(--paper);
-  font-family:'IBM Plex Sans KR',system-ui,sans-serif;
-  font-size:14px; line-height:1.55;
-  padding:0 0 80px;
+  background:var(--bg); color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px; line-height:1.6; letter-spacing:-.01em;
+  -webkit-font-smoothing:antialiased;
+  padding:0 0 96px;
 }
-.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+/* 숫자가 세로로 안 흔들리게. 시각은 표처럼 읽히는 게 맞다 */
+.mono{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:0}
 .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
 
 /* ── header ── */
-header{border-bottom:1px solid var(--line);padding:34px 0 24px;margin-bottom:28px}
-h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
-h1 .dim{color:var(--brass)}
-header p{margin:0;color:var(--muted);font-size:13px;max-width:52ch}
+header{padding:32px 0 26px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.035em;margin:0 0 8px;color:var(--ink)}
+h1 .dim{color:var(--blue)}
+header p{margin:0;color:var(--ink3);font-size:14px;max-width:52ch}
 
 /* ── sections ── */
-.sec{margin-bottom:30px}
-.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
-.sec-head h2{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);margin:0}
-.sec-head span{font-size:12px;color:var(--muted)}
-.sec-head .hi{color:var(--paper);font-weight:600}
-.sec-head .count{font-size:12px;color:var(--paper);font-weight:600;
-  background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:1px 9px}
+.sec{margin-bottom:34px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.sec-head h2{font-size:18px;font-weight:700;letter-spacing:-.03em;color:var(--ink);margin:0}
+.sec-head span{font-size:13px;color:var(--ink3)}
+.sec-head .hi{color:var(--ink2);font-weight:600}
+.sec-head .count{font-size:12.5px;color:var(--blue);font-weight:700;
+  background:var(--blue-soft);border:none;border-radius:var(--pill);padding:3px 11px}
 
 /* ── theme cards ── */
 .themes{display:flex;flex-direction:column;gap:12px}
-.addrow{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
-.addhint{font-size:11.5px;color:var(--muted)}
-.addhint b{color:var(--paper)}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-.card.drag{border-color:var(--brass);background:var(--panel2)}
-.card-top{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
-.idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--brass-dim);width:22px;flex:none}
+.addrow{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.addhint{font-size:12.5px;color:var(--ink3)}
+.addhint b{color:var(--ink2);font-weight:600}
+.card{background:var(--surface);border:1px solid transparent;border-radius:var(--r);
+  padding:18px;box-shadow:var(--sh);transition:box-shadow .15s,border-color .15s}
+.card.drag{border-color:var(--blue);background:var(--surface)}
+.card-top{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+
 input,textarea,select{
-  background:var(--ink);border:1px solid var(--line);color:var(--paper);
-  border-radius:var(--r);padding:7px 9px;font-family:inherit;font-size:13px;
+  background:var(--surface2);border:1px solid var(--line);color:var(--ink);
+  border-radius:var(--r-sm);padding:10px 12px;font-family:inherit;font-size:14px;
+  transition:border-color .13s,box-shadow .13s,background .13s;
 }
-input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brass)}
-.i-name{flex:1;min-width:120px}
-.i-dur{width:78px}
-.unit{color:var(--muted);font-size:12px;margin-left:-4px}
-textarea{width:100%;min-height:60px;resize:vertical;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.7}
-.card-foot{display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap}
-.btn-img{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--line);color:var(--paper);padding:5px 11px;font-size:12px;border-radius:var(--r);cursor:pointer}
-.btn-img:hover{border-color:var(--brass-dim)}
+input::placeholder,textarea::placeholder{color:#B0B8C1}
+input:focus,textarea:focus,select:focus{outline:none;background:var(--surface);
+  border-color:var(--blue);box-shadow:var(--ring)}
+.i-name{flex:1;min-width:120px;font-weight:600}
+.i-dur{width:84px;text-align:center}
+.unit{color:var(--ink3);font-size:13px;margin-left:-2px}
+textarea{width:100%;min-height:66px;resize:vertical;
+  font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;line-height:1.85}
+.card-foot{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.btn-img{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);
+  border:1px solid var(--line);color:var(--ink2);padding:7px 13px;font-size:13px;
+  font-weight:500;border-radius:var(--r-sm);cursor:pointer}
+.btn-img:hover{background:var(--line);border-color:var(--line2)}
 .btn-img input{display:none}
+
 /* 입력한 것이 어떻게 해석됐는지 바로 보여주는 줄.
    12시간 보정은 조용히 일어나면 사고가 되므로(순서가 섞이면 엉뚱한 값이 된다) 눈에 보이게 한다. */
-.parsed{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:8px}
-.parsed .t{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper);
-  background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:1px 7px}
-.parsed .t.fix{border-color:var(--brass-dim);color:var(--brass)}
-.parsed .t.so{color:var(--brick);border-color:var(--brick);opacity:.7;text-decoration:line-through}
-.parsed .t.over{border-color:var(--brick);color:var(--brick)}
-.parsed .hint{font-size:11px;color:var(--muted)}
-.parsed .note{flex-basis:100%;font-size:11px;color:var(--muted);margin-top:1px}
-.parsed .warn{flex-basis:100%;font-size:11.5px;color:var(--brick);margin-top:2px;line-height:1.5}
-.parsed .warn b{color:var(--paper)}
-.chip{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
-.chip .src{color:var(--brass-dim)}
-.chip b{color:var(--sage);font-weight:600}
-.chip i{color:var(--brick);font-style:normal}
+.parsed{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.parsed .t{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12px;
+  font-weight:600;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--pill);padding:3px 10px}
+.parsed .t.fix{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue-press)}
+.parsed .t.so{background:var(--red-soft);border-color:var(--red-line);color:var(--red);
+  text-decoration:line-through}
+.parsed .t.over{background:var(--red-soft);border-color:var(--red-line);color:var(--red)}
+.parsed .hint{font-size:12.5px;color:var(--ink3)}
+.parsed .note{flex-basis:100%;font-size:12.5px;color:var(--ink3);margin-top:2px}
+.parsed .warn{flex-basis:100%;font-size:13px;color:var(--red);margin-top:3px;line-height:1.55}
+.parsed .warn b{color:var(--red);font-weight:700}
+.chip{font-size:12.5px;color:var(--ink3)}
+.chip .src{color:var(--ink3)}
+.chip b{color:var(--ink);font-weight:700}
+.chip i{color:var(--red);font-style:normal;font-weight:600}
 
 /* ── buttons ── */
-button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s}
-.btn{background:var(--panel2);border:1px solid var(--line);color:var(--paper);padding:7px 13px;font-size:12.5px}
-.btn:hover{border-color:var(--brass-dim)}
-.btn-x{background:none;border:1px solid transparent;color:var(--muted);padding:4px 8px;font-size:16px;line-height:1}
-.btn-x:hover{color:var(--brick);border-color:var(--line)}
+button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.13s;
+  letter-spacing:-.01em}
+.btn{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);
+  padding:9px 15px;font-size:13.5px;font-weight:500}
+.btn:hover{background:var(--line);border-color:var(--line2);color:var(--ink)}
+.btn-x{background:none;border:1px solid transparent;color:#B0B8C1;padding:5px 9px;
+  font-size:17px;line-height:1;border-radius:var(--r-xs)}
+.btn-x:hover{color:var(--red);background:var(--red-soft)}
 .btn-go{
-  background:var(--brass);border:1px solid var(--brass);color:#1A1208;
-  padding:11px 30px;font-size:14px;font-weight:700;letter-spacing:.02em;
+  background:var(--blue);border:1px solid var(--blue);color:#fff;
+  padding:13px 30px;font-size:15px;font-weight:700;border-radius:var(--r-sm);
+  box-shadow:0 2px 8px rgba(49,130,246,.24);
 }
-.btn-go:hover{background:#DCAA55}
-.btn-go:disabled{opacity:.45;cursor:default}
+.btn-go:hover{background:var(--blue-press);border-color:var(--blue-press);
+  box-shadow:0 4px 14px rgba(49,130,246,.3)}
+.btn-go:disabled{opacity:.4;cursor:default;box-shadow:none}
 
 /* ── options ── */
-.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-.opt label{display:block;font-size:11px;color:var(--muted);letter-spacing:.06em;margin-bottom:4px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 18px;
+  background:var(--surface);border:none;border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.opt label{display:flex;align-items:center;font-size:12.5px;color:var(--ink3);
+  letter-spacing:0;margin-bottom:6px;font-weight:500}
 .opt input,.opt select{width:100%}
-.checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
-.mini{background:none;border:1px solid var(--line);color:var(--muted2);font-size:10.5px;padding:1px 6px;margin-left:6px}
-.mini:hover{border-color:var(--brass-dim);color:var(--brass)}
-.mealrow{display:none;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px;
-  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:12.5px}
+.checks{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px}
+.mini{background:var(--blue-soft);border:none;color:var(--blue);font-size:11.5px;
+  font-weight:600;padding:3px 9px;margin-left:7px;border-radius:var(--pill)}
+.mini:hover{background:var(--blue-line)}
+.mealrow{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;
+  background:var(--surface);border:none;border-radius:var(--r);padding:14px 16px;
+  font-size:13.5px;box-shadow:var(--sh)}
 .mealrow.on{display:flex}
-.mealrow input{width:74px}
-.mealrow .lb{color:var(--muted2)}
-/* 드래그 손잡이 겸 순서 번호. 잠그면 황동색으로 바뀌어 "이 자리" 임을 알린다 */
-.idx{cursor:grab}
+.mealrow input{width:82px;text-align:center}
+.mealrow .lb{color:var(--ink2)}
+
+/* 드래그 손잡이 겸 순서 번호. 잠그면 파란 알약이 되어 "이 자리" 임을 알린다 */
+.idx{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;
+  color:var(--ink3);width:26px;height:26px;flex:none;display:inline-flex;
+  align-items:center;justify-content:center;border-radius:var(--pill);
+  background:var(--surface2);cursor:grab;user-select:none}
 .idx:active{cursor:grabbing}
-.card.locked .idx{color:var(--brass);font-weight:700}
-.card.dragging{opacity:.45}
-.card.over{border-color:var(--brass);box-shadow:inset 0 3px 0 -1px var(--brass)}
-.lockbtn{background:none;border:1px solid var(--line);color:var(--muted2);font-size:11.5px;padding:4px 9px}
-.lockbtn:hover{border-color:var(--brass-dim);color:var(--brass)}
-.lockbtn.on{background:var(--brass);border-color:var(--brass);color:#1A1208;font-weight:600}
-.btn-copy{background:none;border:1px solid var(--line);color:var(--muted2);font-size:11px;padding:2px 8px;margin-left:auto}
-.btn-copy:hover{border-color:var(--brass-dim);color:var(--brass)}
-.chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--paper);cursor:pointer}
-.chk input{width:14px;height:14px;accent-color:var(--brass)}
-.run{display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}
-.run .note{font-size:12px;color:var(--muted)}
+.card.locked .idx{color:#fff;background:var(--blue)}
+.card.dragging{opacity:.4}
+.card.over{border-color:var(--blue);box-shadow:inset 0 3px 0 -1px var(--blue),var(--sh)}
+.lockbtn{background:var(--surface2);border:1px solid var(--line);color:var(--ink3);
+  font-size:12.5px;font-weight:500;padding:6px 11px}
+.lockbtn:hover{background:var(--line);color:var(--ink2)}
+.lockbtn.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.btn-copy{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);
+  font-size:12px;font-weight:500;padding:4px 11px;border-radius:var(--pill)}
+.btn-copy:hover{background:var(--line);color:var(--ink)}
+.res-head .btn-copy:first-of-type{margin-left:auto}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);
+  cursor:pointer;font-weight:500}
+.chk input{width:17px;height:17px;accent-color:var(--blue);cursor:pointer}
+.run{display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap}
+.run .note{font-size:13px;color:var(--ink3)}
 
 /* ── result tabs ── */
-.tabrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.tabrow.sets{margin-bottom:12px;padding-left:2px}
-.tab{background:none;border:1px solid var(--line);color:var(--muted2);padding:5px 12px;font-size:12px}
-.tab b{color:var(--paper);font-weight:600;margin-left:3px}
-.tab:hover{border-color:var(--brass-dim)}
-.tab.on{background:var(--panel2);border-color:var(--brass);color:var(--paper)}
-.tab.on b{color:var(--brass)}
-.tabrow.sets .tab{font-size:11.5px;padding:3px 10px}
+.tabrow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.tabrow.sets{margin-bottom:14px}
+.tab{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
+  padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
+.tab b{color:var(--ink3);font-weight:700;margin-left:5px}
+.tab:hover{border-color:var(--line2)}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.tab.on b{color:rgba(255,255,255,.62)}
+.tabrow.sets .tab{font-size:12.5px;padding:5px 12px}
 
 /* ── sort ── */
-.sorts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.sortbtn{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 12px;font-size:12px}
-.sortbtn.on{background:var(--brass);border-color:var(--brass);color:#1A1208;font-weight:600}
+.sorts{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.sortbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
+  padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
+.sortbtn:hover{border-color:var(--line2)}
+.sortbtn.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
 
 /* ── results ── */
-.res{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
-.res.best{border-color:var(--brass)}
-.res-head{display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.rank{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--brass);font-weight:600;width:26px;flex:none}
-.stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2)}
-.stat b{color:var(--paper);font-weight:600}
-.stat.warn b{color:var(--brick)}
-.stat.good b{color:var(--sage)}
-.res-body{padding:14px}
+.res{background:var(--surface);border:1px solid transparent;border-radius:var(--r);
+  margin-bottom:12px;overflow:hidden;box-shadow:var(--sh)}
+.res.best{border-color:var(--blue-line);box-shadow:0 0 0 1px var(--blue-line),0 6px 22px rgba(49,130,246,.12)}
+.res-head{display:flex;align-items:center;gap:14px;padding:14px 18px;
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.rank{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12.5px;
+  font-weight:700;color:var(--ink3);width:auto;min-width:24px;flex:none}
+.res.best .rank{color:var(--blue)}
+.stat{font-size:13px;color:var(--ink3)}
+.stat b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.stat.warn b{color:var(--red)}
+.stat.good b{color:var(--green)}
+.res-body{padding:18px}
 
 /* 블록 폭은 소요시간에 비례해야 하므로 이름 길이로 늘릴 수 없다 (시간축이 거짓말이 된다).
    대신 타임라인 전체를 필요한 만큼 넓히고 가로로 스크롤한다 — 비율은 그대로, 이름은 다 들어간다. */
-.tlwrap{overflow-x:auto;overflow-y:hidden}
+.tlwrap{overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
 .tlinner{min-width:100%}
-.tlwrap::-webkit-scrollbar{height:6px}
-.tlwrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.tlwrap::-webkit-scrollbar{height:7px}
+.tlwrap::-webkit-scrollbar-thumb{background:var(--line2);border-radius:var(--pill)}
 
 /* signature: timeline
    위: 테마 블록(이름 + 시작–종료)   아래: 공백 라벨   그 아래: 시간축 */
-.tl{position:relative;height:68px;margin-bottom:4px}
-.blk{position:absolute;top:0;height:44px;background:var(--blk);border:1px solid var(--blk-line);
-  border-radius:3px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;
-  padding:0 8px;gap:1px}
+.tl{position:relative;height:74px;margin-bottom:6px}
+.blk{position:absolute;top:0;height:50px;background:var(--blue-soft);
+  border:1px solid var(--blue-line);border-radius:var(--r-xs);overflow:hidden;
+  display:flex;flex-direction:column;justify-content:center;padding:0 10px;gap:2px}
 .blk .nm{overflow:hidden;white-space:nowrap}
-.blk .nm i{display:inline-block;font-style:normal;font-size:12px;font-weight:600;color:var(--paper)}
+.blk .nm i{display:inline-block;font-style:normal;font-size:13px;font-weight:700;
+  color:var(--blue-press);letter-spacing:-.02em}
 /* 이름이 블록보다 길면 잘라내지 않고 좌우로 천천히 훑는다 (--shift = 넘친 만큼) */
 .blk .nm.roll i{animation:roll 6s ease-in-out infinite alternate}
 @keyframes roll{from{transform:translateX(0)}to{transform:translateX(var(--shift,0))}}
-.blk .rng{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--brass);
-  white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
-.blk.so{border-style:dashed;border-color:var(--brick)}
-.blk.so .rng{color:var(--brick)}
+.blk .rng{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:11px;
+  font-weight:500;color:var(--ink2);white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
+.blk.so{border-style:dashed;border-color:var(--red-line);background:var(--red-soft)}
+.blk.so .nm i{color:var(--red)}
+.blk.so .rng{color:var(--red)}
 
-/* 공백: 막대에는 빗금 영역만, 숫자는 막대 아래에 둔다 */
-.gap{position:absolute;top:0;height:44px;border-radius:3px;
-  border-left:1px dashed var(--line);border-right:1px dashed var(--line);
-  background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(188,171,148,.18) 4px 8px)}
-.gap.big{background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(201,154,76,.26) 4px 8px);
-  border-color:var(--brass-dim)}
-.gap.tight{background:repeating-linear-gradient(-45deg,transparent 0 4px,rgba(196,87,74,.30) 4px 8px);
-  border-color:var(--brick)}
-.gaplab{position:absolute;top:46px;height:18px;display:flex;align-items:center;justify-content:center}
-.gaplab em{font-family:'IBM Plex Mono',monospace;font-size:11px;font-style:normal;font-weight:600;
-  color:var(--muted2);white-space:nowrap}
-.gaplab.big em{color:var(--brass)}
-.gaplab.tight em{color:var(--brick)}
+/* 공백: 막대에는 채운 띠만, 숫자는 막대 아래에 둔다.
+   흰 배경에서는 옅은 빗금이 사라지므로 불투명한 색으로 칠한다 —
+   "공백을 더 눈에 띄게" 가 원래 요구였다. 세 단계(좁음/보통/넓음)를 색으로 가른다. */
+.gap{position:absolute;top:0;height:50px;border-radius:var(--r-xs);
+  border:1px solid var(--line);
+  background:repeating-linear-gradient(-45deg,#EDF0F3 0 5px,#E1E6EB 5px 10px)}
+.gap.big{border-color:var(--amber-line);
+  background:repeating-linear-gradient(-45deg,#FFF3E0 0 5px,#FFE3B8 5px 10px)}
+.gap.tight{border-color:var(--red-line);
+  background:repeating-linear-gradient(-45deg,#FFECEE 0 5px,#FFD4D9 5px 10px)}
+.gaplab{position:absolute;top:53px;height:19px;display:flex;align-items:center;justify-content:center}
+.gaplab em{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:11.5px;
+  font-style:normal;font-weight:700;color:var(--ink3);white-space:nowrap}
+.gaplab.big em{color:var(--amber)}
+.gaplab.tight em{color:var(--red)}
 
-.axis{position:relative;height:16px;border-top:1px solid var(--line)}
-.tick{position:absolute;top:2px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted2);transform:translateX(-50%)}
-.tick::before{content:'';position:absolute;left:50%;top:-3px;height:3px;border-left:1px solid var(--brass-dim)}
-.seq{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted2);margin-top:9px}
-.seq b{color:var(--paper);font-weight:600}
+.axis{position:relative;height:18px;border-top:1px solid var(--line)}
+.tick{position:absolute;top:3px;font-family:var(--num);font-variant-numeric:tabular-nums;
+  font-size:10.5px;color:#B0B8C1;transform:translateX(-50%)}
+.tick::before{content:'';position:absolute;left:50%;top:-4px;height:4px;border-left:1px solid var(--line2)}
+.seq{font-size:13px;color:var(--ink3);margin-top:12px;line-height:1.7}
+.seq b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+
 /* ── misc ── */
-.empty{color:var(--muted);font-size:13px;padding:26px 0;text-align:center;border:1px dashed var(--line);border-radius:var(--r)}
-.err{color:var(--brick);font-size:12.5px;margin-top:8px}
-.busy{color:var(--brass);font-size:12px}
+.empty{color:var(--ink3);font-size:14px;padding:36px 0;text-align:center;
+  background:var(--surface);border:none;border-radius:var(--r);box-shadow:var(--sh)}
+.err{color:var(--red);font-size:13px;margin-top:8px;font-weight:500}
+.busy{color:var(--blue);font-size:13px;font-weight:500}
 @media(max-width:560px){
-  .card-top{gap:7px}.i-name{min-width:90px}
-  .res-head{gap:9px}
-  h1{font-size:21px}
+  body{font-size:14px}
+  .card-top{gap:8px}.i-name{min-width:90px}
+  .res-head{gap:10px;padding:12px 14px}
+  .res-body{padding:14px}
+  .card{padding:15px}
+  h1{font-size:24px}
+  .btn-go{padding:12px 24px;font-size:14px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}
   .blk .nm.roll i{animation:none}
@@ -208,47 +273,60 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s
 
 /* ── 계정 · 내 일정 ─────────────────────────────────────
    로그인은 부가 기능이다. 꺼져 있어도(설정 전이어도) 위 도구는 그대로 돌아간다. */
-.acct{display:flex;justify-content:flex-end;align-items:center;gap:8px;
-  margin-bottom:16px;font-size:12px;color:var(--muted);min-height:26px;flex-wrap:wrap}
-.acct b{color:var(--paper);font-weight:600}
-.acct .btn{padding:5px 11px;font-size:12px}
+.acct{display:flex;justify-content:flex-end;align-items:center;gap:10px;
+  padding-top:18px;font-size:13px;color:var(--ink3);min-height:28px;flex-wrap:wrap}
+.acct b{color:var(--ink);font-weight:700}
+.acct .btn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line)}
+.acct .btn:hover{background:var(--surface2)}
 
-.modal{position:fixed;inset:0;background:rgba(8,6,4,.74);z-index:50;
-  display:none;align-items:center;justify-content:center;padding:18px}
+.modal{position:fixed;inset:0;background:rgba(25,31,40,.44);z-index:50;
+  display:none;align-items:center;justify-content:center;padding:18px;
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
 .modal.on{display:flex}
-.mbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
-  padding:20px;width:100%;max-width:350px;max-height:90vh;overflow:auto}
-.mbox h3{margin:0 0 4px;font-size:13px;font-weight:600;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--brass)}
-.mbox .msub{margin:0 0 16px;font-size:12px;color:var(--muted);line-height:1.55}
-.mrow{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
-.mrow label{font-size:11.5px;color:var(--muted)}
-.mrow input,.mrow textarea{width:100%;box-sizing:border-box}
-.mseg{display:flex;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.mseg button{flex:1;background:var(--ink);border:none;color:var(--muted);
-  padding:8px 0;font-size:12.5px;font-family:inherit;cursor:pointer}
-.mseg button.on{background:var(--panel2);color:var(--paper);font-weight:600;box-shadow:inset 0 -2px 0 var(--brass)}
-.merr{font-size:12px;color:var(--brick);min-height:17px;line-height:1.4}
-.mbtns{display:flex;gap:8px;margin-top:6px}
-.mbtns .btn-go{flex:1;padding:10px 0;font-size:13px}
-.mbtns .btn{padding:10px 16px}
-.mnote{margin:13px 0 0;font-size:11.5px;color:var(--muted);line-height:1.6;
-  border-top:1px solid var(--line);padding-top:11px}
-.mnote b{color:var(--muted2)}
+.mbox{background:var(--surface);border:none;border-radius:22px;
+  padding:26px 24px 24px;width:100%;max-width:370px;max-height:90vh;overflow:auto;
+  box-shadow:var(--sh-up)}
+.mbox h3{margin:0 0 6px;font-size:21px;font-weight:800;letter-spacing:-.035em;
+  text-transform:none;color:var(--ink)}
+.mbox .msub{margin:0 0 20px;font-size:13.5px;color:var(--ink3);line-height:1.6}
+.mrow{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.mrow label{font-size:13px;color:var(--ink2);font-weight:500}
+.mrow label .dim{color:var(--ink3);font-weight:400}
+.mrow input,.mrow textarea{width:100%;box-sizing:border-box;padding:12px 14px;font-size:15px}
+.mseg{display:flex;gap:4px;border:none;border-radius:var(--r-sm);
+  background:var(--surface2);padding:4px}
+.mseg button{flex:1;background:transparent;border:none;color:var(--ink3);
+  padding:9px 0;font-size:13.5px;font-family:inherit;cursor:pointer;
+  border-radius:var(--r-xs);font-weight:500}
+.mseg button.on{background:var(--surface);color:var(--ink);font-weight:700;
+  box-shadow:0 1px 3px rgba(25,31,40,.1)}
+.merr{font-size:13px;color:var(--red);min-height:18px;line-height:1.45;font-weight:500}
+.mbtns{display:flex;gap:8px;margin-top:8px}
+.mbtns .btn-go{flex:1;padding:13px 0;font-size:15px}
+.mbtns .btn{padding:13px 18px;font-size:14px}
+.mnote{margin:18px 0 0;font-size:12.5px;color:var(--ink3);line-height:1.7;
+  border-top:1px solid var(--line);padding-top:14px}
+.mnote b{color:var(--ink2);font-weight:600}
 
 .plans{display:flex;flex-direction:column;gap:10px}
-.plan{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
-  padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.plan.wish{border-left:2px solid var(--brass-dim)}
-.plan.done{border-left:2px solid var(--sage)}
-.plan .pd{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--paper);font-weight:600}
-.tag{font-size:10.5px;padding:1px 8px;border-radius:10px;border:1px solid currentColor;flex:none}
-.tag.done{color:var(--sage)} .tag.wish{color:var(--brass)}
-.plan .pspan{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2)}
-.plan .pmemo{font-size:12px;color:var(--muted);flex:1 1 100%;margin:-2px 0 0}
-.plan .pseq{font-size:12px;color:var(--muted2);flex:1 1 100%;line-height:1.6;margin:-1px 0 0}
+.plan{background:var(--surface);border:none;border-radius:var(--r);
+  padding:16px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  box-shadow:var(--sh);border-left:3px solid transparent}
+.plan.wish{border-left-color:var(--blue)}
+.plan.done{border-left-color:var(--green)}
+.plan .pd{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:14px;
+  color:var(--ink);font-weight:700}
+.tag{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:var(--pill);
+  border:none;flex:none}
+.tag.done{color:var(--green);background:var(--green-soft)}
+.tag.wish{color:var(--blue);background:var(--blue-soft)}
+.plan .pspan{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;
+  color:var(--ink3)}
+.plan .pmemo{font-size:13px;color:var(--ink3);flex:1 1 100%;margin:0}
+.plan .pseq{font-size:13px;color:var(--ink2);flex:1 1 100%;line-height:1.7;margin:0}
+.plan .pseq b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:700}
 .plan .pbtns{display:flex;gap:6px;margin-left:auto;flex:none}
-.plan .pbtns .btn{padding:4px 9px;font-size:11.5px}
+.plan .pbtns .btn{padding:6px 12px;font-size:12.5px;border-radius:var(--pill)}
 @media(max-width:560px){
   .plan .pbtns{margin-left:0;flex:1 1 100%}
   .plan .pbtns .btn{flex:1}
@@ -954,7 +1032,11 @@ function renderResults(){
     let factor=1;
     inner.querySelectorAll('.blk').forEach(b=>{
       const nm=b.querySelector('.nm i'), rng=b.querySelector('.rng');
-      const need=Math.max(nm?nm.scrollWidth:0, rng?rng.scrollWidth:0)+18;
+      /* 여백은 CSS 에서 읽는다. 예전엔 18 을 박아 뒀는데, 디자인을 바꿔 padding 이
+         늘어나자 계산이 모자라 시각이 "10:20 – 11:35" → "10:20" 으로 잘렸다. */
+      const cs=getComputedStyle(b);
+      const pad=parseFloat(cs.paddingLeft)+parseFloat(cs.paddingRight)+2;
+      const need=Math.max(nm?nm.scrollWidth:0, rng?rng.scrollWidth:0)+pad;
       const cur=b.clientWidth;
       if(cur>0 && need>cur) factor=Math.max(factor, need/cur);
     });
@@ -1175,7 +1257,7 @@ function openAuth(mode){
     ? `이미 아이디가 있나요? <b class="lk">로그인</b>`
     : `아이디가 없나요? <b class="lk">가입</b> · <b>비밀번호를 잊으면 되찾을 방법이 없습니다</b> (메일 주소를 안 받기 때문). 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.`;
   const lk=$('authSwap').querySelector('.lk');
-  lk.style.cssText='color:var(--brass);cursor:pointer;text-decoration:underline';
+  lk.style.cssText='color:var(--blue);font-weight:600;cursor:pointer;text-decoration:underline';
   lk.onclick = ()=> openAuth(up?'in':'up');
   $('authErr').textContent='';
   $('authModal').classList.add('on');
