@@ -777,21 +777,60 @@ let ocrWorker=null, ocrLoading=null;
 const OCR_THRESHOLD=235;
 /* 인식 시간은 화소 수에 비례한다. 확대는 작은 캡처의 인식률을 올리지만
    무한정 키우면 몇 분씩 걸린다 — 가로 목표치와 총 화소 상한을 함께 건다. */
-/* 폰은 CPU 도 메모리도 한참 아래다. 같은 화소 예산을 주면 몇 분씩 끌다 시간 초과가 난다.
-   다행히 폰 캡처는 고해상도라 글자가 크게 찍혀 있어, 많이 줄여도 tesseract 가 읽을 만한
-   글자 높이(20~30px)가 남는다. 예산을 절반으로 줄이고 시간은 넉넉히 준다. */
+/* 폰이 느릴 것이라 보고 화소 예산을 절반으로 줄였다가 되돌렸다 —
+   실기기에서 1080×2340 을 4초에 끝냈다. 느린 게 문제가 아니었고,
+   줄인 만큼 글자만 작아져 오히려 인식이 나빠졌다. 예산은 PC 와 같게 두고
+   제한시간만 넉넉히 남긴다(느린 기기가 있을 수는 있으므로). */
 const OCR_MOBILE = matchMedia('(pointer:coarse)').matches || innerWidth < 700;
 const OCR_TARGET_W=1200;
-const OCR_MAX_PIXELS = OCR_MOBILE ? 1.6e6 : 3.2e6;
+const OCR_MAX_PIXELS = 3.2e6;
 const OCR_TIMEOUT_MS = OCR_MOBILE ? 210000 : 120000;
 
-function preprocess(file){
+/* 지역 적응 이진화 — 화소마다 "주변 평균"과 견줘 글자인지 정한다.
+   전역 임계값 하나로는 흰 배경과 "색 버튼 위 흰 글자" 를 못 가른다.
+   둘 다 흰색이라, 어떤 값을 잡아도 한쪽이 통째로 사라진다.
+   주변과 견주면 버튼 안의 흰 글자는 "주변보다 밝다" 로, 흰 배경은 "주변과 같다" 로 갈린다.
+   적분영상을 써서 창 크기와 무관하게 화소당 상수 시간에 끝낸다. */
+function adaptiveInk(gray, w, h, bright){
+  const W=w+1;
+  const I=new Uint32Array(W*(h+1));
+  for(let y=0;y<h;y++){
+    let row=0;
+    for(let x=0;x<w;x++){ row+=gray[y*w+x]; I[(y+1)*W+x+1]=I[y*W+x+1]+row; }
+  }
+  const r=Math.max(7, Math.round(w/24));   /* 글자 한 줄이 들어갈 만한 반경 */
+  const C=8;                               /* 평균과 이만큼은 차이나야 글자로 본다 */
+  const out=new Uint8Array(w*h);
+  for(let y=0;y<h;y++){
+    const y0=Math.max(0,y-r), y1=Math.min(h-1,y+r);
+    for(let x=0;x<w;x++){
+      const x0=Math.max(0,x-r), x1=Math.min(w-1,x+r);
+      const sum=I[(y1+1)*W+x1+1]-I[y0*W+x1+1]-I[(y1+1)*W+x0]+I[y0*W+x0];
+      const mean=sum/((x1-x0+1)*(y1-y0+1));
+      const g=gray[y*w+x];
+      out[y*w+x]=(bright ? g>mean+C : g<mean-C) ? 0 : 255;
+    }
+  }
+  return out;
+}
+
+/* 전처리 한 가지로는 안 된다. 예약 화면마다 글자와 배경의 관계가 달라서
+   임계값 하나로 다 잡히지 않는다 — 특히 "색 버튼 위 흰 글자" 형태는
+   이진화하면 글자가 배경이 되어 통째로 사라진다.
+     auto   : 평균 밝기로 방향을 정해 전역 이진화 (지금까지의 방식 — 옅은 회색 글자에 강하다)
+     adapt  : 지역 적응, 주변보다 어두운 것이 글자
+     bright : 지역 적응, 주변보다 밝은 것이 글자 (색 버튼 위 흰 글자)
+     raw    : 회색조만 만들고 이진화는 tesseract 에 맡긴다
+   값싼 순서로 시도하고 시각이 하나라도 나온 것을 쓴다. 한 번이 몇 초라 부담이 적다. */
+function preprocess(file, mode='auto'){
   return new Promise((res,rej)=>{
     const url=URL.createObjectURL(file);
     const img=new Image();
     img.onload=()=>{
       URL.revokeObjectURL(url);
-      let scale=Math.min(3, Math.max(1, OCR_TARGET_W/img.width));
+      /* 확대는 "작아서 안 읽히는" 캡처를 위한 것이다. 이미 1000px 가 넘는 폰 캡처를
+         1200 에 맞추려 들면 화소 상한에 걸려 도로 줄어든다 — 순수하게 손해다. */
+      let scale = img.width < 900 ? Math.min(3, OCR_TARGET_W/img.width) : 1;
       const px=img.width*img.height*scale*scale;
       if(px>OCR_MAX_PIXELS) scale*=Math.sqrt(OCR_MAX_PIXELS/px);   // 상한 초과분만 되돌린다
       const cv=document.createElement('canvas');
@@ -803,19 +842,30 @@ function preprocess(file){
       const d=cx.getImageData(0,0,cv.width,cv.height), a=d.data;
       /* 다크모드 예약 화면(어두운 배경 + 밝은 글자)이면 기준을 뒤집는다.
          안 그러면 화면 전체가 글자로 판정돼 아무것도 못 읽는다. */
+      const n=cv.width*cv.height;
+      const gray=new Uint8Array(n);
       let sum=0;
-      for(let i=0;i<a.length;i+=4) sum+=0.299*a[i]+0.587*a[i+1]+0.114*a[i+2];
-      const dark=(sum/(a.length/4))<128;
-      for(let i=0;i<a.length;i+=4){
-        const g=0.299*a[i]+0.587*a[i+1]+0.114*a[i+2];
-        const ink=dark ? g>(255-OCR_THRESHOLD) : g<OCR_THRESHOLD;
-        const v=ink?0:255;
+      for(let i=0,j=0;i<a.length;i+=4,j++){
+        const g=(0.299*a[i]+0.587*a[i+1]+0.114*a[i+2])|0;
+        gray[j]=g; sum+=g;
+      }
+      let mask=null;
+      if(mode==='adapt')  mask=adaptiveInk(gray,cv.width,cv.height,false);
+      if(mode==='bright') mask=adaptiveInk(gray,cv.width,cv.height,true);
+      const dark=(sum/n)<128;          /* 다크모드 화면이면 기준을 뒤집는다 */
+      for(let i=0,j=0;i<a.length;i+=4,j++){
+        const g=gray[j];
+        let v;
+        if(mask) v=mask[j];
+        else if(mode==='raw') v=g;     /* 이진화 없이 회색조만 */
+        else v=(dark ? g>(255-OCR_THRESHOLD) : g<OCR_THRESHOLD) ? 0 : 255;
         a[i]=a[i+1]=a[i+2]=v; a[i+3]=255;
       }
       cx.putImageData(d,0,0);
       cv.toBlob(b=>{
         if(!b) return rej(new Error('이미지 변환 실패 — 사진이 너무 큽니다'));
         b._dim = img.width+'×'+img.height+'→'+cv.width+'×'+cv.height;
+        b._mode = mode;
         res(b);
       }, 'image/png');
     };
@@ -896,15 +946,29 @@ async function ocr(file, th){
       if(label) setBusy(th, label+(m.progress?` ${Math.round(m.progress*100)}%`:'')+'…');
     };
     const w=await getOcrWorker(step);
-    setBusy(th,'이미지 다듬는 중…');
-    const prepared=await preprocess(file);
-    shot=prepared._dim||'';
-    setBusy(th,'글자 읽는 중…');
-    const { data:{ text } } = await Promise.race([
-      w.recognize(prepared, {}, { text:true }),
-      new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과 — 이미지를 잘라서 다시 시도해 보세요')), OCR_TIMEOUT_MS))
-    ]);
-    const ss=parseSessions(text);
+    /* 한 방식으로 실패해도 포기하지 않는다 — 화면마다 글자와 배경의 관계가 다르다.
+       한 번이 몇 초라(실측: 폰에서 1080×2340 이 4초) 세 번 해도 부담이 없다. */
+    const MODES=[['auto','1차'],['adapt','2차'],['bright','밝은 글자'],['raw','원본']];
+    /* 처음 성공한 것에서 멈추면 안 된다 — 첫 방식이 9개 중 3개만 건져도 "성공" 이라
+       더 잘 읽는 방식이 뒤에서 막힌다. 넉넉히 읽은 게 나오면 거기서 끊고,
+       아니면 끝까지 돌려 가장 많이 읽은 것을 쓴다. 한 번이 몇 초라 감당된다. */
+    const ENOUGH=5;
+    let ss=[], tried=[];
+    for(const [mode,label] of MODES){
+      setBusy(th, `이미지 다듬는 중… (${label})`);
+      const prepared=await preprocess(file, mode);
+      shot=prepared._dim||'';
+      setBusy(th, `글자 읽는 중… (${label})`);
+      const { data:{ text } } = await Promise.race([
+        w.recognize(prepared, {}, { text:true }),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과 — 이미지를 잘라서 다시 시도해 보세요')), OCR_TIMEOUT_MS))
+      ]);
+      const got=parseSessions(text);
+      tried.push(mode+':'+got.length);
+      if(got.length>ss.length) ss=got;
+      if(ss.length>=ENOUGH) break;
+    }
+    shot += ' · '+tried.join('/');
     if(!ss.length) throw new Error('시간을 찾지 못했습니다');
     th.sessions=ss; th.raw=sessionsToText(ss); th.source='image';
   }catch(err){
