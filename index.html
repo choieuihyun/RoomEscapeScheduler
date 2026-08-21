@@ -245,6 +245,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   font-style:normal;font-weight:700;color:var(--ink3);white-space:nowrap}
 .gaplab.big em{color:var(--amber-text)}
 .gaplab.tight em{color:var(--red-text)}
+.gaplab.hasmv em{color:var(--ink2)}      /* 이동이 있으면 잔여만 아래 규칙으로 물들인다 */
 
 .axis{position:relative;height:18px;border-top:1px solid var(--line)}
 .tick{position:absolute;top:3px;font-family:var(--num);font-variant-numeric:tabular-nums;
@@ -344,12 +345,17 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 /* 이동 구간은 공백 앞쪽에 겹쳐 칠한다 — "끝나자마자 걷는다" 가 눈에 보이게 */
 .mv{position:absolute;top:0;height:50px;border-radius:var(--r-xs) 0 0 var(--r-xs);
-  border:1px solid var(--amber-line);border-right:none;
-  background:repeating-linear-gradient(-45deg,#FFE7BF 0 5px,#FFD79A 5px 10px)}
-.gaplab em u{text-decoration:none;color:var(--amber-text);font-weight:800}
+  border:1px solid #E9A23B;border-right:none;background:#FFC96B}
+/* 공백 라벨: 이동은 채운 알약, 잔여는 맨 글자 — 색이 아니라 모양이 먼저 가른다 */
+.gaplab.hasmv em{display:inline-flex;align-items:center;gap:5px}
+.gaplab em .mvp{background:#FFC96B;color:#6B3D00;font-weight:800;
+  border-radius:var(--pill);padding:1px 8px;white-space:nowrap}
+.gaplab em .wtp{font-weight:700;white-space:nowrap}
+.gaplab.tight em .wtp{color:var(--red-text)}
+.gaplab.big em .wtp{color:var(--amber-text)}
 .mvstat b{color:var(--amber-text)}
-.mvtag{font-style:normal;font-size:12px;font-weight:700;color:var(--amber-text);
-  background:var(--amber-soft);border-radius:var(--pill);padding:2px 9px;white-space:nowrap}
+.mvtag{font-style:normal;font-size:12px;font-weight:800;color:#6B3D00;
+  background:#FFC96B;border-radius:var(--pill);padding:2px 10px;white-space:nowrap}
 
 .pairs{margin-top:12px;background:var(--surface);border-radius:var(--r);
   padding:14px 16px;box-shadow:var(--sh)}
@@ -1148,9 +1154,11 @@ function renderResults(){
         <span class="rank">${pad(ri+1)}</span>
         <span class="stat"><b class="mono">${fmt(r.start)} → ${fmt(r.end)}</b></span>
         <span class="stat">총 <b class="mono">${Math.round((r.end-r.start)/60*10)/10}h</b></span>
-        <span class="stat ${r.total<=30?'good':''}">공백 <b class="mono">${r.total}분</b></span>
+        ${r.moveTotal
+          ? `<span class="stat mvstat">이동 <b class="mono">${r.moveTotal}분</b></span>`
+          + `<span class="stat ${r.total-r.moveTotal<=30?'good':''}">잔여 <b class="mono">${r.total-r.moveTotal}분</b></span>`
+          : `<span class="stat ${r.total<=30?'good':''}">공백 <b class="mono">${r.total}분</b></span>`}
         <span class="stat ${tight?'warn':''}">최소 <b class="mono">${r.minWait===Infinity?'—':r.minWait+'분'}</b></span>
-        ${r.moveTotal?`<span class="stat mvstat">이동 <b>${r.moveTotal}분</b></span>`:''}
         ${r.count<themesReady.length?`<span class="stat">테마 <b>${r.count}/${themesReady.length}</b></span>`:''}
         <button class="btn-copy" type="button">복사</button>
         ${CLOUD_ON?'<button class="btn-copy btn-save" type="button">저장</button>':''}
@@ -1171,15 +1179,16 @@ function renderResults(){
             /* 좁음/넓음 판정은 "노는 시간" 으로 한다. 이동 10분이 낀 15분 공백은
                여유가 5분뿐이라 빠듯한 것이지, 15분 쉬는 게 아니다. */
             const cls = wait<10 ? ' tight' : (wait>=40 ? ' big' : '');
-            const tip = mv ? `${esc(p.place)} → ${esc(s.place)} 이동 ${mv}분 + 여유 ${wait}분` : `공백 ${g}분`;
+            const tip = mv ? `${esc(p.place)} → ${esc(s.place)} 이동 ${mv}분 · 잔여 ${wait}분` : `공백 ${g}분`;
             let h=`<div class="gap${cls}" style="left:${l}%;width:${w}%" title="${tip}"></div>`;
             if(mv>0){
               /* 이동은 앞 테마가 끝나자마자 일어난다 — 공백의 앞쪽을 따로 칠한다 */
               const mw=pct(p.end+mv)-pct(p.end);
               h+=`<div class="mv" style="left:${l}%;width:${mw}%" title="${tip}"></div>`;
             }
-            h+=`<div class="gaplab${cls}" style="left:${l}%;width:${w}%">`
-             + (mv?`<em><u>이동 ${mv}</u> · ${wait}분</em>`:`<em>${g}분</em>`)
+            h+=`<div class="gaplab${cls}${mv?' hasmv':''}" style="left:${l}%;width:${w}%">`
+             + (mv?`<em><b class="mvp">이동 ${mv}분</b><b class="wtp">잔여 ${wait}분</b></em>`
+                 :`<em>${g}분</em>`)
              + `</div>`;
             return h;
           }).join('')
@@ -1457,13 +1466,14 @@ $('shareBtn').onclick = async ()=>{
 /* 결과 한 건을 사람이 읽는 형태로 — 카톡·메모에 그대로 붙여넣는 용도 */
 function resultToText(r){
   const dur = m => (m>=60 ? Math.floor(m/60)+'시간 '+(m%60?(m%60)+'분':'') : m+'분').trim();
-  const head = `${r.count}연방 · ${fmt(r.start)} → ${fmt(r.end)} (${dur(r.end-r.start)}, 공백 ${r.total}분)`;
+  const head = `${r.count}연방 · ${fmt(r.start)} → ${fmt(r.end)} (${dur(r.end-r.start)}, `
+    + (r.moveTotal ? `이동 ${r.moveTotal}분 · 잔여 ${r.total-r.moveTotal}분)` : `공백 ${r.total}분)`);
   const body = r.steps.map((s,i)=>{
     const line = `${fmt(s.start)}–${fmt(s.end)}  ${s.name}${s.place?` @${s.place}`:''} (${s.dur}분)`;
     const nx = r.steps[i+1];
     if(!nx) return line;
     const g = nx.start - s.end, mv = nx.move||0;
-    return line + (mv ? `\n     ↓ 이동 ${mv}분 + 여유 ${g-mv}분` : `\n     ↓ 공백 ${g}분`);
+    return line + (mv ? `\n     ↓ 이동 ${mv}분  잔여 ${g-mv}분` : `\n     ↓ 공백 ${g}분`);
   }).join('\n');
   return head + '\n\n' + body;
 }
