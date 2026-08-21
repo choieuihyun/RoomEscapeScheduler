@@ -4,7 +4,7 @@
 
 ```bash
 npm run dev     # http://localhost:5173
-npm test        # 인수 테스트 (36개 검사)
+npm test        # 인수 테스트 (44개 검사)
 ```
 
 `index.html` 을 브라우저에서 그냥 열어도 조합 계산은 전부 동작한다. 빌드 없음, 의존성 0개.

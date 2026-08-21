@@ -111,6 +111,39 @@ const partial = search(themes, { ...opts, minCount: 2 }).out;
 ok(partial.some(r => r.count === 2) && partial.some(r => r.count === 3),
    '부분 조합 허용(F-08) → 2개짜리·3개짜리 모두 포함');
 
+/* ── 3.5 식사 공백 · 순서 제약 ── */
+console.log('\n[3.5] 식사 공백 · 순서 제약');
+const MEAL = { from: 11 * 60 + 30, to: 14 * 60, min: 40 };
+const meal = search(themes, { ...opts, meal: MEAL }).out;
+const hasMealGap = r => r.steps.some((s, i) =>
+  i > 0 && Math.min(s.start, MEAL.to) - Math.max(r.steps[i - 1].end, MEAL.from) >= MEAL.min);
+ok(meal.length > 0 && meal.every(hasMealGap),
+   `식사 공백 요구 → 전부 11:30~14:00 사이에 40분 이상 확보 (${meal.length}개)`);
+ok(meal.length < out.length, `식사 공백은 조합을 줄인다 (${out.length} → ${meal.length})`);
+
+// 요구하는 공백이므로, 억제하는 조건(최대 공백)과 모순이면 결과가 없어야 한다
+eq(search(themes, { ...opts, meal: MEAL, maxGap: 20 }).out.length, 0,
+   '최대 공백 20분 + 식사 공백 40분 → 모순이라 결과 없음');
+
+const pinFirst = themes.map((t, i) => i === 0 ? { ...t, pin: 'first' } : t);
+const pf = search(pinFirst, opts).out;
+ok(pf.length > 0 && pf.every(r => r.steps[0].name === '범계'),
+   `첫 타 고정 → 전부 범계로 시작 (${pf.length}개)`);
+ok(pf.length < out.length, '순서 고정은 조합을 줄인다');
+
+const pinLast = themes.map((t, i) => i === 2 ? { ...t, pin: 'last' } : t);
+const pl = search(pinLast, opts).out;
+ok(pl.length > 0 && pl.every(r => r.steps[r.steps.length - 1].name === '몽'),
+   `마지막 고정 → 전부 몽으로 끝 (${pl.length}개)`);
+ok(pl.every(r => r.steps.slice(0, -1).every(s => s.name !== '몽')),
+   '고정된 테마가 중간에 끼는 조합은 생기지 않는다');
+
+// 둘을 같이 걸어도 성립해야 한다
+const both = themes.map((t, i) => i === 0 ? { ...t, pin: 'first' } : i === 2 ? { ...t, pin: 'last' } : t);
+const bo = search(both, { ...opts, meal: MEAL }).out;
+ok(bo.every(r => r.steps[0].name === '범계' && r.steps[r.steps.length - 1].name === '몽' && hasMealGap(r)),
+   `순서 고정 + 식사 공백 동시 적용 (${bo.length}개)`);
+
 /* ── 4. 비기능 요구 (§2.4) ── */
 console.log('\n[4] 비기능 요구');
 ok(ms < 100, `테마 3개 계산 100ms 이내 (실측 ${Math.round(ms)}ms)`);
