@@ -103,9 +103,9 @@ ok(window.every(r => r.start >= 13 * 60 && r.end <= 20 * 60), '13:00~20:00 창 �
 const soldout = themes.map((t, i) => i === 0
   ? { ...t, sessions: t.sessions.map(s => ({ ...s, soldout: true })) } : t);
 eq(search(soldout, { ...opts, excludeSoldout: true }).out.length, 0,
-   '한 테마 전 회차 매진 + 매진 제외 → 3개 조합 불가');
+   '한 테마 전 회차 매진 → 3개 조합 불가 (앱은 항상 제외한다)');
 ok(search(soldout, { ...opts, excludeSoldout: false }).out.length > 0,
-   '매진 제외 해제 → 다시 조합 성립');
+   'excludeSoldout 를 끄면 다시 성립 (탐색기 자체의 동작 확인)');
 
 const partial = search(themes, { ...opts, minCount: 2 }).out;
 ok(partial.some(r => r.count === 2) && partial.some(r => r.count === 3),

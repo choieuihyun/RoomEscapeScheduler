@@ -41,6 +41,7 @@ header p{margin:0;color:var(--muted);font-size:13px;max-width:52ch}
 .sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .sec-head h2{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);margin:0}
 .sec-head span{font-size:12px;color:var(--muted)}
+.sec-head .hi{color:var(--paper);font-weight:600}
 .sec-head .count{font-size:12px;color:var(--paper);font-weight:600;
   background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:1px 9px}
 
@@ -72,7 +73,7 @@ textarea{width:100%;min-height:60px;resize:vertical;font-family:'IBM Plex Mono',
 .parsed .t{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper);
   background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:1px 7px}
 .parsed .t.fix{border-color:var(--brass-dim);color:var(--brass)}
-.parsed .t.so{color:var(--brick);border-color:var(--brick);opacity:.85}
+.parsed .t.so{color:var(--brick);border-color:var(--brick);opacity:.7;text-decoration:line-through}
 .parsed .t.over{border-color:var(--brick);color:var(--brick)}
 .parsed .hint{font-size:11px;color:var(--muted)}
 .parsed .note{flex-basis:100%;font-size:11px;color:var(--muted);margin-top:1px}
@@ -200,7 +201,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s
   <div class="sec-head">
     <h2>테마</h2>
     <b class="count" id="themeCount"></b>
-    <span>붙여넣거나 직접 입력 · 아래에서 개수를 늘리고 줄일 수 있습니다</span>
+    <span>붙여넣거나 직접 입력 · <b class="hi">매진된 회차는 빼고 넣어 주세요</b></span>
   </div>
   <div class="themes" id="themes"></div>
   <div class="addrow">
@@ -218,7 +219,6 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s
     <div class="opt"><label>최대 공백 (분)</label><input class="mono" id="oMaxGap" placeholder="90"></div>
   </div>
   <div class="checks">
-    <label class="chk"><input type="checkbox" id="oSold" checked> 매진 회차 제외</label>
     <label class="chk"><input type="checkbox" id="oPartial"> 일부 테마만 넣은 조합도 보기</label>
     <label class="chk"><input type="checkbox" id="oMeal"> 식사 시간 확보</label>
   </div>
@@ -425,7 +425,7 @@ function renderThemes(){
         </select>
         <button class="btn-x" data-k="del" title="삭제">×</button>
       </div>
-      <textarea data-k="raw" placeholder="10:00  13:10  15:40  17:20  ← 이렇게 (쉼표·줄바꿈도 됨)&#10;또는 예약 화면 캡처를 붙여넣기 (Ctrl+V)">${esc(th.raw)}</textarea>
+      <textarea data-k="raw" placeholder="10:00  13:10  15:40  17:20  ← 예약 가능한 회차만 (쉼표·줄바꿈도 됨)&#10;또는 예약 화면 캡처를 붙여넣기 (Ctrl+V)">${esc(th.raw)}</textarea>
       <div class="parsed">${parsedHTML(th)}</div>
       <div class="card-foot">
         <label class="btn-img">이미지 첨부<input type="file" accept="image/*" data-k="file"></label>
@@ -482,11 +482,13 @@ function parsedHTML(th){
     return '<span class="hint">시간을 넣으면 해석 결과가 여기 표시됩니다</span>';
   const over = th.sessions.some(s=>s.t>=24*60);
   const fixed = th.sessions.some(s=>s.fixed);
+  const sold = th.sessions.filter(s=>s.soldout).length;
   let out = th.sessions.map(s=>{
     const cls = 't' + (s.t>=24*60?' over':'') + (s.fixed?' fix':'') + (s.soldout?' so':'');
     const tip = s.fixed ? ' title="오전/오후 표기가 없어 12시간 보정된 값입니다"' : '';
     return `<span class="${cls}"${tip}>${fmtDay(s.t)}${s.soldout?' 매진':''}</span>`;
   }).join('');
+  if(sold) out += `<span class="note">매진으로 읽힌 ${sold}개는 계산에서 제외됩니다</span>`;
   if(over) out += `<span class="warn">자정을 넘긴 회차가 있습니다. 이른 시간부터 순서대로 넣었는지 확인해 주세요 — 순서가 섞였다면 <b>오전</b>/<b>오후</b>를 붙이면 순서와 무관하게 정확해집니다.</span>`;
   else if(fixed) out += `<span class="note">황동색은 12시간 보정된 값입니다 (예: 1:10 → 13:10)</span>`;
   return out;
@@ -776,7 +778,9 @@ function readOptions(){
     endMax:   parseClock($('oEnd').value),
     minGap:   parseInt($('oMinGap').value)||0,
     maxGap:   ($('oMaxGap').value.trim()==='')?null:(parseInt($('oMaxGap').value)||null),
-    excludeSoldout: $('oSold').checked,
+    /* 매진 회차는 애초에 예약할 수 없으므로 선택지로 두지 않는다.
+       "매진" 이 붙어 들어온 회차만 여기서 걸러지고, 나머지는 사용자가 빼고 넣는다. */
+    excludeSoldout: true,
     minCount: partial?2:themesReady.length,
     meal: null
   };
@@ -823,7 +827,7 @@ function serialize(){
     v:1,
     t: themes.map(t=>[t.name, t.dur, t.raw, t.pin||'']),
     o: [$('oStart').value, $('oEnd').value, $('oMinGap').value, $('oMaxGap').value,
-        $('oSold').checked?1:0, $('oPartial').checked?1:0,
+        1, $('oPartial').checked?1:0,
         $('oMeal').checked?1:0, $('oMealFrom').value, $('oMealTo').value, $('oMealMin').value],
     k: sortKey
   }));
@@ -838,7 +842,7 @@ function restore(hash){
   });
   const [a,b,c2,dd,so,pt,me,mf,mt,mm]=d.o;
   $('oStart').value=a; $('oEnd').value=b; $('oMinGap').value=c2; $('oMaxGap').value=dd;
-  $('oSold').checked=!!so; $('oPartial').checked=!!pt;
+  $('oPartial').checked=!!pt;   // so 슬롯은 옛 링크 호환용으로 남겨두고 쓰지 않는다
   $('oMeal').checked=!!me; $('mealRow').classList.toggle('on',!!me);
   $('oMealFrom').value=mf; $('oMealTo').value=mt; $('oMealMin').value=mm;
   if(d.k) sortKey=d.k;
