@@ -87,6 +87,9 @@ export function say(err){
     'too-many-requests'    : '시도가 너무 잦습니다. 잠시 뒤에 다시 해주세요.',
     'network-request-failed':'네트워크에 연결하지 못했습니다.',
     'operation-not-allowed': '이메일/비밀번호 로그인이 아직 켜져 있지 않습니다 (Firebase 콘솔).',
+    /* Authentication 을 아예 시작하지 않은 프로젝트에서 나온다.
+       코드는 멀쩡한데 상대가 없는 상태라, 원문 그대로 두면 원인을 못 찾는다. */
+    'configuration-not-found': 'Firebase 콘솔에서 Authentication 을 아직 시작하지 않았습니다.',
   })[code] || (err && err.message === 'NOT_CONFIGURED'
     ? '로그인이 아직 설정되지 않았습니다 (firebase-config.js).'
     : '문제가 생겼습니다: ' + (err && err.message || err));

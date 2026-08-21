@@ -6,10 +6,12 @@
  *
  * 채우는 법은 README 의 "계정 만들고 일정 저장하기" 참고.
  * 비워 두면 앱은 그대로 동작하고 로그인 기능만 꺼진다.
+ *
+ * measurementId(애널리틱스)는 쓰지 않으므로 넣지 않는다.
  */
 window.FIREBASE_CONFIG = {
-  apiKey:            "",
-  authDomain:        "",
-  projectId:         "",
-  appId:             "",
+  apiKey:            "AIzaSyDSmp0yCSN2fqc7jvlzgLh4LliFi-XwoAk",
+  authDomain:        "roomescapescheduler.firebaseapp.com",
+  projectId:         "roomescapescheduler",
+  appId:             "1:13772151522:web:a4ec3801e170a78a845cbb",
 };
