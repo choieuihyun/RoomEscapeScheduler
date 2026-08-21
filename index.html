@@ -727,7 +727,7 @@ function renderResults(){
           r.steps.map(s=>{
             const l=pct(s.start), w=pct(s.end)-pct(s.start);
             return `<div class="blk${s.soldout?' so':''}" style="left:${l}%;width:${w}%" title="${esc(s.name)} ${fmt(s.start)}→${fmt(s.end)} (${s.dur}분)">
-              <span class="nm"><i>${esc(s.name)}</i></span><span class="rng" data-s="${fmt(s.start)}">${fmt(s.start)}–${fmt(s.end)}</span></div>`;
+              <span class="nm"><i>${esc(s.name)}</i></span><span class="rng" data-s="${fmt(s.start)}">${fmt(s.start)} – ${fmt(s.end)}</span></div>`;
           }).join('') +
           r.steps.slice(1).map((s,k)=>{
             const p=r.steps[k], g=s.start-p.end;
