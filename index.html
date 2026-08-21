@@ -1018,6 +1018,7 @@ function readOptions(){
 }
 
 let themesReady=[];
+let lastSnapshot=null;      // 마지막 계산에 쓰인 입력값 (저장용 — F-12)
 $('go').onclick=()=>{
   const note=$('runNote');
   /* 잠근 카드의 "자리" 는 실제로 진행되는 순서 기준이다.
@@ -1033,6 +1034,10 @@ $('go').onclick=()=>{
     note.textContent=`최대 공백(${o.maxGap}분)이 식사 공백(${o.meal.min}분)보다 작아 조합이 나올 수 없습니다.`;
     found=[]; renderResults(); elCount.textContent=''; return;
   }
+  /* 이 순간의 입력값을 붙잡아 둔다. 저장할 때 다시 serialize() 하면,
+     계산 뒤에 회차를 고치고 화면에 남아 있던 결과 카드의 [저장] 을 누르는 순간
+     "확정 시각은 A, 입력값은 B" 인 문서가 만들어진다 — 불러와도 그 일정이 안 나온다. */
+  lastSnapshot = serialize();
   const t0=performance.now();
   const {out,capped}=search(themesReady,o);
   found=out;
@@ -1179,7 +1184,10 @@ function openAuth(mode){
 function closeAuth(){ $('authModal').classList.remove('on'); $('authPw').value=''; }
 
 async function submitAuth(){
-  const id=$('authId').value.trim(), pw=$('authPw').value;
+  /* toEmail 이 소문자로 낮추므로 Tester 와 tester 는 같은 계정이다.
+     화면에 보이는 것과 실제가 어긋나지 않게 입력칸부터 맞춰 둔다. */
+  const id=$('authId').value.trim().toLowerCase(), pw=$('authPw').value;
+  $('authId').value=id;
   const err=$('authErr'), go=$('authGo');
   const C = await cloud().catch(()=>null);
   if(!C){ err.textContent='로그인 모듈을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.'; return; }
@@ -1229,7 +1237,7 @@ async function submitSave(){
       count: r.count, start: r.start, end: r.end, total: r.total,
       minGap: r.minGap===Infinity ? null : r.minGap,
       steps: r.steps.map(x=>({ name:x.name, dur:x.dur, start:x.start, end:x.end })),
-      snapshot: serialize(),
+      snapshot: lastSnapshot || serialize(),
     });
     $('saveModal').classList.remove('on');
     pending=null;
@@ -1283,7 +1291,11 @@ function renderPlans(){
       if(b.dataset.a==='load'){
         try{
           restore(p.snapshot);
-          renderThemes(); renderSorts();
+          /* 옛 결과 카드를 남겨두면 그 [저장] 버튼이 아직 이전 계산 결과를 붙들고 있다.
+             화면과 입력이 어긋난 채로 저장되는 길을 아예 막는다. */
+          found=[]; themesReady=[]; lastSnapshot=null; tabCount=null; tabSet=null;
+          renderThemes(); renderSorts(); renderTabs(); renderResults();
+          $('resCount').textContent='';
           window.scrollTo({top:0, behavior:'smooth'});
           $('runNote').textContent = `${p.date} 일정의 입력값을 불러왔습니다. 계산을 누르면 다시 짤 수 있습니다.`;
         }catch{ $('runNote').textContent='이 일정은 불러올 수 없는 형식입니다.'; }
