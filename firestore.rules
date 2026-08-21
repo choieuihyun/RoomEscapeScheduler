@@ -1,0 +1,22 @@
+rules_version = '2';
+
+/* Firebase 콘솔 → Firestore Database → 규칙 에 이 내용을 그대로 붙여넣고 게시.
+ *
+ * 규칙이 곧 보안이다. firebase-config.js 의 값은 공개되어도 되지만,
+ * 이 규칙이 느슨하면 아무나 남의 문서를 읽고 쓸 수 있다.
+ * 기본값인 "테스트 모드" 는 30일 뒤 모두 잠기므로 반드시 바꿔야 한다.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* 자기 문서만. 로그인하지 않았거나 uid 가 다르면 읽기조차 막힌다 */
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    /* 그 밖의 모든 경로는 차단 */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

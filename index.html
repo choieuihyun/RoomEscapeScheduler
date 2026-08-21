@@ -205,12 +205,61 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s
 @media(prefers-reduced-motion:reduce){*{transition:none!important}
   .blk .nm.roll i{animation:none}
   .blk .nm{text-overflow:ellipsis}}
+
+/* ── 계정 · 내 일정 ─────────────────────────────────────
+   로그인은 부가 기능이다. 꺼져 있어도(설정 전이어도) 위 도구는 그대로 돌아간다. */
+.acct{display:flex;justify-content:flex-end;align-items:center;gap:8px;
+  margin-bottom:16px;font-size:12px;color:var(--muted);min-height:26px;flex-wrap:wrap}
+.acct b{color:var(--paper);font-weight:600}
+.acct .btn{padding:5px 11px;font-size:12px}
+
+.modal{position:fixed;inset:0;background:rgba(8,6,4,.74);z-index:50;
+  display:none;align-items:center;justify-content:center;padding:18px}
+.modal.on{display:flex}
+.mbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  padding:20px;width:100%;max-width:350px;max-height:90vh;overflow:auto}
+.mbox h3{margin:0 0 4px;font-size:13px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--brass)}
+.mbox .msub{margin:0 0 16px;font-size:12px;color:var(--muted);line-height:1.55}
+.mrow{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
+.mrow label{font-size:11.5px;color:var(--muted)}
+.mrow input,.mrow textarea{width:100%;box-sizing:border-box}
+.mseg{display:flex;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.mseg button{flex:1;background:var(--ink);border:none;color:var(--muted);
+  padding:8px 0;font-size:12.5px;font-family:inherit;cursor:pointer}
+.mseg button.on{background:var(--panel2);color:var(--paper);font-weight:600;box-shadow:inset 0 -2px 0 var(--brass)}
+.merr{font-size:12px;color:var(--brick);min-height:17px;line-height:1.4}
+.mbtns{display:flex;gap:8px;margin-top:6px}
+.mbtns .btn-go{flex:1;padding:10px 0;font-size:13px}
+.mbtns .btn{padding:10px 16px}
+.mnote{margin:13px 0 0;font-size:11.5px;color:var(--muted);line-height:1.6;
+  border-top:1px solid var(--line);padding-top:11px}
+.mnote b{color:var(--muted2)}
+
+.plans{display:flex;flex-direction:column;gap:10px}
+.plan{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.plan.wish{border-left:2px solid var(--brass-dim)}
+.plan.done{border-left:2px solid var(--sage)}
+.plan .pd{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--paper);font-weight:600}
+.tag{font-size:10.5px;padding:1px 8px;border-radius:10px;border:1px solid currentColor;flex:none}
+.tag.done{color:var(--sage)} .tag.wish{color:var(--brass)}
+.plan .pspan{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2)}
+.plan .pmemo{font-size:12px;color:var(--muted);flex:1 1 100%;margin:-2px 0 0}
+.plan .pseq{font-size:12px;color:var(--muted2);flex:1 1 100%;line-height:1.6;margin:-1px 0 0}
+.plan .pbtns{display:flex;gap:6px;margin-left:auto;flex:none}
+.plan .pbtns .btn{padding:4px 9px;font-size:11.5px}
+@media(max-width:560px){
+  .plan .pbtns{margin-left:0;flex:1 1 100%}
+  .plan .pbtns .btn{flex:1}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header>
+  <div class="acct" id="acct"></div>
   <h1>방탈출 <span class="dim">스케줄러</span></h1>
   <p>테마별 회차 시간을 넣으면 겹치지 않는 조합을 전부 계산해서, 공백이 어디에 얼마나 생기는지 보여줍니다.</p>
 </header>
@@ -263,8 +312,68 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r);transition:.13s
   <div id="results"><div class="empty">테마 회차를 넣고 계산을 눌러주세요.</div></div>
 </section>
 
+<section class="sec" id="planSec" hidden>
+  <div class="sec-head">
+    <h2>내 일정</h2>
+    <b class="count" id="planCount"></b>
+    <span id="planNote">결과 카드의 <b class="hi">저장</b> 을 누르면 여기에 쌓입니다</span>
+  </div>
+  <div class="plans" id="plans"></div>
+</section>
+
 </div>
 
+<!-- 로그인 / 가입 -->
+<div class="modal" id="authModal">
+  <div class="mbox">
+    <h3 id="authTitle">로그인</h3>
+    <p class="msub" id="authSub">아이디와 비밀번호만 있으면 됩니다. 이메일도, 인증도 없습니다.</p>
+    <div class="mrow">
+      <label for="authId">아이디</label>
+      <input id="authId" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="englishman">
+    </div>
+    <div class="mrow">
+      <label for="authPw">비밀번호 <span id="pwHint">(6자 이상)</span></label>
+      <input id="authPw" type="password" autocomplete="current-password" placeholder="••••••">
+    </div>
+    <p class="merr" id="authErr"></p>
+    <div class="mbtns">
+      <button class="btn-go" id="authGo" type="button">로그인</button>
+      <button class="btn" id="authCancel" type="button">닫기</button>
+    </div>
+    <p class="mnote" id="authSwap"></p>
+  </div>
+</div>
+
+<!-- 일정 저장 -->
+<div class="modal" id="saveModal">
+  <div class="mbox">
+    <h3>일정 저장</h3>
+    <p class="msub" id="savePreview"></p>
+    <div class="mrow">
+      <label for="saveDate">날짜</label>
+      <input id="saveDate" type="date">
+    </div>
+    <div class="mrow">
+      <label>구분</label>
+      <div class="mseg" id="saveSeg">
+        <button type="button" data-v="wish" class="on">하고 싶은 일정</button>
+        <button type="button" data-v="done">했던 일정</button>
+      </div>
+    </div>
+    <div class="mrow">
+      <label for="saveMemo">메모 <span class="dim">(선택)</span></label>
+      <input id="saveMemo" placeholder="강남 3연방, 지수랑">
+    </div>
+    <p class="merr" id="saveErr"></p>
+    <div class="mbtns">
+      <button class="btn-go" id="saveGo" type="button">저장</button>
+      <button class="btn" id="saveCancel" type="button">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script src="firebase-config.js"></script>
 <script>
 /* ══ @core:start ══════════════════════════════════════════════════
    DOM에 의존하지 않는 순수 로직 구간.
@@ -802,6 +911,7 @@ function renderResults(){
         <span class="stat ${tight?'warn':''}">최소 <b class="mono">${r.minGap===Infinity?'—':r.minGap+'분'}</b></span>
         ${r.count<themesReady.length?`<span class="stat">테마 <b>${r.count}/${themesReady.length}</b></span>`:''}
         <button class="btn-copy" type="button">복사</button>
+        ${CLOUD_ON?'<button class="btn-copy btn-save" type="button">저장</button>':''}
       </div>
       <div class="res-body">
         <div class="tlwrap"><div class="tlinner">
@@ -831,6 +941,8 @@ function renderResults(){
       btn.textContent = ok ? '복사됨' : '실패';
       setTimeout(()=>{ btn.textContent='복사'; }, 1500);
     };
+    const sv=d.querySelector('.btn-save');
+    if(sv) sv.onclick = ()=> openSave(r);
     elRes.appendChild(d);
   });
   /* appendChild 뒤에야 실제 폭이 잡힌다. 넘치는 이름에만 훑기를 건다 —
@@ -1007,6 +1119,218 @@ function resultToText(r){
   return head + '\n\n' + body;
 }
 
+
+/* ══ 계정 · 일정 보관 ═══════════════════════════════════════════════
+   이 아래는 전부 부가 기능이다. 설정이 비어 있거나(FIREBASE_CONFIG)
+   네트워크가 없으면 조용히 꺼질 뿐, 위의 조합 계산은 영향을 받지 않는다.
+   cloud.js 와 Firebase SDK 는 로그인 버튼을 눌러야 처음 내려온다 —
+   로그인을 안 쓰는 사람에게는 예전과 바이트 단위로 같은 앱이다.
+   ═══════════════════════════════════════════════════════════════ */
+
+const CLOUD_ON = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey
+                 && window.FIREBASE_CONFIG.projectId && window.FIREBASE_CONFIG.appId);
+const SEEN_KEY = 'resched.signedin';   /* 예전에 로그인한 적이 있는가 — 이때만 자동 복귀를 시도한다 */
+
+let Cloud = null, me = null, plans = [], pending = null, authMode = 'in';
+const cloud = async () => (Cloud || (Cloud = await import('./cloud.js')));
+
+const today = () => { const d=new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+
+/* ── 계정 줄 ── */
+function renderAcct(){
+  const el=$('acct');
+  if(!CLOUD_ON){
+    el.innerHTML = `<span title="firebase-config.js 가 비어 있습니다. README 의 '계정 만들고 일정 저장하기' 참고">일정 저장 꺼짐</span>`;
+    return;
+  }
+  el.innerHTML = me
+    ? `<span><b>${esc(me.id)}</b> 님</span><button class="btn" id="outBtn" type="button">로그아웃</button>`
+    : `<span>일정을 저장해 두려면</span><button class="btn" id="inBtn" type="button">로그인</button>`;
+  const ib=$('inBtn'), ob=$('outBtn');
+  if(ib) ib.onclick = ()=> openAuth('in');
+  if(ob) ob.onclick = async ()=>{
+    try{ (await cloud()).signOut(); }catch{}
+    localStorage.removeItem(SEEN_KEY);
+    me=null; plans=[]; renderAcct(); renderPlans();
+  };
+}
+
+/* ── 로그인 / 가입 모달 ── */
+function openAuth(mode){
+  authMode = mode;
+  const up = mode==='up';
+  $('authTitle').textContent = up ? '가입' : '로그인';
+  $('authSub').textContent = up
+    ? '아이디와 비밀번호만 정하면 끝입니다. 이메일도, 인증 메일도 없습니다.'
+    : '아이디와 비밀번호를 넣어 주세요.';
+  $('authGo').textContent = up ? '가입하고 시작' : '로그인';
+  $('authPw').setAttribute('autocomplete', up ? 'new-password' : 'current-password');
+  $('authSwap').innerHTML = up
+    ? `이미 아이디가 있나요? <b class="lk">로그인</b>`
+    : `아이디가 없나요? <b class="lk">가입</b> · <b>비밀번호를 잊으면 되찾을 방법이 없습니다</b> (메일 주소를 안 받기 때문). 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.`;
+  const lk=$('authSwap').querySelector('.lk');
+  lk.style.cssText='color:var(--brass);cursor:pointer;text-decoration:underline';
+  lk.onclick = ()=> openAuth(up?'in':'up');
+  $('authErr').textContent='';
+  $('authModal').classList.add('on');
+  setTimeout(()=>$('authId').focus(), 30);
+}
+function closeAuth(){ $('authModal').classList.remove('on'); $('authPw').value=''; }
+
+async function submitAuth(){
+  const id=$('authId').value.trim(), pw=$('authPw').value;
+  const err=$('authErr'), go=$('authGo');
+  const C = await cloud().catch(()=>null);
+  if(!C){ err.textContent='로그인 모듈을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.'; return; }
+  if(!C.ID_RE.test(id)){ err.textContent='아이디 형식이 맞지 않습니다 — ' + C.ID_HINT; return; }
+  if(pw.length<6){ err.textContent='비밀번호는 6자 이상이어야 합니다.'; return; }
+  go.disabled=true; go.textContent='잠시만…'; err.textContent='';
+  try{
+    me = authMode==='up' ? await C.signUp(id,pw) : await C.signIn(id,pw);
+    localStorage.setItem(SEEN_KEY,'1');
+    closeAuth(); renderAcct(); await loadPlans();
+  }catch(e){
+    err.textContent = C.say(e);
+  }finally{
+    go.disabled=false; go.textContent = authMode==='up' ? '가입하고 시작' : '로그인';
+  }
+}
+
+/* ── 저장 모달 ── */
+function openSave(r){
+  if(!me){ openAuth('in'); return; }
+  pending = r;
+  $('savePreview').textContent =
+    `${r.count}연방 · ${fmt(r.start)} → ${fmt(r.end)} · 공백 ${r.total}분`;
+  $('saveDate').value = today();
+  $('saveMemo').value = '';
+  $('saveErr').textContent = '';
+  segSet('wish');
+  $('saveModal').classList.add('on');
+}
+function segSet(v){
+  $('saveSeg').querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.v===v));
+}
+const segGet = () => $('saveSeg').querySelector('button.on').dataset.v;
+
+async function submitSave(){
+  const r=pending; if(!r) return;
+  const err=$('saveErr'), go=$('saveGo');
+  const date=$('saveDate').value;
+  if(!date){ err.textContent='날짜를 골라 주세요.'; return; }
+  go.disabled=true; go.textContent='저장 중…'; err.textContent='';
+  try{
+    const C = await cloud();
+    /* 확정된 시각을 그대로 굳혀 둔다. snapshot 은 "다시 짜기" 용 입력값일 뿐이라
+       나중에 계산 로직이 바뀌면 순위가 달라질 수 있다 — 지나간 일정이 그때 함께 바뀌면 안 된다. */
+    await C.savePlan({
+      date, status: segGet(), memo: $('saveMemo').value.trim(),
+      count: r.count, start: r.start, end: r.end, total: r.total,
+      minGap: r.minGap===Infinity ? null : r.minGap,
+      steps: r.steps.map(x=>({ name:x.name, dur:x.dur, start:x.start, end:x.end })),
+      snapshot: serialize(),
+    });
+    $('saveModal').classList.remove('on');
+    pending=null;
+    await loadPlans();
+    $('planSec').scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(e){
+    err.textContent = (await cloud()).say(e);
+  }finally{
+    go.disabled=false; go.textContent='저장';
+  }
+}
+
+/* ── 내 일정 목록 ── */
+async function loadPlans(){
+  if(!me){ plans=[]; renderPlans(); return; }
+  try{ plans = await (await cloud()).listPlans(); }
+  catch(e){ plans=[]; console.warn('일정 불러오기 실패:', e); }
+  renderPlans();
+}
+
+function renderPlans(){
+  const sec=$('planSec'), box=$('plans');
+  sec.hidden = !me;
+  if(!me) return;
+  $('planCount').textContent = plans.length ? plans.length + '건' : '';
+  if(!plans.length){
+    box.innerHTML = `<div class="empty">아직 저장한 일정이 없습니다. 결과 카드의 <b>저장</b> 을 눌러 보세요.</div>`;
+    return;
+  }
+  box.innerHTML = plans.map(p=>{
+    const wish = p.status==='wish';
+    const seq = (p.steps||[]).map(x=>`<b>${fmt(x.start)}</b> ${esc(x.name)}`).join('  →  ');
+    return `<div class="plan ${wish?'wish':'done'}" data-id="${p.id}">
+      <span class="pd">${esc(p.date||'')}</span>
+      <span class="tag ${wish?'wish':'done'}">${wish?'하고 싶음':'했음'}</span>
+      <span class="pspan">${fmt(p.start)} → ${fmt(p.end)} · ${p.count}연방 · 공백 ${p.total}분</span>
+      <span class="pbtns">
+        <button class="btn" data-a="load" type="button">불러오기</button>
+        <button class="btn" data-a="flip" type="button">${wish?'했음으로':'하고 싶음으로'}</button>
+        <button class="btn" data-a="del"  type="button">삭제</button>
+      </span>
+      <span class="pseq">${seq}  →  <b>${fmt(p.end)}</b> 종료</span>
+      ${p.memo?`<span class="pmemo">${esc(p.memo)}</span>`:''}
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('.plan').forEach(el=>{
+    const id=el.dataset.id, p=plans.find(x=>x.id===id);
+    el.querySelectorAll('button[data-a]').forEach(b=> b.onclick = async ()=>{
+      const C = await cloud();
+      if(b.dataset.a==='load'){
+        try{
+          restore(p.snapshot);
+          renderThemes(); renderSorts();
+          window.scrollTo({top:0, behavior:'smooth'});
+          $('runNote').textContent = `${p.date} 일정의 입력값을 불러왔습니다. 계산을 누르면 다시 짤 수 있습니다.`;
+        }catch{ $('runNote').textContent='이 일정은 불러올 수 없는 형식입니다.'; }
+        return;
+      }
+      if(b.dataset.a==='flip'){
+        const next = p.status==='wish' ? 'done' : 'wish';
+        b.disabled=true;
+        try{ await C.patchPlan(id,{status:next}); p.status=next; renderPlans(); }
+        catch(e){ b.disabled=false; console.warn(e); }
+        return;
+      }
+      if(b.dataset.a==='del'){
+        if(!confirm(`${p.date} 일정을 지울까요?`)) return;
+        b.disabled=true;
+        try{ await C.removePlan(id); plans=plans.filter(x=>x.id!==id); renderPlans(); }
+        catch(e){ b.disabled=false; console.warn(e); }
+      }
+    });
+  });
+}
+
+/* ── 배선 ── */
+if(CLOUD_ON){
+  $('authGo').onclick     = submitAuth;
+  $('authCancel').onclick = closeAuth;
+  $('authPw').onkeydown = e => { if(e.key==='Enter') submitAuth(); };
+  $('authId').onkeydown = e => { if(e.key==='Enter') $('authPw').focus(); };
+  $('saveGo').onclick     = submitSave;
+  $('saveCancel').onclick = ()=>{ $('saveModal').classList.remove('on'); pending=null; };
+  $('saveSeg').onclick = e => { if(e.target.dataset.v) segSet(e.target.dataset.v); };
+  /* 바깥을 눌러도 닫힌다 */
+  ['authModal','saveModal'].forEach(k=> $(k).onclick = e => {
+    if(e.target.id===k) e.target.classList.remove('on');
+  });
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape') document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));
+  });
+
+  /* 예전에 로그인한 적이 있을 때만 SDK 를 미리 깨운다.
+     한 번도 안 쓴 사람에게 5MB 짜리 짐을 지우지 않기 위해서다. */
+  if(localStorage.getItem(SEEN_KEY)){
+    cloud().then(C => C.watch(u=>{ me=u; renderAcct(); loadPlans(); }))
+           .catch(e=> console.warn('로그인 복귀 실패:', e));
+  }
+}
+
 /* ── init ── */
 /* 공유 링크로 들어온 경우 상태를 되살린다. 형식이 깨졌으면 조용히 무시하고 빈 화면으로 시작한다 */
 if(location.hash.startsWith('#s=')){
@@ -1018,7 +1342,7 @@ if(location.hash.startsWith('#s=')){
     themes=seed();
   }
 }
-renderThemes(); renderSorts();
+renderThemes(); renderSorts(); renderAcct();
 </script>
 </body>
 </html>
