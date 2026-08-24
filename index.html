@@ -373,6 +373,9 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   .pair .pn{font-size:13px}
   .pair .pv{width:64px}
 }
+
+.chk.mini{font-size:12.5px;color:var(--ink3);gap:6px;font-weight:500}
+.chk.mini input{width:14px;height:14px}
 </style>
 </head>
 <body>
@@ -677,7 +680,7 @@ const SORTS=[
 
 /* ── 상태 ── */
 let themes=[], nextId=1;
-function blank(name){ return {id:nextId++, name:name||'', place:'', dur:70, raw:'', sessions:[], busy:'', err:'', source:'', lock:false, imgCount:0}; }
+function blank(name){ return {id:nextId++, name:name||'', place:'', dur:70, raw:'', sessions:[], busy:'', err:'', source:'', lock:false, imgCount:0, mergeMode:true}; }
 
 /* 시작할 때 채워두는 기본 데이터. 매번 손으로 넣지 않고 바로 눌러볼 수 있게 한다.
    지우고 쓰면 되고, 공유 링크로 들어오면 이 값은 덮어써진다. */
@@ -730,12 +733,16 @@ function renderThemes(){
       <div class="parsed">${parsedHTML(th)}</div>
       <div class="card-foot">
         <label class="btn-img">${th.source.startsWith('image')&&th.sessions.length?'이미지 추가':'이미지 첨부'}<input type="file" accept="image/*" multiple data-k="file"></label>
+        <label class="chk mini" title="켜두면 새 이미지가 있던 회차에 이어 붙습니다. 꺼두면 새 이미지가 있던 값을 지우고 대신합니다">
+          <input type="checkbox" data-k="merge"${th.mergeMode!==false?' checked':''}> 이어 붙이기
+        </label>
         <span class="chip">${chipHTML(th)}</span>
         <span class="busy">${th.busy?esc(th.busy):''}</span>
         <span class="err">${th.err?esc(th.err):''}</span>
       </div>`;
     c.querySelector('[data-k=name]').oninput = e => th.name=e.target.value;
     c.querySelector('[data-k=place]').oninput = e => { th.place=e.target.value; renderPairs(); refreshMoveHint(); };
+    c.querySelector('[data-k=merge]').onchange = e => { th.mergeMode = e.target.checked; };
     c.querySelector('[data-k=dur]').oninput  = e => th.dur=Math.max(1,parseInt(e.target.value)||0);
     c.querySelector('[data-k=lock]').onclick = ()=>{ th.lock=!th.lock; renderThemes(); };
     c.querySelector('[data-k=del]').onclick  = ()=>{ themes=themes.filter(x=>x!==th); renderThemes(); renderPairs(); refreshMoveHint(); };
@@ -753,6 +760,7 @@ function renderThemes(){
     c.querySelector('[data-k=file]').onchange = async e => {
       const files=[...(e.target.files||[])];
       e.target.value = '';
+      if(files.length) clearIfOverwrite(th);
       /* 시간표가 길어 캡처를 두 장 이상 나눠 넣는 경우 — 차례로 읽어 이어 붙인다.
          워커가 하나뿐이라 동시에 돌리면 서로의 진행 표시를 덮어쓴다. */
       for(const f of files) await readImage(f, th);
@@ -787,6 +795,7 @@ function renderThemes(){
         return;
       }
       const fs=[...(e.dataTransfer.files||[])].filter(f=>f.type.startsWith('image/'));
+      if(fs.length) clearIfOverwrite(th);
       (async()=>{ for(const f of fs) await readImage(f, th); })();
     });
     elThemes.appendChild(c);
@@ -978,9 +987,16 @@ function handlePaste(e, th){
   const img=items.find(it=>it.type.startsWith('image/'));
   if(!img) return;              // 텍스트 붙여넣기는 그대로 통과
   e.preventDefault();
+  clearIfOverwrite(th);
   readImage(img.getAsFile(), th);
 }
 /* tesseract 는 File/Blob 을 그대로 받는다 — base64 변환이 필요 없다. */
+/* "이어 붙이기" 를 껐으면 새 배치를 시작하기 전에 지운다.
+   한 번에 여러 장을 고른 경우 그 장들끼리는 여전히 합쳐진다 —
+   덮어쓰는 대상은 "이전에 있던 값" 이지, "이번에 고른 여러 장" 이 아니다. */
+function clearIfOverwrite(th){
+  if(th.mergeMode===false){ th.raw=''; th.sessions=[]; th.imgCount=0; th.source=''; }
+}
 function readImage(file, th){ return ocr(file, th); }
 
 /* 진행 상황은 카드 하단 한 칸만 갈아끼운다.
