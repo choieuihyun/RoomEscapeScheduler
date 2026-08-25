@@ -278,7 +278,6 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .sorts{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
 .sortbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
   padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
-.sortbtn b{color:var(--ink3);font-weight:700;margin-left:5px}
 .sortbtn:hover{border-color:var(--line2)}
 .sortbtn.on{background:var(--strong);border-color:var(--strong);color:var(--strong-ink);font-weight:600}
 .sortbtn.on b{color:var(--strong-ink);opacity:.62}
@@ -297,6 +296,11 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .stat.warn b{color:var(--red-text)}
 .stat.good b{color:var(--green-text)}
 .res-body{padding:18px}
+
+/* ── 더 보기 ── */
+.showmore{text-align:center;padding:8px 0 4px}
+.reshint{margin:0 0 10px;font-size:12.5px;color:var(--ink3)}
+.morebtn{padding:11px 28px;font-size:14px}
 
 /* 블록 폭은 소요시간에 비례해야 하므로 이름 길이로 늘릴 수 없다 (시간축이 거짓말이 된다).
    대신 타임라인 전체를 필요한 만큼 넓히고 가로로 스크롤한다 — 비율은 그대로, 이름은 다 들어간다. */
@@ -1252,23 +1256,24 @@ async function ocr(file, th){
 /* ── 정렬 버튼 ── */
 let sortKey='gap', found=[];
 const elSorts=document.getElementById('sorts');
-/* 정렬은 필터가 아니라 같은 목록의 순서만 바꾸는 것이라, 다섯 칩이 전부 같은 숫자를
-   갖는다 — 그래도 "지금 보고 있는 게 몇 개인지" 를 탭까지 위로 안 올라가도 보여준다. */
 function renderSorts(){
   elSorts.innerHTML='';
-  const n=currentList().length;
   SORTS.forEach(s=>{
     const b=document.createElement('button');
     b.className='sortbtn'+(s.k===sortKey?' on':'');
-    b.innerHTML=`${s.label}<b>${n.toLocaleString()}</b>`;
-    b.onclick=()=>{sortKey=s.k;renderSorts();renderResults();scheduleAutosave();};
+    b.textContent=s.label;
+    b.onclick=()=>{sortKey=s.k;showCount=SHOW;renderResults();scheduleAutosave();};
     elSorts.appendChild(b);
   });
 }
 
 /* ── 결과 렌더 ── */
 const elRes=document.getElementById('results'), elCount=document.getElementById('resCount');
+/* 한 번에 다 그리면(조합이 수천 개일 수 있다) 스크롤이 끝없이 길어지고 렌더도 무거워진다.
+   그래서 12개씩 끊어서 보여주고, [더 보기] 를 누를 때마다 12개씩 더 연다.
+   showCount 는 지금까지 연 개수 — 탭·정렬·재계산처럼 목록 자체가 바뀌는 지점마다 다시 12로 되돌린다. */
 const SHOW=12;
+let showCount=SHOW;
 
 /* 어떤 테마들로 이루어진 조합인지를 나타내는 키. 부분 조합을 묶어 보여줄 때 쓴다. */
 const setKey = r => r.steps.map(s=>s.i).sort((a,b)=>a-b).join(',');
@@ -1303,8 +1308,8 @@ function renderTabs(){
       + '</div>';
   } else tabSet=null;
   el.innerHTML=html;
-  el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ tabCount=+b.dataset.c; tabSet=null; renderTabs(); renderSorts(); renderResults(); });
-  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ tabSet=b.dataset.s||null; renderTabs(); renderSorts(); renderResults(); });
+  el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ tabCount=+b.dataset.c; tabSet=null; showCount=SHOW; renderTabs(); renderResults(); });
+  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ tabSet=b.dataset.s||null; showCount=SHOW; renderTabs(); renderResults(); });
 }
 
 function currentList(){
@@ -1324,7 +1329,7 @@ function renderResults(){
     elRes.innerHTML='<div class="empty">이 묶음에는 조합이 없습니다.</div>';
     return;
   }
-  const list=[...pool].sort(SORTS.find(s=>s.k===sortKey).f).slice(0,SHOW);
+  const list=[...pool].sort(SORTS.find(s=>s.k===sortKey).f).slice(0,showCount);
   const lo=Math.min(...list.map(r=>r.start)), hi=Math.max(...list.map(r=>r.end));
   const span=Math.max(hi-lo,60), pct=m=>((m-lo)/span)*100;
 
@@ -1400,6 +1405,24 @@ function renderResults(){
     if(sv) sv.onclick = ()=> openSave(r);
     elRes.appendChild(d);
   });
+
+  /* 잘려서 안 보이는 게 있을 때만 안내 + 더 보기를 둔다 — 다 보여준 상태면 군더더기다 */
+  if(pool.length > list.length){
+    const shown=list.length;
+    const more=document.createElement('div');
+    more.className='showmore';
+    more.innerHTML=`
+      <p class="reshint">상위 ${shown.toLocaleString()}개만 표시됩니다 · 전체 ${pool.length.toLocaleString()}개 중</p>
+      <button class="btn morebtn" type="button">더 보기 (${Math.min(SHOW,pool.length-shown).toLocaleString()}개 더)</button>`;
+    more.querySelector('.morebtn').onclick = ()=>{
+      showCount += SHOW;
+      renderResults();
+      /* 방금까지 보이던 마지막 카드 바로 다음이 새로 열린 첫 카드다 */
+      const cards=elRes.querySelectorAll('.res');
+      cards[shown]?.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+    elRes.appendChild(more);
+  }
   /* appendChild 뒤에야 실제 폭이 잡힌다. 넘치는 이름에만 훑기를 건다 —
      안 넘치는 이름까지 움직이면 눈만 피곤하다. */
   /* 1) 이름이 안 들어가는 블록이 있으면 타임라인 전체를 그 비율만큼 넓힌다.
@@ -1549,13 +1572,13 @@ $('go').onclick=()=>{
                     .map((t,i)=>({name:t.name||('테마 '+(i+1)),dur:t.dur,sessions:t.sessions,
                                   place:t.place||'',
                                   lockPos: t.lock ? i : null}));
-  if(themesReady.length<2){ note.textContent='회차가 있는 테마가 2개 이상 필요합니다.'; found=[]; renderTabs(); renderSorts(); renderResults(); elCount.textContent=''; return; }
+  if(themesReady.length<2){ note.textContent='회차가 있는 테마가 2개 이상 필요합니다.'; found=[]; showCount=SHOW; renderTabs(); renderResults(); elCount.textContent=''; return; }
 
   const o=readOptions();
   /* 최대 공백이 식사 공백보다 작으면 서로 모순이라 결과가 0이 된다 — 미리 알려준다 */
   if(o.meal && o.maxGap!=null && o.maxGap<o.meal.min){
     note.textContent=`최대 공백(${o.maxGap}분)이 식사 공백(${o.meal.min}분)보다 작아 조합이 나올 수 없습니다.`;
-    found=[]; renderTabs(); renderSorts(); renderResults(); elCount.textContent=''; return;
+    found=[]; showCount=SHOW; renderTabs(); renderResults(); elCount.textContent=''; return;
   }
   /* 이 순간의 입력값을 붙잡아 둔다. 저장할 때 다시 serialize() 하면,
      계산 뒤에 회차를 고치고 화면에 남아 있던 결과 카드의 [저장] 을 누르는 순간
@@ -1566,10 +1589,10 @@ $('go').onclick=()=>{
   found=out;
   const ms=Math.round(performance.now()-t0);
   tabCount=null; tabSet=null;      // 새로 계산하면 탭 선택을 초기화한다
+  showCount=SHOW;
   elCount.textContent=`${out.length.toLocaleString()}개 조합${capped?' (탐색 한도 도달)':''}`;
-  note.textContent=`${ms}ms · 상위 ${Math.min(SHOW,currentList().length||out.length)}개 표시`;
+  note.textContent=`${ms}ms`;
   renderTabs();
-  renderSorts();
   renderResults();
 };
 
@@ -1849,7 +1872,7 @@ function renderPlans(){
           restore(p.snapshot);
           /* 옛 결과 카드를 남겨두면 그 [저장] 버튼이 아직 이전 계산 결과를 붙들고 있다.
              화면과 입력이 어긋난 채로 저장되는 길을 아예 막는다. */
-          found=[]; themesReady=[]; lastSnapshot=null; tabCount=null; tabSet=null;
+          found=[]; themesReady=[]; lastSnapshot=null; tabCount=null; tabSet=null; showCount=SHOW;
           renderThemes(); renderSorts(); renderTabs(); renderResults();
           $('resCount').textContent='';
           window.scrollTo({top:0, behavior:'smooth'});
