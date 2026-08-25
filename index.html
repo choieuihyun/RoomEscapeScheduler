@@ -8,7 +8,15 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🗝️</text></svg>">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
-<meta name="theme-color" content="#F2F4F6">
+<meta name="theme-color" id="themeColorMeta" content="#F2F4F6">
+<script>
+/* CSS 가 칠해지기 전에 저장된 테마를 먼저 붙인다 — 안 그러면 다크로 저장해 둔 사람에게
+   밝은 화면이 잠깐 번쩍이고 어두워진다(FOUC). */
+try{
+  const t = localStorage.getItem('resched.theme');
+  if(t) document.documentElement.setAttribute('data-theme', t);
+}catch(e){}
+</script>
 <style>
 /* ── 토큰 ──────────────────────────────────────────────
    밝은 배경 + 파란 포인트 + 큰 라운드 + 테두리 대신 그림자.
@@ -22,11 +30,27 @@
   --ink:#191F28;         /* 본문 */
   --ink2:#4E5968;        /* 보조 */
   --ink3:#626C7A;        /* 흐린 설명 */
+  --placeholder:#98A2AE;
 
-  --blue:#2670EB; --blue-press:#1B64DA; --blue-soft:#E8F3FF; --blue-line:#B6D8FF;
+  /* --blue 는 흰 글자를 얹는 버튼·배지용, --blue-text 는 배경 위에 직접 얹는 글자용 —
+     라이트 모드에선 같은 색이 두 역할 다 하지만, 다크 모드에선 방향이 갈린다(아래 참고). */
+  --blue:#2670EB; --blue-hover:#1B64DA; --blue-press:#1B64DA; --blue-text:#2670EB;
+  --blue-soft:#E8F3FF; --blue-line:#B6D8FF;
   --green:#00B26B; --green-text:#00734B; --green-soft:#E4F8EF;
   --red:#F04452;   --red-text:#D92B39;  --red-soft:#FFECEE;  --red-line:#FFC9CF;
   --amber:#E08700; --amber-text:#B4530A; --amber-soft:#FFF3E0; --amber-line:#FFD79A;
+
+  /* 선택된 탭/정렬 칩처럼 "글자색을 뒤집어 채우는" 자리 전용 — --ink 와 분리해 둬야
+     다크 모드에서 --ink 가 밝아져도 이 칩은 계속 또렷하게 채워진다. */
+  --strong:#191F28; --strong-ink:#FFFFFF;
+
+  /* 공백(잔여) 빗금 세 단계 — 기본/넓음/좁음 */
+  --gap-a:#EDF0F3; --gap-b:#E1E6EB;
+  --gap-big-a:#FFF3E0; --gap-big-b:#FFE3B8;
+  --gap-tight-a:#FFECEE; --gap-tight-b:#FFD4D9;
+
+  /* 이동 알약(채운 구간) */
+  --mv-line:#E9A23B; --mv-fill:#FFC96B; --mv-text:#6B3D00;
 
   --r:16px; --r-sm:10px; --r-xs:8px; --pill:999px;
   --sh:0 1px 2px rgba(25,31,40,.04), 0 4px 16px rgba(25,31,40,.05);
@@ -36,6 +60,59 @@
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,
          'Apple SD Gothic Neo','Segoe UI','Malgun Gothic',system-ui,sans-serif;
   --num:ui-monospace,SFMono-Regular,'SF Mono',Menlo,monospace;
+}
+
+/* ── 다크 모드 ──────────────────────────────────────────
+   같은 역할, 다른 값. 컴포넌트 CSS 는 전부 토큰만 참조하므로 여기 두 블록 밖은
+   손댈 필요가 없다 — 시스템 설정을 따르는 경우([data-theme] 없음)와
+   수동 토글([data-theme="dark"])을 한 값으로 같이 챙긴다. */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161A; --surface:#1C1F26; --surface2:#242830;
+    --line:#333A44; --line2:#4A5361;
+    --ink:#F3F5F7; --ink2:#AEB6C2; --ink3:#7E8794; --placeholder:#828B98;
+
+    --blue:#2E63D6; --blue-hover:#2454B8; --blue-press:#8FB4FF; --blue-text:#8FB4FF;
+    --blue-soft:#172642; --blue-line:#3A5A90;
+    --green:#22C57F; --green-text:#6FE3B0; --green-soft:#12301F;
+    --red:#FF5D67;   --red-text:#FF9AA1;  --red-soft:#3A1418;  --red-line:#6B2830;
+    --amber:#FFAE33; --amber-text:#FFCB70; --amber-soft:#3A2A0C; --amber-line:#6B4B14;
+
+    --strong:#F3F5F7; --strong-ink:#14161A;
+
+    --gap-a:#262B33; --gap-b:#2E343D;
+    --gap-big-a:#3A2A0C; --gap-big-b:#4A3610;
+    --gap-tight-a:#3A1418; --gap-tight-b:#4A1C22;
+
+    --mv-line:#8C6427; --mv-fill:#4A340F; --mv-text:#FFCE85;
+
+    --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
+    --sh-up:0 4px 14px rgba(0,0,0,.5), 0 16px 36px rgba(0,0,0,.5);
+    --ring:0 0 0 3px rgba(91,147,255,.28);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161A; --surface:#1C1F26; --surface2:#242830;
+  --line:#333A44; --line2:#4A5361;
+  --ink:#F3F5F7; --ink2:#AEB6C2; --ink3:#7E8794; --placeholder:#828B98;
+
+  --blue:#2E63D6; --blue-hover:#2454B8; --blue-press:#8FB4FF; --blue-text:#8FB4FF;
+  --blue-soft:#172642; --blue-line:#3A5A90;
+  --green:#22C57F; --green-text:#6FE3B0; --green-soft:#12301F;
+  --red:#FF5D67;   --red-text:#FF9AA1;  --red-soft:#3A1418;  --red-line:#6B2830;
+  --amber:#FFAE33; --amber-text:#FFCB70; --amber-soft:#3A2A0C; --amber-line:#6B4B14;
+
+  --strong:#F3F5F7; --strong-ink:#14161A;
+
+  --gap-a:#262B33; --gap-b:#2E343D;
+  --gap-big-a:#3A2A0C; --gap-big-b:#4A3610;
+  --gap-tight-a:#3A1418; --gap-tight-b:#4A1C22;
+
+  --mv-line:#8C6427; --mv-fill:#4A340F; --mv-text:#FFCE85;
+
+  --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
+  --sh-up:0 4px 14px rgba(0,0,0,.5), 0 16px 36px rgba(0,0,0,.5);
+  --ring:0 0 0 3px rgba(91,147,255,.28);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -53,7 +130,7 @@ body{
 /* ── header ── */
 header{padding:32px 0 26px}
 h1{font-size:30px;font-weight:800;letter-spacing:-.035em;margin:0 0 8px;color:var(--ink)}
-h1 .dim{color:var(--blue)}
+h1 .dim{color:var(--blue-text)}
 header p{margin:0;color:var(--ink3);font-size:14px;max-width:52ch}
 
 /* ── sections ── */
@@ -80,7 +157,7 @@ input,textarea,select{
   border-radius:var(--r-sm);padding:10px 12px;font-family:inherit;font-size:14px;
   transition:border-color .13s,box-shadow .13s,background .13s;
 }
-input::placeholder,textarea::placeholder{color:#98A2AE}
+input::placeholder,textarea::placeholder{color:var(--placeholder)}
 input:focus,textarea:focus,select:focus{outline:none;background:var(--surface);
   border-color:var(--blue);box-shadow:var(--ring)}
 .i-name{flex:1;min-width:120px;font-weight:600}
@@ -128,7 +205,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   padding:13px 30px;font-size:15px;font-weight:700;border-radius:var(--r-sm);
   box-shadow:0 2px 8px rgba(49,130,246,.24);
 }
-.btn-go:hover{background:var(--blue-press);border-color:var(--blue-press);
+.btn-go:hover{background:var(--blue-hover);border-color:var(--blue-hover);
   box-shadow:0 4px 14px rgba(49,130,246,.3)}
 .btn-go:disabled{opacity:.4;cursor:default;box-shadow:none}
 
@@ -179,7 +256,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
 .tab b{color:var(--ink3);font-weight:700;margin-left:5px}
 .tab:hover{border-color:var(--line2)}
-.tab.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.tab.on{background:var(--strong);border-color:var(--strong);color:var(--strong-ink);font-weight:600}
 .tab.on b{color:rgba(255,255,255,.62)}
 .tabrow.sets .tab{font-size:12.5px;padding:5px 12px}
 
@@ -188,7 +265,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .sortbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
   padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
 .sortbtn:hover{border-color:var(--line2)}
-.sortbtn.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.sortbtn.on{background:var(--strong);border-color:var(--strong);color:var(--strong-ink);font-weight:600}
 
 /* ── results ── */
 .res{background:var(--surface);border:1px solid transparent;border-radius:var(--r);
@@ -235,11 +312,11 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
    "공백을 더 눈에 띄게" 가 원래 요구였다. 세 단계(좁음/보통/넓음)를 색으로 가른다. */
 .gap{position:absolute;top:0;height:50px;border-radius:var(--r-xs);
   border:1px solid var(--line);
-  background:repeating-linear-gradient(-45deg,#EDF0F3 0 5px,#E1E6EB 5px 10px)}
+  background:repeating-linear-gradient(-45deg,var(--gap-a) 0 5px,var(--gap-b) 5px 10px)}
 .gap.big{border-color:var(--amber-line);
-  background:repeating-linear-gradient(-45deg,#FFF3E0 0 5px,#FFE3B8 5px 10px)}
+  background:repeating-linear-gradient(-45deg,var(--gap-big-a) 0 5px,var(--gap-big-b) 5px 10px)}
 .gap.tight{border-color:var(--red-line);
-  background:repeating-linear-gradient(-45deg,#FFECEE 0 5px,#FFD4D9 5px 10px)}
+  background:repeating-linear-gradient(-45deg,var(--gap-tight-a) 0 5px,var(--gap-tight-b) 5px 10px)}
 .gaplab{position:absolute;top:53px;height:19px;display:flex;align-items:center;justify-content:center}
 .gaplab em{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:11.5px;
   font-style:normal;font-weight:700;color:var(--ink3);white-space:nowrap}
@@ -258,7 +335,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .empty{color:var(--ink3);font-size:14px;padding:36px 0;text-align:center;
   background:var(--surface);border:none;border-radius:var(--r);box-shadow:var(--sh)}
 .err{color:var(--red-text);font-size:13px;margin-top:8px;font-weight:500}
-.busy{color:var(--blue);font-size:13px;font-weight:500}
+.busy{color:var(--blue-text);font-size:13px;font-weight:500}
 @media(max-width:560px){
   body{font-size:14px}
   .card-top{gap:8px}.i-name{min-width:90px}
@@ -345,17 +422,17 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 /* 이동 구간은 공백 앞쪽에 겹쳐 칠한다 — "끝나자마자 걷는다" 가 눈에 보이게 */
 .mv{position:absolute;top:0;height:50px;border-radius:var(--r-xs) 0 0 var(--r-xs);
-  border:1px solid #E9A23B;border-right:none;background:#FFC96B}
+  border:1px solid var(--mv-line);border-right:none;background:var(--mv-fill)}
 /* 공백 라벨: 이동은 채운 알약, 잔여는 맨 글자 — 색이 아니라 모양이 먼저 가른다 */
 .gaplab.hasmv em{display:inline-flex;align-items:center;gap:5px}
-.gaplab em .mvp{background:#FFC96B;color:#6B3D00;font-weight:800;
+.gaplab em .mvp{background:var(--mv-fill);color:var(--mv-text);font-weight:800;
   border-radius:var(--pill);padding:1px 8px;white-space:nowrap}
 .gaplab em .wtp{font-weight:700;white-space:nowrap}
 .gaplab.tight em .wtp{color:var(--red-text)}
 .gaplab.big em .wtp{color:var(--amber-text)}
 .mvstat b{color:var(--amber-text)}
-.mvtag{font-style:normal;font-size:12px;font-weight:800;color:#6B3D00;
-  background:#FFC96B;border-radius:var(--pill);padding:2px 10px;white-space:nowrap}
+.mvtag{font-style:normal;font-size:12px;font-weight:800;color:var(--mv-text);
+  background:var(--mv-fill);border-radius:var(--pill);padding:2px 10px;white-space:nowrap}
 
 .pairs{margin-top:12px;background:var(--surface);border-radius:var(--r);
   padding:14px 16px;box-shadow:var(--sh)}
@@ -379,6 +456,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 /* ── 사용법 투어 ── */
 .hrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hleft{display:flex;align-items:center;gap:8px}
 .tourbtn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line)}
 .tourbtn:hover{background:var(--surface2)}
 .tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
@@ -391,7 +469,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   box-shadow:var(--sh-up);opacity:0;
   transition:top .28s cubic-bezier(.4,0,.2,1),left .28s cubic-bezier(.4,0,.2,1),opacity .18s}
 .tour-tip.on{opacity:1}
-.tour-tip .step{font-size:12px;font-weight:800;color:var(--blue);letter-spacing:.02em}
+.tour-tip .step{font-size:12px;font-weight:800;color:var(--blue-text);letter-spacing:.02em}
 .tour-tip h4{margin:6px 0 8px;font-size:17px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
 .tour-tip p{margin:0 0 16px;font-size:13.5px;line-height:1.6;color:var(--ink2)}
 .tour-btns{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -407,7 +485,10 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 <header>
   <div class="hrow">
-    <button class="btn tourbtn" id="tourBtn" type="button">사용법 보기</button>
+    <div class="hleft">
+      <button class="btn tourbtn" id="tourBtn" type="button">사용법 보기</button>
+      <button class="btn tourbtn" id="themeBtn" type="button">다크 모드</button>
+    </div>
     <div class="acct" id="acct"></div>
   </div>
   <h1>Flo<span class="dim">duler</span></h1>
@@ -963,6 +1044,32 @@ window.addEventListener('resize', ()=>{
   const step=TOUR_STEPS[tourStep], target=document.querySelector(step.sel);
   if(target) positionTour(target, step);
 });
+
+/* ── 다크 모드 ──
+   저장된 선택이 없으면 시스템 설정을 그대로 따르고([data-theme] 속성 자체를 안 둠),
+   버튼을 누르면 그때부터 그 선택을 기억한다. */
+const THEME_KEY='resched.theme';
+const sysDark=()=>matchMedia('(prefers-color-scheme: dark)').matches;
+function isDarkNow(){
+  const t=document.documentElement.getAttribute('data-theme');
+  return t ? t==='dark' : sysDark();
+}
+function applyTheme(t){
+  if(t) document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+  const dark=isDarkNow();
+  document.getElementById('themeBtn').textContent = dark ? '라이트 모드' : '다크 모드';
+  document.getElementById('themeColorMeta').content = dark ? '#14161A' : '#F2F4F6';
+}
+document.getElementById('themeBtn').onclick=()=>{
+  const next = isDarkNow() ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
+  if(!localStorage.getItem(THEME_KEY)) applyTheme(null);   // 저장된 선택이 없을 때만 시스템을 따라간다
+});
+applyTheme(localStorage.getItem(THEME_KEY));
 
 /* ── 이미지 → 회차 (브라우저 내 OCR) ── */
 /* 인식은 전부 이 브라우저 안에서 돈다 — 이미지가 서버로 나가지 않고, API 키도 과금도 없다.
@@ -1681,7 +1788,7 @@ function openAuth(mode){
     ? `이미 아이디가 있나요? <b class="lk">로그인</b>`
     : `아이디가 없나요? <b class="lk">가입</b> · <b>비밀번호를 잊으면 되찾을 방법이 없습니다</b> (메일 주소를 안 받기 때문). 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.`;
   const lk=$('authSwap').querySelector('.lk');
-  lk.style.cssText='color:var(--blue);font-weight:600;cursor:pointer;text-decoration:underline';
+  lk.style.cssText='color:var(--blue-text);font-weight:600;cursor:pointer;text-decoration:underline';
   lk.onclick = ()=> openAuth(up?'in':'up');
   $('authErr').textContent='';
   $('authModal').classList.add('on');
