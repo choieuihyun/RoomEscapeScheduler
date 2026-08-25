@@ -396,7 +396,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   <div class="themes" id="themes"></div>
   <div class="addrow">
     <button class="btn" id="addTheme">＋ 테마 추가</button>
-    <button class="btn" id="seedBtn" type="button">기본값 채우기</button>
+    <button class="btn" id="seedBtn" type="button">테스트 데이터 넣기</button>
     <span class="addhint"><b>순서는 도구가 정합니다.</b> 번호를 끌어 옮기고 <b>자리 고정</b>을 누르면 그 자리에 묶입니다 · <b>×</b> 로 삭제</span>
   </div>
 </section>
@@ -682,8 +682,8 @@ const SORTS=[
 let themes=[], nextId=1;
 function blank(name){ return {id:nextId++, name:name||'', place:'', dur:70, raw:'', sessions:[], busy:'', err:'', source:'', lock:false, imgCount:0, mergeMode:true}; }
 
-/* 시작할 때 채워두는 기본 데이터. 매번 손으로 넣지 않고 바로 눌러볼 수 있게 한다.
-   지우고 쓰면 되고, 공유 링크로 들어오면 이 값은 덮어써진다. */
+/* '테스트 데이터 넣기' 버튼을 누르면 채워지는 예시 데이터. 시작할 때는 빈 화면이다 —
+   눌러본 적 없는 사람에게 낯선 매장 이름을 먼저 보여줄 이유가 없다. */
 const SEED=[
   ['범계',      75, '10:30  12:00  13:30  15:00  16:30  18:00  19:30  21:00  22:30', ''],
   ['몽',        70, '10:50  12:10  13:30  14:50  16:10  17:30  18:50  20:10  21:30  22:50', ''],
@@ -696,7 +696,7 @@ function seed(){
     return th;
   });
 }
-themes = seed();
+themes = [];
 
 /* ── 테마 렌더 ── */
 const elThemes = document.getElementById('themes');
@@ -734,7 +734,7 @@ function renderThemes(){
       <div class="card-foot">
         <label class="btn-img">${th.source.startsWith('image')&&th.sessions.length?'이미지 추가':'이미지 첨부'}<input type="file" accept="image/*" multiple data-k="file"></label>
         <label class="chk mini" title="켜두면 새 이미지가 있던 회차에 이어 붙습니다. 꺼두면 새 이미지가 있던 값을 지우고 대신합니다">
-          <input type="checkbox" data-k="merge"${th.mergeMode!==false?' checked':''}> 이어 붙이기
+          <input type="checkbox" data-k="merge"${th.mergeMode!==false?' checked':''}> 이미지 여러장 넣기
         </label>
         <span class="chip">${chipHTML(th)}</span>
         <span class="busy">${th.busy?esc(th.busy):''}</span>
@@ -1745,10 +1745,9 @@ if(CLOUD_ON){
 if(location.hash.startsWith('#s=')){
   try{
     restore(location.hash.slice(3));
-    if(!themes.length) themes=seed();     // 빈 링크였다면 기본값을 지키는 편이 낫다
   }catch(err){
     console.warn('링크 복원 실패:', err.message);
-    themes=seed();
+    themes=[];
   }
 }
 renderThemes(); renderSorts(); renderAcct(); renderPairs(); refreshMoveHint();
