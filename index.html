@@ -17,6 +17,17 @@ try{
   if(t) document.documentElement.setAttribute('data-theme', t);
 }catch(e){}
 </script>
+<!-- PaddleOCR(ONNX) 을 번들러 없이 쓰기 위한 맨몸 지정자 매핑. 패키지 안의 상대경로
+     import 는 vendor/ 아래 같은 폴더 구조를 그대로 옮겨 놨으므로 손대지 않아도 풀린다. -->
+<script type="importmap">
+{
+  "imports": {
+    "onnxruntime-web": "./vendor/onnxruntime-web/ort.wasm.min.mjs",
+    "ppu-ocv/canvas-web": "./vendor/ppu-ocv/index.canvas-web.js",
+    "ppu-paddle-ocr/web": "./vendor/ppu-paddle-ocr/web/index.js"
+  }
+}
+</script>
 <style>
 /* ── 토큰 ──────────────────────────────────────────────
    밝은 배경 + 파란 포인트 + 큰 라운드 + 테두리 대신 그림자.
@@ -1071,26 +1082,12 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
 });
 applyTheme(localStorage.getItem(THEME_KEY));
 
-/* ── 이미지 → 회차 (브라우저 내 OCR) ── */
-/* 인식은 전부 이 브라우저 안에서 돈다 — 이미지가 서버로 나가지 않고, API 키도 과금도 없다.
-   엔진(tesseract)은 vendor/ 에 같이 들어 있어 CDN 없이 오프라인으로도 동작한다.
-
-   숫자와 콜론만 읽으면 충분하다. "오전/오후" 는 읽지 않는다 —
-   parseSessions 의 오름차순 12시간 보정이 복원해 주기 때문이다.
-   (실제 예약 화면으로 검증: 숫자만으로 9개 회차 전부 정확히 복원됨)
-   글자 후보를 숫자와 콜론으로 제한하면 한글 데이터(약 12MB)가 통째로 불필요하고,
-   달력의 날짜 숫자는 콜론이 없어 parseSessions 단계에서 자연히 걸러진다. */
-/* 상대경로로 주면 워커 내부에서 기준이 달라져 core/데이터를 못 찾고 그대로 멈춘다.
-   페이지 기준 절대 URL 로 고정한다. */
-const OCR_BASE=new URL('vendor/tesseract/', location.href).href;
-let ocrWorker=null, ocrLoading=null;
-
-/* 예약 화면의 회차 글자는 대개 옅은 회색(#bcbcbc 언저리)이라,
-   tesseract 의 기본 이진화에서 배경으로 묻혀 통째로 사라진다.
-   실측: 전처리 없이 0/9 → 전처리 후 9/9. 이 단계가 인식률의 전부다.
-   그래서 넘기기 전에 직접 이진화한다 (회색조 → 임계값으로 흑백 이분),
-   더불어 가로 1500px 정도로 확대한다. 작은 캡처일수록 효과가 크다. */
-const OCR_THRESHOLD=235;
+/* ── 이미지 → 회차 (브라우저 내 OCR) ──
+   인식은 전부 이 브라우저 안에서 돈다 — 이미지가 서버로 나가지 않고, API 키도 과금도 없다.
+   엔진(PaddleOCR)은 모델까지 vendor/ 에 같이 들어 있어 CDN 없이 오프라인으로도 동작한다.
+   전에는 tesseract + 손으로 짠 이진화 전처리를 썼다. PP-OCRv6 tiny 로 바꾼 뒤로는
+   학습된 검출기가 색·배경과 무관하게 글자를 찾아내므로 그 전처리가 필요 없어졌다
+   (기획 §4.25). 실제 구현은 아래 "PaddleOCR" 섹션. */
 /* 인식 시간은 화소 수에 비례한다. 확대는 작은 캡처의 인식률을 올리지만
    무한정 키우면 몇 분씩 걸린다 — 가로 목표치와 총 화소 상한을 함께 건다. */
 /* 폰이 느릴 것이라 보고 화소 예산을 절반으로 줄였다가 되돌렸다 —
@@ -1101,102 +1098,6 @@ const OCR_MOBILE = matchMedia('(pointer:coarse)').matches || innerWidth < 700;
 const OCR_TARGET_W=1200;
 const OCR_MAX_PIXELS = 3.2e6;
 const OCR_TIMEOUT_MS = OCR_MOBILE ? 210000 : 120000;
-
-/* 지역 적응 이진화 — 화소마다 "주변 평균"과 견줘 글자인지 정한다.
-   전역 임계값 하나로는 흰 배경과 "색 버튼 위 흰 글자" 를 못 가른다.
-   둘 다 흰색이라, 어떤 값을 잡아도 한쪽이 통째로 사라진다.
-   주변과 견주면 버튼 안의 흰 글자는 "주변보다 밝다" 로, 흰 배경은 "주변과 같다" 로 갈린다.
-   적분영상을 써서 창 크기와 무관하게 화소당 상수 시간에 끝낸다. */
-function adaptiveInk(gray, w, h, bright){
-  const W=w+1;
-  const I=new Uint32Array(W*(h+1));
-  for(let y=0;y<h;y++){
-    let row=0;
-    for(let x=0;x<w;x++){ row+=gray[y*w+x]; I[(y+1)*W+x+1]=I[y*W+x+1]+row; }
-  }
-  const r=Math.max(7, Math.round(w/24));   /* 글자 한 줄이 들어갈 만한 반경 */
-  const C=8;                               /* 평균과 이만큼은 차이나야 글자로 본다 */
-  const out=new Uint8Array(w*h);
-  for(let y=0;y<h;y++){
-    const y0=Math.max(0,y-r), y1=Math.min(h-1,y+r);
-    for(let x=0;x<w;x++){
-      const x0=Math.max(0,x-r), x1=Math.min(w-1,x+r);
-      const sum=I[(y1+1)*W+x1+1]-I[y0*W+x1+1]-I[(y1+1)*W+x0]+I[y0*W+x0];
-      const mean=sum/((x1-x0+1)*(y1-y0+1));
-      const g=gray[y*w+x];
-      out[y*w+x]=(bright ? g>mean+C : g<mean-C) ? 0 : 255;
-    }
-  }
-  return out;
-}
-
-/* 전처리 한 가지로는 안 된다. 예약 화면마다 글자와 배경의 관계가 달라서
-   임계값 하나로 다 잡히지 않는다 — 특히 "색 버튼 위 흰 글자" 형태는
-   이진화하면 글자가 배경이 되어 통째로 사라진다.
-     auto   : 평균 밝기로 방향을 정해 전역 이진화 (지금까지의 방식 — 옅은 회색 글자에 강하다)
-     adapt  : 지역 적응, 주변보다 어두운 것이 글자
-     bright : 지역 적응, 주변보다 밝은 것이 글자 (색 버튼 위 흰 글자)
-     raw    : 회색조만 만들고 이진화는 tesseract 에 맡긴다
-   값싼 순서로 시도하고 시각이 하나라도 나온 것을 쓴다. 한 번이 몇 초라 부담이 적다. */
-function preprocess(file, mode='auto'){
-  return new Promise((res,rej)=>{
-    const url=URL.createObjectURL(file);
-    const img=new Image();
-    img.onload=()=>{
-      URL.revokeObjectURL(url);
-      /* 확대는 "작아서 안 읽히는" 캡처를 위한 것이다. 이미 1000px 가 넘는 폰 캡처를
-         1200 에 맞추려 들면 화소 상한에 걸려 도로 줄어든다 — 순수하게 손해다. */
-      let scale = img.width < 900 ? Math.min(3, OCR_TARGET_W/img.width) : 1;
-      const px=img.width*img.height*scale*scale;
-      if(px>OCR_MAX_PIXELS) scale*=Math.sqrt(OCR_MAX_PIXELS/px);   // 상한 초과분만 되돌린다
-      const cv=document.createElement('canvas');
-      cv.width=Math.round(img.width*scale);
-      cv.height=Math.round(img.height*scale);
-      const cx=cv.getContext('2d',{willReadFrequently:true});
-      cx.imageSmoothingQuality='high';
-      cx.drawImage(img,0,0,cv.width,cv.height);
-      const d=cx.getImageData(0,0,cv.width,cv.height), a=d.data;
-      /* 다크모드 예약 화면(어두운 배경 + 밝은 글자)이면 기준을 뒤집는다.
-         안 그러면 화면 전체가 글자로 판정돼 아무것도 못 읽는다. */
-      const n=cv.width*cv.height;
-      const gray=new Uint8Array(n);
-      let sum=0;
-      for(let i=0,j=0;i<a.length;i+=4,j++){
-        const g=(0.299*a[i]+0.587*a[i+1]+0.114*a[i+2])|0;
-        gray[j]=g; sum+=g;
-      }
-      let mask=null;
-      if(mode==='adapt')  mask=adaptiveInk(gray,cv.width,cv.height,false);
-      if(mode==='bright') mask=adaptiveInk(gray,cv.width,cv.height,true);
-      const dark=(sum/n)<128;          /* 다크모드 화면이면 기준을 뒤집는다 */
-      for(let i=0,j=0;i<a.length;i+=4,j++){
-        const g=gray[j];
-        let v;
-        if(mask) v=mask[j];
-        else if(mode==='raw') v=g;     /* 이진화 없이 회색조만 */
-        else v=(dark ? g>(255-OCR_THRESHOLD) : g<OCR_THRESHOLD) ? 0 : 255;
-        a[i]=a[i+1]=a[i+2]=v; a[i+3]=255;
-      }
-      cx.putImageData(d,0,0);
-      cv.toBlob(b=>{
-        if(!b) return rej(new Error('이미지 변환 실패 — 사진이 너무 큽니다'));
-        b._dim = img.width+'×'+img.height+'→'+cv.width+'×'+cv.height;
-        b._mode = mode;
-        res(b);
-      }, 'image/png');
-    };
-    img.onerror=()=>{
-      URL.revokeObjectURL(url);
-      /* 아이폰에서 파일 앱을 거쳐 고르면 HEIC 가 그대로 올라올 때가 있다.
-         크롬·사파리 모두 캔버스로 못 그리므로 여기서 걸린다 — 원인을 분명히 말해 준다. */
-      const heic=/heic|heif/i.test(file.type||'') || /\.(heic|heif)$/i.test(file.name||'');
-      rej(new Error(heic
-        ? 'HEIC 사진은 못 읽습니다 — 캡처(스크린샷)를 넣거나 JPG 로 바꿔 주세요'
-        : '이미지를 열지 못했습니다 ('+(file.type||'형식 불명')+')'));
-    };
-    img.src=url;
-  });
-}
 
 function handlePaste(e, th){
   const items=[...(e.clipboardData?.items||[])];
@@ -1223,40 +1124,72 @@ function setBusy(th, msg){
   const el=card&&card.querySelector('.busy');
   if(el) el.textContent=msg||'';
 }
-function loadScript(src){
-  return new Promise((res,rej)=>{
-    const el=document.createElement('script');
-    el.src=src; el.onload=res;
-    el.onerror=()=>rej(new Error('인식 엔진을 불러오지 못했습니다'));
-    document.head.appendChild(el);
-  });
-}
-const OCR_STEP={
-  'loading tesseract core':'엔진 준비 중',
-  'initializing tesseract':'엔진 초기화 중',
-  'loading language traineddata':'인식 데이터 내려받는 중',
-  'initializing api':'준비 중',
-  'recognizing text':'글자 읽는 중',
-};
-/* 워커는 한 번만 만들고 이후 재사용한다 (두 번째 이미지부터는 즉시 인식).
-   동시에 여러 장을 넣어도 같은 로딩을 공유하도록 Promise 를 캐시한다. */
-async function getOcrWorker(onStep){
-  if(ocrWorker) return ocrWorker;
-  if(!ocrLoading) ocrLoading=(async()=>{
-    if(!window.Tesseract) await loadScript(OCR_BASE+'tesseract.min.js');
-    const w=await Tesseract.createWorker('eng', 1, {
-      workerPath: OCR_BASE+'worker.min.js',
-      corePath:   OCR_BASE,
-      langPath:   OCR_BASE,
-      logger: m => onStep && onStep(m),
+/* ── PaddleOCR (ONNX, 브라우저 내) ──
+   tesseract 를 대신한다 — 학습된 검출기가 색·배경과 무관하게 글자 영역을 먼저 찾고
+   나서 읽으므로, 예전처럼 손으로 이진화 기준을 맞출 필요가 없다.
+   모델은 PP-OCRv6 tiny (검출 1.8MB + 인식 4.3MB) — 실측(카톡 캡처, 9개 회차)에서
+   172MB짜리 "server" 모델보다도 정확하고 100배 가까이 빨랐다. vendor/ 에 모델까지
+   같이 두어 tesseract 와 마찬가지로 CDN 없이 오프라인으로 동작한다.
+   import map 으로 onnxruntime-web / ppu-ocv 맨몸 지정자를 vendor 경로에 매핑해 뒀으므로
+   번들러 없이 동적 import() 만으로 붙는다 (index.html 은 여전히 classic 스크립트다). */
+let paddleService=null, paddleLoading=null;
+async function getPaddleService(onStep){
+  if(paddleService) return paddleService;
+  if(!paddleLoading) paddleLoading=(async()=>{
+    onStep && onStep('엔진 준비 중');
+    const ort=await import('onnxruntime-web');
+    /* wasmPaths 를 먼저 정해 둬야 한다 — 안 그러면 ppu-paddle-ocr 가 이 값을 비어 있다고
+       보고 jsDelivr CDN 주소로 채워 버린다(오프라인 원칙이 깨진다). ESM 모듈은 지정자당
+       한 번만 로드되어 인스턴스를 공유하므로, ppu-paddle-ocr 가 나중에 같은 'onnxruntime-web'
+       을 import 해도 이미 정해 둔 값을 그대로 본다. */
+    ort.env.wasm.wasmPaths=new URL('vendor/onnxruntime-web/', location.href).href;
+    ort.env.wasm.numThreads=1;   /* GitHub Pages 는 COOP/COEP 헤더를 못 붙이므로 스레드 병렬은 애초에 안 된다 */
+    const { PaddleOcrService }=await import('ppu-paddle-ocr/web');
+    onStep && onStep('모델 불러오는 중');
+    const base=new URL('vendor/paddle-models/', location.href).href;
+    const svc=new PaddleOcrService({
+      model:{
+        detection: base+'PP-OCRv6_tiny_det.ort',
+        recognition: base+'PP-OCRv6_tiny_rec.ort',
+        charactersDictionary: base+'ppocrv6_tiny_dict.txt',
+      },
+      session:{ executionProviders:['wasm'] },
     });
-    /* 숫자 화이트리스트는 쓰지 않는다. 걸면 "오전/오후" 의 한글 획이 숫자로
-       억지 매핑돼 시각 앞에 들러붙는다 (실측: 3:00 → 23:00, 6:00 → 56:00).
-       제한 없이 읽게 두면 한글은 알파벳 잡음이 되고 시각 정규식이 알아서 걸러낸다. */
-    ocrWorker=w;
-    return w;
-  })().catch(err=>{ ocrLoading=null; throw err; });
-  return ocrLoading;
+    await svc.initialize();
+    paddleService=svc;
+    return svc;
+  })().catch(err=>{ paddleLoading=null; throw err; });
+  return paddleLoading;
+}
+/* 검출기가 학습된 눈으로 글자를 찾으므로, tesseract 때처럼 이진화한 화면을 넘기면
+   오히려 손해다(자연 이미지로 학습됐다) — 색은 그대로 두고 크기만 맞춘다. */
+function preparePaddleCanvas(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let scale = img.width < 900 ? Math.min(3, OCR_TARGET_W/img.width) : 1;
+      const px=img.width*img.height*scale*scale;
+      if(px>OCR_MAX_PIXELS) scale*=Math.sqrt(OCR_MAX_PIXELS/px);
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*scale);
+      cv.height=Math.round(img.height*scale);
+      const cx=cv.getContext('2d',{willReadFrequently:true});
+      cx.imageSmoothingQuality='high';
+      cx.drawImage(img,0,0,cv.width,cv.height);
+      cv._dim=img.width+'×'+img.height+'→'+cv.width+'×'+cv.height;
+      res(cv);
+    };
+    img.onerror=()=>{
+      URL.revokeObjectURL(url);
+      const heic=/heic|heif/i.test(file.type||'') || /\.(heic|heif)$/i.test(file.name||'');
+      rej(new Error(heic
+        ? 'HEIC 사진은 못 읽습니다 — 캡처(스크린샷)를 넣거나 JPG 로 바꿔 주세요'
+        : '이미지를 열지 못했습니다 ('+(file.type||'형식 불명')+')'));
+    };
+    img.src=url;
+  });
 }
 
 async function ocr(file, th){
@@ -1264,34 +1197,17 @@ async function ocr(file, th){
   const t0=performance.now();
   let shot='';                       /* 실제로 넘긴 크기 — 실패 원인 추적용 */
   try{
-    const step=m=>{
-      const label=OCR_STEP[m.status];
-      if(label) setBusy(th, label+(m.progress?` ${Math.round(m.progress*100)}%`:'')+'…');
-    };
-    const w=await getOcrWorker(step);
-    /* 한 방식으로 실패해도 포기하지 않는다 — 화면마다 글자와 배경의 관계가 다르다.
-       한 번이 몇 초라(실측: 폰에서 1080×2340 이 4초) 세 번 해도 부담이 없다. */
-    const MODES=[['auto','1차'],['adapt','2차'],['bright','밝은 글자'],['raw','원본']];
-    /* 처음 성공한 것에서 멈추면 안 된다 — 첫 방식이 9개 중 3개만 건져도 "성공" 이라
-       더 잘 읽는 방식이 뒤에서 막힌다. 넉넉히 읽은 게 나오면 거기서 끊고,
-       아니면 끝까지 돌려 가장 많이 읽은 것을 쓴다. 한 번이 몇 초라 감당된다. */
-    const ENOUGH=5;
-    let ss=[], tried=[];
-    for(const [mode,label] of MODES){
-      setBusy(th, `이미지 다듬는 중… (${label})`);
-      const prepared=await preprocess(file, mode);
-      shot=prepared._dim||'';
-      setBusy(th, `글자 읽는 중… (${label})`);
-      const { data:{ text } } = await Promise.race([
-        w.recognize(prepared, {}, { text:true }),
-        new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과 — 이미지를 잘라서 다시 시도해 보세요')), OCR_TIMEOUT_MS))
-      ]);
-      const got=parseSessions(text);
-      tried.push(mode+':'+got.length);
-      if(got.length>ss.length) ss=got;
-      if(ss.length>=ENOUGH) break;
-    }
-    shot += ' · '+tried.join('/');
+    const svc=await getPaddleService(label=>setBusy(th, label+'…'));
+    setBusy(th, '이미지 다듬는 중…');
+    const prepared=await preparePaddleCanvas(file);
+    shot=prepared._dim||'';
+    setBusy(th, '글자 읽는 중…');
+    const result = await Promise.race([
+      svc.recognize(prepared),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과 — 이미지를 잘라서 다시 시도해 보세요')), OCR_TIMEOUT_MS))
+    ]);
+    const ss=parseSessions(result.text);
+    shot += ' · 회차 '+ss.length;
     if(!ss.length) throw new Error('시간을 찾지 못했습니다');
     /* 시간표가 길어 캡처를 나눠 넣는 경우 — 있던 세션에 이번 세션을 절대시각으로 합친다.
        처음엔 텍스트를 이어 붙여 parseSessions 를 통째로 재적용했는데, 그 오름차순 12시간
@@ -1316,11 +1232,11 @@ async function ocr(file, th){
     const sec=Math.round((performance.now()-t0)/1000);
     th.err='읽기 실패 — 시간을 직접 입력해 주세요. ('+err.message
          + (shot?' · '+shot:'') + ' · '+sec+'초)';
-    /* 멈춰서 시간 초과된 워커를 그대로 두면 다음 시도도 똑같이 막힌다. 버리고 새로 만들게 한다.
-       (단순 인식 실패는 워커 잘못이 아니므로 그대로 재사용한다) */
+    /* 멈춰서 시간 초과된 세션을 그대로 두면 다음 시도도 똑같이 막힌다. 버리고 새로 만들게 한다.
+       (단순 인식 실패는 엔진 잘못이 아니므로 그대로 재사용한다) */
     if(/시간 초과|엔진/.test(err.message)){
-      try{ ocrWorker && ocrWorker.terminate(); }catch{}
-      ocrWorker=null; ocrLoading=null;
+      try{ paddleService && paddleService.destroy(); }catch{}
+      paddleService=null; paddleLoading=null;
     }
   }finally{
     th.busy=''; renderThemes();

@@ -1,0 +1,6 @@
+PP-OCRv6 tiny models (detection + recognition), ONNX Runtime format (.ort)
+Source: https://github.com/PT-Perkasa-Pilar-Utama/ppu-paddle-ocr-models
+Original models: PaddleOCR (PaddlePaddle), Apache License 2.0
+https://github.com/PaddlePaddle/PaddleOCR
+
+Files: PP-OCRv6_tiny_det.ort, PP-OCRv6_tiny_rec.ort, ppocrv6_tiny_dict.txt

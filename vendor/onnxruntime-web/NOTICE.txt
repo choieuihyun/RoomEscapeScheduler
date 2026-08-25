@@ -1,0 +1,6 @@
+onnxruntime-web@1.23.0 — MIT License
+https://github.com/microsoft/onnxruntime
+
+Files vendored here: ort.wasm.min.mjs, ort-wasm-simd-threaded.mjs,
+ort-wasm-simd-threaded.wasm (WASM-only execution provider, no WebGPU/WebGL).
+Full license text: https://github.com/microsoft/onnxruntime/blob/main/LICENSE

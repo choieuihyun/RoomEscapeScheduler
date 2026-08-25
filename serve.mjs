@@ -13,7 +13,7 @@
  *   HOST=0.0.0.0 node serve.mjs
  *
  * 하는 일은 정적 파일 서빙 하나뿐이다.
- * 이미지 인식은 브라우저 안에서 돌므로(vendor/tesseract) 서버가 할 일이 없다.
+ * 이미지 인식은 브라우저 안에서 돌므로(vendor/) 서버가 할 일이 없다.
  * 예전에 있던 /api/ocr 프록시는 AI 비전 API를 쓰던 시절의 잔재라 걷어냈다.
  */
 import { createServer } from 'node:http';
@@ -34,6 +34,8 @@ const MIME = {
   '.md':   'text/markdown; charset=utf-8',
   '.wasm': 'application/wasm',
   '.gz':   'application/octet-stream',   // traineddata.gz 는 tesseract 가 직접 푼다
+  '.ort':  'application/octet-stream',   // PaddleOCR 모델(ONNX Runtime 포맷)
+  '.txt':  'text/plain; charset=utf-8',  // PaddleOCR 문자 사전
   '.svg':  'image/svg+xml',
   '.png':  'image/png',
   '.jpg':  'image/jpeg',
