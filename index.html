@@ -376,13 +376,40 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 .chk.mini{font-size:12.5px;color:var(--ink3);gap:6px;font-weight:500}
 .chk.mini input{width:14px;height:14px}
+
+/* ── 사용법 투어 ── */
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tourbtn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line)}
+.tourbtn:hover{background:var(--surface2)}
+.tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
+.tour-spot{position:fixed;z-index:80;border-radius:14px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(15,18,24,.72);
+  transition:top .28s cubic-bezier(.4,0,.2,1),left .28s cubic-bezier(.4,0,.2,1),
+    width .28s cubic-bezier(.4,0,.2,1),height .28s cubic-bezier(.4,0,.2,1)}
+.tour-tip{position:fixed;z-index:81;background:var(--surface);border-radius:18px;
+  padding:20px 20px 16px;width:300px;max-width:calc(100vw - 32px);
+  box-shadow:var(--sh-up);opacity:0;
+  transition:top .28s cubic-bezier(.4,0,.2,1),left .28s cubic-bezier(.4,0,.2,1),opacity .18s}
+.tour-tip.on{opacity:1}
+.tour-tip .step{font-size:12px;font-weight:800;color:var(--blue);letter-spacing:.02em}
+.tour-tip h4{margin:6px 0 8px;font-size:17px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+.tour-tip p{margin:0 0 16px;font-size:13.5px;line-height:1.6;color:var(--ink2)}
+.tour-btns{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tour-skip{background:none;border:none;color:var(--ink3);font-size:12.5px;
+  cursor:pointer;padding:6px 2px;font-family:inherit}
+.tour-skip:hover{color:var(--ink2)}
+.tour-next-group{display:flex;gap:6px}
+.tour-next-group .btn,.tour-next-group .btn-go{padding:9px 16px;font-size:13.5px}
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header>
-  <div class="acct" id="acct"></div>
+  <div class="hrow">
+    <button class="btn tourbtn" id="tourBtn" type="button">사용법 보기</button>
+    <div class="acct" id="acct"></div>
+  </div>
   <h1>방탈출 <span class="dim">스케줄러</span></h1>
   <p>테마별 회차 시간을 넣으면 겹치지 않는 조합을 전부 계산해서, 공백이 어디에 얼마나 생기는지 보여줍니다.</p>
 </header>
@@ -854,6 +881,88 @@ document.getElementById('seedBtn').onclick=()=>{
   if(location.hash) history.replaceState(null,'',location.pathname);  // 남은 링크 상태도 털어낸다
   renderThemes();
 };
+
+/* ── 사용법 투어 ──
+   화면을 어둡게 덮고 설명할 요소 하나만 구멍을 뚫어 보여주는 스포트라이트 방식.
+   테마 카드처럼 처음엔 없을 수도 있는 요소 대신, 항상 존재하는 버튼·섹션만 짚는다. */
+const TOUR_KEY='resched.tour_v1';
+const TOUR_STEPS=[
+  {sel:'#seedBtn',  title:'감이 안 잡히면',   body:'예시 데이터를 넣어보고 화면이 어떻게 채워지는지 먼저 확인해 보세요. 지우고 다시 시작해도 됩니다.'},
+  {sel:'#addTheme', title:'테마 추가',        body:'테마 하나 = 예약할 매장 하나예요. 여기를 눌러 필요한 만큼 추가하세요.'},
+  {sel:'#themes',   title:'시간표 넣기',      body:'예약 가능한 회차를 직접 입력하거나, 예약 화면 캡처를 붙여넣으면(Ctrl+V) 자동으로 읽습니다. 매장 이름을 적어두면 매장 간 이동시간도 계산에 들어가요.'},
+  {sel:'.opts',     title:'조건 정하기',      body:'가장 이른 시작·늦은 종료, 최소·최대 공백, 기본 이동시간 같은 조건을 정합니다.'},
+  {sel:'#go',       title:'조합 계산',        body:'조건에 맞고 서로 겹치지 않는 조합을 전부 찾아줍니다.'},
+  {sel:'#results',  title:'결과 확인',        body:'정렬 기준을 바꿔가며 훑어보고, 마음에 드는 조합은 저장해 두세요.'},
+  {sel:'#shareBtn', title:'공유하기',         body:'지금 입력한 내용을 그대로 담은 링크를 복사합니다. 로그인 없이도 바로 공유할 수 있어요.'},
+];
+let tourStep=0, tourNodes=null;
+function tourMount(){
+  if(tourNodes) return tourNodes;
+  const dim=document.createElement('div');  dim.className='tour-dim';
+  const spot=document.createElement('div'); spot.className='tour-spot';
+  const tip=document.createElement('div');  tip.className='tour-tip';
+  document.body.append(dim,spot,tip);
+  tourNodes={dim,spot,tip};
+  return tourNodes;
+}
+function startTour(){
+  tourStep=0;
+  tourMount();
+  showTourStep(0);
+}
+function endTour(){
+  if(tourNodes){ tourNodes.dim.remove(); tourNodes.spot.remove(); tourNodes.tip.remove(); tourNodes=null; }
+  localStorage.setItem(TOUR_KEY,'1');
+}
+function showTourStep(i){
+  const step=TOUR_STEPS[i];
+  const target=document.querySelector(step.sel);
+  if(!target){                     // 그 순간 화면에 없는 요소면 건너뛴다
+    if(i<TOUR_STEPS.length-1) showTourStep(i+1); else endTour();
+    return;
+  }
+  tourStep=i;
+  target.scrollIntoView({behavior:'smooth', block:'center'});
+  setTimeout(()=>positionTour(target,step), 320);
+}
+function positionTour(target, step){
+  const {spot,tip}=tourMount();
+  const r=target.getBoundingClientRect();
+  const pad=8;
+  spot.style.top=(r.top-pad)+'px'; spot.style.left=(r.left-pad)+'px';
+  spot.style.width=(r.width+pad*2)+'px'; spot.style.height=(r.height+pad*2)+'px';
+
+  tip.innerHTML=`
+    <div class="step">${tourStep+1} / ${TOUR_STEPS.length}</div>
+    <h4>${esc(step.title)}</h4>
+    <p>${esc(step.body)}</p>
+    <div class="tour-btns">
+      <button class="tour-skip" type="button">건너뛰기</button>
+      <div class="tour-next-group">
+        ${tourStep>0?'<button class="btn" data-tour="prev" type="button">이전</button>':''}
+        <button class="btn-go" data-tour="next" type="button">${tourStep===TOUR_STEPS.length-1?'확인':'다음'}</button>
+      </div>
+    </div>`;
+  tip.querySelector('.tour-skip').onclick=endTour;
+  tip.querySelector('[data-tour=next]').onclick=()=> tourStep<TOUR_STEPS.length-1 ? showTourStep(tourStep+1) : endTour();
+  const prevBtn=tip.querySelector('[data-tour=prev]');
+  if(prevBtn) prevBtn.onclick=()=>showTourStep(tourStep-1);
+
+  requestAnimationFrame(()=>{
+    const th=tip.offsetHeight, tw=tip.offsetWidth, vw=innerWidth, vh=innerHeight;
+    let top = r.bottom + pad + 14;
+    if(top + th > vh - 16) top = Math.max(16, r.top - pad - 14 - th);
+    const left = Math.min(Math.max(16, r.left), vw - tw - 16);
+    tip.style.top=top+'px'; tip.style.left=left+'px';
+    tip.classList.add('on');
+  });
+}
+document.getElementById('tourBtn').onclick=startTour;
+window.addEventListener('resize', ()=>{
+  if(!tourNodes) return;
+  const step=TOUR_STEPS[tourStep], target=document.querySelector(step.sel);
+  if(target) positionTour(target, step);
+});
 
 /* ── 이미지 → 회차 (브라우저 내 OCR) ── */
 /* 인식은 전부 이 브라우저 안에서 돈다 — 이미지가 서버로 나가지 않고, API 키도 과금도 없다.
@@ -1729,7 +1838,10 @@ if(CLOUD_ON){
     if(e.target.id===k) e.target.classList.remove('on');
   });
   document.addEventListener('keydown', e=>{
-    if(e.key==='Escape') document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));
+    if(e.key==='Escape'){
+      document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));
+      if(tourNodes) endTour();
+    }
   });
 
   /* 예전에 로그인한 적이 있을 때만 SDK 를 미리 깨운다.
@@ -1751,6 +1863,7 @@ if(location.hash.startsWith('#s=')){
   }
 }
 renderThemes(); renderSorts(); renderAcct(); renderPairs(); refreshMoveHint();
+if(!localStorage.getItem(TOUR_KEY)) setTimeout(startTour, 500);  // 처음 온 사람에게만, 화면이 자리 잡은 뒤에
 </script>
 </body>
 </html>
