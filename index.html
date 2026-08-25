@@ -373,7 +373,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .acct{display:flex;justify-content:flex-end;align-items:center;gap:10px;
   padding-top:18px;font-size:13px;color:var(--ink3);min-height:28px;flex-wrap:wrap}
 .acct b{color:var(--ink);font-weight:700}
-.acct .btn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line)}
+.acct .btn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
 .acct .btn:hover{background:var(--surface2)}
 
 .modal{position:fixed;inset:0;background:rgba(25,31,40,.44);z-index:50;
@@ -474,9 +474,12 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .chk.mini input{width:14px;height:14px}
 
 /* ── 사용법 투어 ── */
-.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.hleft{display:flex;align-items:center;gap:8px}
-.tourbtn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line)}
+/* 좁은 화면에서 사용법/다크모드 버튼과 로그인 영역이 한 줄에 다 안 들어가면,
+   줄바꿈 없는 버튼 글자를 억지로 욱여넣는 대신(단어 중간이 잘린다) 아예 다음 줄로
+   내려보낸다. */
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.hleft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tourbtn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
 .tourbtn:hover{background:var(--surface2)}
 .tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
 .tour-spot{position:fixed;z-index:80;border-radius:14px;pointer-events:none;
