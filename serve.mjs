@@ -1,5 +1,5 @@
 /**
- * 방탈출 스케줄러 개발 서버 — 의존성 0개.
+ * Floduler 개발 서버 — 의존성 0개.
  *
  *   node serve.mjs            →  http://localhost:5173
  *   PORT=8080 node serve.mjs
@@ -93,7 +93,7 @@ const report = () => {
     process.exit(1);
   }
   const localOnly = bound.every(h => h === '127.0.0.1' || h === '::1' || h === 'localhost');
-  console.log(`방탈출 스케줄러 →  http://localhost:${PORT}`);
+  console.log(`Floduler →  http://localhost:${PORT}`);
   console.log(localOnly
     ? `접속 범위       →  이 컴퓨터에서만 (${bound.join(', ')})`
     : `접속 범위       →  ⚠ 같은 네트워크의 다른 기기도 접속 가능 (${bound.join(', ')})`);

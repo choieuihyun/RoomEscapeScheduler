@@ -1,4 +1,4 @@
-# 방탈출 스케줄러 — 요구사항 및 사양 정리
+# Floduler — 요구사항 및 사양 정리
 
 작성일: 2026-08-20
 산출물: `index.html` (단일 파일 웹앱, 구 `escape-schedule.html`)
