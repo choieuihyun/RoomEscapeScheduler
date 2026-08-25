@@ -268,15 +268,20 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .tab b{color:var(--ink3);font-weight:700;margin-left:5px}
 .tab:hover{border-color:var(--line2)}
 .tab.on{background:var(--strong);border-color:var(--strong);color:var(--strong-ink);font-weight:600}
-.tab.on b{color:rgba(255,255,255,.62)}
+/* --strong-ink 자체가 테마마다 반대색(라이트=흰/다크=검)으로 뒤집히므로, 그 위에
+   opacity 만 얹으면 다크 모드에서도 옅게 깔린다 — 예전엔 흰색을 박아 둬서 다크 모드에서
+   밝은 알약 위에 거의 안 보였다. */
+.tab.on b{color:var(--strong-ink);opacity:.62}
 .tabrow.sets .tab{font-size:12.5px;padding:5px 12px}
 
 /* ── sort ── */
 .sorts{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
 .sortbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
   padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
+.sortbtn b{color:var(--ink3);font-weight:700;margin-left:5px}
 .sortbtn:hover{border-color:var(--line2)}
 .sortbtn.on{background:var(--strong);border-color:var(--strong);color:var(--strong-ink);font-weight:600}
+.sortbtn.on b{color:var(--strong-ink);opacity:.62}
 
 /* ── results ── */
 .res{background:var(--surface);border:1px solid transparent;border-radius:var(--r);
@@ -1247,12 +1252,15 @@ async function ocr(file, th){
 /* ── 정렬 버튼 ── */
 let sortKey='gap', found=[];
 const elSorts=document.getElementById('sorts');
+/* 정렬은 필터가 아니라 같은 목록의 순서만 바꾸는 것이라, 다섯 칩이 전부 같은 숫자를
+   갖는다 — 그래도 "지금 보고 있는 게 몇 개인지" 를 탭까지 위로 안 올라가도 보여준다. */
 function renderSorts(){
   elSorts.innerHTML='';
+  const n=currentList().length;
   SORTS.forEach(s=>{
     const b=document.createElement('button');
     b.className='sortbtn'+(s.k===sortKey?' on':'');
-    b.textContent=s.label;
+    b.innerHTML=`${s.label}<b>${n.toLocaleString()}</b>`;
     b.onclick=()=>{sortKey=s.k;renderSorts();renderResults();scheduleAutosave();};
     elSorts.appendChild(b);
   });
@@ -1295,8 +1303,8 @@ function renderTabs(){
       + '</div>';
   } else tabSet=null;
   el.innerHTML=html;
-  el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ tabCount=+b.dataset.c; tabSet=null; renderTabs(); renderResults(); });
-  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ tabSet=b.dataset.s||null; renderTabs(); renderResults(); });
+  el.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ tabCount=+b.dataset.c; tabSet=null; renderTabs(); renderSorts(); renderResults(); });
+  el.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ tabSet=b.dataset.s||null; renderTabs(); renderSorts(); renderResults(); });
 }
 
 function currentList(){
@@ -1541,13 +1549,13 @@ $('go').onclick=()=>{
                     .map((t,i)=>({name:t.name||('테마 '+(i+1)),dur:t.dur,sessions:t.sessions,
                                   place:t.place||'',
                                   lockPos: t.lock ? i : null}));
-  if(themesReady.length<2){ note.textContent='회차가 있는 테마가 2개 이상 필요합니다.'; found=[]; renderResults(); elCount.textContent=''; return; }
+  if(themesReady.length<2){ note.textContent='회차가 있는 테마가 2개 이상 필요합니다.'; found=[]; renderTabs(); renderSorts(); renderResults(); elCount.textContent=''; return; }
 
   const o=readOptions();
   /* 최대 공백이 식사 공백보다 작으면 서로 모순이라 결과가 0이 된다 — 미리 알려준다 */
   if(o.meal && o.maxGap!=null && o.maxGap<o.meal.min){
     note.textContent=`최대 공백(${o.maxGap}분)이 식사 공백(${o.meal.min}분)보다 작아 조합이 나올 수 없습니다.`;
-    found=[]; renderResults(); elCount.textContent=''; return;
+    found=[]; renderTabs(); renderSorts(); renderResults(); elCount.textContent=''; return;
   }
   /* 이 순간의 입력값을 붙잡아 둔다. 저장할 때 다시 serialize() 하면,
      계산 뒤에 회차를 고치고 화면에 남아 있던 결과 카드의 [저장] 을 누르는 순간
@@ -1561,6 +1569,7 @@ $('go').onclick=()=>{
   elCount.textContent=`${out.length.toLocaleString()}개 조합${capped?' (탐색 한도 도달)':''}`;
   note.textContent=`${ms}ms · 상위 ${Math.min(SHOW,currentList().length||out.length)}개 표시`;
   renderTabs();
+  renderSorts();
   renderResults();
 };
 
