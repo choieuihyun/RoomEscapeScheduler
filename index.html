@@ -299,7 +299,6 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 /* ── 더 보기 ── */
 .showmore{text-align:center;padding:8px 0 4px}
-.reshint{margin:0 0 10px;font-size:12.5px;color:var(--ink3)}
 .morebtn{padding:11px 28px;font-size:14px}
 
 /* 블록 폭은 소요시간에 비례해야 하므로 이름 길이로 늘릴 수 없다 (시간축이 거짓말이 된다).
@@ -1254,7 +1253,7 @@ async function ocr(file, th){
 }
 
 /* ── 정렬 버튼 ── */
-let sortKey='gap', found=[];
+let sortKey='gap', found=[], searchCapped=false;
 const elSorts=document.getElementById('sorts');
 function renderSorts(){
   elSorts.innerHTML='';
@@ -1262,7 +1261,7 @@ function renderSorts(){
     const b=document.createElement('button');
     b.className='sortbtn'+(s.k===sortKey?' on':'');
     b.textContent=s.label;
-    b.onclick=()=>{sortKey=s.k;showCount=SHOW;renderResults();scheduleAutosave();};
+    b.onclick=()=>{sortKey=s.k;showCount=SHOW;renderSorts();renderResults();scheduleAutosave();};
     elSorts.appendChild(b);
   });
 }
@@ -1322,14 +1321,22 @@ function currentList(){
 function renderResults(){
   if(!found.length){
     elRes.innerHTML='<div class="empty">조건을 만족하는 조합이 없습니다. 최소 공백을 줄이거나 시간 범위를 넓혀보세요.</div>';
+    elCount.textContent='';
     return;
   }
   const pool=currentList();
   if(!pool.length){
     elRes.innerHTML='<div class="empty">이 묶음에는 조합이 없습니다.</div>';
+    elCount.textContent='';
     return;
   }
   const list=[...pool].sort(SORTS.find(s=>s.k===sortKey).f).slice(0,showCount);
+  /* "결과" 옆 개수는 두 가지를 같이 말한다 — 총 몇 개인지, 그중 몇 개만 지금 그려졌는지.
+     둘 다 안 잘렸을 땐(showCount 가 충분할 땐) 총 개수만 담백하게 적는다. */
+  const cappedNote=searchCapped?' (탐색 한도 도달)':'';
+  elCount.textContent = list.length<pool.length
+    ? `상위 ${list.length.toLocaleString()}개만 표시됩니다 · 전체 ${pool.length.toLocaleString()}개 중${cappedNote}`
+    : `${pool.length.toLocaleString()}개${cappedNote}`;
   const lo=Math.min(...list.map(r=>r.start)), hi=Math.max(...list.map(r=>r.end));
   const span=Math.max(hi-lo,60), pct=m=>((m-lo)/span)*100;
 
@@ -1406,14 +1413,13 @@ function renderResults(){
     elRes.appendChild(d);
   });
 
-  /* 잘려서 안 보이는 게 있을 때만 안내 + 더 보기를 둔다 — 다 보여준 상태면 군더더기다 */
+  /* 잘려서 안 보이는 게 있을 때만 더 보기를 둔다 — 왜 잘렸는지는 "결과" 옆(elCount)에
+     이미 적어 뒀으니 여기서 같은 문장을 또 반복하지 않는다. */
   if(pool.length > list.length){
     const shown=list.length;
     const more=document.createElement('div');
     more.className='showmore';
-    more.innerHTML=`
-      <p class="reshint">상위 ${shown.toLocaleString()}개만 표시됩니다 · 전체 ${pool.length.toLocaleString()}개 중</p>
-      <button class="btn morebtn" type="button">더 보기 (${Math.min(SHOW,pool.length-shown).toLocaleString()}개 더)</button>`;
+    more.innerHTML=`<button class="btn morebtn" type="button">더 보기 (${Math.min(SHOW,pool.length-shown).toLocaleString()}개 더)</button>`;
     more.querySelector('.morebtn').onclick = ()=>{
       showCount += SHOW;
       renderResults();
@@ -1572,13 +1578,13 @@ $('go').onclick=()=>{
                     .map((t,i)=>({name:t.name||('테마 '+(i+1)),dur:t.dur,sessions:t.sessions,
                                   place:t.place||'',
                                   lockPos: t.lock ? i : null}));
-  if(themesReady.length<2){ note.textContent='회차가 있는 테마가 2개 이상 필요합니다.'; found=[]; showCount=SHOW; renderTabs(); renderResults(); elCount.textContent=''; return; }
+  if(themesReady.length<2){ note.textContent='회차가 있는 테마가 2개 이상 필요합니다.'; found=[]; showCount=SHOW; renderTabs(); renderResults(); return; }
 
   const o=readOptions();
   /* 최대 공백이 식사 공백보다 작으면 서로 모순이라 결과가 0이 된다 — 미리 알려준다 */
   if(o.meal && o.maxGap!=null && o.maxGap<o.meal.min){
     note.textContent=`최대 공백(${o.maxGap}분)이 식사 공백(${o.meal.min}분)보다 작아 조합이 나올 수 없습니다.`;
-    found=[]; showCount=SHOW; renderTabs(); renderResults(); elCount.textContent=''; return;
+    found=[]; showCount=SHOW; renderTabs(); renderResults(); return;
   }
   /* 이 순간의 입력값을 붙잡아 둔다. 저장할 때 다시 serialize() 하면,
      계산 뒤에 회차를 고치고 화면에 남아 있던 결과 카드의 [저장] 을 누르는 순간
@@ -1586,11 +1592,10 @@ $('go').onclick=()=>{
   lastSnapshot = serialize();
   const t0=performance.now();
   const {out,capped}=search(themesReady,o);
-  found=out;
+  found=out; searchCapped=capped;
   const ms=Math.round(performance.now()-t0);
   tabCount=null; tabSet=null;      // 새로 계산하면 탭 선택을 초기화한다
   showCount=SHOW;
-  elCount.textContent=`${out.length.toLocaleString()}개 조합${capped?' (탐색 한도 도달)':''}`;
   note.textContent=`${ms}ms`;
   renderTabs();
   renderResults();
