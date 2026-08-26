@@ -230,6 +230,33 @@ eq(search(themes, { ...opts, minGap: 0, moveMin: 60 }).out.length,
    search(themes, { ...opts, minGap: 0, moveMin: 0 }).out.length,
    '매장을 안 적으면 이동시간 설정은 결과를 바꾸지 않는다');
 
+/* ── 3.7 순차 배정: 팀이 확정한 회차 제외 (§4.29, F-14) ── */
+console.log('\n[3.7] 순차 배정 — 확정된 회차 제외');
+const idThemes = themes.map((t, i) => ({ ...t, id: i + 1 }));
+
+// 팀1이 "13:30 범계 → 14:50 몽 → 16:00 왓 어 트립" 을 확정했다고 하자.
+// 팀2 계산에서는 이 세 회차(테마id+시각)가 후보에서 빠져야 한다.
+const takenFromBest = new Set(best.steps.map(s => idThemes[s.i].id + '|' + s.start));
+const team2 = search(idThemes, { ...opts, taken: takenFromBest }).out;
+
+ok(team2.length > 0, `제외해도 다른 조합은 남는다 (${team2.length}개)`);
+ok(team2.every(r => r.steps.every(s => !takenFromBest.has(idThemes[s.i].id + '|' + s.start))),
+   '팀1이 쓴 (테마,시각) 조합은 팀2 결과 어디에도 나오지 않는다');
+ok(!team2.some(r => r.steps.map(s => `${fmt(s.start)} ${s.name}`).join(' → ') === seq),
+   '팀1이 확정한 바로 그 시퀀스는 팀2 후보에서 완전히 빠진다');
+
+// 같은 테마를 "다른" 시각에는 다시 쓸 수 있어야 한다 — 슬롯 단위 제외이지, 테마 단위 제외가 아니다.
+ok(team2.some(r => r.steps.some(s => s.name === '범계')),
+   '범계 자체가 빠지는 게 아니라, 팀1이 쓴 그 시각만 빠진다 (테마 단위가 아니라 슬롯 단위)');
+
+// taken 이 없거나 빈 Set 이면 원래 결과와 동일해야 한다 (팀 나누기를 꺼도 평소처럼 동작)
+eq(search(idThemes, opts).out.length, out.length, 'taken 없음 → 평소와 결과 개수 동일');
+eq(search(idThemes, { ...opts, taken: new Set() }).out.length, out.length, '빈 taken → 평소와 동일');
+
+// id 가 없는 테마(id:null/undefined)는 taken 이 있어도 걸리지 않는다 — 방어적 동작 확인
+eq(search(themes, { ...opts, taken: takenFromBest }).out.length, out.length,
+   'id 없는 테마 배열은 taken 이 있어도 아무 영향이 없다');
+
 /* ── 4. 비기능 요구 (§2.4) ── */
 console.log('\n[4] 비기능 요구');
 ok(ms < 100, `테마 3개 계산 100ms 이내 (실측 ${Math.round(ms)}ms)`);
