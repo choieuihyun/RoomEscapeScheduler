@@ -2063,6 +2063,21 @@ function renderPlans(){
 let Srv=null;
 const srv = async () => (Srv || (Srv = await import('./server.js')));
 
+/* ⚠️ M4 에서 서버를 배포하면 여기와 server.js 의 DEFAULT_BASE 를 **함께** 바꾼다.
+   둘 중 하나만 바꾸면 버튼이 없거나(여기), 엉뚱한 곳을 부른다(거기). */
+const SERVER_DEPLOYED = false;
+
+/* 배포된 페이지는 누구나 연다. 아직 부를 서버가 없는데 버튼만 떠 있으면
+   처음 온 사람은 눌러서 오류부터 보게 된다 — 없는 기능은 보여주지 않는다
+   (§4.22 "시작 화면은 비워 둔다" 와 같은 결).
+
+   로컬에서 열었거나 서버 주소를 직접 지정한 사람에게는 언제나 보인다. */
+function serverReachable(){
+  if(SERVER_DEPLOYED) return true;
+  try{ if((localStorage.getItem('flod.server')||'').trim()) return true; }catch{}
+  return /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+}
+
 let ldBranches=[], ldThemes=[], ldFresh='';
 const ldPick = new Set();
 
@@ -2185,6 +2200,7 @@ function ldAddPicked(){
   renderThemes(); renderPairs(); refreshMoveHint();
 }
 
+$('loadBtn').hidden      = !serverReachable();
 $('loadBtn').onclick     = openLoad;
 $('loadCancel').onclick  = closeLoad;
 $('loadModal').onclick   = e => { if(e.target===$('loadModal')) closeLoad(); };
