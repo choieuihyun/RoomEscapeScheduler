@@ -445,6 +445,31 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   .plan .pbtns .btn{flex:1}
 }
 
+/* ── 서버에서 불러오기 (F-15) ─────────────────────────── */
+.mbox-wide{max-width:560px}
+.mrow2{display:flex;gap:12px}
+.mrow2 .mrow{flex:1;min-width:0}
+.loadlist{max-height:42vh;overflow:auto;margin:2px 0 14px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface2)}
+.loadlist .lmsg{padding:24px 16px;text-align:center;color:var(--ink3);font-size:13.5px;line-height:1.6}
+.loaditem{display:flex;gap:11px;align-items:center;padding:10px 12px;cursor:pointer;
+  border-bottom:1px solid var(--line)}
+.loaditem:last-child{border-bottom:none}
+.loaditem:hover{background:var(--surface)}
+.loaditem>input{margin:0;flex:none}
+.loaditem img{width:38px;height:52px;object-fit:cover;border-radius:var(--r-xs);flex:none;background:var(--line)}
+.li-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.li-t strong{font-size:14.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+.li-m{font-size:12.5px;color:var(--ink3)}
+.li-c{font-size:12.5px;color:var(--ink2)}
+.li-c i{font-style:normal;color:var(--red-text)}
+/* 인원이 안 맞으면 애초에 못 가는 테마다 — 고를 수는 있게 두되 눈에 띄게 죽인다 */
+.loaditem.off{opacity:.5}
+.loaditem.off .li-m b{color:var(--red-text);font-weight:600}
+.loadfoot{display:flex;align-items:center;gap:8px;margin:-6px 0 12px;
+  font-size:12.5px;color:var(--ink3)}
+.loadfoot .fresh{margin-left:auto}
+
 /* ── 매장 · 이동시간 ─────────────────────────────────── */
 .placerow{display:flex;align-items:center;gap:9px;margin:0 0 10px}
 .plb{font-size:12.5px;color:var(--ink3);flex:none;font-weight:500}
@@ -542,6 +567,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   <div class="themes" id="themes"></div>
   <div class="addrow">
     <button class="btn" id="addTheme">＋ 테마 추가</button>
+    <button class="btn" id="loadBtn" type="button">불러오기 (플레이33)</button>
     <button class="btn" id="seedBtn" type="button">테스트 데이터 넣기</button>
     <span class="addhint"><b>순서는 도구가 정합니다.</b> 번호를 끌어 옮기고 <b>자리 고정</b>을 누르면 그 자리에 묶입니다 · <b>×</b> 로 삭제</span>
   </div>
@@ -625,6 +651,30 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
       <button class="btn" id="authCancel" type="button">닫기</button>
     </div>
     <p class="mnote" id="authSwap"></p>
+  </div>
+</div>
+
+<!-- 서버에서 회차 불러오기 (F-15) -->
+<div class="modal" id="loadModal">
+  <div class="mbox mbox-wide">
+    <h3>회차 불러오기</h3>
+    <p class="msub">예약 사이트에서 회차와 <b>매진 여부</b>까지 가져옵니다. 지금은 <b id="loadStore">플레이33</b> 지점만 지원합니다.</p>
+    <div class="mrow2">
+      <div class="mrow"><label for="loadBranch">지점</label><select id="loadBranch"></select></div>
+      <div class="mrow"><label for="loadDate">날짜</label><select id="loadDate"></select></div>
+    </div>
+    <div class="mrow">
+      <label for="loadPeople">인원 <span class="dim">(비우면 전부 표시)</span></label>
+      <input id="loadPeople" class="mono" inputmode="numeric" placeholder="예: 4  — 인원이 안 맞는 테마를 흐리게 표시합니다">
+    </div>
+    <div class="loadlist" id="loadList"></div>
+    <div class="loadfoot"><span id="loadPicked"></span><span class="fresh" id="loadFresh"></span></div>
+    <p class="merr" id="loadErr"></p>
+    <div class="mbtns">
+      <button class="btn-go" id="loadGo" type="button" disabled>카드로 추가</button>
+      <button class="btn" id="loadCancel" type="button">닫기</button>
+    </div>
+    <p class="mnote">불러온 뒤에도 회차를 <b>손으로 고칠 수 있습니다</b>. 매진 회차는 카드에 남지만 계산에서는 빠집니다.</p>
   </div>
 </div>
 
@@ -911,7 +961,8 @@ function renderThemes(){
     ta.oninput = e => {
       th.raw=e.target.value;
       th.sessions=parseSessions(th.raw);
-      th.source = th.source.startsWith('image') ? 'image-edited' : 'manual';
+      th.source = th.source.startsWith('image')  ? 'image-edited'
+                : th.source.startsWith('server') ? 'server-edited' : 'manual';
       th.err='';
       refreshFoot(c,th);
     };
@@ -973,6 +1024,8 @@ function chipHTML(th){
   const src = th.source==='image'
             ? (th.imgCount>1 ? `사진 ${th.imgCount}장에서 읽음` : '사진에서 읽음')
             : th.source==='image-edited' ? '사진 → 수정함'
+            : th.source==='server' ? '불러옴'
+            : th.source==='server-edited' ? '불러옴 → 수정함'
             : th.sessions.length ? '직접 입력' : '';
   const cnt = th.sessions.length ? `회차 <b>${avail}</b>${sold?` · 매진 <i>${sold}</i>`:''} ` : '회차 없음';
   return (src ? `<span class="src">${esc(src)}</span> · ` : '') + cnt;
@@ -996,6 +1049,9 @@ function parsedHTML(th){
      (형식만 맞으면 존재하지 않는 회차도 똑같이 시각 하나일 뿐이다). 그래서 항상 한 번은
      사람이 보게 만든다. 손으로 고치고 나면(source가 image-edited 로 바뀌어도) 여전히
      이미지에서 온 값이 섞여 있을 수 있으므로 계속 띄운다. */
+  /* 취소표는 시간에 민감하다 — 매진 표시가 언제 기준인지 밝히지 않으면 오해를 부른다. */
+  if(th.fresh)
+    out += `<span class="note">서버에서 불러온 값입니다 · ${esc(th.fresh)}</span>`;
   if(th.source.startsWith('image'))
     out += `<span class="warn">사진에서 읽은 값입니다 — 시간이 제대로 맞는지 한 번 확인해 주세요. 인식이 부정확할 수 있습니다.</span>`;
   return out;
@@ -1999,6 +2055,143 @@ function renderPlans(){
     });
   });
 }
+
+/* ── 서버에서 회차 불러오기 (F-15) ──
+   cloud.js 와 같은 지연 로딩이다 — `불러오기` 를 눌러야 server.js 가 처음 내려온다.
+   서버는 선택이라, 여기가 통째로 실패해도 직접 입력·사진 경로는 손대지 않는다.
+   계약: 서버 저장소 작업명세서 §4.4 */
+let Srv=null;
+const srv = async () => (Srv || (Srv = await import('./server.js')));
+
+let ldBranches=[], ldThemes=[], ldFresh='';
+const ldPick = new Set();
+
+const ldMsg = html => { $('loadList').innerHTML = `<div class="lmsg">${html}</div>`; };
+function ldSyncGo(){
+  const n = ldPick.size;
+  $('loadGo').disabled = !n;
+  $('loadPicked').textContent = n ? `${n}개 선택됨` : '';
+}
+function closeLoad(){ $('loadModal').classList.remove('on'); }
+
+/* 오늘/내일을 글자로 밝힌다 — 날짜만 있으면 어느 게 오늘인지 매번 세어 봐야 한다 */
+function ldDateLabel(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((dt-today)/86400000);
+  const w = '일월화수목금토'[dt.getDay()];
+  return `${m}/${d}(${w})` + (diff===0 ? ' 오늘' : diff===1 ? ' 내일' : '');
+}
+
+function ldFillDates(){
+  const b = ldBranches.find(x=>x.id===$('loadBranch').value) || ldBranches[0];
+  $('loadDate').innerHTML = b.dates.map(d=>`<option value="${d}">${ldDateLabel(d)}</option>`).join('');
+}
+
+async function openLoad(){
+  $('loadModal').classList.add('on');
+  $('loadErr').textContent=''; $('loadFresh').textContent='';
+  ldPick.clear(); ldSyncGo();
+  ldMsg('지점을 불러오는 중…');
+
+  let S;
+  try{ S = await srv(); }
+  catch{ ldMsg('불러오기 기능을 여는 데 실패했습니다.'); return; }
+  $('loadStore').textContent = S.STORE_LABEL;
+
+  try{
+    ldBranches = (await S.branches()).filter(b => b.dates && b.dates.length);
+  }catch(e){
+    ldMsg('지점 목록을 받지 못했습니다.');
+    $('loadErr').textContent = S.say(e);
+    return;
+  }
+  if(!ldBranches.length){
+    ldMsg('아직 수집된 지점이 없습니다.<br>서버가 한 바퀴 돈 뒤에 다시 열어 주세요.');
+    return;
+  }
+  $('loadBranch').innerHTML = ldBranches.map(b=>`<option value="${esc(b.id)}">${esc(b.branch)}</option>`).join('');
+  ldFillDates();
+  await ldFetch();
+}
+
+async function ldFetch(){
+  const S = await srv();
+  ldPick.clear(); ldSyncGo();
+  $('loadErr').textContent=''; $('loadFresh').textContent='';
+  ldMsg('회차를 불러오는 중…');
+  try{
+    const data = await S.schedule($('loadBranch').value, $('loadDate').value);
+    ldThemes = data.themes || [];
+    ldFresh  = S.ago(data.checkedAt);
+    $('loadFresh').textContent = ldFresh;
+    ldRender();
+  }catch(e){
+    ldThemes = [];
+    ldMsg('회차를 받지 못했습니다.');
+    $('loadErr').textContent = S.say(e);
+  }
+}
+
+function ldRender(){
+  if(!ldThemes.length){ ldMsg('이 날짜에는 테마가 없습니다.'); return; }
+  const ppl = parseInt($('loadPeople').value, 10);
+  const el = $('loadList'); el.innerHTML='';
+  ldThemes.forEach((t,i)=>{
+    const avail = t.sessions.filter(s=>!s.soldout).length;
+    const sold  = t.sessions.length - avail;
+    /* 인원이 안 맞으면 애초에 못 가는 테마다. 고를 수는 있게 두고 눈에 띄게만 죽인다 —
+       "왜 이게 목록에 없지" 보다 "왜 흐리지" 가 알아보기 쉽다. */
+    const fits = !ppl || ((t.minPeople==null || ppl>=t.minPeople) && (t.maxPeople==null || ppl<=t.maxPeople));
+    const meta = [t.genre, t.capacity, t.dur?t.dur+'분':null, t.difficulty?'★'.repeat(t.difficulty):null]
+                 .filter(Boolean).join(' · ');
+    const row = document.createElement('label');
+    row.className = 'loaditem' + (fits?'':' off');
+    row.innerHTML = `
+      <input type="checkbox"${ldPick.has(i)?' checked':''}>
+      <img src="${esc(t.posterUrl||'')}" alt="" loading="lazy">
+      <div class="li-t">
+        <strong>${esc(t.name)}</strong>
+        <span class="li-m">${esc(meta)}${fits?'':' · <b>인원이 맞지 않습니다</b>'}</span>
+        <span class="li-c">예약 가능 ${avail}${sold?` · 매진 <i>${sold}</i>`:''}</span>
+      </div>`;
+    row.querySelector('input').onchange = e => {
+      if(e.target.checked) ldPick.add(i); else ldPick.delete(i);
+      ldSyncGo();
+    };
+    el.appendChild(row);
+  });
+}
+
+function ldAddPicked(){
+  const picked = [...ldPick].sort((a,b)=>a-b).map(i=>ldThemes[i]);
+  for(const t of picked){
+    const th = blank(t.name);
+    th.place = t.place || '';
+    th.dur   = t.dur || 70;
+    /* 매진 회차도 그대로 담는다. 카드에 남아야 "왜 이 시간대가 후보에 없지" 가
+       조건 탓인지 매진 탓인지 갈리고, 나중에 "이 자리 감시" 를 붙일 자리가 된다.
+       계산에서 빼는 것은 excludeSoldout 이 이미 한다 (기획 §4.30). */
+    th.sessions = t.sessions.map(x=>({t:x.t, soldout:!!x.soldout}));
+    /* raw 도 같이 채운다 — 손으로 고칠 수 있고(§4.3), 공유 링크·자동저장에도 실린다.
+       sessionsToText 가 " 매진" 을 붙이고 parseSessions 가 그대로 되읽는다. */
+    th.raw    = sessionsToText(th.sessions);
+    th.source = 'server';
+    th.fresh  = ldFresh;
+    themes.push(th);
+  }
+  closeLoad();
+  renderThemes(); renderPairs(); refreshMoveHint();
+}
+
+$('loadBtn').onclick     = openLoad;
+$('loadCancel').onclick  = closeLoad;
+$('loadModal').onclick   = e => { if(e.target===$('loadModal')) closeLoad(); };
+$('loadBranch').onchange = async () => { ldFillDates(); await ldFetch(); };
+$('loadDate').onchange   = ldFetch;
+$('loadPeople').oninput  = () => { if(ldThemes.length) ldRender(); };
+$('loadGo').onclick      = ldAddPicked;
 
 /* ── 배선 ── */
 if(CLOUD_ON){

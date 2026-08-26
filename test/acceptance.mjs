@@ -11,7 +11,7 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const m = html.match(/@core:start[\s\S]*?\*\/([\s\S]*?)\/\*[\s\S]{0,80}?@core:end/);
 if (!m) { console.error('index.html에서 @core 구간을 찾지 못했습니다.'); process.exit(1); }
 const core = new Function(m[1] + '\nreturn {pad,fmt,parseClock,parseSessions,sessionsToText,search,SORTS,moveCost,pairKey};')();
-const { fmt, parseSessions, search, SORTS, moveCost, pairKey } = core;
+const { fmt, parseSessions, sessionsToText, search, SORTS, moveCost, pairKey } = core;
 
 let fail = 0;
 const ok = (cond, name, extra='') => {
@@ -286,6 +286,43 @@ const byEnd = [...out].sort(SORTS.find(s => s.k === 'end').f)[0];
 ok(byEnd.end <= best.end, `"빨리 끝나는 순" 1위 종료(${fmt(byEnd.end)}) ≤ "공백 적은 순" 1위 종료(${fmt(best.end)})`);
 const bySafe = [...out].sort(SORTS.find(s => s.k === 'safe').f)[0];
 ok(bySafe.minGap >= best.minGap, `"여유 있는 순" 1위 최소공백(${bySafe.minGap}분) ≥ 기준(${best.minGap}분)`);
+
+/* ── 8. 서버에서 불러오기 (F-15) ── */
+console.log('\n[8] 서버에서 불러오기 (F-15)');
+
+/* 서버 응답 모양 그대로 (서버 저장소 작업명세서 §4.4).
+   t 는 자정부터의 분이라 카드 내부 형식과 같다 — 변환이 없다. */
+const apiSessions = [
+  { t: 635,  soldout: false },   // 10:35
+  { t: 710,  soldout: false },   // 11:50
+  { t: 1095, soldout: true  },   // 18:15
+  { t: 1335, soldout: true  },   // 22:15
+];
+const loadedRaw = sessionsToText(apiSessions.map(x => ({ t: x.t, soldout: !!x.soldout })));
+
+eq(parseSessions(loadedRaw).map(s => fmt(s.t) + (s.soldout ? '/매진' : '')),
+   ['10:35','11:50','18:15/매진','22:15/매진'],
+   'raw 왕복에서 매진이 살아남는다 — 공유 링크·자동저장이 이 경로를 탄다');
+
+/* 매진 회차를 카드에 남기는 것과 계산에 넣는 것은 다르다 (기획 §4.30).
+   남겨두되 excludeSoldout 이 후보에서 빼는지 확인한다. */
+const loadedThemes = [
+  { id: 1, name: 'A', dur: 65, place: '플레이33 건대점', sessions: parseSessions(loadedRaw), lockPos: null },
+  { id: 2, name: 'B', dur: 60, place: '플레이33 건대점',
+    sessions: parseSessions(sessionsToText([{ t: 790, soldout: false }, { t: 1095, soldout: true }])), lockPos: null },
+];
+const twoOpts = { startMin: null, endMax: null, minGap: 0, maxGap: null, excludeSoldout: true, minCount: 2 };
+const loadedOut = search(loadedThemes, twoOpts).out;
+
+ok(loadedOut.length > 0, '매진을 뺀 회차로 조합이 성립한다');
+ok(loadedOut.every(r => r.steps.every(st => !st.soldout)),
+   '어떤 조합에도 매진 회차가 들어가지 않는다');
+
+/* 같은 지점에서 불러오면 place 문자열이 같아 이동시간이 붙지 않아야 한다 */
+eq(moveCost('플레이33 건대점', '플레이33 건대점', 10, {}), 0,
+   '같은 지점끼리는 이동시간 0 — 서버가 일관된 매장명을 주므로 자동으로 맞는다');
+ok(moveCost('플레이33 건대점', '플레이33 홍대점', 10, {}) === 10,
+   '지점이 다르면 기본 이동시간이 붙는다');
 
 console.log(fail ? `\n실패 ${fail}건\n` : '\n전부 통과\n');
 process.exit(fail ? 1 : 0);
