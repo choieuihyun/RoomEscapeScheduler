@@ -2149,6 +2149,14 @@ async function ldFetch(){
   }
 }
 
+/* 난이도는 0.5 단위로 온다 (플레이33 `size25` = 2.5). `'★'.repeat(2.5)` 는
+   소수를 버려서 2.5 를 ★★ 로 만든다 — 반 칸을 ½ 로 남겨 둔다. */
+function ldStars(d){
+  if(typeof d!=='number' || !isFinite(d) || d<=0) return null;
+  const n = Math.min(d, 5);
+  return '★'.repeat(Math.floor(n)) + (n % 1 >= .5 ? '½' : '');
+}
+
 function ldRender(){
   if(!ldThemes.length){ ldMsg('이 날짜에는 테마가 없습니다.'); return; }
   const ppl = parseInt($('loadPeople').value, 10);
@@ -2159,7 +2167,7 @@ function ldRender(){
     /* 인원이 안 맞으면 애초에 못 가는 테마다. 고를 수는 있게 두고 눈에 띄게만 죽인다 —
        "왜 이게 목록에 없지" 보다 "왜 흐리지" 가 알아보기 쉽다. */
     const fits = !ppl || ((t.minPeople==null || ppl>=t.minPeople) && (t.maxPeople==null || ppl<=t.maxPeople));
-    const meta = [t.genre, t.capacity, t.dur?t.dur+'분':null, t.difficulty?'★'.repeat(t.difficulty):null]
+    const meta = [t.genre, t.capacity, t.dur?t.dur+'분':null, ldStars(t.difficulty)]
                  .filter(Boolean).join(' · ');
     const row = document.createElement('label');
     row.className = 'loaditem' + (fits?'':' off');
