@@ -10,7 +10,8 @@
    다른 주소를 보게 하려면 콘솔에서:  localStorage.setItem('flod.server', 'https://…') */
 const DEFAULT_BASE = 'http://127.0.0.1:8080';
 
-export const STORE_LABEL = '플레이33';
+/* 서버가 지원 매장을 알려주기 전(또는 못 받았을 때) 쓸 문구. 실제 목록은 /api/branches 가 준다 */
+export const STORE_LABEL = '예약 사이트';
 
 export function base(){
   try{ return (localStorage.getItem('flod.server')||'').trim() || DEFAULT_BASE; }

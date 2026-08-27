@@ -567,7 +567,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   <div class="themes" id="themes"></div>
   <div class="addrow">
     <button class="btn" id="addTheme">＋ 테마 추가</button>
-    <button class="btn" id="loadBtn" type="button">불러오기 (플레이33)</button>
+    <button class="btn" id="loadBtn" type="button">회차 불러오기</button>
     <button class="btn" id="seedBtn" type="button">테스트 데이터 넣기</button>
     <span class="addhint"><b>순서는 도구가 정합니다.</b> 번호를 끌어 옮기고 <b>자리 고정</b>을 누르면 그 자리에 묶입니다 · <b>×</b> 로 삭제</span>
   </div>
@@ -658,7 +658,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 <div class="modal" id="loadModal">
   <div class="mbox mbox-wide">
     <h3>회차 불러오기</h3>
-    <p class="msub">예약 사이트에서 회차와 <b>매진 여부</b>까지 가져옵니다. 지금은 <b id="loadStore">플레이33</b> 지점만 지원합니다.</p>
+    <p class="msub">예약 사이트에서 회차와 <b>매진 여부</b>까지 가져옵니다. 지원 매장: <b id="loadStore">…</b></p>
     <div class="mrow2">
       <div class="mrow"><label for="loadBranch">지점</label><select id="loadBranch"></select></div>
       <div class="mrow"><label for="loadDate">날짜</label><select id="loadDate"></select></div>
@@ -2113,7 +2113,7 @@ async function openLoad(){
   let S;
   try{ S = await srv(); }
   catch{ ldMsg('불러오기 기능을 여는 데 실패했습니다.'); return; }
-  $('loadStore').textContent = S.STORE_LABEL;
+  /* 지원 매장은 서버가 정한다. 매장을 추가해도 프론트를 안 고치게 응답에서 뽑는다 */
 
   try{
     ldBranches = (await S.branches()).filter(b => b.dates && b.dates.length);
@@ -2126,7 +2126,12 @@ async function openLoad(){
     ldMsg('아직 수집된 지점이 없습니다.<br>서버가 한 바퀴 돈 뒤에 다시 열어 주세요.');
     return;
   }
-  $('loadBranch').innerHTML = ldBranches.map(b=>`<option value="${esc(b.id)}">${esc(b.branch)}</option>`).join('');
+  /* 매장명을 같이 보여준다. 플레이33·키이스케이프·래빗홀이 다 홍대에 있어서
+     지점명만으로는 "홍대점" 이 셋이라 고를 수가 없다. */
+  $('loadStore').textContent =
+    [...new Set(ldBranches.map(b=>b.store).filter(Boolean))].join(' · ') || S.STORE_LABEL;
+  $('loadBranch').innerHTML = ldBranches
+    .map(b=>`<option value="${esc(b.id)}">${esc(b.store ? b.store+' '+b.branch : b.branch)}</option>`).join('');
   ldFillDates();
   await ldFetch();
 }
