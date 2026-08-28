@@ -6,9 +6,9 @@
    **서버는 선택이다.** 여기가 통째로 실패해도 직접 입력(F-06)과 사진(F-05)은 그대로 동작한다.
    계약은 서버 저장소 `작업명세서.md` §4.4 와 짝이다 — 바꾸려면 양쪽을 같이 본다. */
 
-/* M4 배포가 끝나면 이 값을 도메인으로 바꾼다. 그 전까지는 로컬에 띄운 서버를 본다.
-   다른 주소를 보게 하려면 콘솔에서:  localStorage.setItem('flod.server', 'https://…') */
-const DEFAULT_BASE = 'http://127.0.0.1:8080';
+/* 배포된 서버. 다른 주소를 보게 하려면 콘솔에서:
+   localStorage.setItem('flod.server', 'http://127.0.0.1:8083')   ← 로컬 개발용 */
+const DEFAULT_BASE = 'https://floduler.duckdns.org';
 
 /* 서버가 지원 매장을 알려주기 전(또는 못 받았을 때) 쓸 문구. 실제 목록은 /api/branches 가 준다 */
 export const STORE_LABEL = '예약 사이트';

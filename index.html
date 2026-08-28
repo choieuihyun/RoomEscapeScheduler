@@ -2065,7 +2065,7 @@ const srv = async () => (Srv || (Srv = await import('./server.js')));
 
 /* ⚠️ M4 에서 서버를 배포하면 여기와 server.js 의 DEFAULT_BASE 를 **함께** 바꾼다.
    둘 중 하나만 바꾸면 버튼이 없거나(여기), 엉뚱한 곳을 부른다(거기). */
-const SERVER_DEPLOYED = false;
+const SERVER_DEPLOYED = true;
 
 /* 배포된 페이지는 누구나 연다. 아직 부를 서버가 없는데 버튼만 떠 있으면
    처음 온 사람은 눌러서 오류부터 보게 된다 — 없는 기능은 보여주지 않는다
