@@ -86,10 +86,14 @@ ok(!capped, '탐색 한도 미도달');
 const best = [...out].sort(SORTS.find(s => s.k === 'gap').f)[0];
 const seq = best.steps.map(s => `${fmt(s.start)} ${s.name}`).join(' → ');
 
-eq(seq, '13:30 범계 → 14:50 몽 → 16:00 왓 어 트립', '"공백 적은 순" 1위 = 검증된 최적해');
-eq(best.total, 5,   '공백 총합 5분');
-eq(best.gaps, [5, 0], '개별 공백 [5, 0]');
-eq(fmt(best.end), '17:10', '종료 17:10');
+/* requirements.md §7 의 최적해(13:30 범계 → 14:50 몽 → 16:00 왓 어 트립)는 순서를
+   범계→몽→왓어트립 로 뒤바꿔야 나온다 — §4.14 후기로 도구가 더는 순서를 안 바꾸고
+   카드 배치 순서(여기선 범계,왓어트립,몽) 그대로만 탐색하므로 도달 불가능해졌다.
+   지금 배치 순서 안에서 나오는 최적해로 교체한다. */
+eq(seq, '10:30 범계 → 11:45 왓 어 트립 → 13:30 몽', '"공백 적은 순" 1위 = 카드 순서 고정 후 최적해');
+eq(best.total, 35,   '공백 총합 35분');
+eq(best.gaps, [0, 35], '개별 공백 [0, 35]');
+eq(fmt(best.end), '14:40', '종료 14:40');
 eq(best.minGap, 0,  '최소 공백 0분');
 
 /* ── 3. 조건 필터 (§2.1 F-07) ── */
@@ -125,34 +129,17 @@ ok(meal.length < out.length, `식사 공백은 조합을 줄인다 (${out.length
 eq(search(themes, { ...opts, meal: MEAL, maxGap: 20 }).out.length, 0,
    '최대 공백 20분 + 식사 공백 40분 → 모순이라 결과 없음');
 
-// 자리 잠금: lockPos 는 0부터 센 순서. 개념 하나로 첫 타·마지막·가운데·전체 고정을 다 덮는다.
-const lockAt = (...pos) => themes.map((t, i) => pos.includes(i) ? { ...t, lockPos: i } : t);
+// 카드 배치 순서 고정 (§4.14 후기): "자리 고정" 은 없어졌고, 순서는 항상 배열 순서 그대로다.
+ok(out.every(r => r.steps.every((s, k) => k === 0 || s.i > r.steps[k - 1].i)),
+   '모든 결과가 배열 순서(오름차순 인덱스)로만 나온다 — 순서를 도구가 바꾸지 않는다');
 
-const lf = search(lockAt(0), opts).out;
-ok(lf.length > 0 && lf.every(r => r.steps[0].name === '범계'),
-   `0번 자리 잠금 → 전부 범계로 시작 (${lf.length}개)`);
-ok(lf.length < out.length, '자리 잠금은 조합을 줄인다');
+// 부분 조합(F-08)도 순서는 지키되 건너뛰기만 허용한다 — 재배열은 안 된다
+ok(partial.every(r => r.steps.every((s, k) => k === 0 || s.i > r.steps[k - 1].i)),
+   '부분 조합도 상대 순서를 유지한 채 일부만 건너뛴다');
 
-const ll = search(lockAt(2), opts).out;
-ok(ll.length > 0 && ll.every(r => r.steps[r.steps.length - 1].name === '몽'),
-   `마지막 자리 잠금 → 전부 몽으로 끝 (${ll.length}개)`);
-ok(ll.every(r => r.steps.slice(0, -1).every(s => s.name !== '몽')),
-   '잠근 테마가 다른 자리에 끼는 조합은 생기지 않는다');
-
-// 드롭다운(첫 타/마지막)으로는 표현할 수 없던 것 — 가운데 자리 고정
-const lm = search(lockAt(1), opts).out;
-ok(lm.length > 0 && lm.every(r => r.steps[1].name === '왓 어 트립'),
-   `가운데 자리 잠금 → 전부 2번째가 왓 어 트립 (${lm.length}개)`);
-
-// 전부 잠그면 "이 순서 그대로" 가 된다
-const la = search(lockAt(0, 1, 2), opts).out;
-ok(la.length > 0 && la.every(r => r.steps.map(s => s.name).join('>') === '범계>왓 어 트립>몽'),
-   `전부 잠금 → 순서 그대로, 회차만 탐색 (${la.length}개)`);
-
-// 잠금 + 식사 공백 동시 적용
-const bo = search(lockAt(0, 2), { ...opts, meal: MEAL }).out;
-ok(bo.every(r => r.steps[0].name === '범계' && r.steps[2].name === '몽' && hasMealGap(r)),
-   `자리 잠금 + 식사 공백 동시 적용 (${bo.length}개)`);
+// 첫 카드로 시작하는 조합만 있는 게 아니라, 첫 카드를 건너뛴 부분 조합도 나온다
+ok(partial.some(r => r.count === 2 && r.steps[0].i !== 0),
+   '첫 카드를 건너뛴 부분 조합도 존재한다 (건너뛰기 = 배제, 재배열 아님)');
 
 /* ── 3.6 매장 간 이동시간 ── */
 console.log('\n[3.6] 매장 간 이동시간');
@@ -307,9 +294,9 @@ eq(parseSessions(loadedRaw).map(s => fmt(s.t) + (s.soldout ? '/매진' : '')),
 /* 매진 회차를 카드에 남기는 것과 계산에 넣는 것은 다르다 (기획 §4.30).
    남겨두되 excludeSoldout 이 후보에서 빼는지 확인한다. */
 const loadedThemes = [
-  { id: 1, name: 'A', dur: 65, place: '플레이33 건대점', sessions: parseSessions(loadedRaw), lockPos: null },
+  { id: 1, name: 'A', dur: 65, place: '플레이33 건대점', sessions: parseSessions(loadedRaw) },
   { id: 2, name: 'B', dur: 60, place: '플레이33 건대점',
-    sessions: parseSessions(sessionsToText([{ t: 790, soldout: false }, { t: 1095, soldout: true }])), lockPos: null },
+    sessions: parseSessions(sessionsToText([{ t: 790, soldout: false }, { t: 1095, soldout: true }])) },
 ];
 const twoOpts = { startMin: null, endMax: null, minGap: 0, maxGap: null, excludeSoldout: true, minCount: 2 };
 const loadedOut = search(loadedThemes, twoOpts).out;

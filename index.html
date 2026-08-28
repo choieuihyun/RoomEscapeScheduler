@@ -159,7 +159,8 @@ header p{margin:0;color:var(--ink3);font-size:14px;max-width:52ch}
 .addhint{font-size:12.5px;color:var(--ink3)}
 .addhint b{color:var(--ink2);font-weight:600}
 .card{background:var(--surface);border:1px solid transparent;border-radius:var(--r);
-  padding:18px;box-shadow:var(--sh);transition:box-shadow .15s,border-color .15s}
+  padding:18px;box-shadow:var(--sh);
+  transition:box-shadow .15s,border-color .15s,opacity .15s,transform .15s}
 .card.drag{border-color:var(--blue);background:var(--surface)}
 .card-top{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 
@@ -253,19 +254,17 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .teamctl .btn{padding:6px 12px;font-size:12.5px}
 .teamctl .btn:disabled{opacity:.4;cursor:default}
 
-/* 드래그 손잡이 겸 순서 번호. 잠그면 파란 알약이 되어 "이 자리" 임을 알린다 */
+/* 드래그 손잡이 겸 순서 번호. 이 번호 순서가 곧 조합 순서다 (§4.14 후기) */
 .idx{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;
   color:var(--ink3);width:26px;height:26px;flex:none;display:inline-flex;
   align-items:center;justify-content:center;border-radius:var(--pill);
   background:var(--surface2);cursor:grab;user-select:none}
 .idx:active{cursor:grabbing}
-.card.locked .idx{color:#fff;background:var(--blue)}
-.card.dragging{opacity:.4}
-.card.over{border-color:var(--blue);box-shadow:inset 0 3px 0 -1px var(--blue),var(--sh)}
-.lockbtn{background:var(--surface2);border:1px solid var(--line);color:var(--ink3);
-  font-size:12.5px;font-weight:500;padding:6px 11px}
-.lockbtn:hover{background:var(--line);color:var(--ink2)}
-.lockbtn.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+/* 잡아서 든 느낌이 나야 "지금 옮기는 중" 이 헷갈리지 않는다 — 살짝 커지고 그림자가
+   떠서, 그냥 흐려지기만 하던 것보다 어느 카드를 쥐고 있는지 분명해진다. */
+.card.dragging{opacity:.5;transform:scale(1.02) rotate(-.4deg);
+  box-shadow:0 14px 32px rgba(0,0,0,.22),0 0 0 1px var(--blue-line)}
+.card.over{border-color:var(--blue);box-shadow:inset 0 4px 0 -1px var(--blue),var(--sh)}
 .btn-copy{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);
   font-size:12px;font-weight:500;padding:4px 11px;border-radius:var(--pill)}
 .btn-copy:hover{background:var(--line);color:var(--ink)}
@@ -405,7 +404,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .mrow{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
 .mrow label{font-size:13px;color:var(--ink2);font-weight:500}
 .mrow label .dim{color:var(--ink3);font-weight:400}
-.mrow input,.mrow textarea{width:100%;box-sizing:border-box;padding:12px 14px;font-size:15px}
+.mrow input,.mrow textarea,.mrow select{width:100%;box-sizing:border-box;padding:12px 14px;font-size:15px}
 .mseg{display:flex;gap:4px;border:none;border-radius:var(--r-sm);
   background:var(--surface2);padding:4px}
 .mseg button{flex:1;background:transparent;border:none;color:var(--ink3);
@@ -562,14 +561,13 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   <div class="sec-head">
     <h2>테마</h2>
     <b class="count" id="themeCount"></b>
-    <span>붙여넣거나 직접 입력 · <b class="hi">매진된 회차는 빼고 넣어 주세요</b></span>
+    <span>붙여넣거나 직접 입력 시 <b class="hi">매진된 회차는 빼고 입력해주세요</b></span>
   </div>
   <div class="themes" id="themes"></div>
   <div class="addrow">
     <button class="btn" id="addTheme">＋ 테마 추가</button>
     <button class="btn" id="loadBtn" type="button">회차 불러오기</button>
-    <button class="btn" id="seedBtn" type="button">테스트 데이터 넣기</button>
-    <span class="addhint"><b>순서는 도구가 정합니다.</b> 번호를 끌어 옮기고 <b>자리 고정</b>을 누르면 그 자리에 묶입니다 · <b>×</b> 로 삭제</span>
+    <span class="addhint"><b>카드 순서가 곧 방문 순서입니다.</b> 번호를 끌어 옮겨 정하세요 · <b>×</b> 로 삭제</span>
   </div>
 </section>
 
@@ -658,7 +656,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 <div class="modal" id="loadModal">
   <div class="mbox mbox-wide">
     <h3>회차 불러오기</h3>
-    <p class="msub">예약 사이트에서 회차와 <b>매진 여부</b>까지 가져옵니다. 지원 매장: <b id="loadStore">…</b></p>
+    <p class="msub">예약 사이트에서 회차와 <b>매진 여부</b>까지 가져옵니다.</p>
     <div class="mrow2">
       <div class="mrow"><label for="loadBranch">지점</label><select id="loadBranch"></select></div>
       <div class="mrow"><label for="loadDate">날짜</label><select id="loadDate"></select></div>
@@ -781,8 +779,10 @@ function sessionsToText(ss){
 }
 
 /* ── 조합 탐색 ── */
-/* 폭주 방지용 상한. 요구 범위(테마 3~5개)는 상한에 걸리지 않고 전수 탐색된다 —
-   테마 5개 / 회차 9~10개가 약 1.1만 조합, 10ms 수준.
+/* 폭주 방지용 상한. §4.14 후기로 순서를 더는 탐색하지 않아(카드 배치 순서 고정),
+   탐색 공간이 순열(N!)이 아니라 회차 선택(M^N)만 남아 훨씬 작아졌다 —
+   테마 5개 / 회차 9~10개가 100개 안팎, 1ms 수준. 상한은 이제 실무 범위에서
+   사실상 걸릴 일이 없지만, 회차를 아주 많이 넣는 극단적인 입력을 위해 남겨 둔다.
    상한에 걸리면 결과 개수 옆에 "탐색 한도 도달"로 표시한다(조용히 자르지 않는다). */
 const NODE_CAP=800000, KEEP_CAP=50000;
 /* 매장 쌍의 키. 걷는 시간은 방향에 상관없으므로 정렬해서 한 칸만 쓴다
@@ -807,7 +807,7 @@ function moveCost(fromPlace, toPlace, moveMin, moveMap){
 }
 
 function search(list, o){
-  const n=list.length, used=new Array(n).fill(false), path=[], out=[];
+  const n=list.length, path=[], out=[];
   let nodes=0, capped=false;
   function record(){
     /* 식사 공백: "공백을 줄여라" 가 아니라 "한 군데는 크게 비워라" 는 요구다.
@@ -838,16 +838,15 @@ function search(list, o){
       minWait: waits.length?Math.min(...waits):Infinity
     });
   }
-  function dfs(curEnd){
+  function dfs(curEnd, start){
     if(out.length>=KEEP_CAP||nodes>NODE_CAP){capped=true;return;}
     if(path.length>=o.minCount) record();
-    for(let i=0;i<n;i++){
-      if(used[i])continue;
+    /* 카드 배치 순서가 곧 방문 순서다 (§4.14 후기) — i 를 되돌아가지 않고
+       start 부터만 훑으므로, 순서 자체는 절대 바뀌지 않고 "이 순서에서 어떤
+       테마를 건너뛸지" 만 갈린다. 그래서 used[] 로 방문 여부를 따로 셀 필요가
+       없다 — 이미 지나온 인덱스는 다시 오지 않는다. */
+    for(let i=start;i<n;i++){
       const th=list[i];
-      /* 자리를 잠근 테마는 그 자리에만 놓는다 (lockPos 는 0부터 센 순서).
-         맨 앞만 잠그면 "첫 타 고정", 맨 뒤만 잠그면 "마지막 고정",
-         전부 잠그면 "이 순서 그대로" 가 된다 — 개념 하나로 셋을 다 덮는다. */
-      if(th.lockPos!=null && th.lockPos!==path.length) continue;
       for(const s of th.sessions){
         if(o.excludeSoldout&&s.soldout)continue;
         /* 순차 배정(F-14): 앞선 팀이 이미 확정한 회차는 이 팀의 후보에서 뺀다.
@@ -866,15 +865,15 @@ function search(list, o){
         const end=s.t+th.dur;
         if(o.endMax!=null&&end>o.endMax)continue;
         nodes++;
-        used[i]=true; path.push({i,name:th.name||('테마 '+(i+1)),place:th.place||'',dur:th.dur,
-                                 start:s.t,end,soldout:s.soldout,move});
-        dfs(end);
-        path.pop(); used[i]=false;
+        path.push({i,name:th.name||('테마 '+(i+1)),place:th.place||'',dur:th.dur,
+                   start:s.t,end,soldout:s.soldout,move});
+        dfs(end, i+1);
+        path.pop();
         if(nodes>NODE_CAP){capped=true;return;}
       }
     }
   }
-  dfs(null);
+  dfs(null, 0);
   return {out,capped};
 }
 
@@ -891,22 +890,8 @@ const SORTS=[
 
 /* ── 상태 ── */
 let themes=[], nextId=1;
-function blank(name){ return {id:nextId++, name:name||'', place:'', dur:70, raw:'', sessions:[], busy:'', err:'', source:'', lock:false, imgCount:0, mergeMode:true}; }
+function blank(name){ return {id:nextId++, name:name||'', place:'', dur:70, raw:'', sessions:[], busy:'', err:'', source:'', imgCount:0, mergeMode:true}; }
 
-/* '테스트 데이터 넣기' 버튼을 누르면 채워지는 예시 데이터. 시작할 때는 빈 화면이다 —
-   눌러본 적 없는 사람에게 낯선 매장 이름을 먼저 보여줄 이유가 없다. */
-const SEED=[
-  ['범계',      75, '10:30  12:00  13:30  15:00  16:30  18:00  19:30  21:00  22:30', ''],
-  ['몽',        70, '10:50  12:10  13:30  14:50  16:10  17:30  18:50  20:10  21:30  22:50', ''],
-  ['왓 어 트립', 70, '10:20  11:45  13:10  14:35  16:00  17:25  18:50  20:15  21:40  23:05', ''],
-];
-function seed(){
-  return SEED.map(([name,dur,raw,place])=>{
-    const th=blank(name); th.dur=dur; th.raw=raw; th.place=place||'';
-    th.sessions=parseSessions(raw); th.source='manual';
-    return th;
-  });
-}
 themes = [];
 
 /* ── 테마 렌더 ── */
@@ -924,15 +909,13 @@ function renderThemes(){
   }
   themes.forEach((th,i)=>{
     const c=document.createElement('div');
-    c.className='card'+(th.lock?' locked':'');
+    c.className='card';
     c.innerHTML=`
       <div class="card-top">
         <span class="idx">${pad(i+1)}</span>
         <input class="i-name" placeholder="테마 이름" value="${esc(th.name)}" data-k="name">
         <input class="i-dur mono" value="${th.dur}" data-k="dur" inputmode="numeric">
         <span class="unit">분</span>
-        <button class="lockbtn${th.lock?' on':''}" data-k="lock" type="button"
-          title="이 카드를 지금 자리에 고정합니다. 잠그지 않은 카드는 도구가 알아서 배치합니다">${th.lock?'자리 고정됨':'자리 고정'}</button>
         <button class="btn-x" data-k="del" title="삭제">×</button>
       </div>
       <div class="placerow">
@@ -955,7 +938,6 @@ function renderThemes(){
     c.querySelector('[data-k=place]').oninput = e => { th.place=e.target.value; renderPairs(); refreshMoveHint(); };
     c.querySelector('[data-k=merge]').onchange = e => { th.mergeMode = e.target.checked; };
     c.querySelector('[data-k=dur]').oninput  = e => th.dur=Math.max(1,parseInt(e.target.value)||0);
-    c.querySelector('[data-k=lock]').onclick = ()=>{ th.lock=!th.lock; renderThemes(); };
     c.querySelector('[data-k=del]').onclick  = ()=>{ themes=themes.filter(x=>x!==th); renderThemes(); renderPairs(); refreshMoveHint(); };
     const ta=c.querySelector('[data-k=raw]');
     ta.oninput = e => {
@@ -1067,22 +1049,13 @@ function refreshFoot(card, th){
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 document.getElementById('addTheme').onclick=()=>{ themes.push(blank('')); renderThemes(); renderPairs(); refreshMoveHint(); };
-document.getElementById('seedBtn').onclick=()=>{
-  themes=seed(); moveMap={};
-  if(location.hash) history.replaceState(null,'',location.pathname);  // 남은 링크 상태도 털어낸다
-  /* 테마를 통째로 갈아치우면 옛 테마의 id가 사라진다. 확정해 둔 팀은 그 id로 회차를
-     가리키고 있었으므로, 남겨두면 새 테마의 우연히 같은 id와 조용히 잘못 매칭되거나
-     (§4.29에서 확인한 실제 증상) 조용히 아무 효과가 없어진다 — 둘 다 티가 안 난다. */
-  teams=[]; renderTeams();
-  renderThemes();
-};
 
 /* ── 사용법 투어 ──
    화면을 어둡게 덮고 설명할 요소 하나만 구멍을 뚫어 보여주는 스포트라이트 방식.
    테마 카드처럼 처음엔 없을 수도 있는 요소 대신, 항상 존재하는 버튼·섹션만 짚는다. */
 const TOUR_KEY='resched.tour_v1';
 const TOUR_STEPS=[
-  {sel:'#seedBtn',  title:'감이 안 잡히면',   body:'예시 데이터를 넣어보고 화면이 어떻게 채워지는지 먼저 확인해 보세요. 지우고 다시 시작해도 됩니다.'},
+  {sel:'#loadBtn',  title:'감이 안 잡히면',   body:'예약 사이트에서 회차를 그대로 불러와 화면이 어떻게 채워지는지 먼저 확인해 보세요.'},
   {sel:'#addTheme', title:'테마 추가',        body:'테마 하나 = 예약할 매장 하나예요. 여기를 눌러 필요한 만큼 추가하세요.'},
   {sel:'#themes',   title:'시간표 넣기',      body:'예약 가능한 회차를 직접 입력하거나, 예약 화면 캡처를 붙여넣으면(Ctrl+V) 자동으로 읽습니다. 매장 이름을 적어두면 매장 간 이동시간도 계산에 들어가요.'},
   {sel:'.opts',     title:'조건 정하기',      body:'가장 이른 시작·늦은 종료, 최소·최대 공백, 기본 이동시간 같은 조건을 정합니다.'},
@@ -1419,7 +1392,7 @@ function renderResults(){
        방향이라 오히려 헷갈리게 한다. */
     elRes.innerHTML = ($('oTeam').checked && teams.length)
       ? '<div class="empty">이 조건으로는 남은 회차만으로 조합을 만들 수 없습니다. 앞선 팀이 너무 많은 회차를 가져갔을 수 있어요 — <b class="hi">마지막 팀 취소</b> 또는 <b class="hi">전체 초기화</b> 를 눌러보세요.</div>'
-      : '<div class="empty">조건을 만족하는 조합이 없습니다. 최소 공백을 줄이거나 시간 범위를 넓혀보세요.</div>';
+      : '<div class="empty">조건을 만족하는 조합이 없습니다. 최소 공백을 줄이거나 시간 범위를 넓혀보거나, 테마 순서를 바꿔보세요.</div>';
     elCount.textContent='';
     return;
   }
@@ -1684,12 +1657,11 @@ let teams=[];
 
 function runSearch(){
   const note=$('runNote');
-  /* 잠근 카드의 "자리" 는 실제로 진행되는 순서 기준이다.
-     회차가 없는 카드는 애초에 일정에 안 들어가므로 걸러낸 뒤의 인덱스를 쓴다. */
+  /* 카드 배치 순서가 곧 방문 순서다 (§4.14 후기) — 회차가 없는 카드는 애초에
+     일정에 안 들어가므로 걸러낸 뒤의 순서를 그대로 쓴다. */
   themesReady=themes.filter(t=>t.sessions.length&&t.dur>0)
                     .map((t,i)=>({id:t.id, name:t.name||('테마 '+(i+1)),dur:t.dur,sessions:t.sessions,
-                                  place:t.place||'',
-                                  lockPos: t.lock ? i : null}));
+                                  place:t.place||''}));
   if(themesReady.length<2){ note.textContent='회차가 있는 테마가 2개 이상 필요합니다.'; found=[]; showCount=SHOW; renderTabs(); renderResults(); return; }
 
   const o=readOptions();
@@ -1759,7 +1731,11 @@ const b64d = str => new TextDecoder().decode(
 function serialize(){
   return b64e(JSON.stringify({
     v:3,
-    t: themes.map(t=>[t.name, t.dur, t.raw, t.lock?1:0, t.place||'']),
+    /* 4번째 자리는 옛 "자리 고정" 값이었다. §4.14 후기로 그 개념 자체가 없어졌지만,
+       자리를 빼면 restore() 의 [name,dur,raw,lock,place] 위치 기반 구조분해에서
+       place 가 밀려 옛 링크·자동저장을 전부 깨뜨린다 — so 슬롯과 같은 이유로
+       자리만 남기고 항상 0을 적는다. */
+    t: themes.map(t=>[t.name, t.dur, t.raw, 0, t.place||'']),
     /* 지금 화면에 있는 매장 쌍만 담는다 — 지운 매장의 값까지 링크에 끌고 다닐 이유가 없다 */
     m: (()=>{ const ps=placeList(), out=[];
         for(let i=0;i<ps.length;i++) for(let j=i+1;j<ps.length;j++){
@@ -1782,7 +1758,7 @@ function restore(hash){
   if(d.v!==1 && d.v!==2 && d.v!==3) throw new Error('알 수 없는 링크 형식');
   themes = d.t.map(([name,dur,raw,lock,place])=>{
     const th=blank(name); th.dur=dur; th.raw=raw||'';
-    th.lock=!!lock;                 // v1 의 'first'/'last' 문자열도 참으로 읽혀 자리 고정이 된다
+    // lock 은 옛 "자리 고정" 값 — §4.14 후기로 없어진 개념이라 읽기만 하고 버린다
     th.place=place||'';             // v1·v2 링크에는 없다 — 빈칸이면 이동시간이 안 붙는다
     th.sessions=parseSessions(th.raw); th.source=th.raw?'manual':'';
     return th;
@@ -2126,10 +2102,8 @@ async function openLoad(){
     ldMsg('아직 수집된 지점이 없습니다.<br>서버가 한 바퀴 돈 뒤에 다시 열어 주세요.');
     return;
   }
-  /* 매장명을 같이 보여준다. 플레이33·키이스케이프·래빗홀이 다 홍대에 있어서
+  /* 매장명을 지점 옵션에 같이 보여준다. 플레이33·키이스케이프·래빗홀이 다 홍대에 있어서
      지점명만으로는 "홍대점" 이 셋이라 고를 수가 없다. */
-  $('loadStore').textContent =
-    [...new Set(ldBranches.map(b=>b.store).filter(Boolean))].join(' · ') || S.STORE_LABEL;
   $('loadBranch').innerHTML = ldBranches
     .map(b=>`<option value="${esc(b.id)}">${esc(b.store ? b.store+' '+b.branch : b.branch)}</option>`).join('');
   ldFillDates();
