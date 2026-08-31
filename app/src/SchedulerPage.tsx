@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useScheduler } from './scheduler/useScheduler';
 import { useTheme } from './useTheme';
 import { useTour } from './useTour';
@@ -22,6 +23,18 @@ export function SchedulerPage() {
   const auth = useAuth();
   const plans = usePlans(auth.me);
   const saveModal = useSaveModal(auth, () => s.lastSnapshot.current || s.serializeNow(), plans.reload);
+
+  useEffect(() => {
+    function onKeydown(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      if (loadModal.open) loadModal.close();
+      if (auth.open) auth.closeAuth();
+      if (saveModal.open) saveModal.close();
+      tour.end();
+    }
+    document.addEventListener('keydown', onKeydown);
+    return () => document.removeEventListener('keydown', onKeydown);
+  }, [loadModal, auth, saveModal, tour]);
 
   return (
     <div className="wrap">

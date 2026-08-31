@@ -46,6 +46,7 @@ export function useTour() {
   }
 
   function end() {
+    if (!nodesRef.current) return;
     unmount();
     localStorage.setItem(TOUR_KEY, '1');
   }
@@ -121,5 +122,5 @@ export function useTour() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { start };
+  return { start, end };
 }

@@ -48,6 +48,7 @@ export function useSaveModal(auth: UseAuthReturn, getSnapshot: () => string, onS
       });
       setOpen(false); setPending(null);
       onSaved();
+      document.getElementById('planSec')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
       const C = await cloud();
       setErr(C.say(e));

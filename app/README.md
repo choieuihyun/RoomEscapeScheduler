@@ -48,7 +48,9 @@ src/components/         ThemeCard·ThemeList·ConditionsPanel·MoveTimeGrid·Res
 src/SchedulerPage.tsx   위 컴포넌트를 조립하는 최상위 화면
 src/floduler.css        index.html의 <style> 블록(31~543행) 그대로 — 리디자인 전까지 이 파일이 유일한 스타일 소스
 public/vendor/          onnxruntime-web 모델·wasm — vite.config.ts에서 external 처리, index.html의 importmap으로 런타임 해석
-public/firebase-config.js  저장소 루트 사본. 비밀이 아니라 커밋해도 되는 값 (파일 상단 주석 참고)
+public/firebase-config.js  저장소 루트 사본. 비밀이 아니라 커밋해도 되는 값 (파일 상단 주석 참고).
+                         Pages Source가 이 디렉터리로 전환되면 실제로 서빙되는 건 이 사본뿐이니,
+                         프로젝트를 교체하는 등 값이 바뀌면 이 파일을 기준으로 갱신할 것
 ```
 
 ## 아직 없는 것
