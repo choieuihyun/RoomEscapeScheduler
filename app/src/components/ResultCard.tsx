@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { fmt, type SearchResultRow } from '../core';
 
 function axisTicks(lo: number, hi: number, span: number) {
@@ -70,7 +71,8 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
             {r.steps.map((s, i) => {
               const l = pct(s.start), w = pct(s.end) - pct(s.start);
               return (
-                <div key={i} className={'blk' + (s.soldout ? ' so' : '')} style={{ left: l + '%', width: w + '%' }}
+                <div key={i} className={'blk' + (s.soldout ? ' so' : '')}
+                  style={{ left: l + '%', width: w + '%', '--accent': `var(--accent-${s.i % 6})` } as CSSProperties}
                   title={`${s.name} ${fmt(s.start)}→${fmt(s.end)} (${s.dur}분)`}>
                   <span className="nm"><i>{s.name}</i></span>
                   <span className="rng" data-s={fmt(s.start)} data-full={`${fmt(s.start)} – ${fmt(s.end)}`}>{fmt(s.start)} – {fmt(s.end)}</span>

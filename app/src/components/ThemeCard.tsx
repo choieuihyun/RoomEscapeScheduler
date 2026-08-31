@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { fmt } from '../core';
 import type { Theme } from '../scheduler/types';
 
@@ -72,6 +72,7 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
   return (
     <div
       className={'card' + (dragState === 'dragging' ? ' dragging' : dragState === 'over' ? ' over' : dragState === 'drag' ? ' drag' : '')}
+      style={{ '--accent': `var(--accent-${index % 6})` } as CSSProperties}
       onDragOver={e => {
         e.preventDefault();
         setDragState([...e.dataTransfer.types].includes(DRAG_TYPE) ? 'over' : 'drag');

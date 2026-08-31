@@ -1,28 +1,32 @@
 /* ── 토큰 ──────────────────────────────────────────────
-   밝은 배경 + 파란 포인트 + 큰 라운드 + 테두리 대신 그림자.
+   Linear/Notion Calendar 톤: 그림자로 띄우는 대신 얇은 보더로 면을 가르고,
+   라운드는 작게, 액센트는 인디고 하나로 절제한다.
    색은 역할로만 부르고 값은 여기서만 정한다. */
 :root{
-  --bg:#F2F4F6;          /* 페이지 바닥 */
+  --bg:#FAFAFA;          /* 페이지 바닥 */
   --surface:#FFFFFF;     /* 카드 */
-  --surface2:#F7F8FA;    /* 입력칸처럼 안으로 파인 면 */
-  --line:#E8EBED; --line2:#D5DADF;
+  --surface2:#F4F4F5;    /* 입력칸처럼 안으로 파인 면 */
+  --line:#E4E4E7; --line2:#D4D4D8;
 
-  --ink:#191F28;         /* 본문 */
-  --ink2:#4E5968;        /* 보조 */
-  --ink3:#626C7A;        /* 흐린 설명 */
-  --placeholder:#98A2AE;
+  --ink:#18181B;         /* 본문 */
+  --ink2:#52525B;        /* 보조 */
+  --ink3:#71717A;        /* 흐린 설명 */
+  --placeholder:#A1A1AA;
 
   /* --blue 는 흰 글자를 얹는 버튼·배지용, --blue-text 는 배경 위에 직접 얹는 글자용 —
      라이트 모드에선 같은 색이 두 역할 다 하지만, 다크 모드에선 방향이 갈린다(아래 참고). */
-  --blue:#2670EB; --blue-hover:#1B64DA; --blue-press:#1B64DA; --blue-text:#2670EB;
-  --blue-soft:#E8F3FF; --blue-line:#B6D8FF;
-  --green:#00B26B; --green-text:#00734B; --green-soft:#E4F8EF;
-  --red:#F04452;   --red-text:#D92B39;  --red-soft:#FFECEE;  --red-line:#FFC9CF;
-  --amber:#E08700; --amber-text:#B4530A; --amber-soft:#FFF3E0; --amber-line:#FFD79A;
+  --blue:#5E6AD2; --blue-hover:#4F5BC4; --blue-press:#4048A8; --blue-text:#5E6AD2;
+  --blue-soft:#EEF0FC; --blue-line:#C7CCF5;
+  --green:#1AAE73; --green-text:#0E8A5B; --green-soft:#E7F8F1;
+  --red:#EB5757;   --red-text:#D6483D;  --red-soft:#FDEDEC;  --red-line:#F7C6C1;
+  --amber:#C98A1D; --amber-text:#A06B12; --amber-soft:#FBF1E1; --amber-line:#EBCE9C;
 
   /* 선택된 탭/정렬 칩처럼 "글자색을 뒤집어 채우는" 자리 전용 — --ink 와 분리해 둬야
      다크 모드에서 --ink 가 밝아져도 이 칩은 계속 또렷하게 채워진다. */
-  --strong:#191F28; --strong-ink:#FFFFFF;
+  /* 테마별 컬러 코딩 — ThemeCard 왼쪽 띠, 결과 타임라인 블록에 순환 적용
+     (Notion Calendar 식 캘린더별 색). 6개를 넘으면 다시 처음부터 돈다. */
+  --accent-0:#5E6AD2; --accent-1:#0E9F8E; --accent-2:#E0577B;
+  --accent-3:#C98A1D; --accent-4:#8B5CF6; --accent-5:#2894D6;
 
   /* 공백(잔여) 빗금 세 단계 — 기본/넓음/좁음 */
   --gap-a:#EDF0F3; --gap-b:#E1E6EB;
@@ -32,10 +36,10 @@
   /* 이동 알약(채운 구간) */
   --mv-line:#E9A23B; --mv-fill:#FFC96B; --mv-text:#6B3D00;
 
-  --r:16px; --r-sm:10px; --r-xs:8px; --pill:999px;
-  --sh:0 1px 2px rgba(25,31,40,.04), 0 4px 16px rgba(25,31,40,.05);
-  --sh-up:0 4px 12px rgba(25,31,40,.08), 0 12px 32px rgba(25,31,40,.08);
-  --ring:0 0 0 3px rgba(49,130,246,.14);
+  --r:12px; --r-sm:8px; --r-xs:6px; --pill:999px;
+  --sh:0 1px 2px rgba(0,0,0,.04);
+  --sh-up:0 8px 24px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.06);
+  --ring:0 0 0 3px rgba(94,106,210,.16);
 
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,
          'Apple SD Gothic Neo','Segoe UI','Malgun Gothic',system-ui,sans-serif;
@@ -48,58 +52,60 @@
    수동 토글([data-theme="dark"])을 한 값으로 같이 챙긴다. */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#14161A; --surface:#1C1F26; --surface2:#242830;
-    --line:#333A44; --line2:#4A5361;
-    --ink:#F3F5F7; --ink2:#AEB6C2; --ink3:#7E8794; --placeholder:#828B98;
+    --bg:#0E0E10; --surface:#17181C; --surface2:#1D1E23;
+    --line:#2A2B31; --line2:#3A3C44;
+    --ink:#EDEDEF; --ink2:#A1A1AA; --ink3:#8A8B93; --placeholder:#6C6D75;
 
-    --blue:#2E63D6; --blue-hover:#2454B8; --blue-press:#8FB4FF; --blue-text:#8FB4FF;
-    --blue-soft:#172642; --blue-line:#3A5A90;
-    --green:#22C57F; --green-text:#6FE3B0; --green-soft:#12301F;
-    --red:#FF5D67;   --red-text:#FF9AA1;  --red-soft:#3A1418;  --red-line:#6B2830;
-    --amber:#FFAE33; --amber-text:#FFCB70; --amber-soft:#3A2A0C; --amber-line:#6B4B14;
+    --blue:#7B85E8; --blue-hover:#8D96EE; --blue-press:#9AA3F5; --blue-text:#9AA3F5;
+    --blue-soft:#1E2040; --blue-line:#3A3F7A;
+    --green:#3FCB92; --green-text:#6FE3B0; --green-soft:#12301F;
+    --red:#F0776F;   --red-text:#FF9A93;  --red-soft:#3A1E1B;  --red-line:#6B3630;
+    --amber:#E0AC4E; --amber-text:#F0C57A; --amber-soft:#332510; --amber-line:#6B5320;
 
-    --strong:#F3F5F7; --strong-ink:#14161A;
+    --accent-0:#7B85E8; --accent-1:#3FCBBA; --accent-2:#F0839C;
+    --accent-3:#E0AC4E; --accent-4:#A98CFA; --accent-5:#5CB3EA;
 
-    --gap-a:#262B33; --gap-b:#2E343D;
-    --gap-big-a:#3A2A0C; --gap-big-b:#4A3610;
-    --gap-tight-a:#3A1418; --gap-tight-b:#4A1C22;
+    --gap-a:#232429; --gap-b:#2A2C33;
+    --gap-big-a:#332510; --gap-big-b:#403014;
+    --gap-tight-a:#3A1E1B; --gap-tight-b:#472621;
 
     --mv-line:#8C6427; --mv-fill:#4A340F; --mv-text:#FFCE85;
 
-    --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
-    --sh-up:0 4px 14px rgba(0,0,0,.5), 0 16px 36px rgba(0,0,0,.5);
-    --ring:0 0 0 3px rgba(91,147,255,.28);
+    --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+    --sh-up:0 8px 24px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+    --ring:0 0 0 3px rgba(123,133,232,.3);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#14161A; --surface:#1C1F26; --surface2:#242830;
-  --line:#333A44; --line2:#4A5361;
-  --ink:#F3F5F7; --ink2:#AEB6C2; --ink3:#7E8794; --placeholder:#828B98;
+  --bg:#0E0E10; --surface:#17181C; --surface2:#1D1E23;
+  --line:#2A2B31; --line2:#3A3C44;
+  --ink:#EDEDEF; --ink2:#A1A1AA; --ink3:#8A8B93; --placeholder:#6C6D75;
 
-  --blue:#2E63D6; --blue-hover:#2454B8; --blue-press:#8FB4FF; --blue-text:#8FB4FF;
-  --blue-soft:#172642; --blue-line:#3A5A90;
-  --green:#22C57F; --green-text:#6FE3B0; --green-soft:#12301F;
-  --red:#FF5D67;   --red-text:#FF9AA1;  --red-soft:#3A1418;  --red-line:#6B2830;
-  --amber:#FFAE33; --amber-text:#FFCB70; --amber-soft:#3A2A0C; --amber-line:#6B4B14;
+  --blue:#7B85E8; --blue-hover:#8D96EE; --blue-press:#9AA3F5; --blue-text:#9AA3F5;
+  --blue-soft:#1E2040; --blue-line:#3A3F7A;
+  --green:#3FCB92; --green-text:#6FE3B0; --green-soft:#12301F;
+  --red:#F0776F;   --red-text:#FF9A93;  --red-soft:#3A1E1B;  --red-line:#6B3630;
+  --amber:#E0AC4E; --amber-text:#F0C57A; --amber-soft:#332510; --amber-line:#6B5320;
 
-  --strong:#F3F5F7; --strong-ink:#14161A;
+  --accent-0:#7B85E8; --accent-1:#3FCBBA; --accent-2:#F0839C;
+  --accent-3:#E0AC4E; --accent-4:#A98CFA; --accent-5:#5CB3EA;
 
-  --gap-a:#262B33; --gap-b:#2E343D;
-  --gap-big-a:#3A2A0C; --gap-big-b:#4A3610;
-  --gap-tight-a:#3A1418; --gap-tight-b:#4A1C22;
+  --gap-a:#232429; --gap-b:#2A2C33;
+  --gap-big-a:#332510; --gap-big-b:#403014;
+  --gap-tight-a:#3A1E1B; --gap-tight-b:#472621;
 
   --mv-line:#8C6427; --mv-fill:#4A340F; --mv-text:#FFCE85;
 
-  --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
-  --sh-up:0 4px 14px rgba(0,0,0,.5), 0 16px 36px rgba(0,0,0,.5);
-  --ring:0 0 0 3px rgba(91,147,255,.28);
+  --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+  --sh-up:0 8px 24px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+  --ring:0 0 0 3px rgba(123,133,232,.3);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
   background:var(--bg); color:var(--ink);
   font-family:var(--sans);
-  font-size:15px; line-height:1.6; letter-spacing:-.01em;
+  font-size:14px; line-height:1.6; letter-spacing:-.01em;
   -webkit-font-smoothing:antialiased;
   padding:0 0 96px;
 }
@@ -127,9 +133,11 @@ header p{margin:0;color:var(--ink3);font-size:14px;max-width:52ch}
 .addrow{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
 .addhint{font-size:12.5px;color:var(--ink3)}
 .addhint b{color:var(--ink2);font-weight:600}
-.card{background:var(--surface);border:1px solid transparent;border-radius:var(--r);
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  border-left-width:3px;border-left-color:var(--accent,var(--line));
   padding:18px;box-shadow:var(--sh);
   transition:box-shadow .15s,border-color .15s,opacity .15s,transform .15s}
+.card:hover{border-color:var(--line2);border-left-color:var(--accent,var(--line2))}
 .card.drag{border-color:var(--blue);background:var(--surface)}
 .card-top{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 
@@ -184,15 +192,14 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .btn-go{
   background:var(--blue);border:1px solid var(--blue);color:#fff;
   padding:13px 30px;font-size:15px;font-weight:700;border-radius:var(--r-sm);
-  box-shadow:0 2px 8px rgba(49,130,246,.24);
 }
 .btn-go:hover{background:var(--blue-hover);border-color:var(--blue-hover);
-  box-shadow:0 4px 14px rgba(49,130,246,.3)}
+  box-shadow:0 2px 8px rgba(94,106,210,.24)}
 .btn-go:disabled{opacity:.4;cursor:default;box-shadow:none}
 
 /* ── options ── */
 .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 18px;
-  background:var(--surface);border:none;border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
 .opt label{display:flex;align-items:center;font-size:12.5px;color:var(--ink3);
   letter-spacing:0;margin-bottom:6px;font-weight:500}
 .opt input,.opt select{width:100%}
@@ -201,7 +208,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   font-weight:600;padding:3px 9px;margin-left:7px;border-radius:var(--pill)}
 .mini:hover{background:var(--blue-line)}
 .mealrow{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;
-  background:var(--surface);border:none;border-radius:var(--r);padding:14px 16px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;
   font-size:13.5px;box-shadow:var(--sh)}
 .mealrow.on{display:flex}
 .mealrow input{width:82px;text-align:center}
@@ -209,7 +216,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 /* 자주 쓰는 기능이 아니라서 접어 두고, 체크할 때만 펼친다(§4.29) */
 .teamrow{display:none;flex-direction:column;gap:10px;margin-top:12px;
-  background:var(--surface);border:none;border-radius:var(--r);padding:14px 16px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;
   font-size:13.5px;box-shadow:var(--sh)}
 .teamrow.on{display:flex}
 .teamhint{color:var(--ink3);font-size:12.5px;line-height:1.5}
@@ -251,11 +258,8 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
 .tab b{color:var(--ink3);font-weight:700;margin-left:5px}
 .tab:hover{border-color:var(--line2)}
-.tab.on{background:var(--strong);border-color:var(--strong);color:var(--strong-ink);font-weight:600}
-/* --strong-ink 자체가 테마마다 반대색(라이트=흰/다크=검)으로 뒤집히므로, 그 위에
-   opacity 만 얹으면 다크 모드에서도 옅게 깔린다 — 예전엔 흰색을 박아 둬서 다크 모드에서
-   밝은 알약 위에 거의 안 보였다. */
-.tab.on b{color:var(--strong-ink);opacity:.62}
+.tab.on{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue-text);font-weight:600}
+.tab.on b{color:var(--blue-text);opacity:.72}
 .tabrow.sets .tab{font-size:12.5px;padding:5px 12px}
 
 /* ── sort ── */
@@ -263,13 +267,14 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .sortbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
   padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
 .sortbtn:hover{border-color:var(--line2)}
-.sortbtn.on{background:var(--strong);border-color:var(--strong);color:var(--strong-ink);font-weight:600}
-.sortbtn.on b{color:var(--strong-ink);opacity:.62}
+.sortbtn.on{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue-text);font-weight:600}
+.sortbtn.on b{color:var(--blue-text);opacity:.72}
 
 /* ── results ── */
-.res{background:var(--surface);border:1px solid transparent;border-radius:var(--r);
-  margin-bottom:12px;overflow:hidden;box-shadow:var(--sh)}
-.res.best{border-color:var(--blue-line);box-shadow:0 0 0 1px var(--blue-line),0 6px 22px rgba(49,130,246,.12)}
+.res{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  margin-bottom:12px;overflow:hidden;box-shadow:var(--sh);transition:border-color .15s}
+.res:hover{border-color:var(--line2)}
+.res.best{border-color:var(--blue-line);box-shadow:0 0 0 1px var(--blue-line),0 6px 22px rgba(94,106,210,.12)}
 .res-head{display:flex;align-items:center;gap:14px;padding:14px 18px;
   border-bottom:1px solid var(--line);flex-wrap:wrap}
 .rank{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12.5px;
@@ -295,12 +300,16 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 /* signature: timeline
    위: 테마 블록(이름 + 시작–종료)   아래: 공백 라벨   그 아래: 시간축 */
 .tl{position:relative;height:74px;margin-bottom:6px}
-.blk{position:absolute;top:0;height:50px;background:var(--blue-soft);
-  border:1px solid var(--blue-line);border-radius:var(--r-xs);overflow:hidden;
+/* 테마별 색은 배경·글자색만 바꾼다 — 패딩/보더 두께를 건드리면 ResultsPanel의
+   실측 너비 계산(scrollWidth/clientWidth)이 어긋나 말줄임/마퀴가 깨진다. */
+.blk{position:absolute;top:0;height:50px;
+  background:color-mix(in srgb, var(--accent,var(--blue)) 14%, var(--surface));
+  border:1px solid color-mix(in srgb, var(--accent,var(--blue)) 45%, var(--surface));
+  border-radius:var(--r-xs);overflow:hidden;
   display:flex;flex-direction:column;justify-content:center;padding:0 10px;gap:2px}
 .blk .nm{overflow:hidden;white-space:nowrap}
 .blk .nm i{display:inline-block;font-style:normal;font-size:13px;font-weight:700;
-  color:var(--blue-press);letter-spacing:-.02em}
+  color:var(--accent,var(--blue-press));letter-spacing:-.02em}
 /* 이름이 블록보다 길면 잘라내지 않고 좌우로 천천히 훑는다 (--shift = 넘친 만큼) */
 .blk .nm.roll i{animation:roll 6s ease-in-out infinite alternate}
 @keyframes roll{from{transform:translateX(0)}to{transform:translateX(var(--shift,0))}}
@@ -336,7 +345,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 /* ── misc ── */
 .empty{color:var(--ink3);font-size:14px;padding:36px 0;text-align:center;
-  background:var(--surface);border:none;border-radius:var(--r);box-shadow:var(--sh)}
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
 .err{color:var(--red-text);font-size:13px;margin-top:8px;font-weight:500}
 .busy{color:var(--blue-text);font-size:13px;font-weight:500}
 @media(max-width:560px){
@@ -360,13 +369,16 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .acct .btn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
 .acct .btn:hover{background:var(--surface2)}
 
-.modal{position:fixed;inset:0;background:rgba(25,31,40,.44);z-index:50;
-  display:none;align-items:center;justify-content:center;padding:18px;
-  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-.modal.on{display:flex}
-.mbox{background:var(--surface);border:none;border-radius:22px;
+.modal{position:fixed;inset:0;background:rgba(15,15,17,.44);z-index:50;
+  display:flex;align-items:center;justify-content:center;padding:18px;
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .16s ease,visibility 0s linear .16s}
+.modal.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .16s ease}
+.mbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;
   padding:26px 24px 24px;width:100%;max-width:370px;max-height:90vh;overflow:auto;
-  box-shadow:var(--sh-up)}
+  box-shadow:var(--sh-up);transform:scale(.97);transition:transform .16s ease}
+.modal.on .mbox{transform:scale(1)}
 .mbox h3{margin:0 0 6px;font-size:21px;font-weight:800;letter-spacing:-.035em;
   text-transform:none;color:var(--ink)}
 .mbox .msub{margin:0 0 20px;font-size:13.5px;color:var(--ink3);line-height:1.6}
@@ -390,9 +402,9 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .mnote b{color:var(--ink2);font-weight:600}
 
 .plans{display:flex;flex-direction:column;gap:10px}
-.plan{background:var(--surface);border:none;border-radius:var(--r);
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   padding:16px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
-  box-shadow:var(--sh);border-left:3px solid transparent}
+  box-shadow:var(--sh);border-left-width:3px;border-left-color:transparent}
 .plan.wish{border-left-color:var(--blue)}
 .plan.done{border-left-color:var(--green)}
 .plan .pd{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:14px;
@@ -462,7 +474,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .mvtag{font-style:normal;font-size:12px;font-weight:800;color:var(--mv-text);
   background:var(--mv-fill);border-radius:var(--pill);padding:2px 10px;white-space:nowrap}
 
-.pairs{margin-top:12px;background:var(--surface);border-radius:var(--r);
+.pairs{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   padding:14px 16px;box-shadow:var(--sh)}
 .pairhead{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:10px;
   display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
@@ -490,6 +502,13 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .hleft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tourbtn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
 .tourbtn:hover{background:var(--surface2)}
+
+/* 아직 없는 화면으로 가는 문 — 클릭도, 포커스도, 라우트도 없는 순수 표시용 자리 */
+.nav-item{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:13px;
+  font-weight:500;color:var(--ink3);white-space:nowrap}
+.nav-item.disabled{cursor:not-allowed;opacity:.55}
+.nav-soon{font-size:10.5px;font-weight:700;color:var(--blue-text);background:var(--blue-soft);
+  border-radius:var(--pill);padding:1px 7px}
 .tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
 .tour-spot{position:fixed;z-index:80;border-radius:14px;pointer-events:none;
   box-shadow:0 0 0 9999px rgba(15,18,24,.72);
