@@ -63,9 +63,10 @@ export interface ThemeCardProps {
   onRawChange: (id: number, raw: string) => void;
   onDelete: (id: number) => void;
   onReorder: (from: number, to: number) => void;
+  onAttachImages: (id: number, files: File[]) => void;
 }
 
-export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, onReorder }: ThemeCardProps) {
+export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, onReorder, onAttachImages }: ThemeCardProps) {
   const [dragState, setDragState] = useState<'' | 'dragging' | 'over' | 'drag'>('');
 
   return (
@@ -82,7 +83,10 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
         if ([...e.dataTransfer.types].includes(DRAG_TYPE)) {
           const from = +e.dataTransfer.getData(DRAG_TYPE);
           if (!Number.isNaN(from) && from !== index) onReorder(from, index);
+          return;
         }
+        const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+        if (files.length) onAttachImages(th.id, files);
       }}
     >
       <div className="card-top">
@@ -121,15 +125,29 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
         placeholder={'10:00  13:10  15:40  17:20  ← 예약 가능한 회차만 (쉼표·줄바꿈도 됨)\n또는 예약 화면 캡처를 붙여넣기 (Ctrl+V)'}
         value={th.raw}
         onChange={e => onRawChange(th.id, e.target.value)}
+        onPaste={e => {
+          const item = [...e.clipboardData.items].find(it => it.type.startsWith('image/'));
+          if (!item) return;             // 텍스트 붙여넣기는 그대로 통과
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) onAttachImages(th.id, [file]);
+        }}
       />
       <ParsedSessions th={th} />
       <div className="card-foot">
-        <label className="btn-img" title="다음 단계에서 연결됩니다 (이미지 인식)" aria-disabled="true">
-          이미지 첨부
-          <input type="file" accept="image/*" multiple disabled />
+        <label className="btn-img">
+          {th.source.startsWith('image') && th.sessions.length ? '이미지 추가' : '이미지 첨부'}
+          <input
+            type="file" accept="image/*" multiple
+            onChange={e => {
+              const files = [...(e.target.files || [])];
+              e.target.value = '';       // 같은 파일을 다시 골라도 change가 뜨도록
+              if (files.length) onAttachImages(th.id, files);
+            }}
+          />
         </label>
-        <label className="chk mini" title="다음 단계에서 연결됩니다 (이미지 인식)">
-          <input type="checkbox" checked={th.mergeMode} disabled readOnly /> 이미지 여러장 넣기
+        <label className="chk mini" title="켜두면 새 이미지가 있던 회차에 이어 붙습니다. 꺼두면 새 이미지가 있던 값을 지우고 대신합니다">
+          <input type="checkbox" checked={th.mergeMode} onChange={e => onChange(th.id, { mergeMode: e.target.checked })} /> 이미지 여러장 넣기
         </label>
         <ChipLine th={th} />
         <span className="busy">{th.busy}</span>

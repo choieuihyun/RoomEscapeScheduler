@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  fmt, pairKey, parseClock, parseSessions, search,
-  type SearchOutcome, type SearchResultRow, type SearchTheme, type SortDef,
+  fmt, pairKey, parseClock, parseSessions, search, sessionsToText,
+  type SearchOutcome, type SearchResultRow, type SearchTheme, type Session, type SortDef,
 } from '../core';
 import { restore, serialize, type OptionsState, type TeamState } from '../serialize';
 import { blankTheme, type Theme } from './types';
+import { OcrError, recognizeSessions } from '../ocr';
 
 export const SHOW = 12;
 const AUTOSAVE_KEY = 'resched.laststate';
@@ -101,6 +102,57 @@ export function useScheduler() {
   const deleteTheme = useCallback((id: number) => {
     setThemes(ts => ts.filter(t => t.id !== id));
   }, []);
+
+  /* index.html의 ocr(file, th) 이식 — 한 파일 처리 끝. 진행 표시는 즉시(setThemes),
+     결과 병합은 성공/실패 각각 한 번씩. 워커가 하나뿐이라 여러 장은 attachImages에서
+     차례로(await) 돌린다 — 동시에 돌리면 서로의 진행 표시를 덮어쓴다. */
+  const processImage = useCallback(async (id: number, file: File) => {
+    setThemes(ts => ts.map(t => (t.id === id ? { ...t, err: '', busy: '엔진 준비 중…' } : t)));
+    const t0 = performance.now();
+    try {
+      const sessions = await recognizeSessions(file, s => {
+        setThemes(ts => ts.map(t => (t.id === id ? { ...t, busy: s } : t)));
+      });
+      setThemes(ts => ts.map(t => {
+        if (t.id !== id) return t;
+        /* 시간표가 길어 캡처를 나눠 넣는 경우 — 있던 세션에 이번 세션을 절대시각으로 합친다.
+           같은 시각이 겹치면 매진 여부만 OR로 합친다 (index.html §4.20 후기). */
+        const merged = new Map<number, Session>();
+        for (const s of t.sessions) merged.set(s.t, s);
+        for (const s of sessions) {
+          const prev = merged.get(s.t);
+          merged.set(s.t, prev ? { ...s, soldout: prev.soldout || s.soldout } : s);
+        }
+        const hadRaw = t.raw.trim().length > 0;
+        const newSessions = [...merged.values()].sort((a, b) => a.t - b.t);
+        const source = (hadRaw && t.source !== 'image' && t.source !== 'image-edited') ? 'image-edited' : 'image';
+        return {
+          ...t,
+          sessions: newSessions, raw: sessionsToText(newSessions),
+          imgCount: hadRaw ? (t.imgCount || 0) + 1 : 1,
+          source, busy: '',
+        };
+      }));
+    } catch (err) {
+      const e = err as OcrError;
+      const sec = Math.round((performance.now() - t0) / 1000);
+      const msg = '읽기 실패 — 시간을 직접 입력해 주세요. (' + e.message + (e.dim ? ' · ' + e.dim : '') + ' · ' + sec + '초)';
+      setThemes(ts => ts.map(t => (t.id === id ? { ...t, err: msg, busy: '' } : t)));
+    }
+  }, []);
+
+  /* "이어 붙이기"를 껐으면 새 배치를 시작하기 전에 지운다 — 한 번에 여러 장을 고른
+     경우 그 장들끼리는 여전히 합쳐진다(덮어쓰는 대상은 "이전에 있던 값"이지
+     "이번에 고른 여러 장"이 아니다). index.html의 clearIfOverwrite. */
+  const attachImages = useCallback(async (id: number, files: File[]) => {
+    if (!files.length) return;
+    setThemes(ts => ts.map(t => (
+      t.id === id && t.mergeMode === false
+        ? { ...t, raw: '', sessions: [], imgCount: 0, source: '' }
+        : t
+    )));
+    for (const file of files) await processImage(id, file);
+  }, [processImage]);
 
   const reorderTheme = useCallback((from: number, to: number) => {
     if (from === to) return;
@@ -228,7 +280,7 @@ export function useScheduler() {
   }, [serializeNow]);
 
   return {
-    themes, addTheme, updateTheme, updateRaw, deleteTheme, reorderTheme,
+    themes, addTheme, updateTheme, updateRaw, deleteTheme, reorderTheme, attachImages,
     moveMap, placeList, setMoveMapValue,
     options, setOption,
     sortKey, selectSort,

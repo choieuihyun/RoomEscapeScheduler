@@ -19,6 +19,7 @@ export function ThemeList({ s }: { s: Scheduler }) {
               key={th.id} theme={th} index={i}
               onChange={s.updateTheme} onRawChange={s.updateRaw}
               onDelete={s.deleteTheme} onReorder={s.reorderTheme}
+              onAttachImages={s.attachImages}
             />
           ))
         )}
