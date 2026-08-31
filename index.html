@@ -1734,8 +1734,12 @@ function serialize(){
     /* 4번째 자리는 옛 "자리 고정" 값이었다. §4.14 후기로 그 개념 자체가 없어졌지만,
        자리를 빼면 restore() 의 [name,dur,raw,lock,place] 위치 기반 구조분해에서
        place 가 밀려 옛 링크·자동저장을 전부 깨뜨린다 — so 슬롯과 같은 이유로
-       자리만 남기고 항상 0을 적는다. */
-    t: themes.map(t=>[t.name, t.dur, t.raw, 0, t.place||'']),
+       자리만 남기고 항상 0을 적는다.
+       6번째 자리(id)는 F-14 이후 추가됐다: id가 없으면 restore()가 blank()로
+       새 id를 매기는데, 이미 화면을 만진 뒤(nextId가 진행된 뒤) "불러오기"로
+       팀이 확정된 저장 일정을 불러오면 새 id가 teams[].steps[].id 와 어긋나
+       팀 배정 제외가 조용히 안 먹는 버그가 있었다 — 실측으로 재현·확인함. */
+    t: themes.map(t=>[t.name, t.dur, t.raw, 0, t.place||'', t.id]),
     /* 지금 화면에 있는 매장 쌍만 담는다 — 지운 매장의 값까지 링크에 끌고 다닐 이유가 없다 */
     m: (()=>{ const ps=placeList(), out=[];
         for(let i=0;i<ps.length;i++) for(let j=i+1;j<ps.length;j++){
@@ -1756,13 +1760,20 @@ function serialize(){
 function restore(hash){
   const d=JSON.parse(b64d(hash));
   if(d.v!==1 && d.v!==2 && d.v!==3) throw new Error('알 수 없는 링크 형식');
-  themes = d.t.map(([name,dur,raw,lock,place])=>{
+  themes = d.t.map(([name,dur,raw,lock,place,id])=>{
     const th=blank(name); th.dur=dur; th.raw=raw||'';
     // lock 은 옛 "자리 고정" 값 — §4.14 후기로 없어진 개념이라 읽기만 하고 버린다
     th.place=place||'';             // v1·v2 링크에는 없다 — 빈칸이면 이동시간이 안 붙는다
+    /* id가 실려 있으면(F-14 이후 링크) 그대로 쓴다 — 팀 배정은 이 id로 회차를
+       가리키므로, blank()가 새로 매긴 id로 덮으면 이미 확정된 팀의 제외가
+       조용히 어긋난다. 옛 링크는 id가 없으니 blank()의 새 id를 그대로 둔다. */
+    if(id!=null) th.id=id;
     th.sessions=parseSessions(th.raw); th.source=th.raw?'manual':'';
     return th;
   });
+  /* 방금 되살린 id들과 충돌하지 않도록, 다음에 새로 추가되는 카드의 id는
+     되살린 것들보다 항상 크게 시작한다. */
+  nextId = Math.max(nextId, ...themes.map(t=>t.id||0)) + 1;
   const [a,b,c2,dd,so,pt,me,mf,mt,mm,mv,tmOn]=d.o;
   $('oStart').value=a; $('oEnd').value=b; $('oMinGap').value=c2; $('oMaxGap').value=dd;
   $('oPartial').checked=!!pt;   // so 슬롯은 옛 링크 호환용으로 남겨두고 쓰지 않는다

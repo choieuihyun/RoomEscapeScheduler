@@ -1,0 +1,120 @@
+{
+  "_note": "실제 배포된 코드가 만들어낸(v3) 또는 과거 포맷 그대로 손으로 구성해 현재 restore()로 왕복 검증한(v1/v2/v3early) 공유 링크 해시. index.html의 v3 restore()가 지금 이 값들을 어떻게 해석하는지는 각 항목의 expected에 그대로 기록했다 — React/TS 포팅(2026-08-31 계획 §Step 3) 후 새 상태 계층이 여기 적힌 expected와 다른 결과를 내면 그 자체가 회귀다. 히스토리 근거: git log -S 'v:1'/'v:2'/'v:3' -- index.html (18436e4=v1 도입, 28e305e=v2, 1dfbab7=v3 최초, 2b61695=v3에 m 필드 추가). v3current 픽스처는 t 튜플 6번째 자리(theme id)를 포함한다 — 이 자리는 포팅 작업 중 실제로 재현·수정한 버그(불러오기로 팀이 확정된 저장 일정을 mid-session에 열면 새로 매겨진 id가 teams[].steps[].id 와 어긋나 F-14 제외가 조용히 안 먹던 문제) 때문에 index.html에 새로 추가했다. id 없는 v1/v2/v3early 픽스처는 그대로 blank()가 새 id를 매기는 옛 경로를 검증한다.",
+  "fixtures": [
+    {
+      "label": "v1 — 최초 공유 링크 포맷 (자리 잠금이 문자열 pin, place 없음, moveMin 없음, m/tm 없음)",
+      "version": 1,
+      "hash": "eyJ2IjoxLCJ0IjpbWyLrspTqs4QiLDc1LCIxMDozMCAxMjowMCAxMzozMCAxNTowMCAxNjozMCAxODowMCAxOTozMCAyMTowMCAyMjowMCIsImZpcnN0Il0sWyLsmZMg7Ja0IO2KuOumvSIsNzAsIjEwOjIwIDExOjQ1IDEzOjEwIDE0OjM1IDE2OjAwIDE3OjI1IDE4OjUwIDIwOjE1IDIxOjQwIDIzOjA1IiwiIl0sWyLrqr0iLDcwLCIxMDo1MCAxMjoxMCAxMzozMCAxNDo1MCAxNjoxMCAxNzozMCAxODo1MCAyMDoxMCAyMTozMCAyMjo1MCIsIiJdXSwibyI6WyIxMzowMCIsIjIyOjAwIiwiMTAiLCIiLDEsMCwwLCIxMTozMCIsIjE0OjAwIiwiNDAiXSwiayI6ImdhcCJ9",
+      "decodedRaw": {
+        "v": 1,
+        "t": [
+          ["범계", 75, "10:30 12:00 13:30 15:00 16:30 18:00 19:30 21:00 22:30", "first"],
+          ["왓 어 트립", 70, "10:20 11:45 13:10 14:35 16:00 17:25 18:50 20:15 21:40 23:05", ""],
+          ["몽", 70, "10:50 12:10 13:30 14:50 16:10 17:30 18:50 20:10 21:30 22:50", ""]
+        ],
+        "o": ["13:00", "22:00", "10", "", 1, 0, 0, "11:30", "14:00", "40"],
+        "k": "gap"
+      },
+      "expectedAfterRestore": {
+        "themeNames": ["범계", "왓 어 트립", "몽"],
+        "places": ["", "", ""],
+        "oStart": "13:00",
+        "oEnd": "22:00",
+        "oMinGap": "10",
+        "oMove": "10",
+        "sortKey": "gap",
+        "note": "v1의 4번째 튜플 자리('first' 같은 pin 문자열)는 현재 restore()에서 !!lock 으로 읽히던 자리였으나, §4.14 후기(순서 탐색 폐지)로 lock 자체를 안 쓴다 — 참이든 거짓이든 결과에 영향 없음. place/moveMin/m/tm 필드가 원래 없었으므로 각각 빈 문자열/HTML 기본값(10)/빈 맵/빈 배열로 떨어져야 한다."
+      }
+    },
+    {
+      "label": "v2 — lock이 0/1 숫자로 바뀐 포맷 (place 없음, moveMin 없음, m/tm 없음)",
+      "version": 2,
+      "hash": "eyJ2IjoyLCJ0IjpbWyLrspTqs4QiLDc1LCIxMDozMCAxMjowMCAxMzozMCAxNTowMCAxNjozMCAxODowMCAxOTozMCAyMTowMCAyMjowMCIsMV0sWyLsmZMg7Ja0IO2KuOumvSIsNzAsIjEwOjIwIDExOjQ1IDEzOjEwIDE0OjM1IDE2OjAwIDE3OjI1IDE4OjUwIDIwOjE1IDIxOjQwIDIzOjA1IiwwXSxbIuuqvSIsNzAsIjEwOjUwIDEyOjEwIDEzOjMwIDE0OjUwIDE2OjEwIDE3OjMwIDE4OjUwIDIwOjEwIDIxOjMwIDIyOjUwIiwwXV0sIm8iOlsiIiwiIiwiMTAiLCIiLDEsMCwwLCIxMTozMCIsIjE0OjAwIiwiNDAiXSwiayI6ImVuZCJ9",
+      "decodedRaw": {
+        "v": 2,
+        "t": [
+          ["범계", 75, "10:30 12:00 13:30 15:00 16:30 18:00 19:30 21:00 22:30", 1],
+          ["왓 어 트립", 70, "10:20 11:45 13:10 14:35 16:00 17:25 18:50 20:15 21:40 23:05", 0],
+          ["몽", 70, "10:50 12:10 13:30 14:50 16:10 17:30 18:50 20:10 21:30 22:50", 0]
+        ],
+        "o": ["", "", "10", "", 1, 0, 0, "11:30", "14:00", "40"],
+        "k": "end"
+      },
+      "expectedAfterRestore": {
+        "themeNames": ["범계", "왓 어 트립", "몽"],
+        "places": ["", "", ""],
+        "oStart": "",
+        "oEnd": "",
+        "oMinGap": "10",
+        "oMove": "10",
+        "sortKey": "end"
+      }
+    },
+    {
+      "label": "v3early — F-13 도입 직후 포맷 (place 추가, moveMin 추가, 아직 m 맵/tm 없음)",
+      "version": 3,
+      "hash": "eyJ2IjozLCJ0IjpbWyLrspTqs4QiLDc1LCIxMDozMCAxMjowMCAxMzozMCAxNTowMCAxNjozMCAxODowMCAxOTozMCAyMTowMCAyMjowMCIsMCwiQSJdLFsi7JmTIOyWtCDtirjrpr0iLDcwLCIxMDoyMCAxMTo0NSAxMzoxMCAxNDozNSAxNjowMCAxNzoyNSAxODo1MCAyMDoxNSAyMTo0MCAyMzowNSIsMSwiQiJdLFsi66q9Iiw3MCwiMTA6NTAgMTI6MTAgMTM6MzAgMTQ6NTAgMTY6MTAgMTc6MzAgMTg6NTAgMjA6MTAgMjE6MzAgMjI6NTAiLDAsIkEiXV0sIm8iOlsiIiwiIiwiMCIsIiIsMSwwLDAsIjExOjMwIiwiMTQ6MDAiLCI0MCIsIjEwIl0sImsiOiJldmVuIn0",
+      "decodedRaw": {
+        "v": 3,
+        "t": [
+          ["범계", 75, "10:30 12:00 13:30 15:00 16:30 18:00 19:30 21:00 22:30", 0, "A"],
+          ["왓 어 트립", 70, "10:20 11:45 13:10 14:35 16:00 17:25 18:50 20:15 21:40 23:05", 1, "B"],
+          ["몽", 70, "10:50 12:10 13:30 14:50 16:10 17:30 18:50 20:10 21:30 22:50", 0, "A"]
+        ],
+        "o": ["", "", "0", "", 1, 0, 0, "11:30", "14:00", "40", "10"],
+        "k": "even"
+      },
+      "expectedAfterRestore": {
+        "themeNames": ["범계", "왓 어 트립", "몽"],
+        "places": ["A", "B", "A"],
+        "oStart": "",
+        "oEnd": "",
+        "oMinGap": "0",
+        "oMove": "10",
+        "sortKey": "even",
+        "note": "m(쌍별 이동시간 맵)과 tm(팀) 필드가 없던 시절의 v3 — 둘 다 빈 값으로 떨어져야 한다."
+      }
+    },
+    {
+      "label": "v3current — 오늘(2026-08-31) 배포된 코드(id 포함 수정 후)가 실제로 serialize()해서 만든 값. 이동시간 쌍맵(m)·식사공백·부분조합·팀나누기 체크·확정된 팀 1개(tm)까지 전부 채워서 뽑았다.",
+      "version": 3,
+      "hash": "eyJ2IjozLCJ0IjpbWyLrspTqs4QiLDc1LCIxMDozMCAxMjowMCAxMzozMCAxNTowMCAxNjozMCAxODowMCAxOTozMCAyMTowMCAyMjowMCIsMCwiQSIsMV0sWyLsmZMg7Ja0IO2KuOumvSIsNzAsIjEwOjIwIDExOjQ1IDEzOjEwIDE0OjM1IDE2OjAwIDE3OjI1IDE4OjUwIDIwOjE1IDIxOjQwIDIzOjA1IiwwLCJCIiwyXSxbIuuqvSIsNzAsIjEwOjUwIDEyOjEwIDEzOjMwIDE0OjUwIDE2OjEwIDE3OjMwIDE4OjUwIDIwOjEwIDIxOjMwIDIyOjUwIiwwLCJBIiwzXV0sIm0iOltbIkEiLCJCIiwyNV1dLCJvIjpbIjEwOjAwIiwiMjM6MDAiLCIxMCIsIjEyMCIsMSwxLDEsIjExOjMwIiwiMTQ6MDAiLCIzMCIsIjE1IiwxXSwiayI6InNhZmUiLCJ0bSI6W3sibmFtZSI6Iu2MgCAxIiwic3RlcHMiOlt7ImlkIjoxLCJuYW1lIjoi67KU6rOEIiwidCI6NjMwfSx7ImlkIjoyLCJuYW1lIjoi7JmTIOyWtCDtirjrpr0iLCJ0Ijo3OTB9LHsiaWQiOjMsIm5hbWUiOiLrqr0iLCJ0Ijo5NzB9XSwic3RhcnQiOjYzMCwiZW5kIjoxMDQwfV19",
+      "decodedRaw": {
+        "v": 3,
+        "t": [
+          ["범계", 75, "10:30 12:00 13:30 15:00 16:30 18:00 19:30 21:00 22:30", 0, "A", 1],
+          ["왓 어 트립", 70, "10:20 11:45 13:10 14:35 16:00 17:25 18:50 20:15 21:40 23:05", 0, "B", 2],
+          ["몽", 70, "10:50 12:10 13:30 14:50 16:10 17:30 18:50 20:10 21:30 22:50", 0, "A", 3]
+        ],
+        "m": [["A", "B", 25]],
+        "o": ["10:00", "23:00", "10", "120", 1, 1, 1, "11:30", "14:00", "30", "15", 1],
+        "k": "safe",
+        "tm": [
+          { "name": "팀 1", "steps": [ {"id": 1, "name": "범계", "t": 630}, {"id": 2, "name": "왓 어 트립", "t": 790}, {"id": 3, "name": "몽", "t": 970} ], "start": 630, "end": 1040 }
+        ]
+      },
+      "expectedAfterRestore": {
+        "themeNames": ["범계", "왓 어 트립", "몽"],
+        "themeIds": [1, 2, 3],
+        "places": ["A", "B", "A"],
+        "oStart": "10:00",
+        "oEnd": "23:00",
+        "oMinGap": "10",
+        "oMaxGap": "120",
+        "oMove": "15",
+        "oPartial": true,
+        "oMeal": true,
+        "oMealFrom": "11:30",
+        "oMealTo": "14:00",
+        "oMealMin": "30",
+        "oTeam": true,
+        "sortKey": "safe",
+        "moveMapPairs": [["A", "B", 25]],
+        "teams": [
+          { "name": "팀 1", "start": 630, "end": 1040, "stepCount": 3 }
+        ],
+        "note": "themeIds가 teams[0].steps[].id(1,2,3)와 정확히 일치해야 한다 — 이게 어긋나면 F-14 제외가 조용히 안 먹는다(실측으로 재현한 버그, index.html에서 수정함)."
+      }
+    }
+  ]
+}
