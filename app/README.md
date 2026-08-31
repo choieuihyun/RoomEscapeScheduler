@@ -6,8 +6,9 @@ Vite + React + TypeScript. **핵심 계산기 화면까지** 옮겨진 상태다
 않아 계속 그대로 서빙되고, 이 디렉터리는 그 옆에서 자라는 중이다.
 
 경위·설계 결정은 저장소 루트의 [`기획.md`](../기획.md) §4.31(스캐폴드+
-핵심 로직)·§4.32(핵심 계산기 화면)·§4.33(CI/CD), 진행 상세는
-[`작업명세서.md`](../작업명세서.md) #59·#60·#61 참고.
+핵심 로직)·§4.32(핵심 계산기 화면)·§4.33(CI/CD)·§4.34(3단계, 범위 밖
+기능 하나씩 이식), 진행 상세는 [`작업명세서.md`](../작업명세서.md)
+#59·#60·#61·#62 참고.
 
 **배포는 아직 이 앱으로 전환 안 됐다.** `.github/workflows/deploy.yml`이
 `main` 푸시마다 테스트 통과 후 이 디렉터리를 빌드해 GitHub Pages에 올리는
@@ -31,6 +32,7 @@ src/core.test.ts        test/acceptance.mjs 검사 전체를 Vitest로 이식
 src/serialize.ts        serialize()/restore() — DOM 의존을 없앤 순수 함수. JSON 포맷은 원본과 완전히 동일
 src/serialize.test.ts   ../test/fixtures/legacy-links.json 왕복 검증 + id 버그 회귀 테스트
 src/ocr-spike.ts        PaddleOCR가 Vite 번들에서 되는지 검증한 스파이크 코드 (컴포넌트로 다듬기 전 상태)
+src/useTheme.ts          다크모드 토글 — index.html의 applyTheme/isDarkNow 이식 (§4.34)
 src/scheduler/          useScheduler() 훅 — 핵심 앱 상태(themes/found/teams/sortKey/moveMap 등)
 src/components/         ThemeCard·ThemeList·ConditionsPanel·MoveTimeGrid·ResultsPanel·ResultCard·TeamPanel
 src/SchedulerPage.tsx   위 컴포넌트를 조립하는 최상위 화면
@@ -41,5 +43,8 @@ public/vendor/          onnxruntime-web 모델·wasm — vite.config.ts에서 ex
 ## 아직 없는 것 (버튼은 있지만 비활성화 상태)
 
 이미지 인식(OCR) 연결, Firebase 계정·저장된 일정, F-15 서버 불러오기 모달,
-사용법 투어, 다크모드 수동 토글 버튼(시스템 설정 자동 전환은 됨), Revolt
-스타일 리디자인. 배포 파이프라인은 만들어졌으나 위 이유로 아직 전환 전.
+사용법 투어, Revolt 스타일 리디자인. 배포 파이프라인은 만들어졌으나 위
+이유로 아직 전환 전.
+
+**다크모드 수동 토글 버튼은 완료**(§4.34) — 시스템 설정 자동 전환에 더해
+헤더 버튼으로 수동 전환 가능, 선택은 `localStorage`에 남는다.
