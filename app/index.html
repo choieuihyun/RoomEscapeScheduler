@@ -23,7 +23,7 @@
          this importmap is what lets the bare specifier resolve at runtime, same
          mechanism the original index.html uses. -->
     <script type="importmap">
-      { "imports": { "onnxruntime-web": "/vendor/onnxruntime-web/ort.wasm.min.mjs" } }
+      { "imports": { "onnxruntime-web": "%BASE_URL%vendor/onnxruntime-web/ort.wasm.min.mjs" } }
     </script>
     <!-- Firebase 접속 정보. 비밀이 아니다(firebase-config.js 상단 주석 참고) —
          저장소 루트의 사본과 내용이 같다. 비워 두면 로그인 기능만 조용히 꺼진다. -->

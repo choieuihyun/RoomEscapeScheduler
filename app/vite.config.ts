@@ -2,7 +2,10 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // GitHub Pages 프로젝트 페이지는 도메인 루트가 아니라 /RoomEscapeScheduler/
+  // 서브패스에서 서빙된다. dev 서버는 그대로 루트에서 돌아야 하니 build 때만 적용.
+  base: command === 'build' ? '/RoomEscapeScheduler/' : '/',
   plugins: [react()],
   optimizeDeps: {
     exclude: ['onnxruntime-web'],
@@ -32,4 +35,4 @@ export default defineConfig({
       external: ['onnxruntime-web'],
     },
   },
-})
+}))
