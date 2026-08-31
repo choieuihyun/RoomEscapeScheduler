@@ -1,7 +1,7 @@
 import type { Scheduler } from '../scheduler/useScheduler';
 import { ThemeCard } from './ThemeCard';
 
-export function ThemeList({ s }: { s: Scheduler }) {
+export function ThemeList({ s, onOpenLoad }: { s: Scheduler; onOpenLoad: () => void }) {
   const n = s.themes.length;
   return (
     <section className="sec">
@@ -26,7 +26,7 @@ export function ThemeList({ s }: { s: Scheduler }) {
       </div>
       <div className="addrow">
         <button className="btn" id="addTheme" type="button" onClick={s.addTheme}>＋ 테마 추가</button>
-        <button className="btn" id="loadBtn" type="button" disabled title="다음 단계에서 연결됩니다">회차 불러오기</button>
+        <button className="btn" id="loadBtn" type="button" onClick={onOpenLoad}>회차 불러오기</button>
         <span className="addhint"><b>카드 순서가 곧 방문 순서입니다.</b> 번호를 끌어 옮겨 정하세요 · <b>×</b> 로 삭제</span>
       </div>
     </section>

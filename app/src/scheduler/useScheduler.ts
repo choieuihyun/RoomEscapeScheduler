@@ -86,6 +86,26 @@ export function useScheduler() {
     setThemes(ts => [...ts, blankTheme(nextId.current++)]);
   }, []);
 
+  /* F-15 "회차 불러오기"로 고른 항목들을 카드로 추가한다. index.html의 ldAddPicked() 이식.
+     매진 회차도 그대로 담는다 — 계산에서 빼는 건 excludeSoldout이 이미 한다(기획 §4.30),
+     카드에 남아야 "왜 이 시간대가 후보에 없지"가 조건 탓인지 매진 탓인지 갈린다. */
+  const addServerThemes = useCallback((
+    items: { name: string; place: string; dur: number; sessions: Session[] }[],
+    fresh: string,
+  ) => {
+    setThemes(ts => [
+      ...ts,
+      ...items.map(it => {
+        const sessions = it.sessions;
+        return {
+          ...blankTheme(nextId.current++, it.name),
+          place: it.place, dur: it.dur || 70, sessions,
+          raw: sessionsToText(sessions), source: 'server', fresh,
+        };
+      }),
+    ]);
+  }, []);
+
   const updateTheme = useCallback((id: number, patch: Partial<Theme>) => {
     setThemes(ts => ts.map(t => (t.id !== id ? t : { ...t, ...patch })));
   }, []);
@@ -280,7 +300,7 @@ export function useScheduler() {
   }, [serializeNow]);
 
   return {
-    themes, addTheme, updateTheme, updateRaw, deleteTheme, reorderTheme, attachImages,
+    themes, addTheme, addServerThemes, updateTheme, updateRaw, deleteTheme, reorderTheme, attachImages,
     moveMap, placeList, setMoveMapValue,
     options, setOption,
     sortKey, selectSort,

@@ -7,6 +7,18 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['onnxruntime-web'],
   },
+  server: {
+    // F-15 서버(floduler.duckdns.org)의 CORS 허용 출처는 실제 배포 주소
+    // (choieuihyun.github.io)뿐이라 로컬 개발 서버(localhost:*)에서 직접 fetch하면
+    // 막힌다. dev에서만 /api를 이 프록시로 우회하고, 프로덕션 빌드는 원래대로
+    // 배포 주소를 직접 부른다 (app/src/server.ts의 base() 참고).
+    proxy: {
+      '/api': {
+        target: 'https://floduler.duckdns.org',
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     rollupOptions: {
       // onnxruntime-web ships its own multi-MB .wasm next to its JS and loads it via
