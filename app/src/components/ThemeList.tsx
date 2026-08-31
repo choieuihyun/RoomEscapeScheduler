@@ -10,7 +10,7 @@ export function ThemeList({ s }: { s: Scheduler }) {
         <b className="count">{n >= 2 ? n + '연방' : n + '개'}</b>
         <span>붙여넣거나 직접 입력 시 <b className="hi">매진된 회차는 빼고 입력해주세요</b></span>
       </div>
-      <div className="themes">
+      <div className="themes" id="themes">
         {n === 0 ? (
           <div className="empty">테마가 없습니다. 아래 ＋ 테마 추가를 눌러 주세요.</div>
         ) : (
@@ -24,8 +24,8 @@ export function ThemeList({ s }: { s: Scheduler }) {
         )}
       </div>
       <div className="addrow">
-        <button className="btn" type="button" onClick={s.addTheme}>＋ 테마 추가</button>
-        <button className="btn" type="button" disabled title="다음 단계에서 연결됩니다">회차 불러오기</button>
+        <button className="btn" id="addTheme" type="button" onClick={s.addTheme}>＋ 테마 추가</button>
+        <button className="btn" id="loadBtn" type="button" disabled title="다음 단계에서 연결됩니다">회차 불러오기</button>
         <span className="addhint"><b>카드 순서가 곧 방문 순서입니다.</b> 번호를 끌어 옮겨 정하세요 · <b>×</b> 로 삭제</span>
       </div>
     </section>

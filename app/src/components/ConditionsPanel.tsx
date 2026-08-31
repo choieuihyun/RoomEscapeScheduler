@@ -66,8 +66,8 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
       </div>
       <TeamPanel s={s} />
       <div className="run">
-        <button className="btn-go" type="button" onClick={() => s.runSearch()}>조합 계산</button>
-        <button className="btn" type="button" onClick={s.copyShareLink}>링크 복사</button>
+        <button className="btn-go" id="go" type="button" onClick={() => s.runSearch()}>조합 계산</button>
+        <button className="btn" id="shareBtn" type="button" onClick={s.copyShareLink}>링크 복사</button>
         <span className="note">{s.runNote}</span>
       </div>
     </section>
