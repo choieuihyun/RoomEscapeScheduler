@@ -95,6 +95,7 @@ https://choieuihyun.github.io/RoomEscapeScheduler/
 |---|---|
 | [기획.md](기획.md) | 배경, 목표, 설계 결정과 근거 |
 | [작업명세서.md](작업명세서.md) | 기능·입출력 사양, 아키텍처, 검증 결과, 작업 내역 |
+| [배포.md](배포.md) | 배포 파이프라인·GitHub Pages 설정·런타임 외부 서비스 구조 |
 | [requirements.md](requirements.md) | 최초 요구사항 원본 (보관) |
 
 ## 구성
