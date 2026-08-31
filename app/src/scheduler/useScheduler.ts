@@ -56,6 +56,22 @@ export function useScheduler() {
     setTeams(state.teams);
   }, []);
 
+  /* F-12 "내 일정"에서 저장된 snapshot을 불러온다. index.html의 plan-load 핸들러(불러오기
+     버튼) 이식 — 옛 결과 카드를 남겨두면 그 "저장" 버튼이 이전 계산을 붙든 채 저장되므로
+     found/themesReady/lastSnapshot을 전부 비운다 (작업명세서 §7.1). */
+  const loadSnapshot = useCallback((snapshot: string, date: string) => {
+    try {
+      hydrate(snapshot);
+      setFound([]); setThemesReady([]); lastSnapshot.current = null;
+      setTabCount(null); setTabSet(null); setShowCount(SHOW);
+      setRunNote(`${date} 일정의 입력값을 불러왔습니다. 계산을 누르면 다시 짤 수 있습니다.`);
+      return true;
+    } catch {
+      setRunNote('이 일정은 불러올 수 없는 형식입니다.');
+      return false;
+    }
+  }, [hydrate]);
+
   /* 공유 링크(#s=) 우선, 없으면 자동저장(localStorage) — index.html의 init 순서와 동일 (§4.16/§4.26) */
   useEffect(() => {
     if (restoredOnMount.current) return;
@@ -311,6 +327,8 @@ export function useScheduler() {
     currentList,
     copyShareLink,
     lastSnapshot,
+    loadSnapshot,
+    serializeNow,
   };
 }
 

@@ -32,9 +32,10 @@ export interface ResultCardProps {
   themeCount: number;
   teamModeOn: boolean;
   onConfirmTeam: (r: SearchResultRow) => void;
+  onSave?: (r: SearchResultRow) => void;
 }
 
-export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam }: ResultCardProps) {
+export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave }: ResultCardProps) {
   const pct = (m: number) => ((m - lo) / span) * 100;
   const tight = r.minWait < 10;
 
@@ -60,6 +61,7 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
           btn.textContent = ok ? '복사됨' : '실패';
           setTimeout(() => { btn.textContent = '복사'; }, 1500);
         }}>복사</button>
+        {onSave && <button className="btn-copy btn-save" type="button" onClick={() => onSave(r)}>저장</button>}
         {teamModeOn && <button className="btn-copy btn-team" type="button" onClick={() => onConfirmTeam(r)}>팀 확정</button>}
       </div>
       <div className="res-body">

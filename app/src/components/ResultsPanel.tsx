@@ -64,7 +64,7 @@ function SortBar({ s }: { s: Scheduler }) {
   );
 }
 
-export function ResultsPanel({ s }: { s: Scheduler }) {
+export function ResultsPanel({ s, onSave }: { s: Scheduler; onSave?: (r: Scheduler['found'][number]) => void }) {
   const resRef = useRef<HTMLDivElement>(null);
 
   const pool = s.currentList;
@@ -164,7 +164,7 @@ export function ResultsPanel({ s }: { s: Scheduler }) {
           <ResultCard
             key={ri} r={r} rank={ri} lo={lo} hi={hi} span={span}
             themeCount={s.themesReady.length} teamModeOn={s.options.oTeam}
-            onConfirmTeam={s.confirmTeam}
+            onConfirmTeam={s.confirmTeam} onSave={onSave}
           />
         ))}
         {pool.length > list.length && (
