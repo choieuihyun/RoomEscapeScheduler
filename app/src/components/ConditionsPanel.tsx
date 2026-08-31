@@ -61,6 +61,10 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
           <input type="checkbox" checked={s.options.oTeam} onChange={e => s.setOption('oTeam', e.target.checked)} />
           여러 팀으로 나눠 배정
         </label>
+        <label className="chk" title="회차 시간표 자체는 매진이어도 그대로 있으니, 계산에만 포함시켜 어떤 조합이 되는지 미리 봅니다. 매진 회차가 낀 조합은 타임라인에 매진 표시로 남아 예약이 안 된다는 걸 그대로 보여줍니다 — 취소표를 노려볼 때 씁니다.">
+          <input type="checkbox" checked={s.options.oIncludeSoldout} onChange={e => s.setOption('oIncludeSoldout', e.target.checked)} />
+          매진 회차도 포함해서 계산
+        </label>
       </div>
       <div className={'mealrow' + (s.options.oMeal ? ' on' : '')}>
         <input className="mono" type="time" value={s.options.oMealFrom} onChange={e => s.setOption('oMealFrom', e.target.value)} />

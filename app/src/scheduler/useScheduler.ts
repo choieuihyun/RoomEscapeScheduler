@@ -13,7 +13,7 @@ const AUTOSAVE_KEY = 'resched.laststate';
 const DEFAULT_OPTIONS: OptionsState = {
   oStart: '', oEnd: '', oMinGap: '10', oMaxGap: '',
   oPartial: false, oMeal: false, oMealFrom: '11:30', oMealTo: '14:00', oMealMin: '40',
-  oMove: '10', oTeam: false,
+  oMove: '10', oTeam: false, oIncludeSoldout: false,
 };
 
 /* 어떤 테마들로 이루어진 조합인지를 나타내는 키. 부분 조합을 묶어 보여줄 때 쓴다.
@@ -256,7 +256,7 @@ export function useScheduler() {
     const partial = options.oPartial;
     const { out, capped }: SearchOutcome = search(ready, {
       startMin, endMax, minGap, maxGap, moveMin, moveMap,
-      excludeSoldout: true, minCount: partial ? 2 : ready.length, meal, taken,
+      excludeSoldout: !options.oIncludeSoldout, minCount: partial ? 2 : ready.length, meal, taken,
     });
     setFound(out); setSearchCapped(capped);
     setTabCount(null); setTabSet(null); setShowCount(SHOW);
