@@ -21,11 +21,17 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
               }}
             >지금부터</button>
           </label>
-          <input className="mono" placeholder="13:00" value={s.options.oStart} onChange={e => s.setOption('oStart', e.target.value)} />
+          <input className="mono" type="time" placeholder="13:00" value={s.options.oStart} onChange={e => s.setOption('oStart', e.target.value)} />
         </div>
         <div className="opt">
-          <label>가장 늦은 종료</label>
-          <input className="mono" placeholder="22:00" value={s.options.oEnd} onChange={e => s.setOption('oEnd', e.target.value)} />
+          <label>
+            가장 늦은 종료
+            <button
+              className="mini" type="button"
+              onClick={() => s.setOption('oEnd', '23:59')}
+            >자정</button>
+          </label>
+          <input className="mono" type="time" placeholder="22:00" value={s.options.oEnd} onChange={e => s.setOption('oEnd', e.target.value)} />
         </div>
         <div className="opt">
           <label>최소 공백 (분)</label>
@@ -49,7 +55,7 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
         </label>
         <label className="chk">
           <input type="checkbox" checked={s.options.oMeal} onChange={e => s.setOption('oMeal', e.target.checked)} />
-          식사 시간 확보
+          식사 시간 포함
         </label>
         <label className="chk">
           <input type="checkbox" checked={s.options.oTeam} onChange={e => s.setOption('oTeam', e.target.checked)} />
@@ -57,9 +63,9 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
         </label>
       </div>
       <div className={'mealrow' + (s.options.oMeal ? ' on' : '')}>
-        <input className="mono" value={s.options.oMealFrom} onChange={e => s.setOption('oMealFrom', e.target.value)} />
+        <input className="mono" type="time" value={s.options.oMealFrom} onChange={e => s.setOption('oMealFrom', e.target.value)} />
         <span className="lb">~</span>
-        <input className="mono" value={s.options.oMealTo} onChange={e => s.setOption('oMealTo', e.target.value)} />
+        <input className="mono" type="time" value={s.options.oMealTo} onChange={e => s.setOption('oMealTo', e.target.value)} />
         <span className="lb">사이에</span>
         <input className="mono" value={s.options.oMealMin} onChange={e => s.setOption('oMealMin', e.target.value)} />
         <span className="lb">분 이상 공백을 남긴다</span>
