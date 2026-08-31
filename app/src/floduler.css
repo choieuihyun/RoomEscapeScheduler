@@ -1,0 +1,511 @@
+/* ── 토큰 ──────────────────────────────────────────────
+   밝은 배경 + 파란 포인트 + 큰 라운드 + 테두리 대신 그림자.
+   색은 역할로만 부르고 값은 여기서만 정한다. */
+:root{
+  --bg:#F2F4F6;          /* 페이지 바닥 */
+  --surface:#FFFFFF;     /* 카드 */
+  --surface2:#F7F8FA;    /* 입력칸처럼 안으로 파인 면 */
+  --line:#E8EBED; --line2:#D5DADF;
+
+  --ink:#191F28;         /* 본문 */
+  --ink2:#4E5968;        /* 보조 */
+  --ink3:#626C7A;        /* 흐린 설명 */
+  --placeholder:#98A2AE;
+
+  /* --blue 는 흰 글자를 얹는 버튼·배지용, --blue-text 는 배경 위에 직접 얹는 글자용 —
+     라이트 모드에선 같은 색이 두 역할 다 하지만, 다크 모드에선 방향이 갈린다(아래 참고). */
+  --blue:#2670EB; --blue-hover:#1B64DA; --blue-press:#1B64DA; --blue-text:#2670EB;
+  --blue-soft:#E8F3FF; --blue-line:#B6D8FF;
+  --green:#00B26B; --green-text:#00734B; --green-soft:#E4F8EF;
+  --red:#F04452;   --red-text:#D92B39;  --red-soft:#FFECEE;  --red-line:#FFC9CF;
+  --amber:#E08700; --amber-text:#B4530A; --amber-soft:#FFF3E0; --amber-line:#FFD79A;
+
+  /* 선택된 탭/정렬 칩처럼 "글자색을 뒤집어 채우는" 자리 전용 — --ink 와 분리해 둬야
+     다크 모드에서 --ink 가 밝아져도 이 칩은 계속 또렷하게 채워진다. */
+  --strong:#191F28; --strong-ink:#FFFFFF;
+
+  /* 공백(잔여) 빗금 세 단계 — 기본/넓음/좁음 */
+  --gap-a:#EDF0F3; --gap-b:#E1E6EB;
+  --gap-big-a:#FFF3E0; --gap-big-b:#FFE3B8;
+  --gap-tight-a:#FFECEE; --gap-tight-b:#FFD4D9;
+
+  /* 이동 알약(채운 구간) */
+  --mv-line:#E9A23B; --mv-fill:#FFC96B; --mv-text:#6B3D00;
+
+  --r:16px; --r-sm:10px; --r-xs:8px; --pill:999px;
+  --sh:0 1px 2px rgba(25,31,40,.04), 0 4px 16px rgba(25,31,40,.05);
+  --sh-up:0 4px 12px rgba(25,31,40,.08), 0 12px 32px rgba(25,31,40,.08);
+  --ring:0 0 0 3px rgba(49,130,246,.14);
+
+  --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,
+         'Apple SD Gothic Neo','Segoe UI','Malgun Gothic',system-ui,sans-serif;
+  --num:ui-monospace,SFMono-Regular,'SF Mono',Menlo,monospace;
+}
+
+/* ── 다크 모드 ──────────────────────────────────────────
+   같은 역할, 다른 값. 컴포넌트 CSS 는 전부 토큰만 참조하므로 여기 두 블록 밖은
+   손댈 필요가 없다 — 시스템 설정을 따르는 경우([data-theme] 없음)와
+   수동 토글([data-theme="dark"])을 한 값으로 같이 챙긴다. */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161A; --surface:#1C1F26; --surface2:#242830;
+    --line:#333A44; --line2:#4A5361;
+    --ink:#F3F5F7; --ink2:#AEB6C2; --ink3:#7E8794; --placeholder:#828B98;
+
+    --blue:#2E63D6; --blue-hover:#2454B8; --blue-press:#8FB4FF; --blue-text:#8FB4FF;
+    --blue-soft:#172642; --blue-line:#3A5A90;
+    --green:#22C57F; --green-text:#6FE3B0; --green-soft:#12301F;
+    --red:#FF5D67;   --red-text:#FF9AA1;  --red-soft:#3A1418;  --red-line:#6B2830;
+    --amber:#FFAE33; --amber-text:#FFCB70; --amber-soft:#3A2A0C; --amber-line:#6B4B14;
+
+    --strong:#F3F5F7; --strong-ink:#14161A;
+
+    --gap-a:#262B33; --gap-b:#2E343D;
+    --gap-big-a:#3A2A0C; --gap-big-b:#4A3610;
+    --gap-tight-a:#3A1418; --gap-tight-b:#4A1C22;
+
+    --mv-line:#8C6427; --mv-fill:#4A340F; --mv-text:#FFCE85;
+
+    --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
+    --sh-up:0 4px 14px rgba(0,0,0,.5), 0 16px 36px rgba(0,0,0,.5);
+    --ring:0 0 0 3px rgba(91,147,255,.28);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161A; --surface:#1C1F26; --surface2:#242830;
+  --line:#333A44; --line2:#4A5361;
+  --ink:#F3F5F7; --ink2:#AEB6C2; --ink3:#7E8794; --placeholder:#828B98;
+
+  --blue:#2E63D6; --blue-hover:#2454B8; --blue-press:#8FB4FF; --blue-text:#8FB4FF;
+  --blue-soft:#172642; --blue-line:#3A5A90;
+  --green:#22C57F; --green-text:#6FE3B0; --green-soft:#12301F;
+  --red:#FF5D67;   --red-text:#FF9AA1;  --red-soft:#3A1418;  --red-line:#6B2830;
+  --amber:#FFAE33; --amber-text:#FFCB70; --amber-soft:#3A2A0C; --amber-line:#6B4B14;
+
+  --strong:#F3F5F7; --strong-ink:#14161A;
+
+  --gap-a:#262B33; --gap-b:#2E343D;
+  --gap-big-a:#3A2A0C; --gap-big-b:#4A3610;
+  --gap-tight-a:#3A1418; --gap-tight-b:#4A1C22;
+
+  --mv-line:#8C6427; --mv-fill:#4A340F; --mv-text:#FFCE85;
+
+  --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
+  --sh-up:0 4px 14px rgba(0,0,0,.5), 0 16px 36px rgba(0,0,0,.5);
+  --ring:0 0 0 3px rgba(91,147,255,.28);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px; line-height:1.6; letter-spacing:-.01em;
+  -webkit-font-smoothing:antialiased;
+  padding:0 0 96px;
+}
+/* 숫자가 세로로 안 흔들리게. 시각은 표처럼 읽히는 게 맞다 */
+.mono{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:0}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+/* ── header ── */
+header{padding:32px 0 26px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.035em;margin:0 0 8px;color:var(--ink)}
+h1 .dim{color:var(--blue-text)}
+header p{margin:0;color:var(--ink3);font-size:14px;max-width:52ch}
+
+/* ── sections ── */
+.sec{margin-bottom:34px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.sec-head h2{font-size:18px;font-weight:700;letter-spacing:-.03em;color:var(--ink);margin:0}
+.sec-head span{font-size:13px;color:var(--ink3)}
+.sec-head .hi{color:var(--ink2);font-weight:600}
+.sec-head .count{font-size:12.5px;color:var(--blue-press);font-weight:700;
+  background:var(--blue-soft);border:none;border-radius:var(--pill);padding:3px 11px}
+
+/* ── theme cards ── */
+.themes{display:flex;flex-direction:column;gap:12px}
+.addrow{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.addhint{font-size:12.5px;color:var(--ink3)}
+.addhint b{color:var(--ink2);font-weight:600}
+.card{background:var(--surface);border:1px solid transparent;border-radius:var(--r);
+  padding:18px;box-shadow:var(--sh);
+  transition:box-shadow .15s,border-color .15s,opacity .15s,transform .15s}
+.card.drag{border-color:var(--blue);background:var(--surface)}
+.card-top{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+
+input,textarea,select{
+  background:var(--surface2);border:1px solid var(--line);color:var(--ink);
+  border-radius:var(--r-sm);padding:10px 12px;font-family:inherit;font-size:14px;
+  transition:border-color .13s,box-shadow .13s,background .13s;
+}
+input::placeholder,textarea::placeholder{color:var(--placeholder)}
+input:focus,textarea:focus,select:focus{outline:none;background:var(--surface);
+  border-color:var(--blue);box-shadow:var(--ring)}
+.i-name{flex:1;min-width:120px;font-weight:600}
+.i-dur{width:84px;text-align:center}
+.unit{color:var(--ink3);font-size:13px;margin-left:-2px}
+textarea{width:100%;min-height:66px;resize:vertical;
+  font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;line-height:1.85}
+.card-foot{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.btn-img{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);
+  border:1px solid var(--line);color:var(--ink2);padding:7px 13px;font-size:13px;
+  font-weight:500;border-radius:var(--r-sm);cursor:pointer}
+.btn-img:hover{background:var(--line);border-color:var(--line2)}
+.btn-img input{display:none}
+
+/* 입력한 것이 어떻게 해석됐는지 바로 보여주는 줄.
+   12시간 보정은 조용히 일어나면 사고가 되므로(순서가 섞이면 엉뚱한 값이 된다) 눈에 보이게 한다. */
+.parsed{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.parsed .t{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12px;
+  font-weight:600;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--pill);padding:3px 10px}
+.parsed .t.fix{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue-press)}
+.parsed .t.so{background:var(--red-soft);border-color:var(--red-line);color:var(--red-text);
+  text-decoration:line-through}
+.parsed .t.over{background:var(--red-soft);border-color:var(--red-line);color:var(--red-text)}
+.parsed .hint{font-size:12.5px;color:var(--ink3)}
+.parsed .note{flex-basis:100%;font-size:12.5px;color:var(--ink3);margin-top:2px}
+.parsed .warn{flex-basis:100%;font-size:13px;color:var(--red-text);margin-top:3px;line-height:1.55}
+.parsed .warn b{color:var(--red-text);font-weight:700}
+.chip{font-size:12.5px;color:var(--ink3)}
+.chip .src{color:var(--ink3)}
+.chip b{color:var(--ink);font-weight:700}
+.chip i{color:var(--red-text);font-style:normal;font-weight:600}
+
+/* ── buttons ── */
+button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.13s;
+  letter-spacing:-.01em}
+.btn{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);
+  padding:9px 15px;font-size:13.5px;font-weight:500}
+.btn:hover{background:var(--line);border-color:var(--line2);color:var(--ink)}
+.btn-x{background:none;border:1px solid transparent;color:var(--ink3);padding:5px 9px;
+  font-size:17px;line-height:1;border-radius:var(--r-xs)}
+.btn-x:hover{color:var(--red);background:var(--red-soft)}
+.btn-go{
+  background:var(--blue);border:1px solid var(--blue);color:#fff;
+  padding:13px 30px;font-size:15px;font-weight:700;border-radius:var(--r-sm);
+  box-shadow:0 2px 8px rgba(49,130,246,.24);
+}
+.btn-go:hover{background:var(--blue-hover);border-color:var(--blue-hover);
+  box-shadow:0 4px 14px rgba(49,130,246,.3)}
+.btn-go:disabled{opacity:.4;cursor:default;box-shadow:none}
+
+/* ── options ── */
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 18px;
+  background:var(--surface);border:none;border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.opt label{display:flex;align-items:center;font-size:12.5px;color:var(--ink3);
+  letter-spacing:0;margin-bottom:6px;font-weight:500}
+.opt input,.opt select{width:100%}
+.checks{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px}
+.mini{background:var(--blue-soft);border:none;color:var(--blue-press);font-size:11.5px;
+  font-weight:600;padding:3px 9px;margin-left:7px;border-radius:var(--pill)}
+.mini:hover{background:var(--blue-line)}
+.mealrow{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;
+  background:var(--surface);border:none;border-radius:var(--r);padding:14px 16px;
+  font-size:13.5px;box-shadow:var(--sh)}
+.mealrow.on{display:flex}
+.mealrow input{width:82px;text-align:center}
+.mealrow .lb{color:var(--ink2)}
+
+/* 자주 쓰는 기능이 아니라서 접어 두고, 체크할 때만 펼친다(§4.29) */
+.teamrow{display:none;flex-direction:column;gap:10px;margin-top:12px;
+  background:var(--surface);border:none;border-radius:var(--r);padding:14px 16px;
+  font-size:13.5px;box-shadow:var(--sh)}
+.teamrow.on{display:flex}
+.teamhint{color:var(--ink3);font-size:12.5px;line-height:1.5}
+.teamempty{color:var(--ink3);font-size:12.5px}
+.teamchip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--surface2);border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px}
+.teamchip b{font-weight:700}
+.teamchip .dim{color:var(--ink3);font-size:12px}
+.teamnext{color:var(--ink3);font-size:12.5px;margin-top:2px}
+.teamctl{display:flex;gap:8px}
+.teamctl .btn{padding:6px 12px;font-size:12.5px}
+.teamctl .btn:disabled{opacity:.4;cursor:default}
+
+/* 드래그 손잡이 겸 순서 번호. 이 번호 순서가 곧 조합 순서다 (§4.14 후기) */
+.idx{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;
+  color:var(--ink3);width:26px;height:26px;flex:none;display:inline-flex;
+  align-items:center;justify-content:center;border-radius:var(--pill);
+  background:var(--surface2);cursor:grab;user-select:none}
+.idx:active{cursor:grabbing}
+/* 잡아서 든 느낌이 나야 "지금 옮기는 중" 이 헷갈리지 않는다 — 살짝 커지고 그림자가
+   떠서, 그냥 흐려지기만 하던 것보다 어느 카드를 쥐고 있는지 분명해진다. */
+.card.dragging{opacity:.5;transform:scale(1.02) rotate(-.4deg);
+  box-shadow:0 14px 32px rgba(0,0,0,.22),0 0 0 1px var(--blue-line)}
+.card.over{border-color:var(--blue);box-shadow:inset 0 4px 0 -1px var(--blue),var(--sh)}
+.btn-copy{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);
+  font-size:12px;font-weight:500;padding:4px 11px;border-radius:var(--pill)}
+.btn-copy:hover{background:var(--line);color:var(--ink)}
+.res-head .btn-copy:first-of-type{margin-left:auto}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);
+  cursor:pointer;font-weight:500}
+.chk input{width:17px;height:17px;accent-color:var(--blue);cursor:pointer}
+.run{display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap}
+.run .note{font-size:13px;color:var(--ink3)}
+
+/* ── result tabs ── */
+.tabrow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.tabrow.sets{margin-bottom:14px}
+.tab{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
+  padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
+.tab b{color:var(--ink3);font-weight:700;margin-left:5px}
+.tab:hover{border-color:var(--line2)}
+.tab.on{background:var(--strong);border-color:var(--strong);color:var(--strong-ink);font-weight:600}
+/* --strong-ink 자체가 테마마다 반대색(라이트=흰/다크=검)으로 뒤집히므로, 그 위에
+   opacity 만 얹으면 다크 모드에서도 옅게 깔린다 — 예전엔 흰색을 박아 둬서 다크 모드에서
+   밝은 알약 위에 거의 안 보였다. */
+.tab.on b{color:var(--strong-ink);opacity:.62}
+.tabrow.sets .tab{font-size:12.5px;padding:5px 12px}
+
+/* ── sort ── */
+.sorts{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.sortbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
+  padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
+.sortbtn:hover{border-color:var(--line2)}
+.sortbtn.on{background:var(--strong);border-color:var(--strong);color:var(--strong-ink);font-weight:600}
+.sortbtn.on b{color:var(--strong-ink);opacity:.62}
+
+/* ── results ── */
+.res{background:var(--surface);border:1px solid transparent;border-radius:var(--r);
+  margin-bottom:12px;overflow:hidden;box-shadow:var(--sh)}
+.res.best{border-color:var(--blue-line);box-shadow:0 0 0 1px var(--blue-line),0 6px 22px rgba(49,130,246,.12)}
+.res-head{display:flex;align-items:center;gap:14px;padding:14px 18px;
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.rank{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12.5px;
+  font-weight:700;color:var(--ink3);width:auto;min-width:24px;flex:none}
+.res.best .rank{color:var(--blue-press)}
+.stat{font-size:13px;color:var(--ink3)}
+.stat b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.stat.warn b{color:var(--red-text)}
+.stat.good b{color:var(--green-text)}
+.res-body{padding:18px}
+
+/* ── 더 보기 ── */
+.showmore{text-align:center;padding:8px 0 4px}
+.morebtn{padding:11px 28px;font-size:14px}
+
+/* 블록 폭은 소요시간에 비례해야 하므로 이름 길이로 늘릴 수 없다 (시간축이 거짓말이 된다).
+   대신 타임라인 전체를 필요한 만큼 넓히고 가로로 스크롤한다 — 비율은 그대로, 이름은 다 들어간다. */
+.tlwrap{overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
+.tlinner{min-width:100%}
+.tlwrap::-webkit-scrollbar{height:7px}
+.tlwrap::-webkit-scrollbar-thumb{background:var(--line2);border-radius:var(--pill)}
+
+/* signature: timeline
+   위: 테마 블록(이름 + 시작–종료)   아래: 공백 라벨   그 아래: 시간축 */
+.tl{position:relative;height:74px;margin-bottom:6px}
+.blk{position:absolute;top:0;height:50px;background:var(--blue-soft);
+  border:1px solid var(--blue-line);border-radius:var(--r-xs);overflow:hidden;
+  display:flex;flex-direction:column;justify-content:center;padding:0 10px;gap:2px}
+.blk .nm{overflow:hidden;white-space:nowrap}
+.blk .nm i{display:inline-block;font-style:normal;font-size:13px;font-weight:700;
+  color:var(--blue-press);letter-spacing:-.02em}
+/* 이름이 블록보다 길면 잘라내지 않고 좌우로 천천히 훑는다 (--shift = 넘친 만큼) */
+.blk .nm.roll i{animation:roll 6s ease-in-out infinite alternate}
+@keyframes roll{from{transform:translateX(0)}to{transform:translateX(var(--shift,0))}}
+.blk .rng{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:11px;
+  font-weight:500;color:var(--ink2);white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
+.blk.so{border-style:dashed;border-color:var(--red-line);background:var(--red-soft)}
+.blk.so .nm i{color:var(--red-text)}
+.blk.so .rng{color:var(--red-text)}
+
+/* 공백: 막대에는 채운 띠만, 숫자는 막대 아래에 둔다.
+   흰 배경에서는 옅은 빗금이 사라지므로 불투명한 색으로 칠한다 —
+   "공백을 더 눈에 띄게" 가 원래 요구였다. 세 단계(좁음/보통/넓음)를 색으로 가른다. */
+.gap{position:absolute;top:0;height:50px;border-radius:var(--r-xs);
+  border:1px solid var(--line);
+  background:repeating-linear-gradient(-45deg,var(--gap-a) 0 5px,var(--gap-b) 5px 10px)}
+.gap.big{border-color:var(--amber-line);
+  background:repeating-linear-gradient(-45deg,var(--gap-big-a) 0 5px,var(--gap-big-b) 5px 10px)}
+.gap.tight{border-color:var(--red-line);
+  background:repeating-linear-gradient(-45deg,var(--gap-tight-a) 0 5px,var(--gap-tight-b) 5px 10px)}
+.gaplab{position:absolute;top:53px;height:19px;display:flex;align-items:center;justify-content:center}
+.gaplab em{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:11.5px;
+  font-style:normal;font-weight:700;color:var(--ink3);white-space:nowrap}
+.gaplab.big em{color:var(--amber-text)}
+.gaplab.tight em{color:var(--red-text)}
+.gaplab.hasmv em{color:var(--ink2)}      /* 이동이 있으면 잔여만 아래 규칙으로 물들인다 */
+
+.axis{position:relative;height:18px;border-top:1px solid var(--line)}
+.tick{position:absolute;top:3px;font-family:var(--num);font-variant-numeric:tabular-nums;
+  font-size:11px;color:var(--ink3);transform:translateX(-50%)}
+.tick::before{content:'';position:absolute;left:50%;top:-4px;height:4px;border-left:1px solid var(--line2)}
+.seq{font-size:13px;color:var(--ink3);margin-top:12px;line-height:1.7}
+.seq b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ── misc ── */
+.empty{color:var(--ink3);font-size:14px;padding:36px 0;text-align:center;
+  background:var(--surface);border:none;border-radius:var(--r);box-shadow:var(--sh)}
+.err{color:var(--red-text);font-size:13px;margin-top:8px;font-weight:500}
+.busy{color:var(--blue-text);font-size:13px;font-weight:500}
+@media(max-width:560px){
+  body{font-size:14px}
+  .card-top{gap:8px}.i-name{min-width:90px}
+  .res-head{gap:10px;padding:12px 14px}
+  .res-body{padding:14px}
+  .card{padding:15px}
+  h1{font-size:24px}
+  .btn-go{padding:12px 24px;font-size:14px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}
+  .blk .nm.roll i{animation:none}
+  .blk .nm{text-overflow:ellipsis}}
+
+/* ── 계정 · 내 일정 ─────────────────────────────────────
+   로그인은 부가 기능이다. 꺼져 있어도(설정 전이어도) 위 도구는 그대로 돌아간다. */
+.acct{display:flex;justify-content:flex-end;align-items:center;gap:10px;
+  padding-top:18px;font-size:13px;color:var(--ink3);min-height:28px;flex-wrap:wrap}
+.acct b{color:var(--ink);font-weight:700}
+.acct .btn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
+.acct .btn:hover{background:var(--surface2)}
+
+.modal{position:fixed;inset:0;background:rgba(25,31,40,.44);z-index:50;
+  display:none;align-items:center;justify-content:center;padding:18px;
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.modal.on{display:flex}
+.mbox{background:var(--surface);border:none;border-radius:22px;
+  padding:26px 24px 24px;width:100%;max-width:370px;max-height:90vh;overflow:auto;
+  box-shadow:var(--sh-up)}
+.mbox h3{margin:0 0 6px;font-size:21px;font-weight:800;letter-spacing:-.035em;
+  text-transform:none;color:var(--ink)}
+.mbox .msub{margin:0 0 20px;font-size:13.5px;color:var(--ink3);line-height:1.6}
+.mrow{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.mrow label{font-size:13px;color:var(--ink2);font-weight:500}
+.mrow label .dim{color:var(--ink3);font-weight:400}
+.mrow input,.mrow textarea,.mrow select{width:100%;box-sizing:border-box;padding:12px 14px;font-size:15px}
+.mseg{display:flex;gap:4px;border:none;border-radius:var(--r-sm);
+  background:var(--surface2);padding:4px}
+.mseg button{flex:1;background:transparent;border:none;color:var(--ink3);
+  padding:9px 0;font-size:13.5px;font-family:inherit;cursor:pointer;
+  border-radius:var(--r-xs);font-weight:500}
+.mseg button.on{background:var(--surface);color:var(--ink);font-weight:700;
+  box-shadow:0 1px 3px rgba(25,31,40,.1)}
+.merr{font-size:13px;color:var(--red-text);min-height:18px;line-height:1.45;font-weight:500}
+.mbtns{display:flex;gap:8px;margin-top:8px}
+.mbtns .btn-go{flex:1;padding:13px 0;font-size:15px}
+.mbtns .btn{padding:13px 18px;font-size:14px}
+.mnote{margin:18px 0 0;font-size:12.5px;color:var(--ink3);line-height:1.7;
+  border-top:1px solid var(--line);padding-top:14px}
+.mnote b{color:var(--ink2);font-weight:600}
+
+.plans{display:flex;flex-direction:column;gap:10px}
+.plan{background:var(--surface);border:none;border-radius:var(--r);
+  padding:16px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  box-shadow:var(--sh);border-left:3px solid transparent}
+.plan.wish{border-left-color:var(--blue)}
+.plan.done{border-left-color:var(--green)}
+.plan .pd{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:14px;
+  color:var(--ink);font-weight:700}
+.tag{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:var(--pill);
+  border:none;flex:none}
+.tag.done{color:var(--green-text);background:var(--green-soft)}
+.tag.wish{color:var(--blue-press);background:var(--blue-soft)}
+.plan .pspan{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;
+  color:var(--ink3)}
+.plan .pmemo{font-size:13px;color:var(--ink3);flex:1 1 100%;margin:0}
+.plan .pseq{font-size:13px;color:var(--ink2);flex:1 1 100%;line-height:1.7;margin:0}
+.plan .pseq b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:700}
+.plan .pbtns{display:flex;gap:6px;margin-left:auto;flex:none}
+.plan .pbtns .btn{padding:6px 12px;font-size:12.5px;border-radius:var(--pill)}
+@media(max-width:560px){
+  .plan .pbtns{margin-left:0;flex:1 1 100%}
+  .plan .pbtns .btn{flex:1}
+}
+
+/* ── 서버에서 불러오기 (F-15) ─────────────────────────── */
+.mbox-wide{max-width:560px}
+.mrow2{display:flex;gap:12px}
+.mrow2 .mrow{flex:1;min-width:0}
+.loadlist{max-height:42vh;overflow:auto;margin:2px 0 14px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface2)}
+.loadlist .lmsg{padding:24px 16px;text-align:center;color:var(--ink3);font-size:13.5px;line-height:1.6}
+.loaditem{display:flex;gap:11px;align-items:center;padding:10px 12px;cursor:pointer;
+  border-bottom:1px solid var(--line)}
+.loaditem:last-child{border-bottom:none}
+.loaditem:hover{background:var(--surface)}
+.loaditem>input{margin:0;flex:none}
+.loaditem img{width:38px;height:52px;object-fit:cover;border-radius:var(--r-xs);flex:none;background:var(--line)}
+.li-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.li-t strong{font-size:14.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+.li-m{font-size:12.5px;color:var(--ink3)}
+.li-c{font-size:12.5px;color:var(--ink2)}
+.li-c i{font-style:normal;color:var(--red-text)}
+/* 인원이 안 맞으면 애초에 못 가는 테마다 — 고를 수는 있게 두되 눈에 띄게 죽인다 */
+.loaditem.off{opacity:.5}
+.loaditem.off .li-m b{color:var(--red-text);font-weight:600}
+.loadfoot{display:flex;align-items:center;gap:8px;margin:-6px 0 12px;
+  font-size:12.5px;color:var(--ink3)}
+.loadfoot .fresh{margin-left:auto}
+
+/* ── 매장 · 이동시간 ─────────────────────────────────── */
+.placerow{display:flex;align-items:center;gap:9px;margin:0 0 10px}
+.plb{font-size:12.5px;color:var(--ink3);flex:none;font-weight:500}
+.i-place{flex:1;min-width:120px;font-size:13.5px}
+.movehint{margin:12px 0 0;font-size:12.5px;color:var(--ink3);line-height:1.6}
+.movehint b{color:var(--ink2);font-weight:700}
+.movehint.on{color:var(--ink2)}
+.movehint.on b{color:var(--amber-text)}
+.movehint .dimhint{color:var(--ink3);font-weight:400}
+
+/* 이동 구간은 공백 앞쪽에 겹쳐 칠한다 — "끝나자마자 걷는다" 가 눈에 보이게 */
+.mv{position:absolute;top:0;height:50px;border-radius:var(--r-xs) 0 0 var(--r-xs);
+  border:1px solid var(--mv-line);border-right:none;background:var(--mv-fill)}
+/* 공백 라벨: 이동은 채운 알약, 잔여는 맨 글자 — 색이 아니라 모양이 먼저 가른다 */
+.gaplab.hasmv em{display:inline-flex;align-items:center;gap:5px}
+.gaplab em .mvp{background:var(--mv-fill);color:var(--mv-text);font-weight:800;
+  border-radius:var(--pill);padding:1px 8px;white-space:nowrap}
+.gaplab em .wtp{font-weight:700;white-space:nowrap}
+.gaplab.tight em .wtp{color:var(--red-text)}
+.gaplab.big em .wtp{color:var(--amber-text)}
+.mvstat b{color:var(--amber-text)}
+.mvtag{font-style:normal;font-size:12px;font-weight:800;color:var(--mv-text);
+  background:var(--mv-fill);border-radius:var(--pill);padding:2px 10px;white-space:nowrap}
+
+.pairs{margin-top:12px;background:var(--surface);border-radius:var(--r);
+  padding:14px 16px;box-shadow:var(--sh)}
+.pairhead{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:10px;
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pairhead span{font-size:12px;font-weight:400;color:var(--ink3)}
+.pair{display:flex;align-items:center;gap:8px;padding:5px 0;flex-wrap:wrap}
+.pair .pn{font-size:13.5px;color:var(--ink2);font-weight:500}
+.pair .parr{color:var(--ink3);font-size:13px;flex:none}
+.pair .pv{width:74px;text-align:center;margin-left:auto}
+.pair.set .pv{border-color:var(--amber-line);background:var(--amber-soft);
+  color:var(--amber-text);font-weight:700}
+.pair.set .pn{color:var(--ink)}
+@media(max-width:560px){
+  .pair .pn{font-size:13px}
+  .pair .pv{width:64px}
+}
+
+.chk.mini{font-size:12.5px;color:var(--ink3);gap:6px;font-weight:500}
+.chk.mini input{width:14px;height:14px}
+
+/* ── 사용법 투어 ── */
+/* 좁은 화면에서 사용법/다크모드 버튼과 로그인 영역이 한 줄에 다 안 들어가면,
+   줄바꿈 없는 버튼 글자를 억지로 욱여넣는 대신(단어 중간이 잘린다) 아예 다음 줄로
+   내려보낸다. */
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.hleft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tourbtn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
+.tourbtn:hover{background:var(--surface2)}
+.tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
+.tour-spot{position:fixed;z-index:80;border-radius:14px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(15,18,24,.72);
+  transition:top .28s cubic-bezier(.4,0,.2,1),left .28s cubic-bezier(.4,0,.2,1),
+    width .28s cubic-bezier(.4,0,.2,1),height .28s cubic-bezier(.4,0,.2,1)}
+.tour-tip{position:fixed;z-index:81;background:var(--surface);border-radius:18px;
+  padding:20px 20px 16px;width:300px;max-width:calc(100vw - 32px);
+  box-shadow:var(--sh-up);opacity:0;
+  transition:top .28s cubic-bezier(.4,0,.2,1),left .28s cubic-bezier(.4,0,.2,1),opacity .18s}
+.tour-tip.on{opacity:1}
+.tour-tip .step{font-size:12px;font-weight:800;color:var(--blue-text);letter-spacing:.02em}
+.tour-tip h4{margin:6px 0 8px;font-size:17px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+.tour-tip p{margin:0 0 16px;font-size:13.5px;line-height:1.6;color:var(--ink2)}
+.tour-btns{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tour-skip{background:none;border:none;color:var(--ink3);font-size:12.5px;
+  cursor:pointer;padding:6px 2px;font-family:inherit}
+.tour-skip:hover{color:var(--ink2)}
+.tour-next-group{display:flex;gap:6px}
+.tour-next-group .btn,.tour-next-group .btn-go{padding:9px 16px;font-size:13.5px}
