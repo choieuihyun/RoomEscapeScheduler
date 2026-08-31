@@ -1,0 +1,63 @@
+name: 테스트 후 배포
+
+# main에 푸시될 때마다: 루트(index.html) 인수 테스트 + app/(React+TS) Vitest를
+# 먼저 돌리고, 둘 다 통과해야 app/를 빌드해서 GitHub Pages에 올린다.
+# 테스트가 깨지면 배포 자체가 안 일어난다 — CI가 CD의 문을 지키는 구조.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포 도중 또 push가 들어와도 새 배포가 끝난 뒤 처리한다 — 겹쳐서 올라가는 것 방지.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 루트 인수 테스트 (index.html의 @core 구간)
+        run: npm test
+      - name: app/ 테스트 (Vitest — core.ts/serialize.ts 이식분)
+        working-directory: app
+        run: |
+          npm ci
+          npm test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: app/ 빌드
+        working-directory: app
+        run: |
+          npm ci
+          npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
