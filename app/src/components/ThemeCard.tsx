@@ -44,7 +44,7 @@ function ParsedSessions({ th, watchCtl }: { th: Theme; watchCtl?: WatchControl }
         const title = s.fixed ? '오전/오후 표기가 없어 12시간 보정된 값입니다' : undefined;
         return (
           <span key={i} className={cls} title={title}>
-            {fmtDay(s.t)}{s.soldout ? ' 매진' : ''}
+            {fmtDay(s.t)}<span className="t-end">–{fmtDay(s.t + th.dur)}</span>{s.soldout ? ' 매진' : ''}
             {s.soldout && s.id != null && watchCtl && <WatchBell slotId={s.id} ctl={watchCtl} />}
           </span>
         );
