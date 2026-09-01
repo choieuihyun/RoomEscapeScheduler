@@ -57,9 +57,12 @@ export interface ResultCardProps {
   onConfirmTeam: (r: SearchResultRow) => void;
   onSave?: (r: SearchResultRow) => void;
   watchCtl?: WatchControl;
+  /* 팀 확정 박스용 — 타임라인 시각화 대신 "시각 테마명" 세로 목록만 보여준다.
+     상단 통계·복사 버튼은 그대로 둔다(사용자 요청). */
+  simple?: boolean;
 }
 
-export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave, watchCtl }: ResultCardProps) {
+export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave, watchCtl, simple }: ResultCardProps) {
   const pct = (m: number) => ((m - lo) / span) * 100;
   const tight = r.minWait < 10;
 
@@ -89,50 +92,62 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
         {teamModeOn && <button className="btn-copy btn-team" type="button" onClick={() => onConfirmTeam(r)}>팀 확정</button>}
       </div>
       <div className="res-body">
-        <div className="tlwrap"><div className="tlinner">
-          <div className="tl">
-            {r.steps.map((s, i) => {
-              const l = pct(s.start), w = pct(s.end) - pct(s.start);
-              return (
-                <div key={i} className={'blk' + (s.soldout ? ' so' : '')}
-                  style={{ left: l + '%', width: w + '%', '--accent': `var(--accent-${s.i % 6})` } as CSSProperties}
-                  title={`${s.name} ${fmt(s.start)}→${fmt(s.end)} (${s.dur}분)`}>
-                  <span className="nm"><i>{s.name}</i></span>
-                  <span className="rng" data-s={fmt(s.start)} data-full={`${fmt(s.start)} – ${fmt(s.end)}`}>{fmt(s.start)} – {fmt(s.end)}</span>
-                  {s.soldout && s.sessionId != null && watchCtl && <WatchBell slotId={s.sessionId} ctl={watchCtl} />}
-                </div>
-              );
-            })}
-            {r.steps.slice(1).map((s, k) => {
-              const p = r.steps[k], g = s.start - p.end;
-              if (g <= 0) return null;
-              const mv = s.move || 0, wait = g - mv;
-              const l = pct(p.end), w = pct(s.start) - pct(p.end);
-              const cls = wait < 10 ? ' tight' : (wait >= 40 ? ' big' : '');
-              const tip = mv ? `${p.place} → ${s.place} 이동 ${mv}분 · 잔여 ${wait}분` : `공백 ${g}분`;
-              const mw = mv > 0 ? pct(p.end + mv) - pct(p.end) : 0;
-              return (
-                <div key={k}>
-                  <div className={'gap' + cls} style={{ left: l + '%', width: w + '%' }} title={tip} />
-                  {mv > 0 && <div className="mv" style={{ left: l + '%', width: mw + '%' }} title={tip} />}
-                  <div className={'gaplab' + cls + (mv ? ' hasmv' : '')} style={{ left: l + '%', width: w + '%' }}>
-                    {mv ? <em><b className="mvp">이동 {mv}분</b><b className="wtp">잔여 {wait}분</b></em> : <em>{g}분</em>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="axis">
-            {axisTicks(lo, hi, span).map(({ t, left }) => (
-              <span key={t} className="tick" style={{ left: left + '%' }}>{fmt(t)}</span>
+        {simple ? (
+          <div className="seqcol">
+            {r.steps.map((s, i) => (
+              <div key={i} className="seqcolrow">
+                <b className="mono">{fmt(s.start)}</b> {s.name}
+              </div>
             ))}
           </div>
-        </div></div>
-        <div className="seq">
-          {seqSegments(r).map((seg, i) => (
-            <span key={i}>{i > 0 && '  →  '}{seg}</span>
-          ))}
-        </div>
+        ) : (
+          <>
+            <div className="tlwrap"><div className="tlinner">
+              <div className="tl">
+                {r.steps.map((s, i) => {
+                  const l = pct(s.start), w = pct(s.end) - pct(s.start);
+                  return (
+                    <div key={i} className={'blk' + (s.soldout ? ' so' : '')}
+                      style={{ left: l + '%', width: w + '%', '--accent': `var(--accent-${s.i % 6})` } as CSSProperties}
+                      title={`${s.name} ${fmt(s.start)}→${fmt(s.end)} (${s.dur}분)`}>
+                      <span className="nm"><i>{s.name}</i></span>
+                      <span className="rng" data-s={fmt(s.start)} data-full={`${fmt(s.start)} – ${fmt(s.end)}`}>{fmt(s.start)} – {fmt(s.end)}</span>
+                      {s.soldout && s.sessionId != null && watchCtl && <WatchBell slotId={s.sessionId} ctl={watchCtl} />}
+                    </div>
+                  );
+                })}
+                {r.steps.slice(1).map((s, k) => {
+                  const p = r.steps[k], g = s.start - p.end;
+                  if (g <= 0) return null;
+                  const mv = s.move || 0, wait = g - mv;
+                  const l = pct(p.end), w = pct(s.start) - pct(p.end);
+                  const cls = wait < 10 ? ' tight' : (wait >= 40 ? ' big' : '');
+                  const tip = mv ? `${p.place} → ${s.place} 이동 ${mv}분 · 잔여 ${wait}분` : `공백 ${g}분`;
+                  const mw = mv > 0 ? pct(p.end + mv) - pct(p.end) : 0;
+                  return (
+                    <div key={k}>
+                      <div className={'gap' + cls} style={{ left: l + '%', width: w + '%' }} title={tip} />
+                      {mv > 0 && <div className="mv" style={{ left: l + '%', width: mw + '%' }} title={tip} />}
+                      <div className={'gaplab' + cls + (mv ? ' hasmv' : '')} style={{ left: l + '%', width: w + '%' }}>
+                        {mv ? <em><b className="mvp">이동 {mv}분</b><b className="wtp">잔여 {wait}분</b></em> : <em>{g}분</em>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="axis">
+                {axisTicks(lo, hi, span).map(({ t, left }) => (
+                  <span key={t} className="tick" style={{ left: left + '%' }}>{fmt(t)}</span>
+                ))}
+              </div>
+            </div></div>
+            <div className="seq">
+              {seqSegments(r).map((seg, i) => (
+                <span key={i}>{i > 0 && '  →  '}{seg}</span>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -89,6 +89,12 @@ export function ResultsPanel({ s, onSave, watchCtl }: { s: Scheduler; onSave?: (
     root.querySelectorAll<HTMLElement>('.blk .rng').forEach(el => {
       el.textContent = el.dataset.full || '';
     });
+    /* 좁은 화면에서는 넓히지 않는다 — 4배까지 넓히면 화면엔 블록 하나만 보이고
+       나머지는 옆으로 스와이프해야 하는데, 작은 박스 안에 스크롤이 숨어 있다는 걸
+       알아채기 어렵다(실사용자 실측 — "테마 이름이 안 보인다"). 대신 안 맞는
+       이름은 훑기(.roll) 애니메이션에 맡겨서, 전체 조합이 항상 한 화면에 다
+       보이는 쪽을 우선한다. 560px는 이 파일의 다른 모바일 분기와 같은 기준. */
+    const maxFactor = window.innerWidth < 560 ? 1 : 4;
     root.querySelectorAll<HTMLElement>('.tlinner').forEach(inner => {
       let factor = 1;
       inner.querySelectorAll<HTMLElement>('.blk').forEach(b => {
@@ -99,7 +105,7 @@ export function ResultsPanel({ s, onSave, watchCtl }: { s: Scheduler; onSave?: (
         const cur = b.clientWidth;
         if (cur > 0 && need > cur) factor = Math.max(factor, need / cur);
       });
-      factor = Math.min(factor, 4);
+      factor = Math.min(factor, maxFactor);
       inner.style.width = factor > 1.01 ? (factor * 100) + '%' : '';
     });
     // React가 이미 "시작 – 종료" 전체 텍스트를 렌더해 뒀다 — 원본처럼 처음부터 채워 두고

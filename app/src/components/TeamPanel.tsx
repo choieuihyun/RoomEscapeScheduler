@@ -18,12 +18,16 @@ export function TeamPanel({ s }: { s: Scheduler }) {
           <>
             {s.teams.map((tm, i) => (
               <div key={i} className="teamcard">
-                <p className="teamlabel">{tm.name}</p>
+                <div className="teamlabelrow">
+                  <p className="teamlabel">{i + 1} 팀</p>
+                  <button className="btn-x" type="button" title="이 팀 삭제" onClick={() => s.removeTeam(i)}>×</button>
+                </div>
                 {tm.row ? (
                   <ResultCard
                     r={tm.row} rank={i} lo={tm.row.start} hi={tm.row.end}
                     span={Math.max(tm.row.end - tm.row.start, 60)}
                     themeCount={tm.row.count} teamModeOn={false} onConfirmTeam={noop}
+                    simple
                   />
                 ) : (
                   <div className="teamchip">
@@ -38,7 +42,6 @@ export function TeamPanel({ s }: { s: Scheduler }) {
         )}
       </div>
       <div className="teamctl">
-        <button className="btn" type="button" disabled={!s.teams.length} onClick={s.undoTeam}>마지막 팀 취소</button>
         <button className="btn" type="button" disabled={!s.teams.length} onClick={s.resetTeams}>전체 초기화</button>
       </div>
     </div>

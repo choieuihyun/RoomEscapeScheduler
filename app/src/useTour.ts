@@ -104,19 +104,32 @@ export function useTour() {
   }
 
   useEffect(() => {
-    const onResize = () => {
+    const reposition = () => {
       if (!nodesRef.current) return;
       const step = TOUR_STEPS[stepRef.current];
       const target = document.querySelector(step.sel);
       if (target) position(target, step);
     };
-    window.addEventListener('resize', onResize);
+    /* 모바일에선 터치로 스크롤이 아주 쉽게 일어난다 — spot/tip은 position:fixed라
+       화면 좌표로 한 번 계산해 두는데, resize만 듣고 scroll을 안 들으면 스크롤
+       한 번에 하이라이트가 원래 자리에 그대로 남고 실제 타깃만 움직여서
+       완전히 어긋난다(실측 확인). rAF로 묶어 스크롤마다 레이아웃을 반복
+       계산하지 않게 한다. */
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; reposition(); });
+    };
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
     if (!startedAutoRef.current) {
       startedAutoRef.current = true;
       if (!localStorage.getItem(TOUR_KEY)) setTimeout(start, 500);
     }
     return () => {
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', onScroll, { capture: true });
+      if (raf) cancelAnimationFrame(raf);
       unmount();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

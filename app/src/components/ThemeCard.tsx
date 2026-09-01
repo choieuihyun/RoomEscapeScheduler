@@ -95,9 +95,10 @@ export interface ThemeCardProps {
   onReorder: (from: number, to: number) => void;
   onAttachImages: (id: number, files: File[]) => void;
   watchCtl?: WatchControl;
+  total: number;
 }
 
-export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, onReorder, onAttachImages, watchCtl }: ThemeCardProps) {
+export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, onReorder, onAttachImages, watchCtl, total }: ThemeCardProps) {
   const [dragState, setDragState] = useState<'' | 'dragging' | 'over' | 'drag'>('');
 
   return (
@@ -134,6 +135,11 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
         >
           {String(index + 1).padStart(2, '0')}
         </span>
+        {/* 드래그는 터치에서 안 먹힌다(HTML5 DnD가 마우스 전용) — 버튼은 어디서나 된다. */}
+        <div className="reorder-btns">
+          <button type="button" title="위로" disabled={index === 0} onClick={() => onReorder(index, index - 1)}>▲</button>
+          <button type="button" title="아래로" disabled={index === total - 1} onClick={() => onReorder(index, index + 1)}>▼</button>
+        </div>
         <input
           className="i-name" placeholder="테마 이름" value={th.name}
           onChange={e => onChange(th.id, { name: e.target.value })}

@@ -240,7 +240,8 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .teamempty{color:var(--ink3);font-size:12.5px}
 .teamcard{margin-bottom:10px}
 .teamcard:last-child{margin-bottom:0}
-.teamlabel{font-size:13px;font-weight:700;color:var(--ink);margin:0 0 6px}
+.teamlabelrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.teamlabel{font-size:13px;font-weight:700;color:var(--ink);margin:0}
 .teamchip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   background:var(--surface2);border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px}
 .teamchip b{font-weight:700}
@@ -256,6 +257,13 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   align-items:center;justify-content:center;border-radius:var(--pill);
   background:var(--surface2);cursor:grab;user-select:none}
 .idx:active{cursor:grabbing}
+/* 드래그는 터치에서 안 먹힌다(HTML5 DnD가 마우스 전용) — 어디서나 되는 버튼 */
+.reorder-btns{display:flex;flex-direction:column;gap:2px;flex:none}
+.reorder-btns button{width:20px;height:16px;padding:0;border:1px solid var(--line);
+  background:var(--surface2);color:var(--ink3);font-size:9px;line-height:1;
+  display:flex;align-items:center;justify-content:center;border-radius:4px}
+.reorder-btns button:hover:not(:disabled){background:var(--line);color:var(--ink)}
+.reorder-btns button:disabled{opacity:.3;cursor:default}
 /* 잡아서 든 느낌이 나야 "지금 옮기는 중" 이 헷갈리지 않는다 — 살짝 커지고 그림자가
    떠서, 그냥 흐려지기만 하던 것보다 어느 카드를 쥐고 있는지 분명해진다. */
 .card.dragging{opacity:.5;transform:scale(1.02) rotate(-.4deg);
@@ -362,6 +370,11 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .tick::before{content:'';position:absolute;left:50%;top:-4px;height:4px;border-left:1px solid var(--line2)}
 .seq{font-size:13px;color:var(--ink3);margin-top:12px;line-height:1.7}
 .seq b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* 팀 확정 박스 전용 — 타임라인 대신 "시각 테마명" 세로 목록만 */
+.seqcol{display:flex;flex-direction:column;gap:6px}
+.seqcolrow{font-size:13.5px;color:var(--ink2)}
+.seqcolrow b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums;margin-right:4px}
 
 /* ── misc ── */
 .empty{color:var(--ink3);font-size:14px;padding:36px 0;text-align:center;

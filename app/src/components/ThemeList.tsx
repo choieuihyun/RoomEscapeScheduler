@@ -22,6 +22,7 @@ export function ThemeList({ s, onOpenLoad, watchCtl }: { s: Scheduler; onOpenLoa
               onDelete={s.deleteTheme} onReorder={s.reorderTheme}
               onAttachImages={s.attachImages}
               watchCtl={watchCtl}
+              total={n}
             />
           ))
         )}

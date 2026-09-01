@@ -275,8 +275,11 @@ export function useScheduler() {
     runSearch(next);
   }, [teams, themesReady, runSearch]);
 
-  const undoTeam = useCallback(() => {
-    const next = teams.slice(0, -1);
+  /* 순서 상관없이 아무 팀이나 지운다 — 뒤 팀들의 "N 팀" 표기는 배열 인덱스로
+     다시 매기므로(TeamPanel.tsx) 여기서 이름을 새로 붙일 필요는 없다.
+     남은 팀들의 taken 제외 대상은 이 지운 결과 그대로 다음 계산에 반영된다. */
+  const removeTeam = useCallback((index: number) => {
+    const next = teams.filter((_, i) => i !== index);
     setTeams(next);
     runSearch(next);
   }, [teams, runSearch]);
@@ -325,7 +328,7 @@ export function useScheduler() {
     themesReady, found, searchCapped, runSearch, runNote,
     tabCount, tabSet, selectTab, selectTabSet,
     showCount, showMore,
-    teams, confirmTeam, undoTeam, resetTeams,
+    teams, confirmTeam, removeTeam, resetTeams,
     currentList,
     copyShareLink,
     lastSnapshot,
