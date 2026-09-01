@@ -7,6 +7,7 @@ import { useAuth } from './useAuth';
 import { usePlans } from './usePlans';
 import { useSaveModal } from './useSaveModal';
 import { useWatches, buildWatchControl } from './useWatches';
+import { useCalendarModal } from './useCalendarModal';
 import { ThemeList } from './components/ThemeList';
 import { ConditionsPanel } from './components/ConditionsPanel';
 import { ResultsPanel } from './components/ResultsPanel';
@@ -16,6 +17,7 @@ import { AuthModal } from './components/AuthModal';
 import { SaveModal } from './components/SaveModal';
 import { PlanSection } from './components/PlanSection';
 import { WatchListModal } from './components/WatchListModal';
+import { CalendarModal } from './components/CalendarModal';
 
 export function SchedulerPage() {
   const s = useScheduler();
@@ -27,6 +29,7 @@ export function SchedulerPage() {
   const saveModal = useSaveModal(auth, () => s.lastSnapshot.current || s.serializeNow(), plans.reload);
   const watches = useWatches(auth.me);
   const watchCtl = auth.cloudOn ? buildWatchControl(watches, !!auth.me) : undefined;
+  const calModal = useCalendarModal();
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
@@ -35,11 +38,12 @@ export function SchedulerPage() {
       if (auth.open) auth.closeAuth();
       if (saveModal.open) saveModal.close();
       if (watches.open) watches.close();
+      if (calModal.open) calModal.close();
       tour.end();
     }
     document.addEventListener('keydown', onKeydown);
     return () => document.removeEventListener('keydown', onKeydown);
-  }, [loadModal, auth, saveModal, watches, tour]);
+  }, [loadModal, auth, saveModal, watches, calModal, tour]);
 
   return (
     <div className="wrap">
@@ -57,7 +61,9 @@ export function SchedulerPage() {
                 빈자리 알림 <span className="nav-soon">{watches.watches.length}/{watches.limit}</span>
               </button>
             )}
-            <span className="nav-item disabled" aria-disabled="true">캘린더 <span className="nav-soon">곧</span></span>
+            {auth.cloudOn && (
+              <button className="nav-item" type="button" onClick={calModal.openModal}>캘린더</button>
+            )}
             <AcctWidget auth={auth} />
           </div>
         </div>
@@ -74,6 +80,7 @@ export function SchedulerPage() {
       <LoadModal m={loadModal} />
       <SaveModal m={saveModal} />
       {auth.cloudOn && <WatchListModal w={watches} />}
+      {auth.cloudOn && <CalendarModal ctl={calModal} plans={plans} watches={watches} auth={auth} s={s} />}
     </div>
   );
 }

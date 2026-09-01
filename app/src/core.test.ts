@@ -9,12 +9,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   fmt,
+  monthGrid,
   moveCost,
   pairKey,
   parseSessions,
   search,
   sessionsToText,
   SORTS,
+  toISO,
   type SearchTheme,
 } from './core';
 
@@ -385,5 +387,37 @@ describe('[8] 서버에서 불러오기 (F-15)', () => {
   });
   it('지점이 다르면 기본 이동시간이 붙는다', () => {
     expect(moveCost('플레이33 건대점', '플레이33 홍대점', 10, {})).toBe(10);
+  });
+});
+
+describe('[9] 캘린더 그리드 유틸', () => {
+  it('toISO — 로컬 Date를 "YYYY-MM-DD"로', () => {
+    expect(toISO(new Date(2026, 0, 5))).toBe('2026-01-05');
+    expect(toISO(new Date(2026, 8, 30))).toBe('2026-09-30');
+  });
+
+  it('monthGrid — 칸 수는 항상 7의 배수', () => {
+    for (let m = 0; m < 12; m++) expect(monthGrid(2026, m).length % 7).toBe(0);
+  });
+
+  it('monthGrid — 이번 달 1일과 마지막 날이 그리드 안에 있다', () => {
+    const grid = monthGrid(2026, 8); // 9월, 1일은 화요일
+    expect(grid.map(toISO)).toContain('2026-09-01');
+    expect(grid.map(toISO)).toContain('2026-09-30');
+    expect(toISO(grid[0])).toBe('2026-08-30'); // 앞을 이전 달로 채움 (일요일 시작)
+  });
+
+  it('monthGrid — 윤년 2월(29일)도 정확히 채운다', () => {
+    const grid = monthGrid(2028, 1); // 2028은 윤년
+    const isos = grid.map(toISO);
+    expect(isos).toContain('2028-02-29');
+    expect(isos).not.toContain('2028-02-30');
+  });
+
+  it('monthGrid — 평년 2월(28일)도 정확히 채운다', () => {
+    const grid = monthGrid(2026, 1);
+    const isos = grid.map(toISO);
+    expect(isos).toContain('2026-02-28');
+    expect(isos.filter(d => d.startsWith('2026-02')).length).toBe(28);
   });
 });

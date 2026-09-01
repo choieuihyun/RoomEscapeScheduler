@@ -18,6 +18,19 @@ export function parseClock(s: string | null | undefined): number | null {
   return h * 60 + mi;
 }
 
+/* ── 캘린더 그리드 유틸 (로컬 타임존 기준 "YYYY-MM-DD" 문자열) ── */
+export const toISO = (d: Date) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+export const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+/* year, month(0-based) → 그 달을 7의 배수 칸으로 채운 Date[] (앞뒤는 이웃 달 날짜). */
+export function monthGrid(year: number, month: number): Date[] {
+  const first = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const start = new Date(year, month, 1 - first.getDay());
+  const cells = Math.ceil((first.getDay() + daysInMonth) / 7) * 7;
+  return Array.from({ length: cells }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+}
+
 /* ── 회차 텍스트 파싱 ── */
 export interface Session {
   t: number;

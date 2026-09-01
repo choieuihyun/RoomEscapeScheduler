@@ -389,6 +389,9 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   .card{padding:15px}
   h1{font-size:24px}
   .btn-go{padding:12px 24px;font-size:14px}
+  .cal-grid,.cal-weekday{gap:2px}
+  .cal-daynum{font-size:11.5px}
+  .cal-title{min-width:76px;font-size:13px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}
   .blk .nm.roll i{animation:none}
@@ -443,7 +446,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .plan .pd{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:14px;
   color:var(--ink);font-weight:700}
 .tag{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:var(--pill);
-  border:none;flex:none}
+  border:none;flex:none;align-self:flex-start}
 .tag.done{color:var(--green-text);background:var(--green-soft)}
 .tag.wish{color:var(--blue-press);background:var(--blue-soft)}
 .plan .pspan{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;
@@ -545,7 +548,6 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .tourbtn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
 .tourbtn:hover{background:var(--surface2)}
 
-/* 아직 없는 화면으로 가는 문 — 클릭도, 포커스도, 라우트도 없는 순수 표시용 자리 */
 .nav-item{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:13px;
   font-weight:500;color:var(--ink3);white-space:nowrap;border-radius:var(--r-sm);
   background:none;border:none;font-family:inherit}
@@ -567,6 +569,36 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
    벨만 absolute로 얹는다 — 박스 치수에 영향 없음. */
 .blk-watch{position:absolute;top:2px;right:2px;width:16px;height:16px;
   background:var(--surface);box-shadow:0 0 0 1px var(--line)}
+
+/* ── 캘린더 — 저장 일정 + 감시 회차를 한 달 그리드로 ── */
+.cal-head{display:flex;align-items:center;gap:8px;margin:4px 0 10px}
+.cal-nav{background:none;border:1px solid var(--line);color:var(--ink2);width:28px;height:28px;
+  border-radius:var(--r-sm);cursor:pointer;font-size:15px;line-height:1;
+  display:flex;align-items:center;justify-content:center;font-family:inherit}
+.cal-nav:hover{background:var(--surface2);color:var(--ink)}
+.cal-title{font-size:14.5px;font-weight:700;color:var(--ink);min-width:92px;text-align:center}
+.cal-today{margin-left:auto;padding:5px 12px;font-size:12.5px;border-radius:var(--pill)}
+
+.cal-weekday{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;
+  font-size:11.5px;color:var(--ink3);text-align:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px}
+.cal-day{aspect-ratio:1;border:1px solid transparent;border-radius:var(--r-xs);background:none;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;color:var(--ink2);font-family:inherit}
+.cal-day:hover{background:var(--surface2)}
+.cal-day.out{color:var(--ink3);opacity:.45}
+.cal-day.today{border-color:var(--blue)}
+.cal-day.on{background:var(--blue-soft);color:var(--blue-text)}
+.cal-daynum{font-size:13px;font-variant-numeric:tabular-nums}
+.cal-day .dots{display:flex;align-items:center;gap:2px;height:8px}
+.cal-day .dot{width:5px;height:5px;border-radius:999px;background:var(--blue-press)}
+.cal-day .dot.done{background:var(--green-text)}
+.cal-day .cal-bell{color:var(--amber-text)}
+
+.cal-detail{min-height:52px}
+.cal-detail .pbtns{display:flex;gap:6px;align-items:center;flex:none}
+.cal-detail .pbtns .btn{padding:6px 12px;font-size:12.5px;border-radius:var(--pill)}
+
 .tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
 .tour-spot{position:fixed;z-index:80;border-radius:14px;pointer-events:none;
   box-shadow:0 0 0 9999px rgba(15,18,24,.72);
