@@ -48,6 +48,7 @@ export interface ServerSession {
 }
 
 export interface ServerTheme {
+  id: string;
   name: string;
   place?: string;
   dur?: number;

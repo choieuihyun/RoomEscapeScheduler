@@ -203,7 +203,22 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .opt label{display:flex;align-items:center;font-size:12.5px;color:var(--ink3);
   letter-spacing:0;margin-bottom:6px;font-weight:500}
 .opt input,.opt select{width:100%}
+.opt .tpicker{width:100%}
 .checks{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px}
+
+/* ── 시간 피커 ── native type="time"의 스피너 화살표가 불편하다는 요청으로
+   대체한 커스텀 드롭다운(TimePicker.tsx). 값은 그대로 "HH:MM" 문자열. */
+.tpicker{position:relative}
+.tpicker input{width:100%}
+.tp-list{position:absolute;top:calc(100% + 4px);left:0;z-index:30;width:120px;
+  max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-sm);box-shadow:var(--sh-up);padding:4px}
+.tp-opt{padding:7px 10px;font-size:13px;font-family:var(--num);font-variant-numeric:tabular-nums;
+  color:var(--ink2);border-radius:var(--r-xs);cursor:pointer}
+.tp-opt:hover{background:var(--surface2);color:var(--ink)}
+.tp-opt.on{background:var(--blue-soft);color:var(--blue-text);font-weight:700}
+.tp-clear{font-family:var(--sans);color:var(--ink3);border-bottom:1px solid var(--line);
+  border-radius:0;margin-bottom:3px;padding-bottom:8px}
 .mini{background:var(--blue-soft);border:none;color:var(--blue-press);font-size:11.5px;
   font-weight:600;padding:3px 9px;margin-left:7px;border-radius:var(--pill)}
 .mini:hover{background:var(--blue-line)}
@@ -212,6 +227,8 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   font-size:13.5px;box-shadow:var(--sh)}
 .mealrow.on{display:flex}
 .mealrow input{width:82px;text-align:center}
+.mealrow .tpicker{width:82px}
+.mealrow .tpicker input{text-align:center}
 .mealrow .lb{color:var(--ink2)}
 
 /* 자주 쓰는 기능이 아니라서 접어 두고, 체크할 때만 펼친다(§4.29) */
@@ -221,6 +238,9 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .teamrow.on{display:flex}
 .teamhint{color:var(--ink3);font-size:12.5px;line-height:1.5}
 .teamempty{color:var(--ink3);font-size:12.5px}
+.teamcard{margin-bottom:10px}
+.teamcard:last-child{margin-bottom:0}
+.teamlabel{font-size:13px;font-weight:700;color:var(--ink);margin:0 0 6px}
 .teamchip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   background:var(--surface2);border-radius:10px;padding:9px 12px;margin-bottom:6px;font-size:13px}
 .teamchip b{font-weight:700}
@@ -446,6 +466,15 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 /* 인원이 안 맞으면 애초에 못 가는 테마다 — 고를 수는 있게 두되 눈에 띄게 죽인다 */
 .loaditem.off{opacity:.5}
 .loaditem.off .li-m b{color:var(--red-text);font-weight:600}
+/* 지점을 넘나들며 고른 것들 — 지금 보이는 목록 밖에 있어도 여기서 계속 보인다 */
+.loadpicked{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.pickedchip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;
+  color:var(--ink2);background:var(--blue-soft);border:1px solid var(--blue-line);
+  border-radius:var(--pill);padding:4px 6px 4px 11px}
+.pickedchip i{font-size:11.5px}
+.pickedchip button{background:none;border:none;color:var(--blue-press);
+  font-size:14px;line-height:1;padding:2px 4px;cursor:pointer;border-radius:var(--pill)}
+.pickedchip button:hover{background:var(--blue-line)}
 .loadfoot{display:flex;align-items:center;gap:8px;margin:-6px 0 12px;
   font-size:12.5px;color:var(--ink3)}
 .loadfoot .fresh{margin-left:auto}

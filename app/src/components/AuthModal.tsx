@@ -55,7 +55,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
           ) : (
             <>
               아이디가 없나요? <b style={lkStyle} onClick={() => auth.openAuth('up')}>가입</b> ·{' '}
-              <b>비밀번호를 잊으면 되찾을 방법이 없습니다</b> (메일 주소를 안 받기 때문). 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.
+              <b>비밀번호를 잊으면 되찾을 방법이 없습니다.</b> 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.
             </>
           )}
         </p>

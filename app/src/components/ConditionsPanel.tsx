@@ -2,6 +2,7 @@ import { pad } from '../core';
 import type { Scheduler } from '../scheduler/useScheduler';
 import { MoveTimeGrid, moveHint } from './MoveTimeGrid';
 import { TeamPanel } from './TeamPanel';
+import { TimePicker } from './TimePicker';
 
 export function ConditionsPanel({ s }: { s: Scheduler }) {
   const hint = moveHint(s);
@@ -21,7 +22,7 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
               }}
             >지금부터</button>
           </label>
-          <input className="mono" type="time" placeholder="13:00" value={s.options.oStart} onChange={e => s.setOption('oStart', e.target.value)} />
+          <TimePicker placeholder="13:00" clearable value={s.options.oStart} onChange={v => s.setOption('oStart', v)} />
         </div>
         <div className="opt">
           <label>
@@ -31,7 +32,7 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
               onClick={() => s.setOption('oEnd', '23:59')}
             >자정</button>
           </label>
-          <input className="mono" type="time" placeholder="22:00" value={s.options.oEnd} onChange={e => s.setOption('oEnd', e.target.value)} />
+          <TimePicker placeholder="22:00" clearable value={s.options.oEnd} onChange={v => s.setOption('oEnd', v)} />
         </div>
         <div className="opt">
           <label>최소 공백 (분)</label>
@@ -67,9 +68,9 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
         </label>
       </div>
       <div className={'mealrow' + (s.options.oMeal ? ' on' : '')}>
-        <input className="mono" type="time" value={s.options.oMealFrom} onChange={e => s.setOption('oMealFrom', e.target.value)} />
+        <TimePicker value={s.options.oMealFrom} onChange={v => s.setOption('oMealFrom', v)} />
         <span className="lb">~</span>
-        <input className="mono" type="time" value={s.options.oMealTo} onChange={e => s.setOption('oMealTo', e.target.value)} />
+        <TimePicker value={s.options.oMealTo} onChange={v => s.setOption('oMealTo', v)} />
         <span className="lb">사이에</span>
         <input className="mono" value={s.options.oMealMin} onChange={e => s.setOption('oMealMin', e.target.value)} />
         <span className="lb">분 이상 공백을 남긴다</span>

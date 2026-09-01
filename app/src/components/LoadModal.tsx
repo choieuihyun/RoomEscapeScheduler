@@ -51,7 +51,7 @@ export function LoadModal({ m }: { m: LoadModalState }) {
               return (
                 <label key={i} className={'loaditem' + (fits ? '' : ' off')}>
                   <input
-                    type="checkbox" checked={m.picked.has(i)}
+                    type="checkbox" checked={m.isPicked(i)}
                     onChange={e => m.togglePick(i, e.target.checked)}
                   />
                   <img src={t.posterUrl || ''} alt="" loading="lazy" />
@@ -65,13 +65,23 @@ export function LoadModal({ m }: { m: LoadModalState }) {
             })
           )}
         </div>
+        {m.pickedItems.size > 0 && (
+          <div className="loadpicked">
+            {[...m.pickedItems.values()].map(p => (
+              <span key={p.key} className="pickedchip">
+                {p.theme.name} <i className="dim">· {p.branchLabel}</i>
+                <button type="button" title="선택 해제" onClick={() => m.removePicked(p.key)}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
         <div className="loadfoot">
-          <span>{m.picked.size ? `${m.picked.size}개 선택됨` : ''}</span>
+          <span>{m.pickedItems.size ? `${m.pickedItems.size}개 선택됨 — 지점을 바꿔도 유지됩니다` : ''}</span>
           <span className="fresh">{m.fresh}</span>
         </div>
         <p className="merr">{m.err}</p>
         <div className="mbtns">
-          <button className="btn-go" type="button" disabled={!m.picked.size} onClick={m.addPicked}>카드로 추가</button>
+          <button className="btn-go" type="button" disabled={!m.pickedItems.size} onClick={m.addPicked}>카드로 추가</button>
           <button className="btn" type="button" onClick={m.close}>닫기</button>
         </div>
         <p className="mnote">불러온 뒤에도 회차를 <b>손으로 고칠 수 있습니다</b>. 매진 회차는 카드에 남지만 계산에서는 빠집니다.</p>

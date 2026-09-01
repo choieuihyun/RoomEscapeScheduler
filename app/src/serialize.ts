@@ -8,7 +8,7 @@
    이 포맷에 의존한다. (계획서 "Step 3", 기준 픽스처는
    test/fixtures/legacy-links.json)
    ══════════════════════════════════════════════════════════════════ */
-import type { Session } from './core';
+import type { Session, SearchResultRow } from './core';
 import { pairKey, parseSessions } from './core';
 
 export interface ThemeState {
@@ -32,6 +32,12 @@ export interface TeamState {
   steps: TeamStep[];
   start: number;
   end: number;
+  /* 확정한 그 순간의 결과 카드 전체(타임라인·통계) — "저장 시점이 아니라
+     계산 시점의 snapshot" 원칙(§7.1)과 같은 이유로, 나중에 테마 카드를
+     고쳐도 팀 패널에 뜨는 내용이 안 바뀐다. 없으면(옛 링크) 컴팩트한
+     한 줄 요약으로 대체 표시한다 — steps/start/end 위의 추가 필드라
+     기존 링크·자동저장·Firestore snapshot과 그대로 호환된다. */
+  row?: SearchResultRow;
 }
 
 export interface OptionsState {

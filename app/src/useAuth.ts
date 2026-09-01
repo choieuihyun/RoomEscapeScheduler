@@ -16,7 +16,14 @@ function cloudConfigured(): boolean {
 
 export function useAuth() {
   const cloudOn = useRef(cloudConfigured()).current;
+  const wasSeen = useRef(cloudOn && !!localStorage.getItem(SEEN_KEY)).current;
   const [me, setMe] = useState<Me | null>(null);
+  /* Firebase가 저장된 로그인 상태를 IndexedDB에서 복원하는 동안(수백ms~1초)
+     me는 아직 null이지만 "로그인 안 함"과는 다르다 — 이 구분이 없으면
+     새로고침 직후 잠깐 "로그인" 버튼이 떴다가 돌아오는 깜빡임이 실제로
+     "로그아웃됐다"는 오해를 준다. 예전에 로그인한 적 있을 때만(SEEN_KEY)
+     로딩 상태로 시작한다 — 한 번도 로그인 안 한 사람은 애초에 기다릴 게 없다. */
+  const [authLoading, setAuthLoading] = useState(wasSeen);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'in' | 'up'>('in');
   const [id, setId] = useState('');
@@ -27,10 +34,10 @@ export function useAuth() {
   /* 예전에 로그인한 적이 있을 때만 SDK를 미리 깨운다 — 한 번도 안 쓴 사람에게
      짐을 지우지 않기 위해서다 (index.html의 SEEN_KEY 가드). */
   useEffect(() => {
-    if (!cloudOn || !localStorage.getItem(SEEN_KEY)) return;
-    cloud().then(C => C.watch(u => setMe(u)))
-      .catch(e => console.warn('로그인 복귀 실패:', e));
-  }, [cloudOn]);
+    if (!wasSeen) return;
+    cloud().then(C => C.watch(u => { setMe(u); setAuthLoading(false); }))
+      .catch(e => { console.warn('로그인 복귀 실패:', e); setAuthLoading(false); });
+  }, [wasSeen]);
 
   const openAuth = useCallback((m: 'in' | 'up') => {
     setMode(m); setErr(''); setOpen(true);
@@ -48,6 +55,7 @@ export function useAuth() {
     try {
       const result = mode === 'up' ? await C.signUp(cleanId, pw) : await C.signIn(cleanId, pw);
       setMe(result);
+      setAuthLoading(false);
       localStorage.setItem(SEEN_KEY, '1');
       setOpen(false); setPw('');
     } catch (e) {
@@ -61,9 +69,10 @@ export function useAuth() {
     try { (await cloud()).signOut(); } catch { /* noop */ }
     localStorage.removeItem(SEEN_KEY);
     setMe(null);
+    setAuthLoading(false);
   }, []);
 
-  return { cloudOn, me, open, mode, id, setId, pw, setPw, err, busy, openAuth, closeAuth, submit, logout };
+  return { cloudOn, me, authLoading, open, mode, id, setId, pw, setPw, err, busy, openAuth, closeAuth, submit, logout };
 }
 
 export type UseAuthReturn = ReturnType<typeof useAuth>;

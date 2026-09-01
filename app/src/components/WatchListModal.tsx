@@ -24,7 +24,7 @@ export function WatchListModal({ w }: { w: UseWatchesReturn }) {
                     <strong>{watch.theme}</strong>
                     <span className="li-m">{watch.branch} · {watch.date} · {fmt(watch.t)}</span>
                     <span className="li-c">
-                      {watch.available ? <b>빈자리 있음</b> : '여전히 매진'}
+                      {watch.available ? <b>빈자리 있음</b> : '매진'}
                     </span>
                   </div>
                   <button

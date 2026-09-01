@@ -104,10 +104,11 @@ export function useScheduler() {
 
   /* F-15 "회차 불러오기"로 고른 항목들을 카드로 추가한다. index.html의 ldAddPicked() 이식.
      매진 회차도 그대로 담는다 — 계산에서 빼는 건 excludeSoldout이 이미 한다(기획 §4.30),
-     카드에 남아야 "왜 이 시간대가 후보에 없지"가 조건 탓인지 매진 탓인지 갈린다. */
+     카드에 남아야 "왜 이 시간대가 후보에 없지"가 조건 탓인지 매진 탓인지 갈린다.
+     fresh는 항목마다 다르다 — 매장 A·B·C에서 하나씩 골랐다면 지점마다 서버가
+     확인한 시각이 다르므로, 공통 값 하나로 뭉뚱그리지 않는다. */
   const addServerThemes = useCallback((
-    items: { name: string; place: string; dur: number; sessions: Session[] }[],
-    fresh: string,
+    items: { name: string; place: string; dur: number; sessions: Session[]; fresh: string }[],
   ) => {
     setThemes(ts => [
       ...ts,
@@ -116,7 +117,7 @@ export function useScheduler() {
         return {
           ...blankTheme(nextId.current++, it.name),
           place: it.place, dur: it.dur || 70, sessions,
-          raw: sessionsToText(sessions), source: 'server', fresh,
+          raw: sessionsToText(sessions), source: 'server', fresh: it.fresh,
         };
       }),
     ]);
@@ -265,9 +266,10 @@ export function useScheduler() {
 
   const confirmTeam = useCallback((r: SearchResultRow) => {
     const next = [...teams, {
-      name: `팀 ${teams.length + 1}`,
+      name: `${teams.length + 1} 팀`,
       steps: r.steps.map(s => ({ id: themesReady[s.i].id!, name: s.name, t: s.start })),
       start: r.start, end: r.end,
+      row: r,
     }];
     setTeams(next);
     runSearch(next);

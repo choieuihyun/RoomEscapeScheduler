@@ -1,13 +1,15 @@
 import { fmt } from '../core';
 import type { Scheduler } from '../scheduler/useScheduler';
+import { ResultCard } from './ResultCard';
+
+const noop = () => {};
 
 export function TeamPanel({ s }: { s: Scheduler }) {
   return (
     <div className={'teamrow' + (s.options.oTeam ? ' on' : '')}>
       <p className="teamhint">
         같은 매장들을 여러 팀이 나눠 도는 경우용. 결과에서 한 조합을 <b>팀 확정</b>하면
-        그 회차가 다음 팀 계산에서 빠지고 카드 목록은 다음 팀 후보로 바뀝니다 — 단톡방에 보낼 일정은
-        확정하기 전에 먼저 <b>복사</b> 해 두세요. 팀 수만큼 이어서 누르면 됩니다.
+        그 회차가 다음 팀 계산에서 빠지고 카드 목록은 다음 팀 후보로 바뀝니다. 팀 수만큼 이어서 누르면 됩니다.
       </p>
       <div>
         {s.teams.length === 0 ? (
@@ -15,13 +17,23 @@ export function TeamPanel({ s }: { s: Scheduler }) {
         ) : (
           <>
             {s.teams.map((tm, i) => (
-              <div key={i} className="teamchip">
-                <b>{tm.name}</b>
-                <span className="mono">{fmt(tm.start)} → {fmt(tm.end)}</span>
-                <span className="dim">{tm.steps.map(st => `${st.name} ${fmt(st.t)}`).join(' · ')}</span>
+              <div key={i} className="teamcard">
+                <p className="teamlabel">{tm.name}</p>
+                {tm.row ? (
+                  <ResultCard
+                    r={tm.row} rank={i} lo={tm.row.start} hi={tm.row.end}
+                    span={Math.max(tm.row.end - tm.row.start, 60)}
+                    themeCount={tm.row.count} teamModeOn={false} onConfirmTeam={noop}
+                  />
+                ) : (
+                  <div className="teamchip">
+                    <span className="mono">{fmt(tm.start)} → {fmt(tm.end)}</span>
+                    <span className="dim">{tm.steps.map(st => `${st.name} ${fmt(st.t)}`).join(' · ')}</span>
+                  </div>
+                )}
               </div>
             ))}
-            <p className="teamnext">다음: <b>팀 {s.teams.length + 1}</b> 후보를 계산합니다 (위 회차는 제외)</p>
+            <p className="teamnext">다음: <b>{s.teams.length + 1} 팀</b> 후보를 계산합니다 (위 회차는 제외) — 단톡방에 보낼 일정은 위 카드의 <b>복사</b>를 눌러 두세요.</p>
           </>
         )}
       </div>
