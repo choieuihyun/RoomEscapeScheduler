@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { SORTS } from '../core';
 import type { Scheduler } from '../scheduler/useScheduler';
+import type { WatchControl } from '../useWatches';
 import { ResultCard } from './ResultCard';
 
 function setKey(r: { steps: { i: number }[] }) {
@@ -64,7 +65,7 @@ function SortBar({ s }: { s: Scheduler }) {
   );
 }
 
-export function ResultsPanel({ s, onSave }: { s: Scheduler; onSave?: (r: Scheduler['found'][number]) => void }) {
+export function ResultsPanel({ s, onSave, watchCtl }: { s: Scheduler; onSave?: (r: Scheduler['found'][number]) => void; watchCtl?: WatchControl }) {
   const resRef = useRef<HTMLDivElement>(null);
 
   const pool = s.currentList;
@@ -164,7 +165,7 @@ export function ResultsPanel({ s, onSave }: { s: Scheduler; onSave?: (r: Schedul
           <ResultCard
             key={ri} r={r} rank={ri} lo={lo} hi={hi} span={span}
             themeCount={s.themesReady.length} teamModeOn={s.options.oTeam}
-            onConfirmTeam={s.confirmTeam} onSave={onSave}
+            onConfirmTeam={s.confirmTeam} onSave={onSave} watchCtl={watchCtl}
           />
         ))}
         {pool.length > list.length && (

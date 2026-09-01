@@ -21,7 +21,7 @@ export const toId = (email: string) => String(email || '').replace('@' + DOMAIN,
 
 declare global {
   interface Window {
-    FIREBASE_CONFIG?: { apiKey?: string; authDomain?: string; projectId?: string; appId?: string };
+    FIREBASE_CONFIG?: { apiKey?: string; authDomain?: string; projectId?: string; appId?: string; messagingSenderId?: string };
   }
 }
 
@@ -33,7 +33,7 @@ export function configured(): boolean {
 export interface Me { uid: string; id: string }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let A: any = null, F: any = null, auth: any = null, db: any = null;
+let A: any = null, F: any = null, M: any = null, app: any = null, auth: any = null, db: any = null;
 let ready: Promise<boolean> | null = null;
 
 /* 두 번 불러도 한 번만 받아온다 */
@@ -47,7 +47,7 @@ function boot(): Promise<boolean> {
       import(/* @vite-ignore */ CDN + 'firebase-firestore.js'),
     ]);
     A = authMod; F = fsMod;
-    const app = appMod.initializeApp(window.FIREBASE_CONFIG);
+    app = appMod.initializeApp(window.FIREBASE_CONFIG);
     auth = A.getAuth(app);
     db = F.getFirestore(app);
     /* 탭을 닫아도 로그인이 유지되게. 이게 없으면 새로고침마다 다시 로그인해야 한다 */
@@ -55,6 +55,31 @@ function boot(): Promise<boolean> {
     return true;
   })().catch(err => { ready = null; throw err; });
   return ready;
+}
+
+/* F-16 푸시 토큰 발급. auth/firestore와 달리 감시를 실제로 걸 때만 쓰이므로
+   boot()의 Promise.all에 안 끼워 넣고 따로 지연 로드한다 — 로그인만 하고
+   감시는 안 거는 사람에게 messaging SDK 바이트를 안 보내려는 목적. */
+let messagingReady: Promise<boolean> | null = null;
+function bootMessaging(): Promise<boolean> {
+  if (messagingReady) return messagingReady;
+  messagingReady = (async () => {
+    await boot();
+    M = await import(/* @vite-ignore */ CDN + 'firebase-messaging.js');
+    return true;
+  })().catch(err => { messagingReady = null; throw err; });
+  return messagingReady;
+}
+
+export async function getMessagingToken(vapidKey: string, swRegistration: ServiceWorkerRegistration): Promise<string | null> {
+  await bootMessaging();
+  const messaging = M.getMessaging(app);
+  try {
+    return await M.getToken(messaging, { vapidKey, serviceWorkerRegistration: swRegistration });
+  } catch (e) {
+    console.warn('푸시 토큰 발급 실패:', e);
+    return null;
+  }
 }
 
 /* ── 계정 ── */
@@ -80,6 +105,15 @@ export async function signIn(id: string, pw: string): Promise<Me> {
 export async function signOut() {
   await boot();
   return A.signOut(auth);
+}
+
+/* F-16 감시 API가 요구하는 Authorization: Bearer 값. 서버는 이 토큰을
+   구글 공개키로 서명만 검증하고 우리 서버 코드는 관여하지 않는다
+   (작업명세서 §4.5). 로그인 안 돼 있으면 null. */
+export async function idToken(): Promise<string | null> {
+  await boot();
+  const u = auth?.currentUser;
+  return u ? u.getIdToken() : null;
 }
 
 /* Firebase 오류코드는 그대로 보여주면 아무도 못 읽는다 */

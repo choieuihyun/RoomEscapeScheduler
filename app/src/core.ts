@@ -23,6 +23,10 @@ export interface Session {
   t: number;
   soldout: boolean;
   fixed?: boolean;
+  /* F-16 감시 API의 slotId. 서버에서 불러온 회차만 값이 있다 — 수동 입력·
+     이미지 인식은 서버가 매긴 id가 애초에 없으므로 parseSessions()는 이
+     필드를 만들지 않는다(작업명세서 §4.5). */
+  id?: number;
 }
 
 /* "오전 10:30 매진 오후 12:00 매진 …" 또는 "10:30, 12:00, 1:30" 모두 처리 */
@@ -151,6 +155,9 @@ export interface PathStep {
   end: number;
   soldout: boolean;
   move: number;
+  /* F-16 — 이 스텝이 어느 회차(Session)에서 왔는지. 결과 타임라인에서
+     감시 토글을 걸 때 쓴다. Session.id 와 마찬가지로 서버 로드분만 값이 있다. */
+  sessionId?: number;
 }
 
 export interface SearchResultRow {
@@ -234,7 +241,7 @@ export function search(list: SearchTheme[], o: SearchOptions): SearchOutcome {
         nodes++;
         path.push({
           i, name: th.name || ('테마 ' + (i + 1)), place: th.place || '', dur: th.dur,
-          start: s.t, end, soldout: s.soldout, move,
+          start: s.t, end, soldout: s.soldout, move, sessionId: s.id,
         });
         dfs(end, i + 1);
         path.pop();

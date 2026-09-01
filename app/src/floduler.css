@@ -505,10 +505,26 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 /* 아직 없는 화면으로 가는 문 — 클릭도, 포커스도, 라우트도 없는 순수 표시용 자리 */
 .nav-item{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:13px;
-  font-weight:500;color:var(--ink3);white-space:nowrap}
+  font-weight:500;color:var(--ink3);white-space:nowrap;border-radius:var(--r-sm);
+  background:none;border:none;font-family:inherit}
 .nav-item.disabled{cursor:not-allowed;opacity:.55}
+.nav-item:not(.disabled){cursor:pointer}
+.nav-item:not(.disabled):hover{background:var(--surface2);color:var(--ink2)}
+.nav-item:not(.disabled):focus-visible{outline:none;box-shadow:var(--ring)}
 .nav-soon{font-size:10.5px;font-weight:700;color:var(--blue-text);background:var(--blue-soft);
   border-radius:var(--pill);padding:1px 7px}
+
+/* ── F-16 감시 토글 ── */
+.watch-toggle{display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;margin-left:3px;border:none;background:none;
+  color:var(--ink3);cursor:pointer;border-radius:var(--pill);padding:0;vertical-align:middle}
+.watch-toggle:hover:not(:disabled){background:var(--surface);color:var(--ink2)}
+.watch-toggle.on{color:var(--blue-text)}
+.watch-toggle:disabled{opacity:.35;cursor:not-allowed}
+/* .blk는 실측 너비로 말줄임을 계산하므로(ResultsPanel) padding/border는 그대로 두고
+   벨만 absolute로 얹는다 — 박스 치수에 영향 없음. */
+.blk-watch{position:absolute;top:2px;right:2px;width:16px;height:16px;
+  background:var(--surface);box-shadow:0 0 0 1px var(--line)}
 .tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
 .tour-spot{position:fixed;z-index:80;border-radius:14px;pointer-events:none;
   box-shadow:0 0 0 9999px rgba(15,18,24,.72);

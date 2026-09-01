@@ -6,6 +6,7 @@ import { useLoadModal } from './useLoadModal';
 import { useAuth } from './useAuth';
 import { usePlans } from './usePlans';
 import { useSaveModal } from './useSaveModal';
+import { useWatches, buildWatchControl } from './useWatches';
 import { ThemeList } from './components/ThemeList';
 import { ConditionsPanel } from './components/ConditionsPanel';
 import { ResultsPanel } from './components/ResultsPanel';
@@ -14,6 +15,7 @@ import { AcctWidget } from './components/AcctWidget';
 import { AuthModal } from './components/AuthModal';
 import { SaveModal } from './components/SaveModal';
 import { PlanSection } from './components/PlanSection';
+import { WatchListModal } from './components/WatchListModal';
 
 export function SchedulerPage() {
   const s = useScheduler();
@@ -23,6 +25,8 @@ export function SchedulerPage() {
   const auth = useAuth();
   const plans = usePlans(auth.me);
   const saveModal = useSaveModal(auth, () => s.lastSnapshot.current || s.serializeNow(), plans.reload);
+  const watches = useWatches(auth.me);
+  const watchCtl = auth.cloudOn ? buildWatchControl(watches, !!auth.me) : undefined;
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
@@ -30,11 +34,12 @@ export function SchedulerPage() {
       if (loadModal.open) loadModal.close();
       if (auth.open) auth.closeAuth();
       if (saveModal.open) saveModal.close();
+      if (watches.open) watches.close();
       tour.end();
     }
     document.addEventListener('keydown', onKeydown);
     return () => document.removeEventListener('keydown', onKeydown);
-  }, [loadModal, auth, saveModal, tour]);
+  }, [loadModal, auth, saveModal, watches, tour]);
 
   return (
     <div className="wrap">
@@ -47,6 +52,11 @@ export function SchedulerPage() {
             </button>
           </div>
           <div className="acct">
+            {auth.cloudOn && (
+              <button className="nav-item" type="button" onClick={watches.openModal}>
+                빈자리 알림 <span className="nav-soon">{watches.watches.length}/{watches.limit}</span>
+              </button>
+            )}
             <span className="nav-item disabled" aria-disabled="true">캘린더 <span className="nav-soon">곧</span></span>
             <AcctWidget auth={auth} />
           </div>
@@ -55,14 +65,15 @@ export function SchedulerPage() {
         <p>테마별 회차 시간을 넣으면 겹치지 않는 조합을 전부 계산해서, 공백이 어디에 얼마나 생기는지 보여줍니다.</p>
       </header>
 
-      <ThemeList s={s} onOpenLoad={loadModal.openModal} />
+      <ThemeList s={s} onOpenLoad={loadModal.openModal} watchCtl={watchCtl} />
       <ConditionsPanel s={s} />
-      <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} />
+      <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} watchCtl={watchCtl} />
       <PlanSection auth={auth} plans={plans} s={s} />
 
       <AuthModal auth={auth} />
       <LoadModal m={loadModal} />
       <SaveModal m={saveModal} />
+      {auth.cloudOn && <WatchListModal w={watches} />}
     </div>
   );
 }

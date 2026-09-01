@@ -1,0 +1,13 @@
+{
+  "name": "Floduler",
+  "short_name": "Floduler",
+  "description": "방탈출 테마별 회차 시간을 넣으면 겹치지 않는 조합을 전부 계산해 주는 도구",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#17181C",
+  "theme_color": "#17181C",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

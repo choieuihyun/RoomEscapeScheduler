@@ -1,6 +1,31 @@
 import { useState, type CSSProperties } from 'react';
 import { fmt } from '../core';
 import type { Theme } from '../scheduler/types';
+import type { WatchControl } from '../useWatches';
+
+/* F-16 감시 토글 — 라인 아이콘 하나(벨)로 켜짐/꺼짐만 가른다.
+   서버 로드 회차(session.id 있음)에만 뜬다 — 수동 입력·이미지 인식엔 감시를
+   걸 slotId 자체가 없다(작업명세서 §4.5). */
+function WatchBell({ slotId, ctl }: { slotId: number; ctl: WatchControl }) {
+  const on = ctl.isWatching(slotId);
+  const disabled = ctl.busy(slotId) || (!on && ctl.atLimit) || !ctl.loggedIn;
+  const title = !ctl.loggedIn
+    ? '로그인하면 감시할 수 있어요'
+    : on ? '감시 해제'
+    : ctl.atLimit ? '최대 3개까지 감시할 수 있어요 — 목록에서 하나를 지워주세요'
+    : '빈자리 알림 걸기';
+  return (
+    <button
+      type="button" className={'watch-toggle' + (on ? ' on' : '')} disabled={disabled} title={title}
+      onClick={e => { e.stopPropagation(); ctl.toggle(slotId); }}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill={on ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+    </button>
+  );
+}
 
 const DRAG_TYPE = 'application/x-theme-index';
 
@@ -28,7 +53,7 @@ function ChipLine({ th }: { th: Theme }) {
   );
 }
 
-function ParsedSessions({ th }: { th: Theme }) {
+function ParsedSessions({ th, watchCtl }: { th: Theme; watchCtl?: WatchControl }) {
   if (!th.sessions.length) {
     return <div className="parsed"><span className="hint">시간을 넣으면 해석 결과가 여기 표시됩니다</span></div>;
   }
@@ -40,7 +65,12 @@ function ParsedSessions({ th }: { th: Theme }) {
       {th.sessions.map((s, i) => {
         const cls = 't' + (s.t >= 24 * 60 ? ' over' : '') + (s.fixed ? ' fix' : '') + (s.soldout ? ' so' : '');
         const title = s.fixed ? '오전/오후 표기가 없어 12시간 보정된 값입니다' : undefined;
-        return <span key={i} className={cls} title={title}>{fmtDay(s.t)}{s.soldout ? ' 매진' : ''}</span>;
+        return (
+          <span key={i} className={cls} title={title}>
+            {fmtDay(s.t)}{s.soldout ? ' 매진' : ''}
+            {s.soldout && s.id != null && watchCtl && <WatchBell slotId={s.id} ctl={watchCtl} />}
+          </span>
+        );
       })}
       {sold > 0 && <span className="note">매진으로 읽힌 {sold}개는 계산에서 제외됩니다</span>}
       {over ? (
@@ -64,9 +94,10 @@ export interface ThemeCardProps {
   onDelete: (id: number) => void;
   onReorder: (from: number, to: number) => void;
   onAttachImages: (id: number, files: File[]) => void;
+  watchCtl?: WatchControl;
 }
 
-export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, onReorder, onAttachImages }: ThemeCardProps) {
+export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, onReorder, onAttachImages, watchCtl }: ThemeCardProps) {
   const [dragState, setDragState] = useState<'' | 'dragging' | 'over' | 'drag'>('');
 
   return (
@@ -134,7 +165,7 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
           if (file) onAttachImages(th.id, [file]);
         }}
       />
-      <ParsedSessions th={th} />
+      <ParsedSessions th={th} watchCtl={watchCtl} />
       <div className="card-foot">
         <label className="btn-img">
           {th.source.startsWith('image') && th.sessions.length ? '이미지 추가' : '이미지 첨부'}

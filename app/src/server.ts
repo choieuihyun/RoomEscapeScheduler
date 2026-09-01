@@ -42,6 +42,7 @@ export interface Branch {
 }
 
 export interface ServerSession {
+  id: number;
   t: number;
   soldout?: boolean;
 }
@@ -93,5 +94,68 @@ export function ago(iso: string | null): string {
 }
 
 export function toSessions(ss: ServerSession[]): Session[] {
-  return ss.map(s => ({ t: s.t, soldout: !!s.soldout }));
+  return ss.map(s => ({ t: s.t, soldout: !!s.soldout, id: s.id }));
+}
+
+/* ── F-16 감시 API ── 인증이 필요한 유일한 엔드포인트들이라 get()과 갈라놨다.
+   server.ts는 useLoadModal.ts가 항상 정적 import하므로, 여기서 cloud.ts를
+   끌어오면 로그인 전 0바이트 불변식이 깨진다 — 그래서 토큰은 호출부(지연
+   로드되는 useWatches.ts)가 넘겨준다. 계약: 작업명세서 §4.5, 이 세션에서
+   테스트 계정으로 실측 확인(2026-09-01). */
+export interface WatchDto {
+  id: number;
+  branch: string;
+  theme: string;
+  date: string;
+  t: number;
+  available: boolean;
+  createdAt: string;
+}
+
+interface WatchApiError extends ApiError {
+  body?: { error?: string; message?: string };
+}
+
+async function authed<T>(path: string, token: string, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> {
+  const res = await fetch(base() + path, {
+    method,
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(body != null ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: body != null ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const e: WatchApiError = new Error('HTTP ' + res.status);
+    e.status = res.status;
+    try { e.body = await res.json(); } catch { /* 바디 없는 에러(예: 204류)도 있다 */ }
+    throw e;
+  }
+  if (res.status === 204) return undefined as T;
+  return res.json();
+}
+
+/* 실측: GET은 배열이 아니라 { limit, watches } 객체로 온다(작업명세서 §4.5 문서와 다른 점). */
+export const listWatches = (token: string): Promise<{ limit: number; watches: WatchDto[] }> =>
+  authed('/api/watches', token, 'GET');
+
+export const addWatch = (slotId: number, token: string): Promise<WatchDto> =>
+  authed('/api/watches', token, 'POST', { slotId });
+
+export const removeWatch = (id: number, token: string): Promise<void> =>
+  authed(`/api/watches/${id}`, token, 'DELETE');
+
+/* 푸시 알림 받을 주소 등록 (작업명세서 §4.5 ㉡). 서버가 지금 502라 계약을
+   실측 못 했다 — 문서 스펙 {token, platform} 그대로 가정. 살아나면 재확인. */
+export const registerDevice = (deviceToken: string, authToken: string): Promise<void> =>
+  authed('/api/devices', authToken, 'POST', { token: deviceToken, platform: 'web' });
+
+/* 3개 제한(409 WATCH_LIMIT_EXCEEDED)은 서버가 이미 완성된 한국어 message를
+   주므로 그대로 쓴다 — 나머지 에러는 say()와 같은 판단을 따른다. */
+export function sayWatch(err: unknown): string {
+  const e = err as WatchApiError;
+  if (e?.status === 409 && e.body?.message) return e.body.message;
+  if (e?.status === 400 && e.body?.message) return e.body.message;
+  return say(err);
 }

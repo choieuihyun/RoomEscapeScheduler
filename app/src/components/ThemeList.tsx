@@ -1,7 +1,8 @@
 import type { Scheduler } from '../scheduler/useScheduler';
+import type { WatchControl } from '../useWatches';
 import { ThemeCard } from './ThemeCard';
 
-export function ThemeList({ s, onOpenLoad }: { s: Scheduler; onOpenLoad: () => void }) {
+export function ThemeList({ s, onOpenLoad, watchCtl }: { s: Scheduler; onOpenLoad: () => void; watchCtl?: WatchControl }) {
   const n = s.themes.length;
   return (
     <section className="sec">
@@ -20,6 +21,7 @@ export function ThemeList({ s, onOpenLoad }: { s: Scheduler; onOpenLoad: () => v
               onChange={s.updateTheme} onRawChange={s.updateRaw}
               onDelete={s.deleteTheme} onReorder={s.reorderTheme}
               onAttachImages={s.attachImages}
+              watchCtl={watchCtl}
             />
           ))
         )}

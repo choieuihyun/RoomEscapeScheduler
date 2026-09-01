@@ -1,5 +1,27 @@
 import type { CSSProperties } from 'react';
 import { fmt, type SearchResultRow } from '../core';
+import type { WatchControl } from '../useWatches';
+
+function WatchBell({ slotId, ctl }: { slotId: number; ctl: WatchControl }) {
+  const on = ctl.isWatching(slotId);
+  const disabled = ctl.busy(slotId) || (!on && ctl.atLimit) || !ctl.loggedIn;
+  const title = !ctl.loggedIn
+    ? '로그인하면 감시할 수 있어요'
+    : on ? '감시 해제'
+    : ctl.atLimit ? '최대 3개까지 감시할 수 있어요 — 목록에서 하나를 지워주세요'
+    : '빈자리 알림 걸기';
+  return (
+    <button
+      type="button" className={'watch-toggle blk-watch' + (on ? ' on' : '')} disabled={disabled} title={title}
+      onClick={e => { e.stopPropagation(); ctl.toggle(slotId); }}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill={on ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+    </button>
+  );
+}
 
 function axisTicks(lo: number, hi: number, span: number) {
   const step = span > 420 ? 120 : span > 240 ? 60 : 30;
@@ -34,9 +56,10 @@ export interface ResultCardProps {
   teamModeOn: boolean;
   onConfirmTeam: (r: SearchResultRow) => void;
   onSave?: (r: SearchResultRow) => void;
+  watchCtl?: WatchControl;
 }
 
-export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave }: ResultCardProps) {
+export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave, watchCtl }: ResultCardProps) {
   const pct = (m: number) => ((m - lo) / span) * 100;
   const tight = r.minWait < 10;
 
@@ -76,6 +99,7 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
                   title={`${s.name} ${fmt(s.start)}→${fmt(s.end)} (${s.dur}분)`}>
                   <span className="nm"><i>{s.name}</i></span>
                   <span className="rng" data-s={fmt(s.start)} data-full={`${fmt(s.start)} – ${fmt(s.end)}`}>{fmt(s.start)} – {fmt(s.end)}</span>
+                  {s.soldout && s.sessionId != null && watchCtl && <WatchBell slotId={s.sessionId} ctl={watchCtl} />}
                 </div>
               );
             })}

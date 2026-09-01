@@ -15,10 +15,18 @@ export default defineConfig(({ command }) => ({
     // (choieuihyun.github.io)뿐이라 로컬 개발 서버(localhost:*)에서 직접 fetch하면
     // 막힌다. dev에서만 /api를 이 프록시로 우회하고, 프로덕션 빌드는 원래대로
     // 배포 주소를 직접 부른다 (app/src/server.ts의 base() 참고).
+    //
+    // changeOrigin은 Host 헤더만 바꾼다 — Origin은 그대로 브라우저 값(localhost:*)이
+    // 나가서, 인증이 필요한 엔드포인트(/api/watches, /api/devices)는 서버가 Origin을
+    // 직접 검사해 여전히 403(Invalid CORS request)으로 막는다는 걸 F-16 개발 중
+    // 실측으로 발견했다 — F-15의 GET 전용 엔드포인트(branches/schedule)는 이 검사가
+    // 없어서 지금까지 안 드러났을 뿐이다. headers로 Origin 자체를 배포 주소로
+    // 덮어써야 인증 엔드포인트까지 로컬에서 뚫린다.
     proxy: {
       '/api': {
         target: 'https://floduler.duckdns.org',
         changeOrigin: true,
+        headers: { Origin: 'https://choieuihyun.github.io' },
       },
     },
   },
