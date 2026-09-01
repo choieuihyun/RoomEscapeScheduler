@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { restore } from './serialize';
+import { restore, serialize, type AppState } from './serialize';
 
 const fixturesPath = fileURLToPath(new URL('../../test/fixtures/legacy-links.json', import.meta.url));
 const { fixtures } = JSON.parse(readFileSync(fixturesPath, 'utf8'));
@@ -91,5 +91,60 @@ describe('restore() — mid-session id 충돌 방지 (index.html에서 실측 �
     expect(state.teams[0].steps.map(s => s.id)).toEqual(state.themes.map(t => t.id));
     // 다음 새 카드는 기존 세션의 10과 방금 복원한 3 중 더 큰 쪽보다 커야 한다.
     expect(state.nextId).toBe(10);
+  });
+});
+
+/* F-16 — "새로고침하면 감시 벨이 사라진다" 의 회귀 테스트.
+   복원은 raw 텍스트를 parseSessions()로 다시 읽는데 그 함수는 Session.id 를
+   만들지 않는다. 튜플 7번째 자리가 그걸 메운다 (serialize.ts themeExtra). */
+describe('serialize()↔restore() — 서버에서 불러온 회차의 slotId·출처가 살아남는다', () => {
+  const serverTheme = {
+    id: 1, name: '목격자', dur: 65, place: '플레이33 건대점',
+    raw: '10:35  13:00 매진  18:15  22:30 매진',
+    source: 'server',
+    sessions: [
+      { t: 635, soldout: false, id: 172 },
+      { t: 780, soldout: true, id: 173 },
+      { t: 1095, soldout: false, id: 174 },
+      { t: 1350, soldout: true, id: 175 },
+    ],
+  };
+  const state = (themes: any[]): AppState => ({
+    themes, moveMap: {}, sortKey: 'gap', teams: [], nextId: 9,
+    options: {
+      oStart: '', oEnd: '', oMinGap: '', oMaxGap: '', oPartial: false,
+      oMeal: false, oMealFrom: '', oMealTo: '', oMealMin: '',
+      oMove: '10', oTeam: false, oIncludeSoldout: false,
+    },
+  });
+
+  it('slotId 가 시각(t)으로 되붙고, 매진 여부도 그대로다 — 벨이 뜨는 조건 자체', () => {
+    const back = restore(serialize(state([serverTheme]))).themes[0];
+    expect(back.sessions.map(s => s.t)).toEqual([635, 780, 1095, 1350]);
+    expect(back.sessions.map(s => s.id)).toEqual([172, 173, 174, 175]);
+    expect(back.sessions.map(s => s.soldout)).toEqual([false, true, false, true]);
+    // 벨의 실제 조건 (ThemeCard/ResultCard)
+    expect(back.sessions.filter(s => s.soldout && s.id != null)).toHaveLength(2);
+  });
+
+  it('출처(source)도 살아남는다 — 예전에는 새로고침하면 manual 로 되돌아갔다', () => {
+    const back = restore(serialize(state([serverTheme]))).themes[0];
+    expect(back.source).toBe('server');
+  });
+
+  it('회차를 손으로 고쳐 없어진 시각의 id 는 그냥 안 붙는다 (엉뚱한 칩에 붙지 않는다)', () => {
+    const edited = { ...serverTheme, raw: '10:35  13:00 매진  19:00' };
+    const back = restore(serialize(state([edited]))).themes[0];
+    expect(back.sessions.map(s => s.t)).toEqual([635, 780, 1140]);
+    expect(back.sessions.map(s => s.id)).toEqual([172, 173, undefined]);
+  });
+
+  it('손으로 친 테마는 7번째 자리가 아예 안 붙는다 — 옛 링크와 바이트가 같다', () => {
+    const manual = {
+      id: 1, name: '방', dur: 70, place: '', raw: '10:00 12:00', source: 'manual',
+      sessions: [{ t: 600, soldout: false }, { t: 720, soldout: false }],
+    };
+    const json = JSON.parse(atob(serialize(state([manual])).replace(/-/g, '+').replace(/_/g, '/')));
+    expect(json.t[0]).toHaveLength(6);
   });
 });

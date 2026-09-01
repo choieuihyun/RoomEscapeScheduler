@@ -83,6 +83,33 @@ function placeList(themes: ThemeState[]): string[] {
     .sort((a, b) => a.localeCompare(b, 'ko'));
 }
 
+/* 튜플 7번째 자리(F-16). 6번째까지는 원본 index.html이 만든 바이트 그대로 두고,
+   여기서만 회차 단위 정보를 싣는다 — **필요한 테마에만 붙인다**(손으로 친 테마는
+   붙지 않아 옛 링크와 바이트가 완전히 같다).
+
+   왜 필요한가: 복원은 raw 텍스트를 parseSessions()로 다시 읽는데, 그 함수는
+   설계상 Session.id(감시 slotId)를 만들지 않는다(core.ts). 그래서 이 자리가
+   없으면 새로고침 한 번에 감시 벨이 통째로 사라졌다 — 서버에서 불러온 회차라는
+   사실(source)도 같이 날아가서 'manual'로 되돌아갔다.
+
+   id는 배열 순번이 아니라 **시각(t)으로 다시 붙인다.** 순번은 raw를 손으로 고쳐
+   회차 개수가 달라지면 조용히 어긋나지만, 시각으로 맞추면 없어진 회차는 그냥
+   안 붙고 끝난다. */
+interface ThemeExtra {
+  i?: [number, number][];   // [회차 시각(분), 서버 slotId]
+  s?: string;               // source — 'manual'/'' 은 복원이 알아서 채우므로 안 싣는다
+}
+
+function themeExtra(t: ThemeState): ThemeExtra | null {
+  const i = t.sessions.filter(s => s.id != null).map(s => [s.t, s.id as number] as [number, number]);
+  const s = t.source && t.source !== 'manual' ? t.source : undefined;
+  if (!i.length && !s) return null;
+  const ex: ThemeExtra = {};
+  if (i.length) ex.i = i;
+  if (s) ex.s = s;
+  return ex;
+}
+
 export function serialize(state: AppState): string {
   const ps = placeList(state.themes);
   const m: [string, string, number][] = [];
@@ -99,7 +126,11 @@ export function serialize(state: AppState): string {
        6번째 자리(id)는 F-14 이후 추가됐다: 팀 배정은 이 id로 회차를 가리키므로,
        빠지면 mid-session 복원 때 F-14 제외가 조용히 어긋난다 (실측으로 확인,
        index.html에서도 같은 이유로 고쳤다). */
-    t: state.themes.map(t => [t.name, t.dur, t.raw, 0, t.place || '', t.id]),
+    t: state.themes.map(t => {
+      const base = [t.name, t.dur, t.raw, 0, t.place || '', t.id];
+      const ex = themeExtra(t);
+      return ex ? [...base, ex] : base;
+    }),
     m,
     o: [
       o.oStart, o.oEnd, o.oMinGap, o.oMaxGap,
@@ -123,15 +154,25 @@ export function restore(hash: string, startId = 1): AppState {
 
   let nextId = startId;
   const themes: ThemeState[] = d.t.map(
-    ([name, dur, raw, _lock, place, id]: [string, number, string, number, string | undefined, number | undefined]) => {
+    ([name, dur, raw, _lock, place, id, ex]: [string, number, string, number, string | undefined, number | undefined, ThemeExtra | undefined]) => {
+      const sessions = parseSessions(raw || '');
+      /* 7번째 자리가 있으면 감시 slotId를 시각으로 되붙인다. 없는 옛 링크·자동저장은
+         그대로 통과한다(=지금까지의 동작). */
+      if (ex && Array.isArray(ex.i)) {
+        const byT = new Map<number, number>(ex.i);
+        for (const s of sessions) {
+          const slotId = byT.get(s.t);
+          if (slotId != null) s.id = slotId;
+        }
+      }
       const th: ThemeState = {
         id: id != null ? id : nextId++,
         name: name || '',
         dur,
         raw: raw || '',
         place: place || '',           // v1·v2 링크에는 없다 — 빈칸이면 이동시간이 안 붙는다
-        sessions: parseSessions(raw || ''),
-        source: raw ? 'manual' : '',
+        sessions,
+        source: (ex && ex.s) || (raw ? 'manual' : ''),
       };
       // _lock 은 옛 "자리 고정" 값 — §4.14 후기로 없어진 개념이라 읽지 않고 버린다
       return th;

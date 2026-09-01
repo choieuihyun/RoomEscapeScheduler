@@ -94,8 +94,12 @@ export function ago(iso: string | null): string {
   return `${Math.round(h / 24)}일 전 기준`;
 }
 
+/* 오름차순으로 세워서 돌려준다. 서버 응답 순서를 그대로 믿으면, 이 배열이
+   sessionsToText()로 글자가 됐다가 parseSessions()로 되돌아올 때(자동저장 복원)
+   §4.1-2의 "오전/오후 표기가 없으면 오름차순 가정" 보정이 걸려 시각이 12시간씩
+   밀린다. 정렬해 두면 그 보정이 아예 발동하지 않아 왕복이 정확해진다. */
 export function toSessions(ss: ServerSession[]): Session[] {
-  return ss.map(s => ({ t: s.t, soldout: !!s.soldout, id: s.id }));
+  return ss.map(s => ({ t: s.t, soldout: !!s.soldout, id: s.id })).sort((a, b) => a.t - b.t);
 }
 
 /* ── F-16 감시 API ── 인증이 필요한 유일한 엔드포인트들이라 get()과 갈라놨다.

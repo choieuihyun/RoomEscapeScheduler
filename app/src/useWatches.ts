@@ -54,13 +54,19 @@ export function useWatches(me: Me | null) {
     })();
   }, [me]);
 
+  /* 실패를 상태로만 두면 "빈자리 알림" 모달 안에서만 보인다(WatchListModal).
+     정작 벨을 누르는 곳은 회차 칩·타임라인 블록이라, 거기서 실패하면 벨이 조용히
+     원래대로 돌아갈 뿐 화면에 아무 말도 안 떴다 — 눌러도 아무 일이 없는 것처럼
+     보인다. 그래서 상태는 그대로 두고 alert 를 하나 더 띄운다. */
+  const fail = useCallback((msg: string) => { setErr(msg); alert(msg); }, []);
+
   const add = useCallback(async (slotId: number) => {
     setErr('');
     setBusyIds(s => new Set(s).add(slotId));
     try {
       const C = await cloud();
       const token = await C.idToken();
-      if (!token) { setErr('로그인하면 감시할 수 있어요.'); return; }
+      if (!token) { fail('로그인하면 감시할 수 있어요.'); return; }
       const w = await addWatch(slotId, token);
       setWatches(ws => (ws.some(x => x.id === w.id) ? ws : [w, ...ws]));
       setSlotToWatchId(m => new Map(m).set(slotId, w.id));
@@ -68,12 +74,16 @@ export function useWatches(me: Me | null) {
          감시 자체는 이미 성공했으니 err가 아니라 별도 안내로 보여준다. */
       const push = await requestPushPermission(token);
       setPushNote(push.ok ? '' : push.reason);
+      /* 감시 자체는 이미 성공했으므로 실패로 읽히지 않게 앞머리를 붙인다.
+         아이폰에서 홈 화면 추가 전에는 여기서만 알 수 있는 사실이라 조용히
+         두면 "알림이 왜 안 오지"로 남는다. */
+      if (!push.ok) alert('감시는 걸렸습니다. 다만 ' + push.reason);
     } catch (e) {
-      setErr(sayWatch(e));
+      fail(sayWatch(e));
     } finally {
       setBusyIds(s => { const n = new Set(s); n.delete(slotId); return n; });
     }
-  }, []);
+  }, [fail]);
 
   const remove = useCallback(async (watchId: number) => {
     setErr('');
@@ -90,10 +100,10 @@ export function useWatches(me: Me | null) {
         return n;
       });
     } catch (e) {
-      setErr(sayWatch(e));
+      fail(sayWatch(e));
       setBusyIds(s => { const n = new Set(s); n.delete(watchId); return n; });
     }
-  }, []);
+  }, [fail]);
 
   /* 칩/블록 토글용 — 이 세션에서 건 감시만 안다(위 주석 참고). */
   const removeBySlot = useCallback((slotId: number) => {
@@ -130,10 +140,18 @@ export function buildWatchControl(w: UseWatchesReturn, loggedIn: boolean): Watch
       const watchId = w.watchIdForSlot(slotId);
       return w.busyIds.has(slotId) || (watchId != null && w.busyIds.has(watchId));
     },
+    /* 막는 대신 말한다 — 벨을 disabled 로 두면 폰에서는 이유(title 툴팁)를
+       볼 방법이 없다(WatchBell 주석). 판정을 여기 한 군데 두면 회차 칩과
+       결과 타임라인 양쪽이 같은 문구를 쓴다. */
     toggle: slotId => {
       const watchId = w.watchIdForSlot(slotId);
-      if (watchId != null) w.remove(watchId);
-      else w.add(slotId);
+      if (watchId != null) { w.remove(watchId); return; }
+      if (!loggedIn) { alert('로그인하면 빈자리 알림을 걸 수 있어요.'); return; }
+      if (w.watches.length >= w.limit) {
+        alert(`빈자리 알림은 최대 ${w.limit}개까지만 걸 수 있어요.\n위쪽 "빈자리 알림" 에서 하나를 지우고 다시 걸어 주세요.`);
+        return;
+      }
+      w.add(slotId);
     },
   };
 }
