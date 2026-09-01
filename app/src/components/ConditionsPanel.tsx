@@ -1,4 +1,4 @@
-import { pad } from '../core';
+import { mdWeekday, pad } from '../core';
 import type { Scheduler } from '../scheduler/useScheduler';
 import { MoveTimeGrid, moveHint } from './MoveTimeGrid';
 import { TeamPanel } from './TeamPanel';
@@ -6,6 +6,10 @@ import { TimePicker } from './TimePicker';
 
 export function ConditionsPanel({ s }: { s: Scheduler }) {
   const hint = moveHint(s);
+  /* 3연방은 보통 같은 날 몰아서 도는데, 세션 시각엔 날짜가 없어(core.ts) 서버에서
+     불러온 테마끼리 날짜가 섞여도 계산 자체는 막을 방법이 없다 — 계산 전에
+     눈에 띄게 알린다(§4.13/§4.39와 같은 "막지 말고 말한다" 원칙, §4.41). */
+  const mismatchDates = [...new Set(s.themes.map(t => t.date).filter((d): d is string => !!d))];
 
   return (
     <section className="sec">
@@ -76,6 +80,11 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
         <span className="lb">분 이상 공백을 남긴다</span>
       </div>
       <TeamPanel s={s} />
+      {mismatchDates.length > 1 && (
+        <p className="datewarn">
+          ⚠ 테마마다 날짜가 달라요 ({mismatchDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날 회차로 맞춰야 정확한 조합이 나옵니다.
+        </p>
+      )}
       <div className="run">
         <button className="btn-go" id="go" type="button" onClick={() => s.runSearch()}>조합 계산</button>
         <button className="btn" id="shareBtn" type="button" onClick={s.copyShareLink}>링크 복사</button>

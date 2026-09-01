@@ -42,6 +42,7 @@ export interface AddedTheme {
   dur: number;
   sessions: Session[];
   fresh: string;
+  date?: string;
 }
 
 interface PickedEntry {
@@ -150,7 +151,7 @@ export function useLoadModal(onAdd: (items: AddedTheme[]) => void) {
   const addPicked = useCallback(() => {
     const items: AddedTheme[] = [...pickedItems.values()].map(p => ({
       name: p.theme.name, place: p.theme.place || '', dur: p.theme.dur || 70,
-      sessions: toSessions(p.theme.sessions), fresh: p.fresh,
+      sessions: toSessions(p.theme.sessions), fresh: p.fresh, date: p.date,
     }));
     onAdd(items);
     setPickedItems(new Map());

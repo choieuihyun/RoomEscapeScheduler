@@ -278,6 +278,9 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .chk input{width:17px;height:17px;accent-color:var(--blue);cursor:pointer}
 .run{display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap}
 .run .note{font-size:13px;color:var(--ink3)}
+.datewarn{font-size:13px;color:var(--amber-text);background:var(--amber-soft);
+  border:1px solid var(--amber-line);border-radius:var(--r-sm);
+  padding:8px 12px;margin-top:10px;line-height:1.5}
 
 /* ── result tabs ── */
 .tabrow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
@@ -598,6 +601,9 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .cal-detail{min-height:52px}
 .cal-detail .pbtns{display:flex;gap:6px;align-items:center;flex:none}
 .cal-detail .pbtns .btn{padding:6px 12px;font-size:12.5px;border-radius:var(--pill)}
+.cal-daysched{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.cal-daysched .branch-h{font-size:12.5px;font-weight:700;color:var(--ink2);margin:10px 0 4px}
+.cal-daysched>div:first-child .branch-h{margin-top:0}
 
 .tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
 .tour-spot{position:fixed;z-index:80;border-radius:14px;pointer-events:none;

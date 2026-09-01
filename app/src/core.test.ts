@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   fmt,
+  mdWeekday,
   monthGrid,
   moveCost,
   pairKey,
@@ -419,5 +420,12 @@ describe('[9] 캘린더 그리드 유틸', () => {
     const isos = grid.map(toISO);
     expect(isos).toContain('2026-02-28');
     expect(isos.filter(d => d.startsWith('2026-02')).length).toBe(28);
+  });
+});
+
+describe('[10] mdWeekday — 테마 카드 날짜 표시 (§4.41)', () => {
+  it('"YYYY-MM-DD"를 "M/D(요일)"로', () => {
+    expect(mdWeekday('2026-09-01')).toBe('9/1(화)');
+    expect(mdWeekday('2026-09-03')).toBe('9/3(목)');
   });
 });

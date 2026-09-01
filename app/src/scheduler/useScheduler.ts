@@ -39,7 +39,7 @@ export function useScheduler() {
   const restoredOnMount = useRef(false);
 
   const serializeNow = useCallback(() => serialize({
-    themes: themes.map(t => ({ id: t.id, name: t.name, dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source })),
+    themes: themes.map(t => ({ id: t.id, name: t.name, dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source, date: t.date })),
     moveMap, options, sortKey, teams, nextId: nextId.current,
   }), [themes, moveMap, options, sortKey, teams]);
 
@@ -47,7 +47,7 @@ export function useScheduler() {
     const state = restore(hash);
     setThemes(state.themes.map(t => ({
       ...blankTheme(t.id, t.name),
-      dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source,
+      dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source, date: t.date,
     })));
     nextId.current = state.nextId;
     setMoveMap(state.moveMap);
@@ -108,7 +108,7 @@ export function useScheduler() {
      fresh는 항목마다 다르다 — 매장 A·B·C에서 하나씩 골랐다면 지점마다 서버가
      확인한 시각이 다르므로, 공통 값 하나로 뭉뚱그리지 않는다. */
   const addServerThemes = useCallback((
-    items: { name: string; place: string; dur: number; sessions: Session[]; fresh: string }[],
+    items: { name: string; place: string; dur: number; sessions: Session[]; fresh: string; date?: string }[],
   ) => {
     setThemes(ts => [
       ...ts,
@@ -117,7 +117,7 @@ export function useScheduler() {
         return {
           ...blankTheme(nextId.current++, it.name),
           place: it.place, dur: it.dur || 70, sessions,
-          raw: sessionsToText(sessions), source: 'server', fresh: it.fresh,
+          raw: sessionsToText(sessions), source: 'server', fresh: it.fresh, date: it.date,
         };
       }),
     ]);

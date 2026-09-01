@@ -1,8 +1,10 @@
+import { mdWeekday } from '../core';
 import type { LoadModalState } from '../useLoadModal';
 
 /* F-15 "회차 불러오기" 모달. index.html의 #loadModal 마크업 이식. */
 export function LoadModal({ m }: { m: LoadModalState }) {
   const ppl = parseInt(m.people, 10);
+  const pickedDates = [...new Set([...m.pickedItems.values()].map(p => p.date).filter(Boolean))];
 
   return (
     <div
@@ -69,11 +71,16 @@ export function LoadModal({ m }: { m: LoadModalState }) {
           <div className="loadpicked">
             {[...m.pickedItems.values()].map(p => (
               <span key={p.key} className="pickedchip">
-                {p.theme.name} <i className="dim">· {p.branchLabel}</i>
+                {p.theme.name} <i className="dim">· {p.branchLabel} · {mdWeekday(p.date)}</i>
                 <button type="button" title="선택 해제" onClick={() => m.removePicked(p.key)}>×</button>
               </span>
             ))}
           </div>
+        )}
+        {pickedDates.length > 1 && (
+          <p className="datewarn">
+            ⚠ 선택한 회차의 날짜가 서로 달라요 ({pickedDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날 회차로 맞춰야 정확한 조합이 나옵니다.
+          </p>
         )}
         <div className="loadfoot">
           <span>{m.pickedItems.size ? `${m.pickedItems.size}개 선택됨 — 지점을 바꿔도 유지됩니다` : ''}</span>

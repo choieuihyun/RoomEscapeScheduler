@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fmt, monthGrid, toISO, WEEKDAYS } from '../core';
 import type { Plan } from '../cloud';
-import type { WatchDto } from '../server';
+import { toSessions, type WatchDto } from '../server';
 import type { UseAuthReturn } from '../useAuth';
 import type { UsePlansReturn } from '../usePlans';
 import type { UseWatchesReturn } from '../useWatches';
 import type { UseCalendarModalReturn } from '../useCalendarModal';
+import { useDaySchedule } from '../useDaySchedule';
 import type { Scheduler } from '../scheduler/useScheduler';
 
 interface DayEntry { plans: Plan[]; watches: WatchDto[] }
@@ -76,6 +77,47 @@ function WatchDetailRow({ w, watches }: { w: WatchDto; watches: UseWatchesReturn
   );
 }
 
+const DAYSCHED_SHOW = 6;
+
+/* 서버가 수집해 둔 지점이 30곳을 넘어가는 날도 있어(2026-09-01 실측 34곳),
+   전부 한 번에 펼치면 상세 패널이 끝없이 길어진다. ResultsPanel.tsx의
+   "더 보기"(showMore/.showmore/.morebtn)와 같은 패턴 — 네트워크는 이미
+   한 번에 다 받아 왔으니(day.load) 여기선 화면에 보여줄 개수만 늘린다. */
+function DaySchedSection({ iso, day }: { iso: string; day: ReturnType<typeof useDaySchedule> }) {
+  const [show, setShow] = useState(DAYSCHED_SHOW);
+  const entry = day.cache.get(iso);
+  if (entry === undefined || entry === 'loading') {
+    return entry === 'loading' ? <div className="lmsg">회차 확인 중…</div> : null;
+  }
+  if (entry.length === 0) return null;
+  const visible = entry.slice(0, show);
+  return (
+    <div className="cal-daysched">
+      {day.listErr && <p className="mnote">{day.listErr}</p>}
+      {visible.map(({ branch, themes }) => (
+        <div key={branch.id}>
+          <p className="branch-h">{branch.store} {branch.branch}</p>
+          {themes.map(theme => (
+            <div key={theme.id} className="parsed">
+              <span className="li-m">{theme.name}</span>
+              {toSessions(theme.sessions).map((sess, i) => (
+                <span key={i} className={'t' + (sess.soldout ? ' so' : '')}>{fmt(sess.t)}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+      ))}
+      {entry.length > visible.length && (
+        <div className="showmore">
+          <button className="btn morebtn" type="button" onClick={() => setShow(n => n + DAYSCHED_SHOW)}>
+            더 보기 ({Math.min(DAYSCHED_SHOW, entry.length - visible.length)}개 지점 더 · 전체 {entry.length}곳)
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CalendarModal({
   ctl, plans, watches, auth, s,
 }: {
@@ -83,6 +125,10 @@ export function CalendarModal({
 }) {
   const grid = useMemo(() => monthGrid(ctl.cursor.y, ctl.cursor.m), [ctl.cursor.y, ctl.cursor.m]);
   const today = useMemo(() => toISO(new Date()), []);
+  const day = useDaySchedule(ctl.open);
+  useEffect(() => {
+    if (ctl.open && ctl.selected) day.load(ctl.selected);
+  }, [ctl.open, ctl.selected, day.load]);
   const byDate = useMemo(() => {
     const m = new Map<string, DayEntry>();
     const get = (k: string) => m.get(k) ?? (m.set(k, { plans: [], watches: [] }), m.get(k)!);
@@ -139,6 +185,7 @@ export function CalendarModal({
               {selEntry.watches.map(w => <WatchDetailRow key={w.id} w={w} watches={watches} />)}
             </>
           )}
+          {ctl.selected && <DaySchedSection key={ctl.selected} iso={ctl.selected} day={day} />}
         </div>
 
         <div className="mbtns">

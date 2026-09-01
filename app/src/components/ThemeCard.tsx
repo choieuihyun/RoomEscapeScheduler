@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { fmt } from '../core';
+import { fmt, mdWeekday } from '../core';
 import type { Theme } from '../scheduler/types';
 import type { WatchControl } from '../useWatches';
 import { WatchBell } from './WatchBell';
@@ -55,7 +55,11 @@ function ParsedSessions({ th, watchCtl }: { th: Theme; watchCtl?: WatchControl }
       ) : fixed ? (
         <span className="note">파란색은 12시간 보정된 값입니다 (예: 1:10 → 13:10)</span>
       ) : null}
-      {th.fresh && <span className="note">서버에서 불러온 값입니다 · {th.fresh}</span>}
+      {(th.fresh || th.date) && (
+        <span className="note">
+          서버에서 불러온 값입니다{th.fresh && <> · {th.fresh}</>}{th.date && <> · <b>{mdWeekday(th.date)}</b> 회차</>}
+        </span>
+      )}
       {th.source.startsWith('image') && (
         <span className="warn">사진에서 읽은 값입니다 — 시간이 제대로 맞는지 한 번 확인해 주세요. 인식이 부정확할 수 있습니다.</span>
       )}

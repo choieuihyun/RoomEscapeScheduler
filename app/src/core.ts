@@ -31,6 +31,15 @@ export function monthGrid(year: number, month: number): Date[] {
   return Array.from({ length: cells }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
 }
 
+/* "YYYY-MM-DD" → "9/1(화)". useLoadModal.ts의 dateLabel()과 달리 오늘/내일 같은
+   상대 표현 없이 날짜만 — 테마 카드 사이의 날짜 불일치를 한눈에 비교하려는
+   용도라 "오늘"보다 실제 날짜가 더 유용하다. */
+export function mdWeekday(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${m}/${d}(${WEEKDAYS[dt.getDay()]})`;
+}
+
 /* ── 회차 텍스트 파싱 ── */
 export interface Session {
   t: number;

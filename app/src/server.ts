@@ -61,7 +61,7 @@ export interface ServerTheme {
   sessions: ServerSession[];
 }
 
-interface ScheduleResponse {
+export interface ScheduleResponse {
   store: string;
   branch: string;
   date: string;

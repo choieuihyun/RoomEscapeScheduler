@@ -147,4 +147,15 @@ describe('serialize()↔restore() — 서버에서 불러온 회차의 slotId·�
     const json = JSON.parse(atob(serialize(state([manual])).replace(/-/g, '+').replace(/_/g, '/')));
     expect(json.t[0]).toHaveLength(6);
   });
+
+  it('날짜(date)도 살아남는다 — 테마 간 날짜 불일치 경고(§4.41)가 새로고침 후에도 유지된다', () => {
+    const dated = { ...serverTheme, date: '2026-09-02' };
+    const back = restore(serialize(state([dated]))).themes[0];
+    expect(back.date).toBe('2026-09-02');
+  });
+
+  it('날짜 없는 서버 테마는 date가 undefined로 복원된다', () => {
+    const back = restore(serialize(state([serverTheme]))).themes[0];
+    expect(back.date).toBeUndefined();
+  });
 });
