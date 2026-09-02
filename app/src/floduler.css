@@ -44,6 +44,14 @@
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,
          'Apple SD Gothic Neo','Segoe UI','Malgun Gothic',system-ui,sans-serif;
   --num:ui-monospace,SFMono-Regular,'SF Mono',Menlo,monospace;
+
+  /* 원목 데스크 배경 — 카드 "밖" 여백에만 보이는 질감(카드 자체는 --surface로 계속
+     평평하다). --wood-noise는 feTurbulence로 만든 결 노이즈(SVG data URI), 나머지는
+     그 위에 깔리는 판자 그러데이션+이음새. 값은 헤드리스로 확인한 우드 목업과 동일. */
+  --wood-1:#a97c46; --wood-2:#caa06a; --wood-3:#e3c191;
+  --wood-seam:rgba(0,0,0,.14); --wood-seam2:rgba(0,0,0,.07);
+  --wood-noise-blend:multiply;
+  --wood-noise:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSczMDAnIGhlaWdodD0nMzAwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjAxMiAwLjQnIG51bU9jdGF2ZXM9JzQnIHNlZWQ9JzExJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdtYXRyaXgnIHZhbHVlcz0nMCAwIDAgMCAwLjI4ICAwIDAgMCAwIDAuMTQgIDAgMCAwIDAgMC4wMiAgMCAwIDAgMC41NSAwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJy8+Cjwvc3ZnPgo=");
 }
 
 /* ── 다크 모드 ──────────────────────────────────────────
@@ -74,6 +82,11 @@
     --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
     --sh-up:0 8px 24px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
     --ring:0 0 0 3px rgba(123,133,232,.3);
+
+    --wood-1:#2e1c0e; --wood-2:#4a2f18; --wood-3:#6e4726;
+    --wood-seam:rgba(0,0,0,.4); --wood-seam2:rgba(0,0,0,.22);
+    --wood-noise-blend:overlay;
+    --wood-noise:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSczMDAnIGhlaWdodD0nMzAwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjAxMiAwLjQnIG51bU9jdGF2ZXM9JzQnIHNlZWQ9JzExJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdtYXRyaXgnIHZhbHVlcz0nMCAwIDAgMCAwLjA1ICAwIDAgMCAwIDAuMDIgIDAgMCAwIDAgMCAgMCAwIDAgMC44NSAwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJy8+Cjwvc3ZnPgo=");
   }
 }
 :root[data-theme="dark"]{
@@ -99,11 +112,29 @@
   --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
   --sh-up:0 8px 24px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
   --ring:0 0 0 3px rgba(123,133,232,.3);
+
+  --wood-1:#2e1c0e; --wood-2:#4a2f18; --wood-3:#6e4726;
+  --wood-seam:rgba(0,0,0,.4); --wood-seam2:rgba(0,0,0,.22);
+  --wood-noise-blend:overlay;
+  --wood-noise:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSczMDAnIGhlaWdodD0nMzAwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjAxMiAwLjQnIG51bU9jdGF2ZXM9JzQnIHNlZWQ9JzExJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdtYXRyaXgnIHZhbHVlcz0nMCAwIDAgMCAwLjA1ICAwIDAgMCAwIDAuMDIgIDAgMCAwIDAgMCAgMCAwIDAgMC44NSAwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJy8+Cjwvc3ZnPgo=");
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+/* 원목 데스크 — 카드(.card/.res/.mbox 등)는 전부 자기 --surface 배경을 갖고 있어
+   그 위에 얹힌 종이처럼 그대로 클린하게 남는다. body는 그 카드들 "밖" 여백에서만
+   보인다(.sec은 자기 배경이 없어 34px 섹션 간격에 그대로 비친다). background-attachment:
+   fixed로 스크롤해도 책상은 그 자리에 있는 느낌을 준다. */
 body{
-  background:var(--bg); color:var(--ink);
+  background-color:var(--wood-2); color:var(--ink);
+  background-image:
+    var(--wood-noise),
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.08)),
+    repeating-linear-gradient(90deg, var(--wood-seam) 0 1px, transparent 1px 140px, var(--wood-seam2) 140px 142px, transparent 142px 260px),
+    linear-gradient(180deg, var(--wood-3) 0%, var(--wood-2) 55%, var(--wood-1) 100%);
+  background-repeat:repeat, no-repeat, repeat-x, no-repeat;
+  background-size:240px 240px, 100% 100%, 260px 100%, 100% 100%;
+  background-blend-mode:var(--wood-noise-blend), normal, normal, normal;
+  background-attachment:fixed;
   font-family:var(--sans);
   font-size:14px; line-height:1.6; letter-spacing:-.01em;
   -webkit-font-smoothing:antialiased;
@@ -117,13 +148,17 @@ body{
 header{padding:32px 0 26px}
 h1{font-size:30px;font-weight:800;letter-spacing:-.035em;margin:0 0 8px;color:var(--ink)}
 h1 .dim{color:var(--blue-text)}
-header p{margin:0;color:var(--ink3);font-size:14px;max-width:52ch}
+/* --ink3는 원래 "카드 위의 흐린 캡션"용으로 잡은 값이라, 원목 배경(§4.43)처럼 대비가
+   낮은 바탕에 직접 얹히면 거의 안 보인다. 카드/모달처럼 자기 --surface를 가진 곳의
+   --ink3는 그대로 두고, body(원목)에 직접 얹히는 이 캡션들만 --ink2로 한 단계 진하게
+   — 실측(헤드리스 라이트 모드 스크린샷)으로 확인한 대비 문제. */
+header p{margin:0;color:var(--ink2);font-size:14px;max-width:52ch}
 
 /* ── sections ── */
 .sec{margin-bottom:34px}
 .sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .sec-head h2{font-size:18px;font-weight:700;letter-spacing:-.03em;color:var(--ink);margin:0}
-.sec-head span{font-size:13px;color:var(--ink3)}
+.sec-head span{font-size:13px;color:var(--ink2)}
 .sec-head .hi{color:var(--ink2);font-weight:600}
 .sec-head .count{font-size:12.5px;color:var(--blue-press);font-weight:700;
   background:var(--blue-soft);border:none;border-radius:var(--pill);padding:3px 11px}
@@ -131,13 +166,16 @@ header p{margin:0;color:var(--ink3);font-size:14px;max-width:52ch}
 /* ── theme cards ── */
 .themes{display:flex;flex-direction:column;gap:12px}
 .addrow{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
-.addhint{font-size:12.5px;color:var(--ink3)}
+.addhint{font-size:12.5px;color:var(--ink2)}
 .addhint b{color:var(--ink2);font-weight:600}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   border-left-width:3px;border-left-color:var(--accent,var(--line));
   padding:18px;box-shadow:var(--sh);
-  transition:box-shadow .15s,border-color .15s,opacity .15s,transform .15s}
-.card:hover{border-color:var(--line2);border-left-color:var(--accent,var(--line2))}
+  transition:box-shadow .15s,border-color .15s,opacity .15s,transform .22s cubic-bezier(.34,1.56,.64,1)}
+/* 원목 데스크 위에서 카드를 손으로 살짝 들어올리는 느낌 — 스프링 이징이라 살짝
+   오버슈트했다 자리잡는다. 드래그 중(.dragging)의 transform과는 별개 상태라 충돌 없음. */
+.card:hover{border-color:var(--line2);border-left-color:var(--accent,var(--line2));
+  transform:translateY(-2px) scale(1.012);box-shadow:var(--sh-up)}
 .card.drag{border-color:var(--blue);background:var(--surface)}
 .card-top{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 
@@ -184,6 +222,8 @@ textarea{width:100%;min-height:66px;resize:vertical;
 /* ── buttons ── */
 button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.13s;
   letter-spacing:-.01em}
+/* 눌렀다는 걸 손끝으로 느끼게 — 모든 버튼 공통(단, disabled는 :active 자체가 안 걸린다) */
+button:active{transform:scale(.97)}
 .btn{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);
   padding:9px 15px;font-size:13.5px;font-weight:500}
 .btn:hover{background:var(--line);border-color:var(--line2);color:var(--ink)}
@@ -278,7 +318,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   cursor:pointer;font-weight:500}
 .chk input{width:17px;height:17px;accent-color:var(--blue);cursor:pointer}
 .run{display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap}
-.run .note{font-size:13px;color:var(--ink3)}
+.run .note{font-size:13px;color:var(--ink2)}
 .datewarn{font-size:13px;color:var(--amber-text);background:var(--amber-soft);
   border:1px solid var(--amber-line);border-radius:var(--r-sm);
   padding:8px 12px;margin-top:10px;line-height:1.5}
@@ -304,8 +344,10 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 
 /* ── results ── */
 .res{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
-  margin-bottom:12px;overflow:hidden;box-shadow:var(--sh);transition:border-color .15s}
-.res:hover{border-color:var(--line2)}
+  margin-bottom:12px;overflow:hidden;box-shadow:var(--sh);
+  transition:border-color .15s,transform .22s cubic-bezier(.34,1.56,.64,1);
+  animation:resultIn .32s cubic-bezier(.34,1.56,.64,1) both}
+.res:hover{border-color:var(--line2);transform:translateY(-2px) scale(1.008)}
 .res.best{border-color:var(--blue-line);box-shadow:0 0 0 1px var(--blue-line),0 6px 22px rgba(94,106,210,.12)}
 .res-head{display:flex;align-items:center;gap:14px;padding:14px 18px;
   border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -345,6 +387,9 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 /* 이름이 블록보다 길면 잘라내지 않고 좌우로 천천히 훑는다 (--shift = 넘친 만큼) */
 .blk .nm.roll i{animation:roll 6s ease-in-out infinite alternate}
 @keyframes roll{from{transform:translateX(0)}to{transform:translateX(var(--shift,0))}}
+/* 결과 카드가 계산되는 순간 순차적으로 나타난다 — ResultCard.tsx가 순위(rank)로
+   animation-delay를 인라인으로 얹는다. */
+@keyframes resultIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .blk .rng{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:11px;
   font-weight:500;color:var(--ink2);white-space:nowrap;overflow:hidden;letter-spacing:-.02em}
 .blk.so{border-style:dashed;border-color:var(--red-line);background:var(--red-soft)}
@@ -399,12 +444,14 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}
   .blk .nm.roll i{animation:none}
-  .blk .nm{text-overflow:ellipsis}}
+  .blk .nm{text-overflow:ellipsis}
+  .res{animation:none}
+  .card:hover,.res:hover{transform:none}}
 
 /* ── 계정 · 내 일정 ─────────────────────────────────────
    로그인은 부가 기능이다. 꺼져 있어도(설정 전이어도) 위 도구는 그대로 돌아간다. */
 .acct{display:flex;justify-content:flex-end;align-items:center;gap:10px;
-  padding-top:18px;font-size:13px;color:var(--ink3);min-height:28px;flex-wrap:wrap}
+  padding-top:18px;font-size:13px;color:var(--ink2);min-height:28px;flex-wrap:wrap}
 .acct b{color:var(--ink);font-weight:700}
 .acct .btn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
 .acct .btn:hover{background:var(--surface2)}
@@ -503,11 +550,11 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .placerow{display:flex;align-items:center;gap:9px;margin:0 0 10px}
 .plb{font-size:12.5px;color:var(--ink3);flex:none;font-weight:500}
 .i-place{flex:1;min-width:120px;font-size:13.5px}
-.movehint{margin:12px 0 0;font-size:12.5px;color:var(--ink3);line-height:1.6}
+.movehint{margin:12px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.6}
 .movehint b{color:var(--ink2);font-weight:700}
 .movehint.on{color:var(--ink2)}
 .movehint.on b{color:var(--amber-text)}
-.movehint .dimhint{color:var(--ink3);font-weight:400}
+.movehint .dimhint{color:var(--ink2);font-weight:400}
 
 /* 이동 구간은 공백 앞쪽에 겹쳐 칠한다 — "끝나자마자 걷는다" 가 눈에 보이게 */
 .mv{position:absolute;top:0;height:50px;border-radius:var(--r-xs) 0 0 var(--r-xs);
@@ -553,7 +600,7 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
 .tourbtn:hover{background:var(--surface2)}
 
 .nav-item{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:13px;
-  font-weight:500;color:var(--ink3);white-space:nowrap;border-radius:var(--r-sm);
+  font-weight:500;color:var(--ink2);white-space:nowrap;border-radius:var(--r-sm);
   background:none;border:none;font-family:inherit}
 .nav-item.disabled{cursor:not-allowed;opacity:.55}
 .nav-item:not(.disabled){cursor:pointer}

@@ -47,7 +47,11 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
   const tight = r.minWait < 10;
 
   return (
-    <div className={'res' + (rank === 0 ? ' best' : '')}>
+    <div
+      className={'res' + (rank === 0 ? ' best' : '')}
+      /* 카드 등장 애니메이션(.res, resultIn)의 순차 딜레이 — 8개부터는 한꺼번에 (§4.43) */
+      style={{ animationDelay: `${Math.min(rank, 8) * 30}ms` }}
+    >
       <div className="res-head">
         <span className="rank">{String(rank + 1).padStart(2, '0')}</span>
         <span className="stat"><b className="mono">{fmt(r.start)} → {fmt(r.end)}</b></span>
