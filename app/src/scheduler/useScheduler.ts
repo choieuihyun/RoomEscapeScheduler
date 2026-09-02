@@ -3,7 +3,10 @@ import {
   fmt, pairKey, parseClock, parseSessions, search, sessionsToText,
   type SearchOutcome, type SearchResultRow, type SearchTheme, type Session, type SortDef,
 } from '../core';
-import { restore, serialize, type OptionsState, type TeamState } from '../serialize';
+import {
+  inflateShare, readShareHash, restore, serialize, shareHash,
+  type AppState, type OptionsState, type TeamState,
+} from '../serialize';
 import { blankTheme, type Theme } from './types';
 import { OcrError, recognizeSessions } from '../ocr';
 
@@ -37,11 +40,21 @@ export function useScheduler() {
   const [runNote, setRunNote] = useState('');
   const lastSnapshot = useRef<string | null>(null);
   const restoredOnMount = useRef(false);
+  /* restoredOnMount 와 나눠 둔 이유: 그건 "이 effect 가 이미 돌았나"(중복 실행 방지)
+     이고, 이건 "복원이 실제로 끝났나"(자동저장 개폐)다. #z= 복원이 async 가 되면서
+     둘이 갈렸다 — 예전처럼 하나로 쓰면 ref 가 먼저 켜져 400ms 디바운스가 **빈
+     상태를 받는 사람 자동저장 위에 덮어쓴다.** */
+  const hydrated = useRef(false);
 
-  const serializeNow = useCallback(() => serialize({
+  /* serializeNow 에서 상태 조립만 떼어냈다 — 공유 링크(#z=)는 base64 문자열이
+     아니라 AppState 를 받아야 압축할 수 있기 때문. 조립 규칙이 두 벌이 되면
+     둘이 어긋나므로 한 곳에 둔다. */
+  const stateNow = useCallback((): AppState => ({
     themes: themes.map(t => ({ id: t.id, name: t.name, dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source, date: t.date })),
     moveMap, options, sortKey, teams, nextId: nextId.current,
   }), [themes, moveMap, options, sortKey, teams]);
+
+  const serializeNow = useCallback(() => serialize(stateNow()), [stateNow]);
 
   const hydrate = useCallback((hash: string) => {
     const state = restore(hash);
@@ -72,26 +85,56 @@ export function useScheduler() {
     }
   }, [hydrate]);
 
-  /* 공유 링크(#s=) 우선, 없으면 자동저장(localStorage) — index.html의 init 순서와 동일 (§4.16/§4.26) */
+  /* 공유 링크 우선, 없으면 자동저장(localStorage) — index.html의 init 순서와 동일
+     (§4.16/§4.26). 읽는 형식은 두 가지다: #s=(그대로) · #z=(deflate, serialize.ts).
+
+     **`#` 에 페이로드가 실려 있으면 그건 공유 링크다 — 우리가 읽을 수 있든 없든.**
+     예전엔 `#s=` 로 시작하지 않으면 곧장 else 로 떨어져 **받는 사람 자신의
+     자동저장**을 복원했다. 에러도 안내도 없이 화면이 멀쩡히 채워지니, 공유받은
+     게 아니라는 걸 알 방법이 없었다 — "조회 실패와 결과 없음을 같은 값으로 두지
+     않는다" 가 프론트에서 깨지던 자리다. 옛 번들을 캐시한 사람이 #z= 를 받는
+     경우가 정확히 이 상황이라, **쓰기를 켜기 전에 이 가드가 먼저 퍼져 있어야
+     한다.** 지금은 못 읽으면 말하고, 자동저장은 (지우지 않고) 대신 띄운다. */
   useEffect(() => {
     if (restoredOnMount.current) return;
     restoredOnMount.current = true;
-    if (location.hash.startsWith('#s=')) {
-      try { hydrate(location.hash.slice(3)); }
-      catch (err) { console.warn('링크 복원 실패:', (err as Error).message); }
-    } else {
+
+    /* 복원했으면 true. 실패 안내 문구가 "마지막 작업 상태를 띄워 뒀다"고 말하려면
+       실제로 띄웠는지를 알아야 한다 — 자동저장이 없는 첫 방문자에게 그 문장은
+       거짓말이고, 안내를 못 믿게 만든다. */
+    const fromAutosave = () => {
       const saved = localStorage.getItem(AUTOSAVE_KEY);
-      if (saved) {
-        try { hydrate(saved); }
-        catch (err) { console.warn('저장된 상태 복원 실패:', (err as Error).message); }
+      if (!saved) return false;
+      try { hydrate(saved); return true; }
+      catch (err) { console.warn('저장된 상태 복원 실패:', (err as Error).message); return false; }
+    };
+
+    const share = readShareHash(location.hash);
+    if (share.kind === 'none') { fromAutosave(); hydrated.current = true; return; }
+
+    (async () => {
+      try {
+        if (share.kind === 'plain') hydrate(share.payload);
+        else if (share.kind === 'packed') hydrate(await inflateShare(share.payload));
+        else throw new Error(`알 수 없는 링크 형식(#${share.tag}=)`);
+      } catch (err) {
+        console.warn('링크 복원 실패:', (err as Error).message);
+        const fellBack = fromAutosave();
+        setRunNote(
+          '이 공유 링크를 열지 못했습니다 — 링크가 중간에 잘렸거나, 이 브라우저가 아직 모르는 형식입니다. '
+          + '새로고침해도 그대로면 링크를 다시 받아 주세요.'
+          + (fellBack ? ' 우선 마지막 작업 상태를 띄워 뒀습니다.' : ''),
+        );
+      } finally {
+        hydrated.current = true;
       }
-    }
+    })();
   }, [hydrate]);
 
   /* 400ms 디바운스 자동저장 — index.html의 scheduleAutosave(), 위임 리스너 대신
      상태 변화를 직접 의존성으로 건다(동등한 효과). */
   useEffect(() => {
-    if (!restoredOnMount.current) return;
+    if (!hydrated.current) return;   // 복원 전에는 안 쓴다 — 위 hydrated 주석 참고
     const t = setTimeout(() => {
       try { localStorage.setItem(AUTOSAVE_KEY, serializeNow()); } catch { /* 저장공간 꽉 참 등 */ }
     }, 400);
@@ -307,18 +350,21 @@ export function useScheduler() {
   }, []);
   const showMore = useCallback(() => setShowCount(c => c + SHOW), []);
 
+  /* 해시 형식은 shareHash() 가 정한다(#s= / #z=) — 여기서 형식을 다시 판단하면
+     스위치가 두 곳이 된다. 클립보드가 막힌 경로도 **같은 해시**를 쓴다. */
   const copyShareLink = useCallback(async () => {
-    const url = location.origin + location.pathname + '#s=' + serializeNow();
+    const h = await shareHash(stateNow());
+    const url = location.origin + location.pathname + '#' + h;
     try {
       await navigator.clipboard.writeText(url);
       setRunNote('링크를 복사했습니다.');
       return true;
     } catch {
-      location.hash = 's=' + serializeNow();
+      location.hash = h;
       setRunNote('복사가 막혀 주소창에 넣었습니다. 주소창 링크를 복사해 주세요.');
       return false;
     }
-  }, [serializeNow]);
+  }, [stateNow]);
 
   return {
     themes, addTheme, addServerThemes, updateTheme, updateRaw, deleteTheme, reorderTheme, attachImages,

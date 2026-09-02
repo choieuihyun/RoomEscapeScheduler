@@ -68,14 +68,15 @@ export interface AppState {
   nextId: number;
 }
 
-const b64e = (str: string) =>
-  btoa(Array.from(new TextEncoder().encode(str), c => String.fromCharCode(c)).join(''))
+const bytesToB64 = (b: Uint8Array) =>
+  btoa(Array.from(b, c => String.fromCharCode(c)).join(''))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-const b64d = (str: string) =>
-  new TextDecoder().decode(
-    Uint8Array.from(atob(str.replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0)),
-  );
+const b64ToBytes = (str: string) =>
+  Uint8Array.from(atob(str.replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0));
+
+const b64e = (str: string) => bytesToB64(new TextEncoder().encode(str));
+const b64d = (str: string) => new TextDecoder().decode(b64ToBytes(str));
 
 /* 지금 상태에 등장하는 매장 이름만, 한국어 로케일로 정렬해 꺼낸다.
    (index.html의 placeList() — 지운 매장 값까지 링크에 끌고 다니지 않기 위함) */
@@ -115,6 +116,13 @@ function themeExtra(t: ThemeState): ThemeExtra | null {
 }
 
 export function serialize(state: AppState): string {
+  return b64e(payloadJson(state));
+}
+
+/* serialize() 에서 base64 만 벗겨낸 것. #z=(압축 공유 링크)도 **이 JSON 을 그대로**
+   싣는다 — 운반 방법만 다르고 내용은 한 바이트도 안 다르다. 이 파일 첫 주석의
+   바이트 호환 약속이 지켜지는 근거가 여기다. */
+function payloadJson(state: AppState): string {
   const ps = placeList(state.themes);
   const m: [string, string, number][] = [];
   for (let i = 0; i < ps.length; i++) {
@@ -124,7 +132,7 @@ export function serialize(state: AppState): string {
     }
   }
   const o = state.options;
-  return b64e(JSON.stringify({
+  return JSON.stringify({
     v: 3,
     /* 4번째 자리는 옛 "자리 고정" 값 — §4.14 후기로 없어진 개념이라 항상 0.
        6번째 자리(id)는 F-14 이후 추가됐다: 팀 배정은 이 id로 회차를 가리키므로,
@@ -145,7 +153,51 @@ export function serialize(state: AppState): string {
     ],
     k: state.sortKey,
     tm: state.teams,
-  }));
+  });
+}
+
+/* ══ 공유 링크 압축 (#z=) ═════════════════════════════════════════════
+   왜 공유 링크에만 붙이나: 자동저장(localStorage)·Firestore snapshot 은 크기
+   압박이 없고, 압축해 두면 저장된 값을 눈으로 못 읽는다. 무엇보다 serialize()
+   가 내는 바이트를 그대로 둬야 옛 링크·저장분이 안전하다. #z= 는 같은 JSON 을
+   deflate 로 감싼 것뿐이고, 풀면 #s= 페이로드와 **바이트가 완전히 같다**
+   (serialize.test.ts 가 이걸 못 박는다).
+
+   실측(2026-09-01, 테마 3개·팀 0개 실제 링크): 1,583자 → 606자.
+   반복이 많은 데이터라(같은 지점명·날짜·"매진") 테마가 늘어도 압축본은 거의
+   안 커진다 — 테마 6개로 늘리면 #s= 는 3,027자인데 #z= 는 630자다.
+
+   **deflateShare() 는 2차 배포 전까지 UI 에 연결하지 않는다.** 옛 번들을
+   캐시한 사람이 #z= 링크를 받으면 못 읽기 때문 — 먼저 읽기(inflateShare)와
+   useScheduler 의 가드를 퍼뜨리고, 그다음에 쓰기를 켠다. 순서를 바꾸면
+   받는 사람이 "남의 일정 대신 자기 자동저장"을 보게 된다. */
+
+/** deflate-raw 를 쓸 수 있는 브라우저인가. 버전으로 따지지 않고 기능으로 본다. */
+export const canCompressShare = () =>
+  typeof CompressionStream !== 'undefined' && typeof DecompressionStream !== 'undefined';
+
+/* GenericTransformStream 으로 받는 이유: CompressionStream 의 writable 은
+   WritableStream<BufferSource> 라 TransformStream<Uint8Array, Uint8Array> 에
+   대입이 안 된다(tsc TS2345). 둘의 공통 조상이 이거다. */
+async function through(bytes: Uint8Array, t: GenericTransformStream) {
+  const src = new ReadableStream<Uint8Array>({
+    start(c) { c.enqueue(bytes); c.close(); },
+  });
+  return new Uint8Array(await new Response(src.pipeThrough(t)).arrayBuffer());
+}
+
+/** AppState → #z= 페이로드. */
+export async function deflateShare(state: AppState): Promise<string> {
+  const json = new TextEncoder().encode(payloadJson(state));
+  return bytesToB64(await through(json, new CompressionStream('deflate-raw')));
+}
+
+/** #z= 페이로드 → #s= 페이로드(base64url JSON). restore() 에 그대로 넘긴다.
+    restore() 를 안 건드리려고 일부러 base64 로 되싸서 돌려준다 — 한 번 더
+    인코딩하는 값은 치르지만, 포맷을 읽는 코드가 한 벌로 유지된다. */
+export async function inflateShare(z: string): Promise<string> {
+  const raw = await through(b64ToBytes(z), new DecompressionStream('deflate-raw'));
+  return bytesToB64(raw);
 }
 
 /* 옛 링크(v1/v2/v3early)는 id가 없다 — 그럴 때만 새 id를 매긴다.
@@ -210,4 +262,46 @@ export function restore(hash: string, startId = 1): AppState {
     teams: Array.isArray(d.tm) ? d.tm : [],
     nextId,
   };
+}
+
+/* ── 해시 판독 ────────────────────────────────────────────────────────
+   `#` 에 페이로드가 실려 있으면 그건 공유 링크다 — 우리가 읽을 수 있든 없든.
+   'unknown' 이 따로 있는 이유가 이 함수의 존재 이유다: 못 읽는 공유 링크를
+   "해시 없음"과 같은 값으로 뭉개면 받는 사람 자동저장이 조용히 대신 뜬다.
+   훅 안에 인라인으로 두면 테스트할 방법이 없어서 밖으로 뺐다. */
+export type ShareHash =
+  | { kind: 'none' }                      // 공유 링크가 아니다 — 자동저장으로
+  | { kind: 'plain'; payload: string }    // #s=
+  | { kind: 'packed'; payload: string }   // #z=
+  | { kind: 'unknown'; tag: string };     // 공유 링크인데 이 번들이 모르는 형식
+
+export function readShareHash(hash: string): ShareHash {
+  // 한 글자 + '=' 만 공유 링크로 본다. `#top` 같은 평범한 앵커는 안 걸린다.
+  const m = /^#([a-z])=([\s\S]*)$/.exec(hash);
+  if (!m) return { kind: 'none' };
+  const [, tag, payload] = m;
+  if (tag === 's') return { kind: 'plain', payload };
+  if (tag === 'z') return { kind: 'packed', payload };
+  return { kind: 'unknown', tag };
+}
+
+/* ── 공유 링크를 압축해서 낼 것인가 ──────────────────────────────────
+   원래는 "1차(읽기) 배포 후 하루 뒤에 켠다"로 계획했다. 옛 번들을 캐시한
+   사람이 #z= 를 받으면 못 읽기 때문이다(기획 §4.43). 그런데 **아직 이 앱을
+   쓰는 사람이 없다** — 옛 번들을 든 사람이 0명이면 그 위험창도 0이라,
+   기다릴 이유가 없어져 처음부터 켜고 나간다.
+
+   ⚠️ 나중에 **읽는 쪽 형식을 또 바꿀 일이 생기면** 그때는 이 계산이 다르다.
+   그때는 사용자가 있을 테니 읽기를 먼저 배포하고 쓰기를 나중에 켜는
+   2단계로 돌아가야 한다 — 그러라고 이 스위치를 남겨 둔다. */
+const SHARE_WRITE_PACKED = true;
+
+/** 공유 링크에 붙일 해시("s=…" 또는 "z=…"). packed 인자는 테스트용이다. */
+export async function shareHash(state: AppState, packed = SHARE_WRITE_PACKED): Promise<string> {
+  if (packed && canCompressShare()) {
+    /* 압축이 실패하면 링크를 못 만드는 게 아니라 그냥 안 쓴다 — 긴 링크는
+       불편할 뿐이지만, 링크가 안 나가는 건 기능이 없어지는 것이다. */
+    try { return 'z=' + await deflateShare(state); } catch { /* 아래로 */ }
+  }
+  return 's=' + serialize(state);
 }

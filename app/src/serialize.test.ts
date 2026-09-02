@@ -7,7 +7,10 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { restore, serialize, type AppState } from './serialize';
+import {
+  canCompressShare, deflateShare, inflateShare, readShareHash, restore, serialize, shareHash,
+  type AppState,
+} from './serialize';
 
 const fixturesPath = fileURLToPath(new URL('../../test/fixtures/legacy-links.json', import.meta.url));
 const { fixtures } = JSON.parse(readFileSync(fixturesPath, 'utf8'));
@@ -157,5 +160,143 @@ describe('serialize()↔restore() — 서버에서 불러온 회차의 slotId·�
   it('날짜 없는 서버 테마는 date가 undefined로 복원된다', () => {
     const back = restore(serialize(state([serverTheme]))).themes[0];
     expect(back.date).toBeUndefined();
+  });
+});
+
+/* ══ #z= 공유 링크 압축 (1차: 읽기만) ═══════════════════════════════════
+   지켜야 할 불변식은 "풀면 열린다"가 아니라 **"풀면 #s= 와 바이트가 같다"** 다.
+   같은 바이트여야 restore() 를 한 벌로 유지할 수 있고, 옛 링크·자동저장·
+   Firestore snapshot 이 의존하는 포맷이 안 건드려졌다는 증거가 된다. */
+describe('#z= 압축 공유 링크', () => {
+  const serverTheme = {
+    id: 1, name: '목격자', dur: 65, place: '플레이33 건대점',
+    raw: '10:35  13:00 매진  18:15  22:30 매진',
+    source: 'server',
+    sessions: [
+      { t: 635, soldout: false, id: 172 },
+      { t: 780, soldout: true, id: 173 },
+      { t: 1095, soldout: false, id: 174 },
+      { t: 1350, soldout: true, id: 175 },
+    ],
+    date: '2026-09-05',
+  };
+  const state = (themes: any[]): AppState => ({
+    themes, moveMap: { '플레이33 건대점|||토끼굴 홍대점': 25 }, sortKey: 'gap', teams: [], nextId: 9,
+    options: {
+      oStart: '11:00', oEnd: '20:00', oMinGap: '10', oMaxGap: '', oPartial: false,
+      oMeal: false, oMealFrom: '11:30', oMealTo: '14:00', oMealMin: '40',
+      oMove: '10', oTeam: false, oIncludeSoldout: true,
+    },
+  });
+
+  it('이 환경에 deflate-raw 가 있다 (없으면 아래 테스트는 의미가 없다)', () => {
+    expect(canCompressShare()).toBe(true);
+  });
+
+  it('풀면 #s= 페이로드와 바이트가 완전히 같다', async () => {
+    const st = state([serverTheme]);
+    expect(await inflateShare(await deflateShare(st))).toBe(serialize(st));
+  });
+
+  it('#z= 로 왕복해도 restore() 결과가 #s= 와 동일하다 — slotId·출처·날짜까지', async () => {
+    const st = state([serverTheme]);
+    const viaZ = restore(await inflateShare(await deflateShare(st)));
+    expect(viaZ).toEqual(restore(serialize(st)));
+    expect(viaZ.themes[0].sessions.map(x => x.id)).toEqual([172, 173, 174, 175]);
+    expect(viaZ.themes[0].source).toBe('server');
+    expect(viaZ.themes[0].date).toBe('2026-09-05');
+  });
+
+  it('옛 픽스처(v1/v2/v3)도 #z= 로 실어 나를 수 있다 — 포맷이 아니라 운반만 바뀐 것', async () => {
+    for (const fx of fixtures as any[]) {
+      const st = restore(fx.hash);
+      expect(await inflateShare(await deflateShare(st))).toBe(serialize(st));
+    }
+  });
+
+  it('실제로 짧아진다 — 반복 많은 서버 회차 데이터에서', async () => {
+    const st = state([serverTheme, { ...serverTheme, id: 2, name: '다이얼' }, { ...serverTheme, id: 3, name: '그 날' }]);
+    const plain = serialize(st).length;
+    const packed = (await deflateShare(st)).length;
+    expect(packed).toBeLessThan(plain / 2);
+  });
+
+  it('망가진 페이로드는 조용히 빈 값이 아니라 예외로 끝난다', async () => {
+    // 조회 실패와 "결과 없음" 을 같은 값으로 두지 않는다 — useScheduler 가 이 예외를
+    // 잡아 안내를 띄운다. 여기서 빈 상태를 돌려주면 그 구분이 사라진다.
+    await expect(inflateShare('bm90LWRlZmxhdGUtYXQtYWxs')).rejects.toThrow();
+  });
+});
+
+/* ══ 해시 판독 가드 ═══════════════════════════════════════════════════
+   1차에서 useScheduler 안에 인라인이라 테스트를 못 걸었던 부분. 순수 함수로
+   빼면서 여기로 왔다. 지켜야 할 것은 **못 읽는 공유 링크가 'none'(=자동저장
+   으로)으로 새지 않는 것** 하나다 — 새면 받는 사람 자기 일정이 조용히 뜬다. */
+describe('readShareHash — 공유 링크와 그냥 앵커를 가른다', () => {
+  it('#s= 는 그대로 읽는 형식', () => {
+    expect(readShareHash('#s=abc')).toEqual({ kind: 'plain', payload: 'abc' });
+  });
+
+  it('#z= 는 압축 형식', () => {
+    expect(readShareHash('#z=abc')).toEqual({ kind: 'packed', payload: 'abc' });
+  });
+
+  it('모르는 형식은 unknown — 절대 none 으로 새지 않는다', () => {
+    // 이 한 줄이 "옛 번들이 #z= 를 받으면 자기 자동저장을 본다" 버그의 회귀 테스트다.
+    expect(readShareHash('#q=abc')).toEqual({ kind: 'unknown', tag: 'q' });
+  });
+
+  it('평범한 앵커·빈 해시는 공유 링크가 아니다 — 자동저장으로 간다', () => {
+    for (const h of ['#top', '#', '', '#s', '#=abc', '#ss=abc', '#S=abc']) {
+      expect(readShareHash(h).kind).toBe('none');
+    }
+  });
+
+  it('페이로드에 = 나 개행이 섞여도 통째로 넘긴다', () => {
+    expect(readShareHash('#s=a=b\nc')).toEqual({ kind: 'plain', payload: 'a=b\nc' });
+  });
+});
+
+/* ══ 2차 — 쓰기 스위치 ════════════════════════════════════════════════ */
+describe('shareHash — 공유 링크에 붙일 해시', () => {
+  const st = (): AppState => ({
+    themes: [{
+      id: 1, name: '목격자', dur: 65, place: '플레이33 건대점',
+      raw: '10:35  13:00 매진  18:15  22:30 매진', source: 'server', date: '2026-09-05',
+      sessions: [
+        { t: 635, soldout: false, id: 172 }, { t: 780, soldout: true, id: 173 },
+        { t: 1095, soldout: false, id: 174 }, { t: 1350, soldout: true, id: 175 },
+      ],
+    }],
+    moveMap: {}, sortKey: 'gap', teams: [], nextId: 2,
+    options: {
+      oStart: '11:00', oEnd: '20:00', oMinGap: '10', oMaxGap: '', oPartial: false,
+      oMeal: false, oMealFrom: '11:30', oMealTo: '14:00', oMealMin: '40',
+      oMove: '10', oTeam: false, oIncludeSoldout: true,
+    },
+  });
+
+  it('기본값은 켜짐 — #z= 를 만들고, readShareHash 가 packed 로 읽는다', async () => {
+    const h = await shareHash(st());
+    expect(h.startsWith('z=')).toBe(true);
+    expect(readShareHash('#' + h)).toEqual({ kind: 'packed', payload: h.slice(2) });
+  });
+
+  it('끄면 #s= 로 떨어진다 — 압축을 못 쓰는 브라우저가 가는 길이기도 하다', async () => {
+    const h = await shareHash(st(), false);
+    expect(h.startsWith('s=')).toBe(true);
+    expect(h.slice(2)).toBe(serialize(st()));
+  });
+
+  it('켠 링크를 다시 풀면 끈 링크와 바이트가 같다 — 스위치는 운반만 바꾼다', async () => {
+    const off = await shareHash(st(), false);
+    const on = await shareHash(st(), true);
+    expect(await inflateShare(on.slice(2))).toBe(off.slice(2));
+    expect(restore(await inflateShare(on.slice(2)))).toEqual(restore(off.slice(2)));
+  });
+
+  it('켜면 실제로 짧아진다', async () => {
+    const s2 = { ...st(), themes: [st().themes[0], { ...st().themes[0], id: 2, name: '다이얼' }, { ...st().themes[0], id: 3, name: '그 날' }] };
+    expect((await shareHash(s2, true)).length).toBeLessThan((await shareHash(s2, false)).length / 2);
   });
 });
