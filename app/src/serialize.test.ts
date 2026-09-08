@@ -117,7 +117,7 @@ describe('serialize()↔restore() — 서버에서 불러온 회차의 slotId·�
     options: {
       oStart: '', oEnd: '', oMinGap: '', oMaxGap: '', oPartial: false,
       oMeal: false, oMealFrom: '', oMealTo: '', oMealMin: '',
-      oMove: '10', oTeam: false, oIncludeSoldout: false,
+      oMove: '10', oTeam: false, oIncludeSoldout: false, oFixedOrder: false,
     },
   });
 
@@ -185,7 +185,7 @@ describe('#z= 압축 공유 링크', () => {
     options: {
       oStart: '11:00', oEnd: '20:00', oMinGap: '10', oMaxGap: '', oPartial: false,
       oMeal: false, oMealFrom: '11:30', oMealTo: '14:00', oMealMin: '40',
-      oMove: '10', oTeam: false, oIncludeSoldout: true,
+      oMove: '10', oTeam: false, oIncludeSoldout: true, oFixedOrder: false,
     },
   });
 
@@ -272,7 +272,7 @@ describe('shareHash — 공유 링크에 붙일 해시', () => {
     options: {
       oStart: '11:00', oEnd: '20:00', oMinGap: '10', oMaxGap: '', oPartial: false,
       oMeal: false, oMealFrom: '11:30', oMealTo: '14:00', oMealMin: '40',
-      oMove: '10', oTeam: false, oIncludeSoldout: true,
+      oMove: '10', oTeam: false, oIncludeSoldout: true, oFixedOrder: false,
     },
   });
 

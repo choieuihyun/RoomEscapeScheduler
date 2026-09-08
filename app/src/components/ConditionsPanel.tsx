@@ -54,6 +54,10 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
       <p className={hint.className}>{hint.content}</p>
       <MoveTimeGrid s={s} />
       <div className="checks">
+        <label className="chk" title="끄면 어느 테마가 첫 타로 오든 도구가 순서까지 다 짚습니다 — 카드를 아무렇게나 넣어도 됩니다. 켜면 카드에 늘어놓은 순서 그대로 방문하고 회차만 맞춥니다(순서를 이미 정해 뒀을 때).">
+          <input type="checkbox" checked={s.options.oFixedOrder} onChange={e => s.setOption('oFixedOrder', e.target.checked)} />
+          카드 순서 그대로 계산
+        </label>
         <label className="chk">
           <input type="checkbox" checked={s.options.oPartial} onChange={e => s.setOption('oPartial', e.target.checked)} />
           일부 테마만 넣은 조합도 계산

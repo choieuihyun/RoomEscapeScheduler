@@ -30,7 +30,13 @@ export function ThemeList({ s, onOpenLoad, watchCtl }: { s: Scheduler; onOpenLoa
       <div className="addrow">
         <button className="btn" id="addTheme" type="button" onClick={s.addTheme}>＋ 테마 추가</button>
         <button className="btn" id="loadBtn" type="button" onClick={onOpenLoad}>회차 불러오기</button>
-        <span className="addhint"><b>카드 순서가 곧 방문 순서입니다.</b> 번호를 끌어 옮겨 정하세요 · <b>×</b> 로 삭제</span>
+        {/* 화면이 전제를 말해 주지 않으면 카드 순서가 곧 진행 순서로 읽힌다 — §4.14 가
+            드러낸 문제라, 이제 모드마다 다른 문장을 띄운다(§4.46). */}
+        <span className="addhint">
+          {s.options.oFixedOrder
+            ? <><b>카드 순서가 곧 방문 순서입니다.</b> 번호를 끌어 옮겨 정하세요 · <b>×</b> 로 삭제</>
+            : <><b>순서는 도구가 정합니다.</b> 아무 순서로 넣어도 됩니다 · <b>×</b> 로 삭제</>}
+        </span>
       </div>
     </section>
   );

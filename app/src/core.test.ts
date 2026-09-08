@@ -95,10 +95,16 @@ const themes: SearchTheme[] = [
   T('몽', 70, ['10:50', '12:10', '13:30', '14:50', '16:10', '17:30', '18:50', '20:10', '21:30', '22:50']),
 ];
 const opts = { startMin: null, endMax: null, minGap: 0, maxGap: null, excludeSoldout: false, minCount: 3 };
+/* 카드 순서 그대로 계산(§4.46 의 옵션) — 기본값은 순서 자유이므로 이쪽만 따로 켠다. */
+const fixedOpts = { ...opts, fixedOrder: true };
 
 const { out, capped } = search(themes, opts);
 const best = [...out].sort(SORTS.find(s => s.k === 'gap')!.f)[0];
 const seq = best.steps.map(s => `${fmt(s.start)} ${s.name}`).join(' → ');
+
+const { out: outFixed } = search(themes, fixedOpts);
+const bestFixed = [...outFixed].sort(SORTS.find(s => s.k === 'gap')!.f)[0];
+const seqFixed = bestFixed.steps.map(s => `${fmt(s.start)} ${s.name}`).join(' → ');
 
 describe('[2] 인수 기준 (§7 검증 케이스)', () => {
   it('조합 발견', () => {
@@ -109,18 +115,40 @@ describe('[2] 인수 기준 (§7 검증 케이스)', () => {
     expect(capped).toBe(false);
   });
 
-  it('"공백 적은 순" 1위 = 카드 순서 고정 후 최적해', () => {
-    // requirements.md §7 의 최적해(13:30 범계 → 14:50 몽 → 16:00 왓 어 트립)는 순서를
-    // 범계→몽→왓어트립 로 뒤바꿔야 나온다 — §4.14 후기로 도구가 더는 순서를 안 바꾸고
-    // 카드 배치 순서(여기선 범계,왓어트립,몽) 그대로만 탐색하므로 도달 불가능해졌다.
-    // 지금 배치 순서 안에서 나오는 최적해로 교체한다.
-    expect(seq).toBe('10:30 범계 → 11:45 왓 어 트립 → 13:30 몽');
+  it('"공백 적은 순" 1위 = §7 수기 최적해 (순서까지 도구가 찾아낸다)', () => {
+    // requirements.md §7 의 최적해는 카드 배치 순서(범계, 왓 어 트립, 몽)가 아니라
+    // 범계→몽→왓 어 트립 순서에서 나온다. §4.14 후기(카드 순서 고정)로 한동안
+    // 도달 불가능했다가, §4.46 으로 순서 탐색이 기본값이 되면서 다시 1위로 돌아왔다.
+    expect(seq).toBe('13:30 범계 → 14:50 몽 → 16:00 왓 어 트립');
   });
 
-  it('공백 총합 35분', () => { expect(best.total).toBe(35); });
-  it('개별 공백 [0, 35]', () => { expect(best.gaps).toEqual([0, 35]); });
-  it('종료 14:40', () => { expect(fmt(best.end)).toBe('14:40'); });
+  it('공백 총합 5분', () => { expect(best.total).toBe(5); });
+  it('개별 공백 [5, 0]', () => { expect(best.gaps).toEqual([5, 0]); });
+  it('종료 17:10', () => { expect(fmt(best.end)).toBe('17:10'); });
   it('최소 공백 0분', () => { expect(best.minGap).toBe(0); });
+});
+
+/* ── 2.5 카드 순서 그대로 계산 (§4.46 옵션) ──
+   §4.14 후기로 한 번 기본값이었던 동작 — 지금은 켰을 때만 이렇게 돈다.
+   그때 박아 둔 수치를 그대로 회귀 테스트로 남긴다. */
+describe('[2.5] fixedOrder — 카드 배치 순서를 그대로 따를 때', () => {
+  it('1위는 카드 배치 순서(범계 → 왓 어 트립 → 몽) 안에서의 최적해', () => {
+    expect(seqFixed).toBe('10:30 범계 → 11:45 왓 어 트립 → 13:30 몽');
+  });
+
+  it('공백 총합 35분 · 종료 14:40', () => {
+    expect(bestFixed.total).toBe(35);
+    expect(bestFixed.gaps).toEqual([0, 35]);
+    expect(fmt(bestFixed.end)).toBe('14:40');
+  });
+
+  it('순서를 안 바꾸므로 조합 수는 순서 자유의 부분집합이다', () => {
+    expect(outFixed.length).toBeLessThan(out.length);
+  });
+
+  it('순서 자유는 §7 최적해를 찾지만 고정 순서는 못 찾는다 — 옵션이 실제로 갈리는 지점', () => {
+    expect(bestFixed.total).toBeGreaterThan(best.total);
+  });
 });
 
 describe('[3] 조건 필터 (§2.1 F-07)', () => {
@@ -170,19 +198,37 @@ describe('[3.5] 식사 공백 · 순서 제약', () => {
     expect(search(themes, { ...opts, meal: MEAL, maxGap: 20 }).out.length).toBe(0);
   });
 
-  it('모든 결과가 배열 순서(오름차순 인덱스)로만 나온다 — 순서를 도구가 바꾸지 않는다', () => {
-    // 카드 배치 순서 고정 (§4.14 후기): "자리 고정" 은 없어졌고, 순서는 항상 배열 순서 그대로다.
-    expect(out.every(r => r.steps.every((s, k) => k === 0 || s.i > r.steps[k - 1].i))).toBe(true);
+  const ascending = (r: { steps: { i: number }[] }) =>
+    r.steps.every((s, k) => k === 0 || s.i > r.steps[k - 1].i);
+
+  it('fixedOrder 를 켜면 모든 결과가 배열 순서(오름차순 인덱스)로만 나온다', () => {
+    expect(outFixed.every(ascending)).toBe(true);
   });
 
-  const partial = search(themes, { ...opts, minCount: 2 }).out;
-  it('부분 조합도 상대 순서를 유지한 채 일부만 건너뛴다', () => {
+  it('기본값(순서 자유)에서는 배열 순서를 거스르는 결과가 실제로 나온다', () => {
+    // 이게 §4.46 의 본체다 — 카드를 어떤 순서로 넣든 도구가 순서를 짚는다.
+    expect(out.some(r => !ascending(r))).toBe(true);
+  });
+
+  it('순서 자유는 같은 테마 묶음을 여러 순서로 내놓는다', () => {
+    // 3개 전부 쓰는 조합의 방문 순서가 두 가지 이상 등장해야 한다.
+    const orders = new Set(out.map(r => r.steps.map(s => s.i).join(',')));
+    expect(orders.size).toBeGreaterThan(1);
+  });
+
+  const partial = search(themes, { ...fixedOpts, minCount: 2 }).out;
+  it('fixedOrder 부분 조합은 상대 순서를 유지한 채 일부만 건너뛴다', () => {
     // 부분 조합(F-08)도 순서는 지키되 건너뛰기만 허용한다 — 재배열은 안 된다
-    expect(partial.every(r => r.steps.every((s, k) => k === 0 || s.i > r.steps[k - 1].i))).toBe(true);
+    expect(partial.every(ascending)).toBe(true);
   });
 
   it('첫 카드를 건너뛴 부분 조합도 존재한다 (건너뛰기 = 배제, 재배열 아님)', () => {
     expect(partial.some(r => r.count === 2 && r.steps[0].i !== 0)).toBe(true);
+  });
+
+  it('순서 자유 + 부분 조합이면 두 테마를 뒤바꾼 2개짜리도 나온다', () => {
+    const free2 = search(themes, { ...opts, minCount: 2 }).out;
+    expect(free2.some(r => r.count === 2 && !ascending(r))).toBe(true);
   });
 });
 

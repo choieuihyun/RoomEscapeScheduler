@@ -54,6 +54,11 @@ export interface OptionsState {
   oMove: string;
   oTeam: boolean;
   oIncludeSoldout: boolean;
+  /* 카드 순서 그대로만 계산할 것인가 (§4.46). 기본은 꺼짐 = 순서 자유.
+     이 필드가 없던 옛 링크는 undefined → 꺼짐으로 떨어진다 — 순서 자유가
+     고정 순서의 상위집합이라, 옛 링크로 보던 조합은 전부 그대로 나오고
+     못 보던 순서가 더 붙는다(사라지는 조합은 없다). */
+  oFixedOrder: boolean;
 }
 
 export interface AppState {
@@ -150,6 +155,9 @@ function payloadJson(state: AppState): string {
       o.oMeal ? 1 : 0, o.oMealFrom, o.oMealTo, o.oMealMin,
       o.oMove, o.oTeam ? 1 : 0,
       o.oIncludeSoldout ? 1 : 0,
+      /* 14번째 자리(§4.46). 뒤에 붙이기만 하므로 앞자리 바이트는 그대로다 —
+         옛 번들은 이 자리를 그냥 안 읽는다. */
+      o.oFixedOrder ? 1 : 0,
     ],
     k: state.sortKey,
     tm: state.teams,
@@ -238,9 +246,9 @@ export function restore(hash: string, startId = 1): AppState {
   // 명시적 id가 있는 링크(v3current 이후)라도, 다음 카드는 그 id들보다 커야 한다.
   nextId = Math.max(nextId, ...themes.map(t => t.id + 1));
 
-  const [a, b, c2, dd, , pt, me, mf, mt, mm, mv, tmOn, isv] = d.o as [
+  const [a, b, c2, dd, , pt, me, mf, mt, mm, mv, tmOn, isv, fx] = d.o as [
     string, string, string, string, unknown, number, number, string, string, string,
-    string | undefined, number | undefined, number | undefined,
+    string | undefined, number | undefined, number | undefined, number | undefined,
   ];
   // so(5번째) 슬롯은 옛 링크 호환용으로 남겨두고 쓰지 않는다 — index.html과 동일
 
@@ -257,6 +265,7 @@ export function restore(hash: string, startId = 1): AppState {
       oMove: mv !== undefined ? mv : '10',   // v1/v2 링크엔 없다 — HTML 기본값(10)으로 떨어진다
       oTeam: !!tmOn,                          // 옛 링크는 tmOn이 undefined → 꺼짐
       oIncludeSoldout: !!isv,                 // 이 필드가 없던 옛 링크는 undefined → 꺼짐(안전한 기본값)
+      oFixedOrder: !!fx,                      // 옛 링크는 undefined → 순서 자유(§4.46)
     },
     sortKey: d.k || 'gap',
     teams: Array.isArray(d.tm) ? d.tm : [],

@@ -107,10 +107,10 @@ export function sessionsToText(ss: Session[]): string {
 }
 
 /* ── 조합 탐색 ── */
-/* 폭주 방지용 상한. §4.14 후기로 순서를 더는 탐색하지 않아(카드 배치 순서 고정),
-   탐색 공간이 순열(N!)이 아니라 회차 선택(M^N)만 남아 훨씬 작아졌다 —
-   테마 5개 / 회차 9~10개가 100개 안팎, 1ms 수준. 상한은 이제 실무 범위에서
-   사실상 걸릴 일이 없지만, 회차를 아주 많이 넣는 극단적인 입력을 위해 남겨 둔다.
+/* 폭주 방지용 상한. §4.46 으로 순서 탐색이 기본값으로 돌아오면서 탐색 공간은 다시
+   `N!×M^N`(순서 자유) 이고, `fixedOrder` 를 켰을 때만 `M^N`(회차 선택만) 이다.
+   순서 자유 쪽이 훨씬 크므로 상한은 이제 실제로 닿을 수 있다 — 테마가 6~7개를
+   넘어가면서 회차도 많으면 걸린다.
    상한에 걸리면 결과 개수 옆에 "탐색 한도 도달"로 표시한다(조용히 자르지 않는다). */
 export const NODE_CAP = 800000, KEEP_CAP = 50000;
 
@@ -166,6 +166,10 @@ export interface SearchOptions {
   meal?: MealOption | null;
   /* 순차 배정(F-14): 앞선 팀이 이미 확정한 회차 제외용. 테마 id + 시각 키. */
   taken?: Set<string> | null;
+  /* 카드에 늘어놓은 순서 그대로만 탐색할 것인가 (§4.46).
+     기본값(false/생략)은 **순서 자유** — 어느 테마가 첫 타로 오든 도구가 다 짚는다.
+     켜면 `list` 의 인덱스 오름차순으로만 방문한다(=§4.14 후기의 동작). */
+  fixedOrder?: boolean;
 }
 
 export interface PathStep {
@@ -203,6 +207,10 @@ export interface SearchOutcome {
 export function search(list: SearchTheme[], o: SearchOptions): SearchOutcome {
   const n = list.length, path: PathStep[] = [], out: SearchResultRow[] = [];
   let nodes = 0, capped = false;
+  /* 순서 자유일 때만 필요하다 — 고정 순서에서는 인덱스를 되돌아가지 않으므로
+     "이미 썼나"를 따로 셀 이유가 없다(아래 dfs 주석). */
+  const free = !o.fixedOrder;
+  const used: boolean[] = free ? new Array(n).fill(false) : [];
 
   function record() {
     /* 식사 공백: "공백을 줄여라" 가 아니라 "한 군데는 크게 비워라" 는 요구다.
@@ -237,11 +245,13 @@ export function search(list: SearchTheme[], o: SearchOptions): SearchOutcome {
   function dfs(curEnd: number | null, start: number) {
     if (out.length >= KEEP_CAP || nodes > NODE_CAP) { capped = true; return; }
     if (path.length >= o.minCount) record();
-    /* 카드 배치 순서가 곧 방문 순서다 (§4.14 후기) — i 를 되돌아가지 않고
-       start 부터만 훑으므로, 순서 자체는 절대 바뀌지 않고 "이 순서에서 어떤
-       테마를 건너뛸지" 만 갈린다. 그래서 used[] 로 방문 여부를 따로 셀 필요가
-       없다 — 이미 지나온 인덱스는 다시 오지 않는다. */
-    for (let i = start; i < n; i++) {
+    /* 두 가지 모드가 이 한 줄에서 갈린다 (§4.46).
+       - 순서 자유(기본): 0 부터 전부 훑고 used[] 로 중복만 막는다 → 모든 순열.
+       - 고정 순서(fixedOrder): start 부터만 훑고 되돌아가지 않는다 → 카드 배치
+         순서는 절대 안 바뀌고 "이 순서에서 어떤 테마를 건너뛸지" 만 갈린다.
+         이미 지나온 인덱스는 다시 오지 않으므로 used[] 도 필요 없다. */
+    for (let i = free ? 0 : start; i < n; i++) {
+      if (free && used[i]) continue;
       const th = list[i];
       for (const s of th.sessions) {
         if (o.excludeSoldout && s.soldout) continue;
@@ -261,12 +271,14 @@ export function search(list: SearchTheme[], o: SearchOptions): SearchOutcome {
         const end = s.t + th.dur;
         if (o.endMax != null && end > o.endMax) continue;
         nodes++;
+        if (free) used[i] = true;
         path.push({
           i, name: th.name || ('테마 ' + (i + 1)), place: th.place || '', dur: th.dur,
           start: s.t, end, soldout: s.soldout, move, sessionId: s.id,
         });
         dfs(end, i + 1);
         path.pop();
+        if (free) used[i] = false;
         if (nodes > NODE_CAP) { capped = true; return; }
       }
     }
