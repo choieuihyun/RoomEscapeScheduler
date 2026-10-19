@@ -10,7 +10,7 @@ import { useWatches, buildWatchControl } from './useWatches';
 import { useCalendar } from './useCalendar';
 import { useView, decideFirstScreen, type View } from './useView';
 import { useClubEvents } from './useClubEvents';
-import { addDays, todayKst } from './clubEvents';
+import { addDays, sortKeyDate, todayKst } from './clubEvents';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
 import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
@@ -105,7 +105,7 @@ export function SchedulerPage() {
   /* 칩·줄을 눌러 일정을 연다. 링크로 연 일정과 다른 일정이면 #e= 를 지운다 */
   const openEvent = useCallback((ev: EventDto) => {
     if (readEventHash(location.hash) !== ev.id) dropLink();
-    calSelect(ev.date);
+    calSelect(sortKeyDate(ev));
     setOpenEvent(ev.id);
   }, [dropLink, calSelect, setOpenEvent]);
   /* 캘린더 밖 화면으로 옮길 때는 #e= 를 지운다 — 남으면 `?view=calc#e=12` 를 새로고침(iOS 탭 되살림)했을 때 캘린더로 끌려간다 */
@@ -164,7 +164,7 @@ export function SchedulerPage() {
         const ev = await getEvent(id, t);
         adopt(ev);
         go('calendar');
-        calSelect(ev.date);
+        calSelect(sortKeyDate(ev));
         setOpenEvent(ev.id);
       } catch (e) {
         if (errorCode(e) === 'NO_SUCH_EVENT') {

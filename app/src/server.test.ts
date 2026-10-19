@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   addParticipant, conflictOf, createEvent, deleteEvent, errorCode, getEvent, isMissingApi, joinClub, kakaoLogin,
   leaveEvent, listClubMembers, listEvents, listMembers, memberAction, removeParticipant, sayClub, setBooked,
-  setMemberRole, updateEvent, joinEvent,
+  setMemberRole, updateEvent, joinEvent, setAvailability, clearAvailability,
 } from './server';
 import type { EventInput } from './server';
 
@@ -198,5 +198,21 @@ describe('동호회 일정 API 호출 (§4.7)', () => {
     expect(isMissingApi(await getEvent(1, 'T').catch(e => e))).toBe(false);
     stubFetch(500, {});
     expect(isMissingApi(await getEvent(1, 'T').catch(e => e))).toBe(false);
+  });
+});
+
+describe('시간 협의 API (§4.8)', () => {
+  it('setAvailability 는 POST …/availability 본문을 그대로', async () => {
+    const fn = stubFetch(200, {});
+    const body = { date: '2026-10-31', available: true, startMin: 840, endMin: 1080 };
+    await setAvailability(3, body, 'T');
+    expect([call(fn).url.split('/api')[1], call(fn).init.method]).toEqual(['/club/events/3/availability', 'POST']);
+    expect(JSON.parse(call(fn).init.body as string)).toEqual(body);
+  });
+
+  it('clearAvailability 는 DELETE …/availability/2026-10-31', async () => {
+    const fn = stubFetch(200, {});
+    await clearAvailability(3, '2026-10-31', 'T');
+    expect([call(fn).url.split('/api')[1], call(fn).init.method]).toEqual(['/club/events/3/availability/2026-10-31', 'DELETE']);
   });
 });

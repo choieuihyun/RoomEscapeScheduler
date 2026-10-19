@@ -12,7 +12,8 @@ export const STATUS_LABEL: Record<EventStatus, string> = {
 };
 
 /* 상태는 저장하지 않고 만든다: 구간 없음 → 협의 중, 있으면 예약 여부에 따라. */
-export function eventStatus(ev: Pick<EventDto, 'segments' | 'booked'>): EventStatus {
+export function eventStatus(ev: Pick<EventDto, 'segments' | 'booked'> & { date?: string | null }): EventStatus {
+  if (ev.date === null) return 'talk'; // 날짜 미정은 구간이 있어도 늘 협의 중(§4.8)
   if (ev.segments.length === 0) return 'talk';
   return ev.booked ? 'done' : 'before';
 }
@@ -159,6 +160,52 @@ export function kakaoPost(ev: EventDto, link: string): string {
   return `${head} · ${people}\n${link}`;
 }
 
+export const isUndecided = (ev: Pick<EventDto, 'date'>): boolean => ev.date === null;
+
+/* 정렬·자리 잡기 기준 날짜: 날짜가 있으면 그 날짜, 미정이면 from 이상인 가장 이른 후보(없으면 가장 이른 후보).
+   후보도 없으면 ''. */
+export function sortKeyDate(ev: Pick<EventDto, 'date' | 'candidates'>, from?: string): string {
+  if (ev.date !== null) return ev.date;
+  const ds = ev.candidates.map((c) => c.date).sort();
+  return (from === undefined ? undefined : ds.find((d) => d >= from)) ?? ds[0] ?? '';
+}
+
+export interface CandidateRow {
+  date: string;
+  yes: number;
+  total: number;
+  window: { start: number; end: number } | null;
+  noUids: string[];
+  noneUids: string[];
+  all: boolean;
+}
+
+/* 후보 날짜별 요약(§4.8): 몇 명 중 몇 명이 되는지, 된다는 사람들 시간대의 교집합(종일 = 0~2879),
+   안 된다는 사람·응답 안 한 사람. 모두 되는 날짜가 먼저, 그다음 되는 사람 많은 순, 같으면 날짜 순. */
+export function candidateSummary(ev: Pick<EventDto, 'candidates' | 'participants'>): CandidateRow[] {
+  const total = ev.participants.length;
+  const rows = ev.candidates.map((c): CandidateRow => {
+    const byUid = new Map(c.responses.map((r) => [r.uid, r]));
+    const noUids: string[] = [];
+    const noneUids: string[] = [];
+    let yes = 0;
+    let start = 0;
+    let end = 2 * DAY_MIN - 1;
+    for (const p of ev.participants) {
+      const r = byUid.get(p.uid);
+      if (!r) noneUids.push(p.uid);
+      else if (!r.available) noUids.push(p.uid);
+      else {
+        yes++;
+        start = Math.max(start, r.startMin ?? 0);
+        end = Math.min(end, r.endMin ?? 2 * DAY_MIN - 1);
+      }
+    }
+    return { date: c.date, yes, total, window: yes > 0 && start < end ? { start, end } : null, noUids, noneUids, all: total > 0 && yes === total };
+  });
+  return rows.sort((a, b) => Number(b.all) - Number(a.all) || b.yes - a.yes || (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
 /* 정렬 기준 시각: 하루 종일(시각도 구간도 없음)은 맨 앞, 일정 시각이 없으면 첫 구간 시작. */
 function sortMin(ev: EventDto): number {
   if (ev.startMin !== null) return ev.startMin;
@@ -168,7 +215,7 @@ function sortMin(ev: EventDto): number {
 export function sortEvents(evs: EventDto[]): EventDto[] {
   return [...evs].sort(
     (a, b) =>
-      (a.date < b.date ? -1 : a.date > b.date ? 1 : 0) ||
+      (sortKeyDate(a) < sortKeyDate(b) ? -1 : sortKeyDate(a) > sortKeyDate(b) ? 1 : 0) ||
       sortMin(a) - sortMin(b) ||
       a.id - b.id,
   );
@@ -233,13 +280,13 @@ function endOf(ev: EventDto): number {
 /* 내 다음 일정: 참여 중이고 오늘(한국 날짜) 이후인 것 중 가장 이른 것. 오늘 일정은 이미 끝났으면 건너뛴다. */
 export function nextMine(evs: EventDto[], now: Date): EventDto | null {
   const { iso: today, min } = kst(now);
-  return sortEvents(evs.filter((e) => e.joined && e.date >= today && (e.date > today || endOf(e) > min)))[0] ?? null;
+  return sortEvents(evs.filter((e) => e.joined && e.date !== null && e.date >= today && (e.date > today || endOf(e) > min)))[0] ?? null;
 }
 
 /* 오늘 ~ 오늘+days-1 (양쪽 포함). */
 export function upcoming(evs: EventDto[], today: string, days: number): EventDto[] {
   const last = addDays(today, days - 1);
-  return sortEvents(evs.filter((e) => e.date >= today && e.date <= last));
+  return sortEvents(evs.filter((e) => { const k = sortKeyDate(e, today); return k >= today && k <= last; }));
 }
 
 /* "YYYY-MM-DD" 에 n 일을 더한다(날짜만 — 시간대와 무관). */
@@ -255,7 +302,10 @@ export const cpLen = (s: string): number => [...s].length;
 /* from~to(양쪽 포함) 안의 기존 항목을 버리고 fresh 로 바꾼 뒤 정렬한다. 서버에서 지워진 일정이 사라진다. */
 export function mergeRange(cur: EventDto[], from: string, to: string, fresh: EventDto[]): EventDto[] {
   const ids = new Set(fresh.map((e) => e.id)); // 범위 밖에서 범위 안으로 옮겨 온 일정이 둘로 남지 않게
-  return sortEvents([...cur.filter((e) => (e.date < from || e.date > to) && !ids.has(e.id)), ...fresh]);
+  /* 날짜 미정 일정은 후보가 하나라도 범위 안이면 그 범위 소속 */
+  const inRange = (e: EventDto) =>
+    e.date !== null ? e.date >= from && e.date <= to : e.candidates.some((c) => c.date >= from && c.date <= to);
+  return sortEvents([...cur.filter((e) => !inRange(e) && !ids.has(e.id)), ...fresh]);
 }
 
 /* 같은 id 가 있으면 바꾸고 없으면 넣는다. */

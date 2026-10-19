@@ -1,7 +1,7 @@
 /* 일정 만들기·수정 창의 폼 상태 ↔ EventInput 변환과 검사 — React 밖의 순수 함수 (계획 Task E5).
    시각은 입력 칸 문자열("13:40", 24시간제), 서버로 보낼 때만 분으로 바꾸며 자정 넘김(다음날)을 채운다. */
 import { fmt, type PathStep } from './core';
-import { addDays, clockLabel, cpLen, parseClock24, parseKakaoTitle, rangeLabel, rollDays, type TimeRow } from './clubEvents';
+import { addDays, sortKeyDate, clockLabel, cpLen, parseClock24, parseKakaoTitle, rangeLabel, rollDays, type TimeRow } from './clubEvents';
 import type { EventDto, EventInput, SegmentInput } from './server';
 
 export interface FormSeg {
@@ -51,7 +51,7 @@ function nextDayDate(date: string, first: number | null): { date: string; dateMo
 export function formFromEvent(ev: EventDto): FormState {
   return {
     title: ev.title,
-    ...nextDayDate(ev.date, ev.segments[0]?.startMin ?? ev.startMin),
+    ...nextDayDate(sortKeyDate(ev), ev.segments[0]?.startMin ?? ev.startMin),
     allDay: ev.startMin === null && ev.segments.length === 0,
     start: clockOrBlank(ev.startMin),
     end: clockOrBlank(ev.endMin),

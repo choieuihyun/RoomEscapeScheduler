@@ -10,7 +10,7 @@ import { useDaySchedule } from '../useDaySchedule';
 import type { Scheduler } from '../scheduler/useScheduler';
 import { DayBranches } from './DayBranches';
 import { EventPanel } from './EventPanel';
-import { eventStatus, eventTitle, STATUS_LABEL, timeLabel, todayKst } from '../clubEvents';
+import { eventStatus, sortKeyDate, eventTitle, STATUS_LABEL, timeLabel, todayKst } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
 
 /* 캘린더 화면(§4.49) — 모달이던 것(§4.38·§4.40)을 왼쪽 메뉴의 한 화면으로 옮겼다.
@@ -232,7 +232,7 @@ export function CalendarPage({
   const showClub = clubOn && ctl.filter.club;
   const clubByDate = useMemo(() => {
     const m = new Map<string, EventDto[]>();
-    for (const e of club.events) (m.get(e.date) ?? (m.set(e.date, []), m.get(e.date)!)).push(e);
+    for (const e of club.events) (m.get(sortKeyDate(e)) ?? (m.set(sortKeyDate(e), []), m.get(sortKeyDate(e))!)).push(e);
     return m;
   }, [club.events]);
   const clubOf = (iso: string) => (showClub ? clubByDate.get(iso) ?? [] : []);
@@ -243,7 +243,7 @@ export function CalendarPage({
   /* 칸·창·주 보기가 같이 쓰는 줄 목록: 동호회 일정 먼저, 그다음 내 일정·빈자리 알림 */
   const lineOf = (iso: string) => [
     ...clubOf(iso).map(ev => (
-      <ClubChip key={'c' + ev.id} ev={ev} on={ev.id === ctl.openEvent} past={ev.date < clubToday} onOpen={openClub} />
+      <ClubChip key={'c' + ev.id} ev={ev} on={ev.id === ctl.openEvent} past={sortKeyDate(ev) < clubToday} onOpen={openClub} />
     )),
     ...evsOf(iso).map(e => <EvLine key={e.key} e={e} />),
   ];
@@ -399,7 +399,7 @@ export function CalendarPage({
               {selClub.length > 0 && (
                 <div className="cal-day-club cal-evs">
                   {selClub.map(ev => (
-                    <ClubChip key={ev.id} ev={ev} on={ev.id === ctl.openEvent} past={ev.date < clubToday} onOpen={openClub} />
+                    <ClubChip key={ev.id} ev={ev} on={ev.id === ctl.openEvent} past={sortKeyDate(ev) < clubToday} onOpen={openClub} />
                   ))}
                 </div>
               )}

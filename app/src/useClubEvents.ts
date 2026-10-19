@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  addParticipant, createEvent, deleteEvent, errorCode, getEvent, isMissingApi, joinEvent, leaveEvent,
-  listEvents, removeParticipant, sayClub, setBooked as setBookedApi, updateEvent,
+  addParticipant, clearAvailability, createEvent, deleteEvent, errorCode, getEvent, isMissingApi, joinEvent, leaveEvent,
+  listEvents, removeParticipant, sayClub, setAvailability, setBooked as setBookedApi, updateEvent,
   type EventDto, type EventInput,
 } from './server';
 import { afterActionError, dropEvent, mergeRange, upsert } from './clubEvents';
@@ -202,6 +202,16 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   );
   const join = useCallback((id: number) => quiet(act(id, false, (t, put) => joinEvent(id, t).then(put))), [act]);
   const leave = useCallback((id: number) => quiet(act(id, false, (t, put) => leaveEvent(id, t).then(put))), [act]);
+  /* 되는 시간 고르기·지우기 — 참여와 같은 갈래(version 무관) */
+  const answer = useCallback(
+    (id: number, date: string, available: boolean, startMin: number | null, endMin: number | null) =>
+      quiet(act(id, false, (t, put) => setAvailability(id, { date, available, startMin, endMin }, t).then(put))),
+    [act],
+  );
+  const unanswer = useCallback(
+    (id: number, date: string) => quiet(act(id, false, (t, put) => clearAvailability(id, date, t).then(put))),
+    [act],
+  );
   const addPerson = useCallback(
     (id: number, uid: string) => quiet(act(id, false, (t, put) => addParticipant(id, uid, t).then(put))),
     [act],
@@ -217,7 +227,7 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
 
   return {
     events, api, error, reload, refreshOne, adopt,
-    create, update, remove, join, leave, addPerson, removePerson, setBooked, busyIds,
+    create, update, remove, join, leave, answer, unanswer, addPerson, removePerson, setBooked, busyIds,
   };
 }
 

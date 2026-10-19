@@ -4,7 +4,7 @@ import type { PathStep } from './core';
 import { applyPaste, shouldApplyOnBlur, emptyForm, formFromEvent, formFromSteps, segTimeText, toInput, type FormState } from './eventForm';
 
 const ev = (o: Partial<EventDto> = {}): EventDto => ({
-  id: 1, title: '', date: '2026-10-20', startMin: null, endMin: null, location: null,
+  id: 1, title: '', date: '2026-10-20', candidates: [], startMin: null, endMin: null, location: null,
   capacity: null, booked: false, memo: null, segments: [], version: 3,
   createdBy: { uid: 'u1', nickname: '가' }, createdAt: '', updatedAt: '',
   participants: [], count: 1, joined: false, mine: true, canManage: true, ...o,
@@ -35,7 +35,7 @@ describe('eventForm', () => {
     expect([form.date, form.dateMoved]).toEqual(['2026-10-20', false]);
     const night = applyPaste(f, '[예약O] A 00:30 + B 01:40').form;
     expect([night.date, night.dateMoved]).toEqual(['2026-10-21', true]);
-    const g = formFromEvent(ev({ date: '2026-10-20', startMin: null, segments: [{ themeName: 'A', branchName: null, themeKey: null, startMin: 1470, endMin: null } as never] }));
+    const g = formFromEvent(ev({ date: '2026-10-20', candidates: [], startMin: null, segments: [{ themeName: 'A', branchName: null, themeKey: null, startMin: 1470, endMin: null } as never] }));
     expect(applyPaste(g, 'A 13:40 + B 15:20').form.date).toBe('2026-10-20');
   });
 

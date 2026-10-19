@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { eventStatus, eventTitle, kakaoPost, longDayLabel, rangeLabel, STATUS_LABEL, timeLabel } from '../clubEvents';
+import { eventStatus, sortKeyDate, eventTitle, kakaoPost, longDayLabel, rangeLabel, STATUS_LABEL, timeLabel } from '../clubEvents';
 import { eventLink } from '../eventLink';
 import { listClubMembers, sayClub, type ClubMemberDto, type EventDto } from '../server';
 import { showToast } from '../toast';
@@ -71,7 +71,7 @@ export function EventPanel({ ev, club, onClose, onEdit }: {
       <div>
         <h2 className="evp-title">{eventTitle(ev)}</h2>
         <p className="evp-sub">
-          {longDayLabel(ev.date)}{time && ` ${time}`} · 만든 사람 {ev.createdBy.nickname}
+          {longDayLabel(sortKeyDate(ev))}{time && ` ${time}`} · 만든 사람 {ev.createdBy.nickname}
         </p>
       </div>
 

@@ -240,7 +240,9 @@ export type SegmentDto = SegmentInput;
 
 export interface EventInput {
   title: string;
-  date: string;
+  date: string | null; // null = 날짜 미정(§4.8) — candidates 가 1개 이상
+  /* 후보 날짜. 빠지거나 null 이면 서버가 그대로 둔다 — 후보를 고칠 때만 보낸다(★ §4.8) */
+  candidates?: string[] | null;
   startMin: number | null;
   endMin: number | null;
   location: string | null;
@@ -250,10 +252,24 @@ export interface EventInput {
   segments: SegmentInput[];
 }
 
+/* 후보 날짜 하나에 대한 한 사람의 응답(§4.8). 종일 됨 = available true + 시각 둘 다 null */
+export interface AvailabilityDto {
+  uid: string;
+  available: boolean;
+  startMin: number | null;
+  endMin: number | null;
+}
+export interface CandidateDto {
+  date: string;
+  responses: AvailabilityDto[];
+}
+
 export interface EventDto {
   id: number;
   title: string;
-  date: string;
+  date: string | null; // null = 날짜 미정
+  candidates: CandidateDto[]; // date 순. 날짜를 정한 뒤에도 남는다
+
   startMin: number | null;
   endMin: number | null;
   location: string | null;
@@ -316,6 +332,21 @@ export const removeParticipant = (id: number, uid: string, token: string): Promi
 
 export const setBooked = (id: number, booked: boolean, token: string): Promise<EventDto> =>
   authed(`${EVENTS}/${id}/booking`, token, 'POST', { booked });
+
+export interface AvailabilityInput {
+  date: string;
+  available: boolean;
+  startMin: number | null;
+  endMin: number | null;
+}
+
+/* 되는 시간 고르기(§4.8). 같은 날짜면 덮어쓴다, version 은 안 오른다. */
+export const setAvailability = (id: number, input: AvailabilityInput, token: string): Promise<EventDto> =>
+  authed(`${EVENTS}/${id}/availability`, token, 'POST', input);
+
+/* 응답 지우기 = "응답 안 함" */
+export const clearAvailability = (id: number, date: string, token: string): Promise<EventDto> =>
+  authed(`${EVENTS}/${id}/availability/${encodeURIComponent(date)}`, token, 'DELETE');
 
 export const listClubMembers = (token: string): Promise<ClubMemberDto[]> =>
   authed('/api/club/members', token, 'GET');

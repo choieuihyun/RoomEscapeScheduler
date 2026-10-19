@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { monthGrid, toISO, WEEKDAYS } from '../core';
 import {
-  addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, nextMine, relDay, STATUS_LABEL, timeLabel, upcoming, weekday,
+  addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, nextMine, relDay, sortKeyDate, STATUS_LABEL, timeLabel, upcoming, weekday,
 } from '../clubEvents';
 import type { EventDto } from '../server';
 import type { UseClubEventsReturn } from '../useClubEvents';
@@ -53,7 +53,7 @@ export function HomePage({
 
   const homeLast = addDays(today, HOME_DAYS - 1);
   /* 내 다음 일정도 같은 범위에서 고른다 — 캘린더에서 넘겨 본 먼 달 일정이 수(0)와 따로 뜨지 않게 */
-  const homeEvents = events.filter((e) => e.date >= today && e.date <= homeLast);
+  const homeEvents = events.filter((e) => { const k = sortKeyDate(e, today); return k >= today && k <= homeLast; });
   const joinedCount = homeEvents.filter((e) => e.joined).length;
   /* 오늘 일정은 이미 끝났으면 건너뛴다(한국 시각) */
   const next = nextMine(homeEvents, new Date());
@@ -70,7 +70,7 @@ export function HomePage({
 
   /* 미니 달력 — 날짜별 동호회 일정 수 */
   const perDay = new Map<string, number>();
-  for (const e of events) perDay.set(e.date, (perDay.get(e.date) ?? 0) + 1);
+  for (const e of events) perDay.set(sortKeyDate(e, today), (perDay.get(sortKeyDate(e, today)) ?? 0) + 1);
   const cells = monthGrid(month.y, month.m);
 
   const initial = [...nickname][0] ?? '?';
@@ -157,7 +157,7 @@ export function HomePage({
                         <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
                       </div>
                       <span className="home-row-m">
-                        <span className={dowClass(weekday(ev.date))}>{dayLabel(ev.date)}</span>
+                        <span className={dowClass(weekday(sortKeyDate(ev, today)))}>{dayLabel(sortKeyDate(ev, today))}</span>
                         {' · '}{ev.createdBy.nickname} · {people(ev)}
                       </span>
                     </div>
@@ -194,7 +194,7 @@ export function HomePage({
           </div>
           {next ? (
             <>
-              <div className="home-next-date">{longDayLabel(next.date)} · {relDay(next.date, today)}</div>
+              <div className="home-next-date">{longDayLabel(next.date!)} · {relDay(next.date!, today)}</div>
               {next.title && next.segments.length > 0 && <div className="home-next-title">{next.title}</div>}
               <div className="home-next-box">
                 {next.segments.length > 0 ? next.segments.map((g, i) => (

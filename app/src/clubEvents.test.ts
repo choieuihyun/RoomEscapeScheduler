@@ -3,7 +3,7 @@ import type { EventDto } from './server';
 import {
   eventStatus, eventTitle, timeLabel, parseKakaoTitle, kakaoPost,
   sortEvents, nextMine, upcoming, addDays, cpLen, STATUS_LABEL,
-  mergeRange, upsert, dropEvent, afterActionError,
+  mergeRange, upsert, isUndecided, sortKeyDate, candidateSummary, dropEvent, afterActionError,
   parseClock24, rollDays, todayKst, daysBetween, relDay, dayLabel, longDayLabel, clockLabel, rangeLabel,
 } from './clubEvents';
 
@@ -11,7 +11,7 @@ const seg = (themeName: string, startMin: number, endMin: number | null = null) 
   ({ themeName, branchName: null, themeKey: null, startMin, endMin });
 
 const ev = (o: Partial<EventDto> = {}): EventDto => ({
-  id: 1, title: '', date: '2026-10-20', startMin: null, endMin: null, location: null,
+  id: 1, title: '', date: '2026-10-20', candidates: [], startMin: null, endMin: null, location: null,
   capacity: null, booked: false, memo: null, segments: [], version: 0,
   createdBy: { uid: 'u1', nickname: '가' }, createdAt: '', updatedAt: '',
   participants: [], count: 1, joined: false, mine: false, canManage: false, ...o,
@@ -250,5 +250,70 @@ describe('clubEvents 목록 병합', () => {
     expect(afterActionError(err(404, 'NO_SUCH_EVENT'))).toBe('drop');
     expect(afterActionError(err(409, 'EVENT_CONFLICT'))).toBe('none');
     expect(afterActionError(new Error('x'))).toBe('none');
+  });
+});
+
+describe('시간 협의 (§4.8)', () => {
+  const cand = (date: string, responses: { uid: string; available: boolean; startMin?: number | null; endMin?: number | null }[] = []) =>
+    ({ date, responses: responses.map((r) => ({ startMin: null, endMin: null, ...r })) });
+  const people = (...uids: string[]) => uids.map((uid) => ({ uid, nickname: uid, addedBy: null, joinedAt: '' }));
+  const undecided = (o: Partial<EventDto> = {}) => ev({ date: null, candidates: [cand('2026-10-30'), cand('2026-11-20')], ...o });
+
+  it('미정 일정은 협의 중', () => {
+    expect(isUndecided(undecided())).toBe(true);
+    expect(eventStatus(undecided({ segments: two, booked: true }))).toBe('talk');
+  });
+
+  it('미정은 내 다음 일정에서 빠진다', () => {
+    const now = new Date('2026-10-19T03:00:00Z');
+    expect(nextMine([undecided({ joined: true })], now)).toBeNull();
+    expect(nextMine([undecided({ joined: true }), ev({ id: 2, date: '2026-12-01', joined: true })], now)?.id).toBe(2);
+  });
+
+  it('후보 일부만 범위 안이어도 그 범위에 속한다', () => {
+    const u = undecided();
+    expect(sortKeyDate(u, '2026-11-01')).toBe('2026-11-20');
+    expect(sortKeyDate(u)).toBe('2026-10-30');
+    expect(sortKeyDate(u, '2026-12-01')).toBe('2026-10-30');
+    expect(mergeRange([u], '2026-11-01', '2026-11-30', []).map((e) => e.id)).toEqual([]);
+    expect(mergeRange([u], '2026-11-01', '2026-11-30', [u]).map((e) => e.id)).toEqual([1]);
+    expect(mergeRange([u], '2026-12-01', '2026-12-31', []).map((e) => e.id)).toEqual([1]);
+    expect(upcoming([u], '2026-11-01', 30).map((e) => e.id)).toEqual([1]);
+    expect(upcoming([u], '2026-12-01', 30)).toEqual([]);
+  });
+
+  it('교집합', () => {
+    const sum = (rs: Parameters<typeof cand>[1], n = ['A', 'B', 'C']) =>
+      candidateSummary(ev({ candidates: [cand('2026-10-31', rs)], participants: people(...n) }))[0];
+    const all = sum([
+      { uid: 'A', available: true },
+      { uid: 'B', available: true, startMin: 840, endMin: 1320 },
+      { uid: 'C', available: true, startMin: 780, endMin: 1080 },
+    ]);
+    expect(all).toMatchObject({ yes: 3, total: 3, window: { start: 840, end: 1080 }, all: true });
+    const cNo = sum([
+      { uid: 'A', available: true },
+      { uid: 'B', available: true, startMin: 840, endMin: 1320 },
+      { uid: 'C', available: false },
+    ]);
+    expect(cNo).toMatchObject({ yes: 2, all: false, noUids: ['C'], noneUids: [] });
+    expect(sum([])).toMatchObject({ yes: 0, window: null, noneUids: ['A', 'B', 'C'], all: false });
+    expect(sum([{ uid: 'A', available: true }, { uid: 'B', available: true, startMin: 1200, endMin: 1500 }], ['A', 'B']).window)
+      .toEqual({ start: 1200, end: 1500 });
+    expect(sum([{ uid: 'B', available: true, startMin: 600, endMin: 720 }, { uid: 'C', available: true, startMin: 780, endMin: 900 }], ['B', 'C']).window)
+      .toBeNull();
+  });
+
+  it('정렬: 모두 되는 날짜가 맨 위', () => {
+    const rows = candidateSummary(ev({
+      participants: people('A', 'B'),
+      candidates: [
+        cand('2026-10-30', [{ uid: 'A', available: true }]),
+        cand('2026-11-01', [{ uid: 'A', available: true }, { uid: 'B', available: true }]),
+        cand('2026-10-31', [{ uid: 'A', available: true }]),
+        cand('2026-10-29'),
+      ],
+    }));
+    expect(rows.map((r) => r.date)).toEqual(['2026-11-01', '2026-10-30', '2026-10-31', '2026-10-29']);
   });
 });
