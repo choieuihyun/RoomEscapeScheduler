@@ -22,7 +22,7 @@ export function useSaveModal(auth: UseAuthReturn, getSnapshot: () => string, onS
   const [busy, setBusy] = useState(false);
 
   const openSave = useCallback((r: SearchResultRow) => {
-    if (!auth.me) { auth.openAuth('in'); return; }
+    if (!auth.me) { auth.openAuth(); return; }
     setPending(r);
     setDate(today());
     setStatus('wish'); setMemo(''); setErr('');

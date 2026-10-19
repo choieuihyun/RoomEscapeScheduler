@@ -21,7 +21,7 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
   ) : (
     <>
       <span>일정을 저장해 두려면</span>
-      <button className="btn" type="button" onClick={() => auth.openAuth('in')}>로그인</button>
+      <button className="btn" type="button" onClick={() => auth.openAuth()}>로그인</button>
     </>
   );
 }

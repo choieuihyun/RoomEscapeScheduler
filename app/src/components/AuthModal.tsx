@@ -1,18 +1,14 @@
 import { useEffect, useRef } from 'react';
-import type { CSSProperties } from 'react';
 import type { UseAuthReturn } from '../useAuth';
 
-const lkStyle: CSSProperties = { color: 'var(--blue-text)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' };
-
-/* 로그인/가입 모달 — index.html의 #authModal + openAuth()/submitAuth() 이식. */
+/* 로그인 모달 — index.html의 #authModal + openAuth()/submitAuth() 이식. */
 export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   const idRef = useRef<HTMLInputElement>(null);
   const pwRef = useRef<HTMLInputElement>(null);
-  const up = auth.mode === 'up';
 
   useEffect(() => {
     if (auth.open) setTimeout(() => idRef.current?.focus(), 30);
-  }, [auth.open, auth.mode]);
+  }, [auth.open]);
 
   return (
     <div
@@ -20,9 +16,9 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
       onClick={e => { if (e.target === e.currentTarget) auth.closeAuth(); }}
     >
       <div className="mbox">
-        <h3>{up ? '가입' : '로그인'}</h3>
+        <h3>로그인</h3>
         <p className="msub">
-          {up ? '아이디랑 비밀번호만 정하면 끝이에요. 이메일 인증 같은 건 없어요.' : '아이디와 비밀번호를 넣어 주세요.'}
+          아이디와 비밀번호를 넣어 주세요.
         </p>
         <div className="mrow">
           <label>아이디</label>
@@ -37,7 +33,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
           <label>비밀번호 <span>(6자 이상)</span></label>
           <input
             ref={pwRef}
-            type="password" autoComplete={up ? 'new-password' : 'current-password'} placeholder="••••••"
+            type="password" autoComplete="current-password" placeholder="••••••"
             value={auth.pw} onChange={e => auth.setPw(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') auth.submit(); }}
           />
@@ -45,20 +41,11 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
         <p className="merr">{auth.err}</p>
         <div className="mbtns">
           <button className="btn-go" type="button" disabled={auth.busy} onClick={auth.submit}>
-            {auth.busy ? '잠시만…' : (up ? '가입하고 시작' : '로그인')}
+            {auth.busy ? '잠시만…' : '로그인'}
           </button>
           <button className="btn" type="button" onClick={auth.closeAuth}>닫기</button>
         </div>
-        <p className="mnote">
-          {up ? (
-            <>이미 아이디가 있나요? <b style={lkStyle} onClick={() => auth.openAuth('in')}>로그인</b></>
-          ) : (
-            <>
-              아이디가 없나요? <b style={lkStyle} onClick={() => auth.openAuth('up')}>가입</b> ·{' '}
-              <b>비밀번호를 잊어버리면 찾을 방법이 없어요.</b> 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.
-            </>
-          )}
-        </p>
+        <p className="mnote"><b>비밀번호를 잊어버리면 찾을 방법이 없어요.</b></p>
       </div>
     </div>
   );
