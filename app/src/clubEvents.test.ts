@@ -304,6 +304,32 @@ describe('시간 협의 (§4.8)', () => {
       .toBeNull();
   });
 
+  it('미정은 지난 후보가 아니라 from 이상인 후보 자리에 정렬된다', () => {
+    const u = ev({ id: 5, date: null, candidates: [cand('2026-10-10'), cand('2026-10-25')] });
+    const d = ev({ id: 6, date: '2026-10-20' });
+    expect(upcoming([u, d], '2026-10-19', 30).map((e) => e.id)).toEqual([6, 5]);
+    expect(mergeRange([], '2026-10-19', '2026-10-31', [u, d]).map((e) => e.id)).toEqual([6, 5]);
+  });
+
+  it('정했다가 다시 미정으로 돌려도 범위가 맞다', () => {
+    const decided = ev({ id: 7, date: '2026-11-05' });
+    expect(mergeRange([decided], '2026-11-01', '2026-11-30', [])).toEqual([]);
+    const far = ev({ id: 8, date: null, candidates: [cand('2026-12-10')] });
+    expect(mergeRange([far], '2026-11-01', '2026-11-30', []).map((e) => e.id)).toEqual([8]);
+  });
+
+  it('참여자가 아닌 사람의 응답은 세지 않는다', () => {
+    const [row] = candidateSummary(ev({
+      participants: people('A'),
+      candidates: [cand('2026-10-31', [{ uid: 'A', available: true, startMin: 600, endMin: 900 }, { uid: 'Z', available: true, startMin: 700, endMin: 800 }])],
+    }));
+    expect(row).toMatchObject({ yes: 1, total: 1, window: { start: 600, end: 900 } });
+  });
+
+  it('NOT_A_CANDIDATE 는 다시 불러온다', () => {
+    expect(afterActionError({ body: { error: 'NOT_A_CANDIDATE' } })).toBe('refresh');
+  });
+
   it('정렬: 모두 되는 날짜가 맨 위', () => {
     const rows = candidateSummary(ev({
       participants: people('A', 'B'),

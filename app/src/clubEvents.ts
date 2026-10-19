@@ -212,10 +212,11 @@ function sortMin(ev: EventDto): number {
   return ev.segments.length > 0 ? ev.segments[0].startMin : -1;
 }
 
-export function sortEvents(evs: EventDto[]): EventDto[] {
+/* from 을 주면 미정 일정은 from 이상인 가장 이른 후보 자리에 놓인다(지난 후보에 끌려가지 않게). */
+export function sortEvents(evs: EventDto[], from?: string): EventDto[] {
   return [...evs].sort(
     (a, b) =>
-      (sortKeyDate(a) < sortKeyDate(b) ? -1 : sortKeyDate(a) > sortKeyDate(b) ? 1 : 0) ||
+      (sortKeyDate(a, from) < sortKeyDate(b, from) ? -1 : sortKeyDate(a, from) > sortKeyDate(b, from) ? 1 : 0) ||
       sortMin(a) - sortMin(b) ||
       a.id - b.id,
   );
@@ -286,7 +287,7 @@ export function nextMine(evs: EventDto[], now: Date): EventDto | null {
 /* 오늘 ~ 오늘+days-1 (양쪽 포함). */
 export function upcoming(evs: EventDto[], today: string, days: number): EventDto[] {
   const last = addDays(today, days - 1);
-  return sortEvents(evs.filter((e) => { const k = sortKeyDate(e, today); return k >= today && k <= last; }));
+  return sortEvents(evs.filter((e) => { const k = sortKeyDate(e, today); return k >= today && k <= last; }), today);
 }
 
 /* "YYYY-MM-DD" 에 n 일을 더한다(날짜만 — 시간대와 무관). */
@@ -305,7 +306,7 @@ export function mergeRange(cur: EventDto[], from: string, to: string, fresh: Eve
   /* 날짜 미정 일정은 후보가 하나라도 범위 안이면 그 범위 소속 */
   const inRange = (e: EventDto) =>
     e.date !== null ? e.date >= from && e.date <= to : e.candidates.some((c) => c.date >= from && c.date <= to);
-  return sortEvents([...cur.filter((e) => !inRange(e) && !ids.has(e.id)), ...fresh]);
+  return sortEvents([...cur.filter((e) => !inRange(e) && !ids.has(e.id)), ...fresh], from);
 }
 
 /* 같은 id 가 있으면 바꾸고 없으면 넣는다. */
@@ -321,7 +322,7 @@ export function dropEvent(cur: EventDto[], id: number): EventDto[] {
    이미 지워진 일정이면 목록에서 뺀다. 수정 충돌(EVENT_CONFLICT)은 화면(E5)이 직접 다룬다. */
 export function afterActionError(err: unknown): 'refresh' | 'drop' | 'none' {
   const code = errorCode(err);
-  if (code === 'EVENT_FULL') return 'refresh';
+  if (code === 'EVENT_FULL' || code === 'NOT_A_CANDIDATE') return 'refresh';
   if (code === 'NO_SUCH_EVENT') return 'drop';
   return 'none';
 }
