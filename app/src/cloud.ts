@@ -86,10 +86,20 @@ export async function getMessagingToken(vapidKey: string, swRegistration: Servic
   }
 }
 
-/* 앱 탭이 보이는 동안 온 푸시(서비스 워커가 창으로 넘긴 것). SDK 는 이때 알림을 띄우지 않는다. 끊는 함수를 돌려준다 */
+/* 앱 탭이 보이는 동안 온 푸시(서비스 워커가 창으로 넘긴 것). SDK 는 이때 알림을 띄우지 않는다. 끊는 함수를 돌려준다.
+   SDK 의 onMessage 는 인스턴스에 받는 쪽을 하나만 두고, 돌려주는 끊기는 지금 받는 쪽이 누구든 지운다 —
+   SDK 를 받는 중에 다시 걸면(등록 알림 등) 늦게 끝난 앞 구독의 끊기가 새 받는 쪽까지 지운다(헤드리스로 재현).
+   그래서 SDK 에는 페이지마다 한 번만 걸고, 여기서 받는 쪽만 바꿔 끼운다. 끊기는 자기 것일 때만 지운다. */
+let fgCb: ((payload: unknown) => void) | null = null;
+let fgHooked = false;
 export async function onForegroundMessage(cb: (payload: unknown) => void): Promise<() => void> {
   await bootMessaging();
-  return M.onMessage(M.getMessaging(app), cb);
+  if (!fgHooked) {
+    M.onMessage(M.getMessaging(app), (p: unknown) => fgCb?.(p));
+    fgHooked = true;
+  }
+  fgCb = cb;
+  return () => { if (fgCb === cb) fgCb = null; };
 }
 
 /* ── 계정 ── */
