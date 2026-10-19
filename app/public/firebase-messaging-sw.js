@@ -20,7 +20,7 @@ self.addEventListener('activate', event => event.waitUntil(self.clients.claim())
    그래서 importScripts 보다 먼저 걸어 우리 것이 먼저 돌고, stopImmediatePropagation 으로 SDK 것을 막는다
    (안 막으면 창이 두 번 열리거나, 앞으로 온 창이 그 일정을 안 연다). */
 
-// pickLink 시작 — app/src/swLink.ts 의 pickLink 와 똑같이 유지한다(swLink.test.ts 가 같은 표로 둘 다 돌린다)
+// pickLink 시작 — app/src/swLink.ts 의 pickLink·clickTarget 과 똑같이 유지한다(swLink.test.ts 가 같은 표로 둘 다 돌린다)
 function pickLink(data, root) {
   const bag = v => (v && typeof v === 'object' ? v : null);
   const d = bag(data);
@@ -40,6 +40,18 @@ function pickLink(data, root) {
   }
   return root;
 }
+
+/* 열린 창에서: 일정 링크가 아니면 null(앞으로 가져오기만), 지금 주소의 해시만 바꾼 주소(새로 불러오지 않는다),
+   이미 그 해시면 'message' */
+function clickTarget(clientUrl, link) {
+  const i = link.indexOf('#');
+  const hash = i < 0 ? '' : link.slice(i);
+  if (!/^#e=\d{1,15}$/.test(hash)) return null;
+  const u = new URL(clientUrl);
+  if (u.hash === hash) return 'message';
+  u.hash = hash;
+  return u.href;
+}
 // pickLink 끝
 
 async function openLink(link) {
@@ -52,12 +64,16 @@ async function openLink(link) {
   }
   /* 누른 직후에만 창을 앞으로 가져올 수 있어 focus 를 먼저 한다 */
   await client.focus().catch(() => {});
-  try {
-    await client.navigate(link);
-  } catch {
-    /* 관할 밖 창은 navigate 가 거절된다 — 앱이 이 메시지를 받아 #e= 로 연다(SchedulerPage) */
-    client.postMessage({ type: 'open', link });
+  const target = clickTarget(client.url, link);
+  if (target === null) return;
+  if (target !== 'message') {
+    try {
+      await client.navigate(target);
+      return;
+    } catch { /* 관할 밖 창은 navigate 가 거절된다 — 아래 메시지로 */ }
   }
+  /* 앱이 이 메시지를 받아 #e= 로 연다(SchedulerPage) */
+  client.postMessage({ type: 'open', link });
 }
 
 self.addEventListener('notificationclick', event => {

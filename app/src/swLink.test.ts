@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { pickLink, swOpenId } from './swLink';
+import { clickTarget, pickLink, swOpenId } from './swLink';
 
 const ROOT = 'https://choieuihyun.github.io/RoomEscapeScheduler/';
 
@@ -21,13 +21,22 @@ const CASES: [string, unknown, string][] = [
   ['빈 문자열·숫자는 건너뜀', { link: '', FCM_MSG: { data: { link: 5 }, fcmOptions: { link: ROOT + '#e=8' } } }, ROOT + '#e=8'],
 ];
 
-/* public/firebase-messaging-sw.js 의 pickLink 를 꺼내 함수로 만든다 */
-function swPickLink(): (data: unknown, root: string) => string {
+/* public/firebase-messaging-sw.js 의 pickLink·clickTarget 을 꺼내 함수로 만든다 */
+function swCopy(): { pickLink: typeof pickLink; clickTarget: typeof clickTarget } {
   const src = readFileSync(new URL('../public/firebase-messaging-sw.js', import.meta.url), 'utf8');
   const m = /\/\/ pickLink 시작.*\n([\s\S]*?)\/\/ pickLink 끝/.exec(src);
   if (!m) throw new Error('서비스 워커에서 pickLink 를 못 찾았어요');
-  return new Function(`${m[1]}\nreturn pickLink;`)();
+  return new Function(`${m[1]}\nreturn { pickLink, clickTarget };`)();
 }
+
+/* [지금 창 주소, 고른 링크, 기대] */
+const TARGETS: [string, string, string, string | null][] = [
+  ['빈자리(앱 주소) → 앞으로만', ROOT + '?view=calc', ROOT, null],
+  ['일정 링크 아님(#s=) → 앞으로만', ROOT, ROOT + '#s=abc', null],
+  ['계산 화면 → 쿼리는 두고 해시만', ROOT + '?view=calc', ROOT + '#e=12', ROOT + '?view=calc#e=12'],
+  ['다른 일정 링크 → 해시만 바꿈', ROOT + '?view=calendar#e=3', ROOT + '#e=12', ROOT + '?view=calendar#e=12'],
+  ['이미 같은 해시 → 메시지', ROOT + '#e=12', ROOT + '#e=12', 'message'],
+];
 
 describe('pickLink', () => {
   for (const [name, data, want] of CASES) {
@@ -35,8 +44,19 @@ describe('pickLink', () => {
   }
 
   it('서비스 워커 사본도 같은 결과', () => {
-    const sw = swPickLink();
-    for (const [name, data, want] of CASES) expect(sw(data, ROOT), name).toBe(want);
+    const sw = swCopy();
+    for (const [name, data, want] of CASES) expect(sw.pickLink(data, ROOT), name).toBe(want);
+  });
+});
+
+describe('clickTarget', () => {
+  for (const [name, cur, link, want] of TARGETS) {
+    it(name, () => expect(clickTarget(cur, link)).toBe(want));
+  }
+
+  it('서비스 워커 사본도 같은 결과', () => {
+    const sw = swCopy();
+    for (const [name, cur, link, want] of TARGETS) expect(sw.clickTarget(cur, link), name).toBe(want);
   });
 });
 

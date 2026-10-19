@@ -1,6 +1,6 @@
 /* 알림을 눌렀을 때 열 주소 (작업명세서 §4.10, 계획 Task 10).
    서비스 워커(public/firebase-messaging-sw.js)는 번들 밖의 그냥 JS 라 이 파일을 불러올 수 없다 —
-   같은 pickLink 를 그 파일에 그대로 옮겨 두고, swLink.test.ts 가 두 쪽을 같은 표로 돌려 어긋나지 않게 지킨다. */
+   같은 pickLink·clickTarget 을 그 파일에 그대로 옮겨 두고, swLink.test.ts 가 두 쪽을 같은 표로 돌려 어긋나지 않게 지킨다. */
 import { readEventHash } from './eventLink';
 
 type Bag = Record<string, unknown>;
@@ -25,6 +25,20 @@ export function pickLink(data: unknown, root: string): string {
     } catch { /* 못 읽는 주소는 건너뛴다 */ }
   }
   return root;
+}
+
+/* 이미 열린 앱 창에서 링크를 어떻게 열지. 링크를 그대로 navigate 하면 지금 주소(`?view=calc` 등)와 달라 새로 불러온다 —
+   - 일정 링크(`#e=<id>`)가 아니면(빈자리 = 앱 주소) null: 창을 앞으로 가져오기만(예전 SDK 동작과 같다).
+   - 지금 주소의 해시만 바꾼 주소: 새로 불러오지 않고 hashchange 로 연다.
+   - 이미 그 해시면 'message': navigate 해도 아무 일이 없어 앱에 메시지로 알린다. */
+export function clickTarget(clientUrl: string, link: string): string | 'message' | null {
+  const i = link.indexOf('#');
+  const hash = i < 0 ? '' : link.slice(i);
+  if (!/^#e=\d{1,15}$/.test(hash)) return null;
+  const u = new URL(clientUrl);
+  if (u.hash === hash) return 'message';
+  u.hash = hash;
+  return u.href;
 }
 
 /* 서비스 워커가 창을 옮기지 못했을 때(navigate 거절) 보내는 `{ type: 'open', link }` 에서 일정 id 를 꺼낸다.
