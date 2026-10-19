@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { cpLen, dayLabel, eventStatus, eventTitle, STATUS_LABEL, weekday } from '../clubEvents';
 import { isPlayableName, searchThemes, sourceLabel } from '../played';
 import type { EventDto, MeDto, PlayedDto, ThemeRef } from '../server';
@@ -123,9 +123,19 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
   const [mErr, setMErr] = useState('');
   const [mBusy, setMBusy] = useState(false);
 
-  const mine = played ?? [];
   const needle = q.trim();
-  const results = needle && profile.themes ? searchThemes(profile.themes, needle, mine) : [];
+  /* 찾기는 타자가 멈추고 150ms 뒤에 — 테마 목록이 수백 개라 글자마다 다시 거르지 않는다 */
+  const [dq, setDq] = useState('');
+  useEffect(() => {
+    const t = window.setTimeout(() => setDq(needle), 150);
+    return () => clearTimeout(t);
+  }, [needle]);
+  const { themes } = profile;
+  const results = useMemo(
+    () => (dq && themes ? searchThemes(themes, dq, played ?? []) : []),
+    [dq, themes, played],
+  );
+  const mine = played ?? [];
 
   const rows = mine.filter((p) => inTab(p, tab));
   const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
@@ -133,6 +143,24 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
   const cur = Math.min(page, pages - 1);
   const shown = rows.slice(cur * PER_PAGE, cur * PER_PAGE + PER_PAGE);
   const tabInfo = TABS.find((t) => t.id === tab)!;
+
+  /* 지운 줄의 × 에 있던 포커스를 다음 줄 × 로(없으면 앞 줄, 그것도 없으면 고른 탭). 되돌리면 그 줄 × 로 돌려 놓는다.
+     사용자가 이미 다른 곳으로 옮겼으면 건드리지 않는다. */
+  const listRef = useRef<HTMLUListElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const lost = () => { const a = document.activeElement; return !a || a === document.body || !!a.closest('.toasts'); };
+  const fallback = () => tabsRef.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]');
+  const del = async (p: PlayedDto, idx: number) => {
+    await profile.remove(p, (id) => requestAnimationFrame(() => {
+      if (!lost()) return;
+      (listRef.current?.querySelector<HTMLButtonElement>(`[data-pid="${id}"]`) ?? fallback())?.focus();
+    }));
+    requestAnimationFrame(() => {
+      if (!lost()) return;
+      const dels = listRef.current?.querySelectorAll<HTMLButtonElement>('.pf-del');
+      (dels?.[idx] ?? dels?.[idx - 1] ?? fallback())?.focus();
+    });
+  };
 
   const pick = async (ref: ThemeRef) => {
     setAddingKey(ref.themeKey);
@@ -189,8 +217,9 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
         />
         <svg className="pf-q-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
           strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-        {needle && (
-          <div className="pf-results" aria-label="찾은 테마">
+        {dq && (
+          <section className="pf-results" aria-labelledby="pf-res-h">
+            <h3 id="pf-res-h" className="sr-only">찾은 테마</h3>
             {profile.themes === null ? (
               <p className="pf-res-note">{profile.themesError || '테마 목록을 불러오는 중…'}</p>
             ) : results.length === 0 ? (
@@ -205,7 +234,7 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
                 )}
               </div>
             ))}
-          </div>
+          </section>
         )}
         {!manualOpen ? (
           <button type="button" className="pf-manual-link" onClick={openManual}>찾는 테마가 없으면 직접 적기</button>
@@ -230,7 +259,7 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
         )}
       </div>
 
-      <div role="tablist" className="home-tabs pf-tabs">
+      <div role="tablist" className="home-tabs pf-tabs" ref={tabsRef}>
         {TABS.map((t) => (
           <button
             key={t.id} type="button" role="tab" aria-selected={tab === t.id}
@@ -250,8 +279,8 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
       ) : shown.length === 0 ? (
         <p className="home-empty-p pf-loading">{tabInfo.empty}</p>
       ) : (
-        <ul className="pf-list">
-          {shown.map((p) => {
+        <ul className="pf-list" ref={listRef}>
+          {shown.map((p, i) => {
             const src = sourceLabel(p);
             const meta = [p.branchName, p.playedOn && dayLabel(p.playedOn)].filter(Boolean).join(' · ');
             return (
@@ -261,8 +290,8 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
                   {meta && <div className="pf-row-m">{meta}</div>}
                 </div>
                 <span className={'chip-info pf-src' + (p.source === 'MANUAL' ? '' : ' muted')}>{src}</span>
-                <button type="button" className="pf-del" aria-label={`${p.themeName} 기록 지우기`} title="지우기"
-                  disabled={profile.busyIds.has(p.id)} onClick={() => void profile.remove(p)}>×</button>
+                <button type="button" className="pf-del" data-pid={p.id} aria-label={`${p.themeName} 기록 지우기`} title="지우기"
+                  onClick={() => void del(p, i)}>×</button>
               </li>
             );
           })}

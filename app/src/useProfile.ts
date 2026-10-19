@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  addPlayed, deletePlayed, errorCode, isMissingApi, listPlayed, listThemes, myPastEvents, sayClub,
+  addPlayed, deletePlayed, deletePlayedNow, errorCode, isMissingApi, listPlayed, listThemes, myPastEvents, sayClub,
   type EventDto, type PlayedDto, type PlayedInput, type ThemeRef,
 } from './server';
 import { addDays } from './clubEvents';
-import { showToast } from './toast';
+import { clearToasts, showToast, type CloseReason } from './toast';
 
 /* "내 정보" 화면의 데이터 — 해 본 테마·지난 동호회 일정(작업명세서 §4.9).
    해 본 테마 목록은 켜지자마자 한 번 받는다 — 서버가 이 API 를 모르면(본문 없는 404) 메뉴를 숨겨야 해서다.
@@ -35,14 +35,17 @@ export function mergePast(loaded: EventDto[], fresh: EventDto[], limit: number):
   };
 }
 
-/* 되돌리기로 다시 보낼 내용. 자동 기록(EVENT)은 화면이 그 출처로 보낼 수 없어(§4.9 source 는 MANUAL·PLAN 만)
-   직접 기록으로 돌아온다. 테마 키·지점·날짜는 그대로. */
-export function restoreInput(p: PlayedDto): PlayedInput {
-  return {
-    themeKey: p.themeKey, themeName: p.themeName, branchName: p.branchName, playedOn: p.playedOn,
-    ...(p.source === 'PLAN' ? { source: 'PLAN' as const } : {}),
-  };
+/* 지우기는 바로 보내지 않고 미룬다 — 줄은 곧바로 감추고 "되돌리기" 알림이 닫힐 때 정한다.
+   되돌리기를 눌렀으면 요청 없이 다시 보이고, 그 밖(시간이 다 됨·밀려남·지움)이면 그때 DELETE.
+   그래서 자동 기록의 출처(EVENT)·일정 연결(eventId)이 되돌려도 그대로 남는다. */
+export const onDeleteToastClose = (reason: CloseReason): 'restore' | 'send' => (reason === 'action' ? 'restore' : 'send');
+
+/* 지우려고 미뤄 둔 기록은 목록에서 뺀다 — 그 사이 목록을 새로 받아도 지운 줄이 다시 나타나지 않게 */
+export function withoutPending(list: PlayedDto[], pending: ReadonlySet<number>): PlayedDto[] {
+  return pending.size === 0 ? list : list.filter((p) => !pending.has(p.id));
 }
+
+type Pending = { token: string; sending: boolean };
 
 async function token(): Promise<string | null> {
   return (await import('./cloud')).idToken();
@@ -58,7 +61,10 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
   const [pastError, setPastError] = useState('');
   const [themes, setThemes] = useState<ThemeRef[] | null>(null);
   const [themesError, setThemesError] = useState('');
-  const [busyIds, setBusyIds] = useState<Set<number>>(new Set());
+  /* 지우기를 미뤄 둔 id(화면에서 감춤). 실제 대기 내용(미리 받아 둔 토큰·보내는 중)은 pendingRef */
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<number>>(new Set());
+  const pendingRef = useRef(new Map<number, Pending>());
+  const syncPending = useCallback(() => setPendingIds(new Set(pendingRef.current.keys())), []);
 
   /* 켜짐 세대 — 꺼질 때(로그아웃·다른 사람) 올린다. 그 전에 떠난 요청·되돌리기가 새 사람 화면을 건드리지 못하게. */
   const epoch = useRef(0);
@@ -75,24 +81,40 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     setPast(null);
   }, []);
 
-  const reloadPlayed = useCallback(async () => {
-    if (!enabled) return;
+  /* 받은 목록을 돌려준다(못 받았거나 낡은 응답이면 null) */
+  const reloadPlayed = useCallback(async (): Promise<PlayedDto[] | null> => {
+    if (!enabled) return null;
     const ep = epoch.current;
     const my = ++playedSeq.current;
     try {
       const t = await token();
-      if (!t || ep !== epoch.current || my !== playedSeq.current) return;
+      if (!t || ep !== epoch.current || my !== playedSeq.current) return null;
       const list = await listPlayed(t);
-      if (ep !== epoch.current || my !== playedSeq.current) return;
+      if (ep !== epoch.current || my !== playedSeq.current) return null;
+      playedRef.current = list;
       setPlayed(list);
       setApi('on');
       setError('');
+      return list;
     } catch (e) {
-      if (ep !== epoch.current || my !== playedSeq.current) return;
+      if (ep !== epoch.current || my !== playedSeq.current) return null;
       if (isMissingApi(e)) missing();
       else setError(sayClub(e));
+      return null;
     }
   }, [enabled, missing]);
+
+  /* 미뤄 둔 지우기를 지금 보낸다 — 창을 닫거나(pagehide) 로그아웃할 때. 결과를 기다릴 수 없어 keepalive 로,
+     토큰은 지울 때 미리 받아 둔 것으로 보낸다. 보낸 줄은 목록에서도 뺀다. */
+  const flushPending = useCallback(() => {
+    const gone: number[] = [];
+    for (const [id, p] of pendingRef.current) {
+      if (!p.sending) deletePlayedNow(id, p.token);
+      gone.push(id);
+    }
+    pendingRef.current.clear();
+    return gone;
+  }, []);
 
   /* 지난 일정 한 쪽. first 면 처음부터 다시 받는다. */
   const loadPast = useCallback(async (first: boolean) => {
@@ -124,7 +146,10 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     if (!enabled) return;
     const ep = epoch;
     return () => {
+      flushPending();
       ep.current++;
+      clearToasts(); // 앞 사람의 "되돌리기"를 남기지 않는다(닫힐 때 세대가 달라 아무것도 안 한다)
+      setPendingIds(new Set());
       setApi('unknown');
       setPlayed(null);
       setError('');
@@ -132,9 +157,21 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
       setHasMorePast(false);
       setPastBusy(false);
       setPastError('');
-      setBusyIds(new Set());
     };
-  }, [enabled]);
+  }, [enabled, flushPending]);
+
+  /* 창을 닫거나 다른 페이지로 떠날 때 미뤄 둔 지우기를 보낸다 */
+  useEffect(() => {
+    if (!enabled) return;
+    const onHide = () => {
+      const gone = new Set(flushPending());
+      if (gone.size === 0) return;
+      setPlayed((cur) => cur?.filter((p) => !gone.has(p.id)) ?? cur);
+      setPendingIds(new Set());
+    };
+    addEventListener('pagehide', onHide);
+    return () => removeEventListener('pagehide', onHide);
+  }, [enabled, flushPending]);
 
   /* 켜질 때 — 해 본 테마 목록으로 이 API 가 있는지 본다 */
   useEffect(() => {
@@ -165,62 +202,70 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
   }, [themes]);
 
   /* 기록 하나 더하기. 같은 테마가 이미 있으면 서버가 있던 행을 그대로 준다(멱등) — 보내기 전 목록에 그 id 가 있었으면 existed.
-     실패하면 서버 문구를 던진다(부르는 쪽이 칸 아래나 토스트로 보인다). */
+     목록을 아직 못 받았으면 먼저 받고 나서 판정한다. 실패하면 서버 문구를 던진다(부르는 쪽이 칸 아래나 토스트로 보인다). */
   const add = useCallback(async (input: PlayedInput): Promise<{ existed: boolean }> => {
     const ep = epoch.current;
     const t = enabled ? await token() : null;
     if (!t || ep !== epoch.current) throw new Error('로그인해 주세요.');
-    const before = new Set((playedRef.current ?? []).map((p) => p.id));
+    const known = playedRef.current ?? await reloadPlayed();
     let row: PlayedDto;
     try {
       row = await addPlayed(input, t);
     } catch (e) {
       throw new Error(sayClub(e));
     }
-    if (ep === epoch.current) await reloadPlayed(); // 기록 날짜가 없는 행이 어디에 끼는지는 서버 순서를 따른다
-    return { existed: before.has(row.id) };
-  }, [enabled, reloadPlayed]);
+    if (ep !== epoch.current) return { existed: false };
+    /* 지우려고 미뤄 둔 그 기록이 돌아왔으면 — 지우기를 거두고 다시 보인다(새로 기록한 것과 같다) */
+    const revived = pendingRef.current.get(row.id);
+    if (revived && !revived.sending) { pendingRef.current.delete(row.id); syncPending(); }
+    await reloadPlayed(); // 기록 날짜가 없는 행이 어디에 끼는지는 서버 순서를 따른다
+    return { existed: !revived && !!known?.some((p) => p.id === row.id) };
+  }, [enabled, reloadPlayed, syncPending]);
 
-  const setBusy = (id: number, on: boolean) => setBusyIds((cur) => {
-    const next = new Set(cur);
-    if (on) next.add(id); else next.delete(id);
-    return next;
-  });
-
-  /* 지우기 — 묻지 않고 지운 뒤 "되돌리기"를 준다. 되돌리기는 같은 내용으로 다시 기록한다(새 id). */
-  const remove = useCallback(async (p: PlayedDto) => {
-    const ep = epoch.current;
-    setBusy(p.id, true);
+  /* 알림이 닫힐 때 미뤄 둔 지우기를 정한다(onDeleteToastClose). 세대가 바뀌었거나 이미 보냈으면(flush) 할 일이 없다. */
+  const settle = useCallback(async (p: PlayedDto, reason: CloseReason, ep: number, onRestored?: (id: number) => void) => {
+    const wait = pendingRef.current.get(p.id);
+    if (ep !== epoch.current || !wait || wait.sending) return;
+    if (onDeleteToastClose(reason) === 'restore') {
+      pendingRef.current.delete(p.id);
+      syncPending();
+      onRestored?.(p.id);
+      return;
+    }
+    wait.sending = true;
     try {
-      const t = await token();
-      if (!t || ep !== epoch.current) return;
-      await deletePlayed(p.id, t);
-      if (ep !== epoch.current) return;
-      setPlayed((cur) => cur?.filter((x) => x.id !== p.id) ?? cur);
-      showToast('지웠어요.', {
-        label: '되돌리기',
-        run: () => {
-          if (ep !== epoch.current) return;
-          add(restoreInput(p)).then(
-            () => showToast('되돌렸어요.'),
-            (e: Error) => showToast(e.message),
-          );
-        },
-      });
+      await deletePlayed(p.id, (await token()) ?? wait.token);
+      if (ep === epoch.current) setPlayed((cur) => cur?.filter((x) => x.id !== p.id) ?? cur);
     } catch (e) {
       if (ep !== epoch.current) return;
-      showToast(sayClub(e));
-      if (errorCode(e) === 'NO_SUCH_PLAYED') void reloadPlayed(); // 이미 없는 기록 — 목록을 맞춘다
+      if (errorCode(e) === 'NO_SUCH_PLAYED') setPlayed((cur) => cur?.filter((x) => x.id !== p.id) ?? cur); // 이미 없다 — 목적은 이뤘다
+      else showToast(sayClub(e)); // 못 지웠다 — 줄이 다시 보인다
     } finally {
-      if (ep === epoch.current) setBusy(p.id, false);
+      if (ep === epoch.current) { pendingRef.current.delete(p.id); syncPending(); }
     }
-  }, [add, reloadPlayed]);
+  }, [syncPending]);
+
+  /* 지우기 — 묻지 않는다. 줄을 바로 감추고 "지웠어요. 되돌리기" 알림이 닫힐 때 보낸다(settle).
+     토큰은 지금 받아 둔다 — 창을 닫을 때(pagehide) 기다리지 않고 보내야 해서. onRestored 는 되돌렸을 때 화면이 포커스를 돌리는 데 쓴다. */
+  const remove = useCallback(async (p: PlayedDto, onRestored?: (id: number) => void) => {
+    const ep = epoch.current;
+    const t = await token();
+    if (!t || ep !== epoch.current || pendingRef.current.has(p.id)) return;
+    pendingRef.current.set(p.id, { token: t, sending: false });
+    syncPending();
+    showToast('지웠어요.', {
+      action: { label: '되돌리기' },
+      onClose: (reason) => void settle(p, reason, ep, onRestored),
+    });
+  }, [settle, syncPending]);
+
+  const visible = useMemo(() => (played === null ? null : withoutPending(played, pendingIds)), [played, pendingIds]);
 
   return {
-    api, played, error, reloadPlayed,
+    api, played: visible, error, reloadPlayed,
     past, hasMorePast, pastBusy, pastError, morePast: () => loadPast(false), retryPast: () => loadPast(true),
     themes, themesError, loadThemes,
-    add, remove, busyIds,
+    add, remove,
   };
 }
 

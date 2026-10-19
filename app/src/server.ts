@@ -412,6 +412,17 @@ export const addPlayed = (body: PlayedInput, token: string): Promise<PlayedDto> 
 export const deletePlayed = (id: number, token: string): Promise<{ id: number; deleted: boolean }> =>
   authed(`/api/me/played/${id}`, token, 'DELETE');
 
+/* 창을 닫거나 로그아웃할 때 미뤄 둔 지우기를 보낸다 — keepalive 라 페이지가 사라져도 요청은 간다.
+   결과는 기다리지 않는다(받을 화면이 없다). 토큰은 부르는 쪽이 미리 받아 둔 것. */
+export function deletePlayedNow(id: number, token: string): void {
+  try {
+    void fetch(base() + `/api/me/played/${id}`, {
+      method: 'DELETE', keepalive: true,
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+    }).catch(() => { /* 닫히는 중 — 알릴 곳이 없다 */ });
+  } catch { /* fetch 자체가 없을 때 */ }
+}
+
 export const memberPlayed = (uid: string, token: string): Promise<PlayedDto[]> =>
   authed(`/api/club/members/${encodeURIComponent(uid)}/played`, token, 'GET');
 

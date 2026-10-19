@@ -42,8 +42,7 @@ export function searchThemes(
   const needle = squash(q);
   const out: { ref: ThemeRef; recorded: boolean }[] = [];
   for (const ref of all) {
-    if (needle && !squash(`${ref.themeName} ${ref.storeName} ${ref.branchName}`).includes(needle)
-      && ![ref.themeName, ref.storeName, ref.branchName].some((f) => squash(f).includes(needle))) continue;
+    if (needle && !squash(`${ref.themeName} ${ref.storeName} ${ref.branchName}`).includes(needle)) continue;
     out.push({ ref, recorded: isRecorded(ref, mine) });
     if (out.length >= 20) break;
   }

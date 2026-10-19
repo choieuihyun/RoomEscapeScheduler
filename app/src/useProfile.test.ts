@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergePast, nextPastQuery, PAST_PAGE, restoreInput } from './useProfile';
+import { mergePast, nextPastQuery, onDeleteToastClose, PAST_PAGE, withoutPending } from './useProfile';
 import type { EventDto, PlayedDto } from './server';
 
 const ev = (id: number, date: string) => ({ id, date } as EventDto);
@@ -42,15 +42,19 @@ describe('mergePast', () => {
   });
 });
 
-describe('restoreInput', () => {
-  const p: PlayedDto = {
-    id: 9, themeKey: 'k1', themeName: '심야 병동', branchName: '강남점', playedOn: '2026-10-11',
-    source: 'EVENT', eventId: 3, createdAt: '2026-10-12T00:00:00Z',
-  };
-  it('자동 기록은 출처 없이(직접) 키·지점·날짜는 그대로', () => {
-    expect(restoreInput(p)).toEqual({ themeKey: 'k1', themeName: '심야 병동', branchName: '강남점', playedOn: '2026-10-11' });
+describe('미뤄 둔 지우기', () => {
+  const row = (id: number): PlayedDto => ({
+    id, themeKey: null, themeName: `t${id}`, branchName: null, playedOn: null, source: 'EVENT', eventId: 3, createdAt: '2026-10-12T00:00:00Z',
   });
-  it('개인 일정에서 온 기록은 PLAN 으로', () => {
-    expect(restoreInput({ ...p, source: 'PLAN' }).source).toBe('PLAN');
+  it('되돌리기(action)만 요청 없이 되살리고, 나머지 닫힘은 모두 그때 DELETE', () => {
+    expect(onDeleteToastClose('action')).toBe('restore');
+    expect(onDeleteToastClose('expired')).toBe('send');
+    expect(onDeleteToastClose('evicted')).toBe('send');
+    expect(onDeleteToastClose('dismissed')).toBe('send');
+  });
+  it('새로 받은 목록에서도 지우려고 미뤄 둔 id 는 뺀다', () => {
+    const list = [row(1), row(2), row(3)];
+    expect(withoutPending(list, new Set([2])).map((p) => p.id)).toEqual([1, 3]);
+    expect(withoutPending(list, new Set())).toBe(list);
   });
 });
