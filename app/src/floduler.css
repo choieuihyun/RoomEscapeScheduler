@@ -56,7 +56,9 @@
 
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,
          'Apple SD Gothic Neo','Segoe UI','Malgun Gothic',system-ui,sans-serif;
-  --num:ui-monospace,SFMono-Regular,'SF Mono',Menlo,monospace;
+  /* 숫자(시간·분)도 본문과 같은 프리텐다드로 — 자리는 쓰는 곳마다 붙은
+     tabular-nums(숫자 폭 맞춤)가 맞춘다. 코딩용 고정폭은 다우오피스 톤과 어긋났다(§4.56) */
+  --num:var(--sans);
 }
 
 /* ── 다크 모드 ──────────────────────────────────────────
