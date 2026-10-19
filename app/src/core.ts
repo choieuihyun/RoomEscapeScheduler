@@ -102,8 +102,11 @@ export function parseSessions(text: string | null | undefined): Session[] {
   return [...byT.values()].sort((a, b) => a.t - b.t);
 }
 
+/* 자정 뒤 회차(1440 이상)는 `24:30` 으로 적는다 — fmt 는 24 에 접어 `00:30` 이 되는데, 그러면
+   parseSessions 가 같은 날 00:30 으로 되읽는다(자동저장 복원). parseSessions 는 29시까지 읽는다. */
+const clockText = (m: number) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 export function sessionsToText(ss: Session[]): string {
-  return ss.map(s => fmt(s.t) + (s.soldout ? ' 매진' : '')).join('  ');
+  return ss.map(s => clockText(s.t) + (s.soldout ? ' 매진' : '')).join('  ');
 }
 
 /* ── 조합 탐색 ── */

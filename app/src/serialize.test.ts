@@ -7,6 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { sessionsToText } from './core';
 import {
   canCompressShare, deflateShare, inflateShare, readShareHash, restore, serialize, shareHash,
   type AppState,
@@ -128,6 +129,14 @@ describe('serialize()↔restore() — 서버에서 불러온 회차의 slotId·�
     expect(back.sessions.map(s => s.soldout)).toEqual([false, true, false, true]);
     // 벨의 실제 조건 (ThemeCard/ResultCard)
     expect(back.sessions.filter(s => s.soldout && s.id != null)).toHaveLength(2);
+  });
+
+  it('계산 화면 자동 저장은 자정 넘은 회차를 그대로 되살린다', () => {
+    const ts = [{ t: 1470, soldout: false }, { t: 1500, soldout: true }];
+    const th = { ...serverTheme, raw: sessionsToText(ts), sessions: ts.map(s => ({ ...s, id: s.t })) };
+    const back = restore(serialize(state([th]))).themes[0];
+    expect(back.sessions.map(s => s.t)).toEqual([1470, 1500]);
+    expect(back.sessions.map(s => s.soldout)).toEqual([false, true]);
   });
 
   it('출처(source)도 살아남는다 — 예전에는 새로고침하면 manual 로 되돌아갔다', () => {

@@ -25,6 +25,8 @@ export interface FormState {
   segs: FormSeg[];
   /* 불러온 첫 시각이 자정 뒤(1440 이상)라 날짜를 다음날로 옮겼다 — 창이 안내를 보이고, 날짜를 직접 바꾸면 끈다 */
   dateMoved: boolean;
+  /* 날짜를 옮기기 전 날짜 — 붙여넣어 시각이 바뀌면 옮긴 날짜가 틀리므로 되돌린다 */
+  origDate?: string;
 }
 
 export const MAX_SEGS = 6;
@@ -42,8 +44,8 @@ export function emptyForm(date: string): FormState {
 
 /* 첫 시각(첫 구간 시작, 없으면 일정 시작)이 1440 이상이면 날짜를 하루 뒤로 옮긴다. 칸은 fmt 로 24 에 접혀
    그대로 맞고, 저장할 때 toInput 이 옮긴 날짜 기준으로 다시 다음날을 채운다 — 같은 순간이 그대로 저장된다. */
-function nextDayDate(date: string, first: number | null): { date: string; dateMoved: boolean } {
-  return first !== null && first >= 1440 ? { date: addDays(date, 1), dateMoved: true } : { date, dateMoved: false };
+function nextDayDate(date: string, first: number | null): { date: string; dateMoved: boolean; origDate?: string } {
+  return first !== null && first >= 1440 ? { date: addDays(date, 1), dateMoved: true, origDate: date } : { date, dateMoved: false };
 }
 
 export function formFromEvent(ev: EventDto): FormState {
@@ -92,7 +94,8 @@ export function applyPaste(f: FormState, title: string): { form: FormState; note
   if (p.booked !== null) bits.push(p.booked ? '예약 완료' : '예약 전');
   bits.push(`테마 ${segs.length}개`);
   return {
-    form: { ...f, title: '', segs, booked: p.booked ?? f.booked, dateMoved: false }, // 붙여넣은 시각은 옮긴 날짜와 무관 — 안내를 끈다
+    /* 붙여넣은 시각은 옮긴 날짜와 무관 — 안내를 끄고 날짜도 원래대로 */
+    form: { ...f, title: '', segs, booked: p.booked ?? f.booked, date: f.dateMoved && f.origDate ? f.origDate : f.date, dateMoved: false, origDate: undefined },
     note: (p.booked !== null ? '카톡 제목에서 ' : '') + bits.join(' · ') + '를 채웠어요.',
   };
 }
@@ -122,6 +125,16 @@ export function segTimeText(segs: FormSeg[]): string {
   const a = rolled.rows[0], z = rolled.rows[rolled.rows.length - 1];
   const lastMin = z.end ?? z.start;
   return (lastMin === a.start ? clockLabel(a.start) : rangeLabel(a.start, lastMin)) + ' (테마에서)';
+}
+
+/* 18시 전에 시작해 자정을 넘기려는 경우 — 규칙상 안 되는 이유를 말해 준다(13:00→12:00 같은 오타와 구분).
+   starts: 첫 행부터 이 행까지의 시작 시각(앞에서 이미 자정을 넘은 적이 없어야 한다). */
+const EVENING_MSG = '자정을 넘기는 일정은 저녁 6시 이후에 시작할 때만 이어서 적을 수 있어요. 날짜를 나눠 주세요.';
+function isEarlyOvernight(rows: TimeRow[], bad: 'start' | 'end', i: number): boolean {
+  for (let k = 1; k <= i; k++) if (rows[k].start < rows[k - 1].start && !(bad === 'start' && k === i)) return false;
+  const early = bad === 'start' ? rows[i - 1].start : rows[i].start;
+  const late = bad === 'start' ? rows[i].start : rows[i].end;
+  return late !== null && late < early && late < 6 * 60 && early < 18 * 60;
 }
 
 const TIME_HINT = '13:40 처럼 24시간제로 적어 주세요.';
@@ -161,6 +174,7 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
   const rolled = rollDays(times);
   if (!('rows' in rolled)) {
     const n = rolled.index + 1;
+    if (isEarlyOvernight(times, rolled.bad, rolled.index)) return { error: `${n}번째 테마: ${EVENING_MSG}` };
     return { error: rolled.bad === 'start'
       ? `${n}번째 테마 시작이 앞 테마보다 이르네요. 순서를 확인해 주세요.`
       : `${n}번째 테마의 끝 시각이 시작보다 늦어야 해요.` };
@@ -178,7 +192,9 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
       const end = parseClock24(f.end);
       if (end === null) return { error: `끝 시각은 ${TIME_HINT}` };
       const rolled = rollDays([{ start: startMin, end }]); // 자정을 건너면 다음날
-      if (!('rows' in rolled)) return { error: '끝 시각이 시작보다 늦어야 해요.' };
+      if (!('rows' in rolled)) {
+        return { error: isEarlyOvernight([{ start: startMin, end }], 'end', 0) ? EVENING_MSG : '끝 시각이 시작보다 늦어야 해요.' };
+      }
       endMin = rolled.rows[0].end;
     }
   }

@@ -347,6 +347,12 @@ button:active{transform:scale(.97)}
   border:1px solid var(--amber-line);border-radius:var(--r-sm);
   padding:8px 12px;margin-top:10px;line-height:1.5}
 
+/* 첫 동호회 일정 목록을 못 받았을 때 계산·캘린더 위 띠 */
+.listfail{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  font-size:14px;color:var(--amber-text);background:var(--amber-soft);
+  border:1px solid var(--amber-line);border-radius:var(--r-sm);
+  padding:8px 12px;margin-bottom:14px;line-height:1.5}
+
 /* ── result tabs ── */
 .tabrow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
 .tabrow.sets{margin-bottom:14px}

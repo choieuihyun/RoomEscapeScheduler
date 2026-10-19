@@ -205,6 +205,14 @@ export function SchedulerPage() {
   };
 
   const onCalc = nav.view === 'calc';
+  /* 첫 목록을 못 받아 빈 채로 열린 승인 멤버 — 계산·캘린더 위에 띠로 알린다(성공하면 error 가 비어 사라진다) */
+  const listFailed = clubOn && club.error !== '' && club.events.length === 0;
+  const failStrip = listFailed && (
+    <div className="listfail" role="status">
+      <span>동호회 일정을 불러오지 못했어요.</span>
+      <button type="button" className="btn ghost" onClick={() => void club.reload()}>다시 시도</button>
+    </div>
+  );
   return (
     <div className="shell">
       <SideNav
@@ -220,6 +228,7 @@ export function SchedulerPage() {
         {/* 계산 화면은 캘린더로 넘어가도 지우지 않고 숨기기만 한다 — 입력·결과·"더 보기"
             같은 컴포넌트 안 상태가 그대로 남아 돌아왔을 때 이어서 볼 수 있다. */}
         <div className={'view' + (onCalc ? '' : ' off')}>
+          {failStrip}
           <header className="page-head">
             <h1>조합 계산</h1>
             <p>테마별 예약 시간을 넣으면 겹치지 않게 이어서 갈 수 있는 조합을 다 찾아 드려요. 중간에 비는 시간도 같이 보여요.</p>
@@ -248,6 +257,7 @@ export function SchedulerPage() {
 
         {auth.cloudOn && (
           <div className={'view' + (nav.view === 'calendar' ? '' : ' off')}>
+            {failStrip}
             <header className="page-head">
               <h1>캘린더</h1>
               <p>{homeOn ? '동호회 일정과 저장한 일정, 빈자리 알림을' : '저장한 일정과 빈자리 알림을'} 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
