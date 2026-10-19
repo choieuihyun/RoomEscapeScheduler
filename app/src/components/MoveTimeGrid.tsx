@@ -8,7 +8,7 @@ export function MoveTimeGrid({ s }: { s: Scheduler }) {
 
   return (
     <div className="pairs">
-      <div className="pairhead">매장 간 이동시간 <span>손대지 않은 칸은 기본값({def}분)을 따라갑니다</span></div>
+      <div className="pairhead">매장 간 이동시간 <span>안 고친 칸은 기본값({def}분)으로 계산해요</span></div>
       {ps.flatMap((pa, i) => ps.slice(i + 1).map((pb) => {
         const key = pairKey(pa, pb);
         const v = s.moveMap[key];
@@ -34,13 +34,13 @@ export function moveHint(s: Scheduler): { className: string; content: React.Reac
   const m = parseInt(s.options.oMove) || 0;
 
   if (!named.length) {
-    return { className: 'movehint', content: <>테마에 <b>매장</b>을 적으면 매장이 바뀌는 자리에 이동시간이 붙습니다. 지금은 안 붙습니다.</> };
+    return { className: 'movehint', content: <>테마에 <b>매장</b>을 적으면 매장을 옮길 때 이동시간을 넣어 계산해요. 지금은 안 넣고 있어요.</> };
   }
   if (places.size < 2) {
-    return { className: 'movehint', content: <>매장이 <b>{[...places][0]}</b> 한 곳이라 이동시간이 붙지 않습니다.</> };
+    return { className: 'movehint', content: <>매장이 <b>{[...places][0]}</b> 한 곳이라 이동시간은 없어요.</> };
   }
   if (!m) {
-    return { className: 'movehint', content: <>매장 <b>{places.size}곳</b> — 이동시간이 <b>0분</b>이라 붙지 않습니다.</> };
+    return { className: 'movehint', content: <>매장 <b>{places.size}곳</b> — 이동시간을 <b>0분</b>으로 해 둬서 안 넣어요.</> };
   }
   const blank = s.themes.length - named.length;
   const ps = s.placeList;
@@ -55,9 +55,9 @@ export function moveHint(s: Scheduler): { className: string; content: React.Reac
     className: 'movehint on',
     content: (
       <>
-        매장 <b>{places.size}곳</b> · 쌍 <b>{n}개</b>
-        {set ? <> (<b>{set}개</b>는 따로 지정)</> : <> · 전부 <b>{m}분</b></>}
-        {blank ? <span className="dimhint">· 매장을 안 적은 테마 {blank}개는 제외</span> : null}
+        매장 <b>{places.size}곳</b> · 구간 <b>{n}개</b>
+        {set ? <> (<b>{set}개</b>는 직접 정함)</> : <> · 전부 <b>{m}분</b></>}
+        {blank ? <span className="dimhint">· 매장을 안 적은 테마 {blank}개는 빼고 계산</span> : null}
       </>
     ),
   };

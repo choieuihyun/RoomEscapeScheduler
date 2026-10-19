@@ -121,22 +121,22 @@ export function say(err: unknown): string {
   const e = err as { code?: string; message?: string };
   const code = (e?.code || '').replace('auth/', '');
   const known: Record<string, string> = {
-    'email-already-in-use': '이미 있는 아이디입니다.',
-    'invalid-credential': '아이디 또는 비밀번호가 맞지 않습니다.',
-    'invalid-login-credentials': '아이디 또는 비밀번호가 맞지 않습니다.',
-    'wrong-password': '아이디 또는 비밀번호가 맞지 않습니다.',
-    'user-not-found': '없는 아이디입니다.',
-    'weak-password': '비밀번호는 6자 이상이어야 합니다.',
-    'invalid-email': '아이디에 쓸 수 없는 문자가 있습니다.',
-    'too-many-requests': '시도가 너무 잦습니다. 잠시 뒤에 다시 해주세요.',
-    'network-request-failed': '네트워크에 연결하지 못했습니다.',
+    'email-already-in-use': '이미 있는 아이디예요.',
+    'invalid-credential': '아이디나 비밀번호가 틀렸어요.',
+    'invalid-login-credentials': '아이디나 비밀번호가 틀렸어요.',
+    'wrong-password': '아이디나 비밀번호가 틀렸어요.',
+    'user-not-found': '없는 아이디예요.',
+    'weak-password': '비밀번호는 6자 이상으로 해 주세요.',
+    'invalid-email': '아이디에 쓸 수 없는 글자가 있어요.',
+    'too-many-requests': '너무 여러 번 시도했어요. 잠시 뒤에 다시 해 주세요.',
+    'network-request-failed': '인터넷 연결을 확인해 주세요.',
     'operation-not-allowed': '이메일/비밀번호 로그인이 아직 켜져 있지 않습니다 (Firebase 콘솔).',
     /* Authentication을 아예 시작하지 않은 프로젝트에서 나온다. */
     'configuration-not-found': 'Firebase 콘솔에서 Authentication을 아직 시작하지 않았습니다.',
   };
   if (known[code]) return known[code];
   if (e?.message === 'NOT_CONFIGURED') return '로그인이 아직 설정되지 않았습니다 (firebase-config.js).';
-  return '문제가 생겼습니다: ' + (e?.message || String(err));
+  return '문제가 생겼어요: ' + (e?.message || String(err));
 }
 
 /* ── 일정 ── */
@@ -161,7 +161,7 @@ export interface Plan {
 
 function mine() {
   const u = auth?.currentUser;
-  if (!u) throw new Error('로그인이 필요합니다.');
+  if (!u) throw new Error('로그인해 주세요.');
   return F.collection(db, 'users', u.uid, 'plans');
 }
 

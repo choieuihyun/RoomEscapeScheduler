@@ -32,7 +32,7 @@ function ChipLine({ th }: { th: Theme }) {
 
 function ParsedSessions({ th, watchCtl }: { th: Theme; watchCtl?: WatchControl }) {
   if (!th.sessions.length) {
-    return <div className="parsed"><span className="hint">시간을 넣으면 해석 결과가 여기 표시됩니다</span></div>;
+    return <div className="parsed"><span className="hint">시간을 넣으면 여기에 정리돼서 보여요</span></div>;
   }
   const over = th.sessions.some(s => s.t >= 24 * 60);
   const fixed = th.sessions.some(s => s.fixed);
@@ -41,7 +41,7 @@ function ParsedSessions({ th, watchCtl }: { th: Theme; watchCtl?: WatchControl }
     <div className="parsed">
       {th.sessions.map((s, i) => {
         const cls = 't' + (s.t >= 24 * 60 ? ' over' : '') + (s.fixed ? ' fix' : '') + (s.soldout ? ' so' : '');
-        const title = s.fixed ? '오전/오후 표기가 없어 12시간 보정된 값입니다' : undefined;
+        const title = s.fixed ? '오전/오후가 없어서 오후로 바꿔 읽은 시간이에요' : undefined;
         return (
           <span key={i} className={cls} title={title}>
             {fmtDay(s.t)}<span className="t-end">–{fmtDay(s.t + th.dur)}</span>{s.soldout ? ' 매진' : ''}
@@ -49,19 +49,19 @@ function ParsedSessions({ th, watchCtl }: { th: Theme; watchCtl?: WatchControl }
           </span>
         );
       })}
-      {sold > 0 && <span className="note">매진으로 읽힌 {sold}개는 계산에서 제외됩니다</span>}
+      {sold > 0 && <span className="note">매진으로 읽힌 {sold}개는 계산에서 빠져요</span>}
       {over ? (
-        <span className="warn">자정을 넘긴 회차가 있습니다. 이른 시간부터 순서대로 넣었는지 확인해 주세요 — 순서가 섞였다면 <b>오전</b>/<b>오후</b>를 붙이면 순서와 무관하게 정확해집니다.</span>
+        <span className="warn">자정을 넘긴 회차가 있어요. 이른 시간부터 차례로 넣었는지 확인해 주세요 — 순서가 섞였으면 <b>오전</b>/<b>오후</b>를 붙이면 정확해져요.</span>
       ) : fixed ? (
-        <span className="note">파란색은 12시간 보정된 값입니다 (예: 1:10 → 13:10)</span>
+        <span className="note">파란 칩은 오후로 바꿔 읽은 시간이에요 (예: 1:10 → 13:10)</span>
       ) : null}
       {(th.fresh || th.date) && (
         <span className="note">
-          서버에서 불러온 값입니다{th.fresh && <> · {th.fresh}</>}{th.date && <> · <b>{mdWeekday(th.date)}</b> 회차</>}
+          예약 사이트에서 불러왔어요{th.fresh && <> · {th.fresh}</>}{th.date && <> · <b>{mdWeekday(th.date)}</b> 회차</>}
         </span>
       )}
       {th.source.startsWith('image') && (
-        <span className="warn">사진에서 읽은 값입니다 — 시간이 제대로 맞는지 한 번 확인해 주세요. 인식이 부정확할 수 있습니다.</span>
+        <span className="warn">사진에서 읽은 시간이에요. 잘못 읽었을 수 있으니 한 번 확인해 주세요.</span>
       )}
     </div>
   );
@@ -135,13 +135,13 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
       <div className="placerow">
         <span className="plb">매장</span>
         <input
-          className="i-place" placeholder="비워두면 이동시간을 안 붙입니다" value={th.place}
-          title="같은 매장끼리는 이동시간이 0 입니다. 매장이 다르면 조건의 이동시간이 붙습니다"
+          className="i-place" placeholder="비워 두면 이동시간 없이 계산해요" value={th.place}
+          title="같은 매장끼리는 이동시간이 없어요. 매장이 다르면 조건에 적은 이동시간을 넣어 계산해요"
           onChange={e => onChange(th.id, { place: e.target.value })}
         />
       </div>
       <textarea
-        placeholder={'10:00  13:10  15:40  17:20  ← 예약 가능한 회차만 (쉼표·줄바꿈도 됨)\n또는 예약 화면 캡처를 붙여넣기 (Ctrl+V)'}
+        placeholder={'10:00  13:10  15:40  17:20  ← 예약 가능한 회차만 (쉼표·줄바꿈도 돼요)\n예약 화면 캡처를 붙여넣어도 돼요 (Ctrl+V)'}
         value={th.raw}
         onChange={e => onRawChange(th.id, e.target.value)}
         onPaste={e => {
@@ -165,7 +165,7 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
             }}
           />
         </label>
-        <label className="chk mini" title="켜두면 새 이미지가 있던 회차에 이어 붙습니다. 꺼두면 새 이미지가 있던 값을 지우고 대신합니다">
+        <label className="chk mini" title="켜 두면 새 사진의 회차를 원래 회차에 더해요. 끄면 원래 회차를 지우고 새 사진으로 바꿔요">
           <input type="checkbox" checked={th.mergeMode} onChange={e => onChange(th.id, { mergeMode: e.target.checked })} /> 이미지 여러장 넣기
         </label>
         <ChipLine th={th} />

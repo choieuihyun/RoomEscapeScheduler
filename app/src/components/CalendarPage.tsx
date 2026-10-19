@@ -46,7 +46,7 @@ function eventsOf(entry: DayEntry | undefined, filter: CalFilter): Ev[] {
       evs.push({
         key: 'w' + w.id, kind: 'watch', start: w.t, end: null,
         text: `${fmt(w.t)} ${w.theme}`,
-        title: `빈자리 감시 · ${w.branch} · ${w.theme} ${fmt(w.t)} · ${w.available ? '빈자리 있음' : '매진'}`,
+        title: `빈자리 알림 · ${w.branch} · ${w.theme} ${fmt(w.t)} · ${w.available ? '빈자리 있음' : '매진'}`,
       });
     }
   }
@@ -69,7 +69,7 @@ function PlanDetailRow({ p, s, plans, onLoaded }: { p: Plan; s: Scheduler; plans
       <div className="li-t">
         <strong>{fmt(p.start)} → {fmt(p.end)}</strong>
         <span className="li-m">{p.count}연방 · 공백 {p.total}분</span>
-        <span className={'tag ' + (wish ? 'wish' : 'done')}>{wish ? '하고 싶음' : '했음'}</span>
+        <span className={'tag ' + (wish ? 'wish' : 'done')}>{wish ? '하고 싶음' : '다녀옴'}</span>
       </div>
       <span className="pbtns">
         <button
@@ -97,8 +97,8 @@ function WatchDetailRow({ w, watches }: { w: WatchDto; watches: UseWatchesReturn
         <span className="li-c">{w.available ? <b>빈자리 있음</b> : '매진'}</span>
       </div>
       <button
-        className="btn-x" type="button" title="감시 해제" disabled={busy}
-        onClick={() => { if (confirm(`${w.theme} ${fmt(w.t)} 감시를 해제할까요?`)) watches.remove(w.id); }}
+        className="btn-x" type="button" title="빈자리 알림 끄기" disabled={busy}
+        onClick={() => { if (confirm(`${w.theme} ${fmt(w.t)} 빈자리 알림을 끌까요?`)) watches.remove(w.id); }}
       >×</button>
     </div>
   );
@@ -250,9 +250,9 @@ export function CalendarPage({
       </div>
       {/* 넓은 화면에선 왼쪽 메뉴의 "내 캘린더" 가 같은 일을 한다 — 좁은 화면에서만 보인다. */}
       <div className="cal-legend">
-        {kindBtn('wish', '하고 싶은 일정')}{kindBtn('done', '다녀온 일정')}{kindBtn('watch', '빈자리 감시')}
+        {kindBtn('wish', '하고 싶은 일정')}{kindBtn('done', '다녀온 일정')}{kindBtn('watch', '빈자리 알림')}
       </div>
-      {!auth.me && <p className="cal-note">로그인하면 저장한 일정과 감시 중인 자리가 달력에 표시됩니다.</p>}
+      {!auth.me && <p className="cal-note">로그인하면 저장한 일정과 빈자리 알림이 달력에 나와요.</p>}
 
       <div className="cal-layout">
         <div className="cal-month">
@@ -329,7 +329,7 @@ export function CalendarPage({
           <p className="cal-side-title">{dayTitle(sel)}</p>
           <div className="cal-detail">
             {!selEntry || (selEntry.plans.length === 0 && selEntry.watches.length === 0) ? (
-              <div className="lmsg">이 날짜엔 저장한 일정도 감시 중인 자리도 없어요.</div>
+              <div className="lmsg">이날은 저장한 일정도, 빈자리 알림도 없어요.</div>
             ) : (
               <>
                 {selEntry.plans.map(p => (

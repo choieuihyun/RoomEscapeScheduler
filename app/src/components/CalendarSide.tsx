@@ -5,7 +5,7 @@ import type { CalKind, UseCalendarReturn } from '../useCalendar';
 /* 캘린더 화면일 때 왼쪽 메뉴 아래에 붙는 것(§4.50) — 그룹웨어처럼 미니 달력과
    "내 캘린더"(종류별 보이기). 미니 달력은 큰 달력과 따로 넘길 수 있고, 날짜를 누르면
    큰 달력이 그 날로 간다. 좁은 화면(위쪽 막대)에선 CSS 가 숨긴다. */
-const KINDS: [CalKind, string][] = [['wish', '하고 싶은 일정'], ['done', '다녀온 일정'], ['watch', '빈자리 감시']];
+const KINDS: [CalKind, string][] = [['wish', '하고 싶은 일정'], ['done', '다녀온 일정'], ['watch', '빈자리 알림']];
 
 export function CalendarSide({ ctl }: { ctl: UseCalendarReturn }) {
   const grid = useMemo(() => monthGrid(ctl.mini.y, ctl.mini.m), [ctl.mini.y, ctl.mini.m]);

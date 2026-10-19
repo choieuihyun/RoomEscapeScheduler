@@ -12,8 +12,8 @@ export function LoadModal({ m }: { m: LoadModalState }) {
       onClick={e => { if (e.target === e.currentTarget) m.close(); }}
     >
       <div className="mbox mbox-wide">
-        <h3>회차 불러오기</h3>
-        <p className="msub">예약 사이트에서 회차와 <b>매진 여부</b>까지 가져옵니다.</p>
+        <h3>테마 불러오기</h3>
+        <p className="msub">예약 사이트에서 테마별 회차와 <b>매진 여부</b>까지 가져와요.</p>
         <div className="mrow2">
           <div className="mrow">
             <label>지점</label>
@@ -34,7 +34,7 @@ export function LoadModal({ m }: { m: LoadModalState }) {
           <label>인원 <span className="dim">(비우면 전부 표시)</span></label>
           <input
             className="mono" inputMode="numeric"
-            placeholder="예: 4  — 인원이 안 맞는 테마를 흐리게 표시합니다"
+            placeholder="예: 4 — 인원이 안 맞는 테마는 흐리게 보여요"
             value={m.people} onChange={e => m.setPeople(e.target.value)}
           />
         </div>
@@ -42,7 +42,7 @@ export function LoadModal({ m }: { m: LoadModalState }) {
           {m.listMsg ? (
             <div className="lmsg">{m.listMsg.split('\n').map((line, i) => <span key={i}>{i > 0 && <br />}{line}</span>)}</div>
           ) : m.themes.length === 0 ? (
-            <div className="lmsg">이 날짜에는 테마가 없습니다.</div>
+            <div className="lmsg">이날은 열린 테마가 없어요.</div>
           ) : (
             m.themes.map((t, i) => {
               const avail = t.sessions.filter(s => !s.soldout).length;
@@ -59,7 +59,7 @@ export function LoadModal({ m }: { m: LoadModalState }) {
                   <img src={t.posterUrl || ''} alt="" loading="lazy" />
                   <div className="li-t">
                     <strong>{t.name}</strong>
-                    <span className="li-m">{meta}{fits ? '' : <> · <b>인원이 맞지 않습니다</b></>}</span>
+                    <span className="li-m">{meta}{fits ? '' : <> · <b>인원이 안 맞아요</b></>}</span>
                     <span className="li-c">예약 가능 {avail}{sold ? <> · 매진 <i>{sold}</i></> : null}</span>
                   </div>
                 </label>
@@ -79,11 +79,11 @@ export function LoadModal({ m }: { m: LoadModalState }) {
         )}
         {pickedDates.length > 1 && (
           <p className="datewarn">
-            ⚠ 선택한 회차의 날짜가 서로 달라요 ({pickedDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날 회차로 맞춰야 정확한 조합이 나옵니다.
+            ⚠ 선택한 회차의 날짜가 서로 달라요 ({pickedDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날로 맞춰야 조합이 제대로 나와요.
           </p>
         )}
         <div className="loadfoot">
-          <span>{m.pickedItems.size ? `${m.pickedItems.size}개 선택됨 — 지점을 바꿔도 유지됩니다` : ''}</span>
+          <span>{m.pickedItems.size ? `${m.pickedItems.size}개 고름 — 지점을 바꿔도 그대로예요` : ''}</span>
           <span className="fresh">{m.fresh}</span>
         </div>
         <p className="merr">{m.err}</p>
@@ -91,7 +91,7 @@ export function LoadModal({ m }: { m: LoadModalState }) {
           <button className="btn-go" type="button" disabled={!m.pickedItems.size} onClick={m.addPicked}>카드로 추가</button>
           <button className="btn" type="button" onClick={m.close}>닫기</button>
         </div>
-        <p className="mnote">불러온 뒤에도 회차를 <b>손으로 고칠 수 있습니다</b>. 매진 회차는 카드에 남지만 계산에서는 빠집니다.</p>
+        <p className="mnote">불러온 뒤에도 회차는 <b>직접 고칠 수 있어요</b>. 매진된 회차는 카드에 남지만 계산에서는 빠져요.</p>
       </div>
     </div>
   );

@@ -81,7 +81,7 @@ export function useLoadModal(onAdd: (items: AddedTheme[]) => void) {
       setListMsg('');
     } catch (e) {
       setThemes([]);
-      setListMsg('회차를 받지 못했습니다.');
+      setListMsg('회차를 받지 못했어요.');
       setErr(say(e));
     }
   }, []);
@@ -94,12 +94,12 @@ export function useLoadModal(onAdd: (items: AddedTheme[]) => void) {
     try {
       list = (await fetchBranches()).filter(b => b.dates && b.dates.length);
     } catch (e) {
-      setListMsg('지점 목록을 받지 못했습니다.');
+      setListMsg('지점 목록을 받지 못했어요.');
       setErr(say(e));
       return;
     }
     if (!list.length) {
-      setListMsg('아직 수집된 지점이 없습니다.\n서버가 한 바퀴 돈 뒤에 다시 열어 주세요.');
+      setListMsg('아직 불러올 수 있는 지점이 없어요.\n조금 뒤에 다시 열어 주세요.');
       return;
     }
     setBranchList(list);

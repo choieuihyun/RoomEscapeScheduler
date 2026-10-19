@@ -5,13 +5,13 @@ import { useEffect, useRef } from 'react';
    React 트리 안에 넣기보다 body에 직접 붙이는 쪽이 원본과 동일하고 더 단순하다. */
 const TOUR_KEY = 'resched.tour_v1';
 const TOUR_STEPS = [
-  { sel: '#loadBtn', title: '감이 안 잡히면', body: '예약 사이트에서 회차를 그대로 불러와 화면이 어떻게 채워지는지 먼저 확인해 보세요.' },
-  { sel: '#addTheme', title: '테마 추가', body: '테마 하나 = 예약할 매장 하나예요. 여기를 눌러 필요한 만큼 추가하세요.' },
-  { sel: '#themes', title: '시간표 넣기', body: '예약 가능한 회차를 직접 입력하거나, 예약 화면 캡처를 붙여넣으면(Ctrl+V) 자동으로 읽습니다. 매장 이름을 적어두면 매장 간 이동시간도 계산에 들어가요.' },
-  { sel: '.opts', title: '조건 정하기', body: '가장 이른 시작·늦은 종료, 최소·최대 공백, 기본 이동시간 같은 조건을 정합니다.' },
-  { sel: '#go', title: '조합 계산', body: '조건에 맞고 서로 겹치지 않는 조합을 전부 찾아줍니다.' },
-  { sel: '#results', title: '결과 확인', body: '정렬 기준을 바꿔가며 훑어보고, 마음에 드는 조합은 저장해 두세요.' },
-  { sel: '#shareBtn', title: '공유하기', body: '지금 입력한 내용을 그대로 담은 링크를 복사합니다. 로그인 없이도 바로 공유할 수 있어요.' },
+  { sel: '#loadBtn', title: '처음이라면', body: '먼저 테마를 불러와 보세요. 예약 사이트 시간표가 그대로 채워져요.' },
+  { sel: '#addTheme', title: '테마 추가', body: '갈 방(테마)마다 하나씩 추가하세요.' },
+  { sel: '#themes', title: '시간표 넣기', body: '예약 가능한 회차를 직접 넣거나, 예약 화면 캡처를 붙여넣으면(Ctrl+V) 알아서 읽어요. 매장 이름을 적어 두면 매장 사이 이동시간도 같이 계산해요.' },
+  { sel: '.opts', title: '조건 정하기', body: '몇 시부터 몇 시까지, 방 사이를 얼마나 비울지 정해요.' },
+  { sel: '#go', title: '조합 계산', body: '조건에 맞게 겹치지 않는 조합을 다 찾아 줘요.' },
+  { sel: '#results', title: '결과 확인', body: '정렬을 바꿔 가며 보고, 마음에 드는 조합은 저장해 두세요.' },
+  { sel: '#shareBtn', title: '공유하기', body: '지금 넣은 내용을 그대로 담은 링크를 복사해요. 로그인 안 해도 바로 보낼 수 있어요.' },
 ];
 
 function esc(s: string) {

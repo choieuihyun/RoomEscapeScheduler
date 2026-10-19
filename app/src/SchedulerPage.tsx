@@ -79,7 +79,7 @@ export function SchedulerPage() {
         <div className={'view' + (onCalc ? '' : ' off')}>
           <header className="page-head">
             <h1>조합 계산</h1>
-            <p>테마별 회차 시간을 넣으면 겹치지 않는 조합을 전부 계산해서, 공백이 어디에 얼마나 생기는지 보여줍니다.</p>
+            <p>테마별 예약 시간을 넣으면 겹치지 않게 이어서 갈 수 있는 조합을 다 찾아 드려요. 중간에 비는 시간도 같이 보여요.</p>
           </header>
           <ThemeList s={s} onOpenLoad={loadModal.openModal} watchCtl={watchCtl} />
           <ConditionsPanel s={s} />
@@ -91,7 +91,7 @@ export function SchedulerPage() {
           <div className={'view' + (onCalc ? ' off' : '')}>
             <header className="page-head">
               <h1>캘린더</h1>
-              <p>저장한 일정과 감시 중인 자리를 날짜별로 모아 봅니다. 날짜를 누르면 그날 열려 있는 회차도 보입니다.</p>
+              <p>저장한 일정과 빈자리 알림을 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
             </header>
             <CalendarPage
               ctl={cal} active={!onCalc} plans={plans} watches={watches} auth={auth} s={s}

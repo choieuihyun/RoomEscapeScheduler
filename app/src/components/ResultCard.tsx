@@ -15,13 +15,13 @@ function axisTicks(lo: number, hi: number, span: number) {
 export function resultToText(r: SearchResultRow): string {
   const dur = (m: number) => (m >= 60 ? Math.floor(m / 60) + '시간 ' + (m % 60 ? (m % 60) + '분' : '') : m + '분').trim();
   const head = `${r.count}연방 · ${fmt(r.start)} → ${fmt(r.end)} (${dur(r.end - r.start)}, `
-    + (r.moveTotal ? `이동 ${r.moveTotal}분 · 잔여 ${r.total - r.moveTotal}분)` : `공백 ${r.total}분)`);
+    + (r.moveTotal ? `이동 ${r.moveTotal}분 · 대기 ${r.total - r.moveTotal}분)` : `공백 ${r.total}분)`);
   const body = r.steps.map((s, i) => {
     const line = `${fmt(s.start)}–${fmt(s.end)}  ${s.name}${s.place ? ` @${s.place}` : ''} (${s.dur}분)`;
     const nx = r.steps[i + 1];
     if (!nx) return line;
     const g = nx.start - s.end, mv = nx.move || 0;
-    return line + (mv ? `\n     ↓ 이동 ${mv}분  잔여 ${g - mv}분` : `\n     ↓ 공백 ${g}분`);
+    return line + (mv ? `\n     ↓ 이동 ${mv}분  대기 ${g - mv}분` : `\n     ↓ 공백 ${g}분`);
   }).join('\n');
   return head + '\n\n' + body;
 }
@@ -59,7 +59,7 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
         {r.moveTotal ? (
           <>
             <span className="stat mvstat">이동 <b className="mono">{r.moveTotal}분</b></span>
-            <span className={'stat' + (r.total - r.moveTotal <= 30 ? ' good' : '')}>잔여 <b className="mono">{r.total - r.moveTotal}분</b></span>
+            <span className={'stat' + (r.total - r.moveTotal <= 30 ? ' good' : '')}>대기 <b className="mono">{r.total - r.moveTotal}분</b></span>
           </>
         ) : (
           <span className={'stat' + (r.total <= 30 ? ' good' : '')}>공백 <b className="mono">{r.total}분</b></span>
@@ -106,14 +106,14 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
                   const mv = s.move || 0, wait = g - mv;
                   const l = pct(p.end), w = pct(s.start) - pct(p.end);
                   const cls = wait < 10 ? ' tight' : (wait >= 40 ? ' big' : '');
-                  const tip = mv ? `${p.place} → ${s.place} 이동 ${mv}분 · 잔여 ${wait}분` : `공백 ${g}분`;
+                  const tip = mv ? `${p.place} → ${s.place} 이동 ${mv}분 · 대기 ${wait}분` : `공백 ${g}분`;
                   const mw = mv > 0 ? pct(p.end + mv) - pct(p.end) : 0;
                   return (
                     <div key={k}>
                       <div className={'gap' + cls} style={{ left: l + '%', width: w + '%' }} title={tip} />
                       {mv > 0 && <div className="mv" style={{ left: l + '%', width: mw + '%' }} title={tip} />}
                       <div className={'gaplab' + cls + (mv ? ' hasmv' : '')} style={{ left: l + '%', width: w + '%' }}>
-                        {mv ? <em><b className="mvp">이동 {mv}분</b><b className="wtp">잔여 {wait}분</b></em> : <em>{g}분</em>}
+                        {mv ? <em><b className="mvp">이동 {mv}분</b><b className="wtp">대기 {wait}분</b></em> : <em>{g}분</em>}
                       </div>
                     </div>
                   );

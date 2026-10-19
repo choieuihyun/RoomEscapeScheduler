@@ -14,14 +14,14 @@ let paddleLoading: Promise<any> | null = null;
 async function getPaddleService(onStep?: (s: string) => void) {
   if (paddleService) return paddleService;
   if (!paddleLoading) paddleLoading = (async () => {
-    onStep?.('엔진 준비 중');
+    onStep?.('사진 읽을 준비 중');
     const ort = await import('onnxruntime-web');
     /* wasmPaths 를 먼저 정해 둬야 한다 — 안 그러면 ppu-paddle-ocr 가 이 값을 비어 있다고
        보고 jsDelivr CDN 주소로 채워 버린다(오프라인 원칙이 깨진다). */
     ort.env.wasm.wasmPaths = new URL('vendor/onnxruntime-web/', location.href).href;
     ort.env.wasm.numThreads = 1;
     const { PaddleOcrService } = await import('ppu-paddle-ocr/web');
-    onStep?.('모델 불러오는 중');
+    onStep?.('사진 읽을 준비 중');
     const base = new URL('vendor/paddle-models/', location.href).href;
     const svc = new PaddleOcrService({
       model: {
@@ -70,8 +70,8 @@ function preparePaddleCanvas(file: File): Promise<PreparedCanvas> {
       URL.revokeObjectURL(url);
       const heic = /heic|heif/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || '');
       rej(new Error(heic
-        ? 'HEIC 사진은 못 읽습니다 — 캡처(스크린샷)를 넣거나 JPG 로 바꿔 주세요'
-        : '이미지를 열지 못했습니다 (' + (file.type || '형식 불명') + ')'));
+        ? 'HEIC 사진은 못 읽어요 — 캡처(스크린샷)를 넣거나 JPG로 바꿔 주세요'
+        : '사진을 열지 못했어요 (' + (file.type || '형식 불명') + ')'));
     };
     img.src = url;
   });
@@ -85,27 +85,30 @@ export class OcrError extends Error {
   }
 }
 
+/* 시간 초과 판별에 쓰므로 문구를 바꿀 땐 이 상수 하나만 고친다(§4.53) */
+const TIMEOUT_MSG = '너무 오래 걸려요 — 사진을 잘라서 다시 넣어 보세요';
+
 export async function recognizeSessions(file: File, onStep: (s: string) => void): Promise<Session[]> {
-  onStep('엔진 준비 중…');
+  onStep('사진 읽을 준비 중…');
   let dim = '';
   try {
     const svc = await getPaddleService(s => onStep(s + '…'));
-    onStep('이미지 다듬는 중…');
+    onStep('사진 정리하는 중…');
     const prepared = await preparePaddleCanvas(file);
     dim = prepared._dim || '';
     onStep('글자 읽는 중…');
     const result = await Promise.race([
       svc.recognize(prepared),
-      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('시간 초과 — 이미지를 잘라서 다시 시도해 보세요')), OCR_TIMEOUT_MS)),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error(TIMEOUT_MSG)), OCR_TIMEOUT_MS)),
     ]);
     const sessions = parseSessions(result.text);
-    if (!sessions.length) throw new Error('시간을 찾지 못했습니다');
+    if (!sessions.length) throw new Error('사진에서 시간을 못 찾았어요');
     return sessions;
   } catch (err) {
     const message = (err as Error).message;
     /* 멈춰서 시간 초과된 세션을 그대로 두면 다음 시도도 똑같이 막힌다 — 버리고 새로 만들게 한다.
        (단순 인식 실패는 엔진 잘못이 아니므로 그대로 재사용한다) */
-    if (/시간 초과|엔진/.test(message)) resetPaddleService();
+    if (message === TIMEOUT_MSG || /엔진/.test(message)) resetPaddleService();
     throw new OcrError(message, dim);
   }
 }

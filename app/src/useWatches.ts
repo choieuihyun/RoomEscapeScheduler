@@ -67,7 +67,7 @@ export function useWatches(me: Me | null) {
     try {
       const C = await cloud();
       const token = await C.idToken();
-      if (!token) { fail('로그인하면 감시할 수 있어요.'); return; }
+      if (!token) { fail('로그인하면 빈자리 알림을 걸 수 있어요.'); return; }
       const w = await addWatch(slotId, token);
       setWatches(ws => (ws.some(x => x.id === w.id) ? ws : [w, ...ws]));
       setSlotToWatchId(m => new Map(m).set(slotId, w.id));
@@ -78,7 +78,7 @@ export function useWatches(me: Me | null) {
       /* 감시 자체는 이미 성공했으므로 실패로 읽히지 않게 앞머리를 붙인다.
          아이폰에서 홈 화면 추가 전에는 여기서만 알 수 있는 사실이라 조용히
          두면 "알림이 왜 안 오지"로 남는다. */
-      if (!push.ok) alert('감시는 걸렸습니다. 다만 ' + push.reason);
+      if (!push.ok) alert('빈자리 알림은 걸었어요. 다만 ' + push.reason);
     } catch (e) {
       fail(sayWatch(e));
     } finally {
@@ -95,7 +95,7 @@ export function useWatches(me: Me | null) {
       if (!token) return;
       await removeWatch(watchId, token);
       setWatches(ws => ws.filter(x => x.id !== watchId));
-      showToast('감시를 해제했어요.');
+      showToast('빈자리 알림을 껐어요.');
       setSlotToWatchId(m => {
         const n = new Map(m);
         for (const [slot, wid] of n) if (wid === watchId) n.delete(slot);
@@ -150,7 +150,7 @@ export function buildWatchControl(w: UseWatchesReturn, loggedIn: boolean): Watch
       if (watchId != null) { w.remove(watchId); return; }
       if (!loggedIn) { alert('로그인하면 빈자리 알림을 걸 수 있어요.'); return; }
       if (w.watches.length >= w.limit) {
-        alert(`빈자리 알림은 최대 ${w.limit}개까지만 걸 수 있어요.\n위쪽 "빈자리 알림" 에서 하나를 지우고 다시 걸어 주세요.`);
+        alert(`빈자리 알림은 최대 ${w.limit}개까지 걸 수 있어요.\n왼쪽 메뉴의 "빈자리 알림"에서 하나를 지우고 다시 걸어 주세요.`);
         return;
       }
       w.add(slotId);

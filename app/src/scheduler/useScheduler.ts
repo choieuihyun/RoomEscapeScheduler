@@ -77,10 +77,10 @@ export function useScheduler() {
       hydrate(snapshot);
       setFound([]); setThemesReady([]); lastSnapshot.current = null;
       setTabCount(null); setTabSet(null); setShowCount(SHOW);
-      setRunNote(`${date} 일정의 입력값을 불러왔습니다. 계산을 누르면 다시 짤 수 있습니다.`);
+      setRunNote(`${date} 일정을 불러왔어요. 조합 계산을 누르면 다시 짤 수 있어요.`);
       return true;
     } catch {
-      setRunNote('이 일정은 불러올 수 없는 형식입니다.');
+      setRunNote('이 일정은 불러올 수 없어요.');
       return false;
     }
   }, [hydrate]);
@@ -121,9 +121,9 @@ export function useScheduler() {
         console.warn('링크 복원 실패:', (err as Error).message);
         const fellBack = fromAutosave();
         setRunNote(
-          '이 공유 링크를 열지 못했습니다 — 링크가 중간에 잘렸거나, 이 브라우저가 아직 모르는 형식입니다. '
+          '이 공유 링크를 열지 못했어요 — 링크가 중간에 잘렸을 수 있어요. '
           + '새로고침해도 그대로면 링크를 다시 받아 주세요.'
-          + (fellBack ? ' 우선 마지막 작업 상태를 띄워 뒀습니다.' : ''),
+          + (fellBack ? ' 일단 마지막으로 작업하던 화면을 띄워 뒀어요.' : ''),
         );
       } finally {
         hydrated.current = true;
@@ -187,7 +187,7 @@ export function useScheduler() {
      결과 병합은 성공/실패 각각 한 번씩. 워커가 하나뿐이라 여러 장은 attachImages에서
      차례로(await) 돌린다 — 동시에 돌리면 서로의 진행 표시를 덮어쓴다. */
   const processImage = useCallback(async (id: number, file: File) => {
-    setThemes(ts => ts.map(t => (t.id === id ? { ...t, err: '', busy: '엔진 준비 중…' } : t)));
+    setThemes(ts => ts.map(t => (t.id === id ? { ...t, err: '', busy: '사진 읽을 준비 중…' } : t)));
     const t0 = performance.now();
     try {
       const sessions = await recognizeSessions(file, s => {
@@ -216,7 +216,7 @@ export function useScheduler() {
     } catch (err) {
       const e = err as OcrError;
       const sec = Math.round((performance.now() - t0) / 1000);
-      const msg = '읽기 실패 — 시간을 직접 입력해 주세요. (' + e.message + (e.dim ? ' · ' + e.dim : '') + ' · ' + sec + '초)';
+      const msg = '사진을 못 읽었어요 — 시간을 직접 넣어 주세요. (' + e.message + (e.dim ? ' · ' + e.dim : '') + ' · ' + sec + '초)';
       setThemes(ts => ts.map(t => (t.id === id ? { ...t, err: msg, busy: '' } : t)));
     }
   }, []);
@@ -269,7 +269,7 @@ export function useScheduler() {
     setThemesReady(ready);
 
     if (ready.length < 2) {
-      setRunNote('회차가 있는 테마가 2개 이상 필요합니다.');
+      setRunNote('회차를 넣은 테마가 2개 이상 있어야 해요.');
       setFound([]); setShowCount(SHOW);
       return;
     }
@@ -290,7 +290,7 @@ export function useScheduler() {
       : null;
 
     if (meal && maxGap != null && maxGap < meal.min) {
-      setRunNote(`최대 공백(${maxGap}분)이 식사 공백(${meal.min}분)보다 작아 조합이 나올 수 없습니다.`);
+      setRunNote(`최대 공백(${maxGap}분)이 식사 시간(${meal.min}분)보다 짧아서 조합이 안 나와요.`);
       setFound([]); setShowCount(SHOW);
       return;
     }
@@ -358,11 +358,11 @@ export function useScheduler() {
     const url = location.origin + location.pathname + '#' + h;
     try {
       await navigator.clipboard.writeText(url);
-      setRunNote('링크를 복사했습니다.');
+      setRunNote('링크를 복사했어요.');
       return true;
     } catch {
       location.hash = h;
-      setRunNote('복사가 막혀 주소창에 넣었습니다. 주소창 링크를 복사해 주세요.');
+      setRunNote('복사가 안 돼서 주소창에 넣어 뒀어요. 주소창에서 복사해 주세요.');
       return false;
     }
   }, [stateNow]);

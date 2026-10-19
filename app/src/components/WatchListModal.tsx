@@ -11,10 +11,10 @@ export function WatchListModal({ w }: { w: UseWatchesReturn }) {
     >
       <div className="mbox mbox-wide">
         <h3>빈자리 알림</h3>
-        <p className="msub">매진 회차 옆 벨 아이콘으로 건 감시 목록입니다. 자리가 나면 푸시로 알려드려요.</p>
+        <p className="msub">매진된 회차 옆 벨을 눌러 걸어 둔 알림이에요. 자리가 나면 알려 드려요.</p>
         <div className="loadlist">
           {w.watches.length === 0 ? (
-            <div className="lmsg">아직 감시 중인 자리가 없어요.{'\n'}매진 회차 옆의 벨 아이콘을 눌러보세요.</div>
+            <div className="lmsg">아직 걸어 둔 알림이 없어요.{'\n'}매진된 회차 옆의 벨을 눌러 보세요.</div>
           ) : (
             w.watches.map(watch => {
               const busy = w.busyIds.has(watch.id);
@@ -28,8 +28,8 @@ export function WatchListModal({ w }: { w: UseWatchesReturn }) {
                     </span>
                   </div>
                   <button
-                    className="btn-x" type="button" title="감시 해제" disabled={busy}
-                    onClick={() => { if (confirm(`${watch.theme} ${fmt(watch.t)} 감시를 해제할까요?`)) w.remove(watch.id); }}
+                    className="btn-x" type="button" title="빈자리 알림 끄기" disabled={busy}
+                    onClick={() => { if (confirm(`${watch.theme} ${fmt(watch.t)} 빈자리 알림을 끌까요?`)) w.remove(watch.id); }}
                   >×</button>
                 </div>
               );
@@ -37,14 +37,14 @@ export function WatchListModal({ w }: { w: UseWatchesReturn }) {
           )}
         </div>
         <div className="loadfoot">
-          <span>{w.watches.length}/{w.limit}개 감시 중</span>
+          <span>{w.watches.length}/{w.limit}개 걸어 둠</span>
         </div>
         <p className="merr">{w.err}</p>
         {w.pushNote && <p className="mnote">{w.pushNote}</p>}
         <div className="mbtns">
           <button className="btn" type="button" onClick={w.close}>닫기</button>
         </div>
-        <p className="mnote">알림은 같은 자리에 대해 <b>1시간에 한 번</b>까지만 갑니다. 최대 <b>3개</b>까지 걸 수 있어요.</p>
+        <p className="mnote">같은 자리 알림은 <b>1시간에 한 번</b>만 가요. 최대 <b>3개</b>까지 걸 수 있어요.</p>
       </div>
     </div>
   );

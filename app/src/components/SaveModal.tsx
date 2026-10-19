@@ -20,12 +20,12 @@ export function SaveModal({ m }: { m: UseSaveModalReturn }) {
           <label>구분</label>
           <div className="mseg">
             <button type="button" className={m.status === 'wish' ? 'on' : ''} onClick={() => m.setStatus('wish')}>하고 싶은 일정</button>
-            <button type="button" className={m.status === 'done' ? 'on' : ''} onClick={() => m.setStatus('done')}>했던 일정</button>
+            <button type="button" className={m.status === 'done' ? 'on' : ''} onClick={() => m.setStatus('done')}>다녀온 일정</button>
           </div>
         </div>
         <div className="mrow">
           <label>메모 <span className="dim">(선택)</span></label>
-          <input placeholder="메모를 입력하세요" value={m.memo} onChange={e => m.setMemo(e.target.value)} />
+          <input placeholder="예: 친구 넷이서" value={m.memo} onChange={e => m.setMemo(e.target.value)} />
         </div>
         <p className="merr">{m.err}</p>
         <div className="mbtns">

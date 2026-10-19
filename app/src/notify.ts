@@ -31,12 +31,12 @@ async function registerAndSend(authToken: string): Promise<PushResult> {
     const swReg = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}firebase-messaging-sw.js`);
     const C = await cloud();
     const deviceToken = await C.getMessagingToken(VAPID_KEY, swReg);
-    if (!deviceToken) return { ok: false, reason: '알림 주소를 만들지 못했습니다.' };
+    if (!deviceToken) return { ok: false, reason: '알림 등록이 안 됐어요.' };
     await registerDevice(deviceToken, authToken);
     return { ok: true };
   } catch (e) {
     console.warn('푸시 등록 실패:', e);
-    return { ok: false, reason: '푸시 등록에 실패했습니다.' };
+    return { ok: false, reason: '알림 등록이 안 됐어요.' };
   }
 }
 
@@ -44,9 +44,9 @@ async function registerAndSend(authToken: string): Promise<PushResult> {
    대부분 거절하고 브라우저가 다시 안 물어본다 — 그래서 이 함수는 반드시
    버튼 클릭 콜백 안에서만 호출한다. */
 export async function requestPushPermission(authToken: string): Promise<PushResult> {
-  if (needsIOSInstall()) return { ok: false, reason: '아이폰은 홈 화면에 추가해야 알림이 옵니다.' };
+  if (needsIOSInstall()) return { ok: false, reason: '아이폰은 홈 화면에 추가해야 알림이 와요.' };
   if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-    return { ok: false, reason: '이 브라우저는 푸시 알림을 지원하지 않습니다.' };
+    return { ok: false, reason: '이 브라우저에선 알림을 받을 수 없어요.' };
   }
   if (Notification.permission === 'denied') {
     return { ok: false, reason: '알림이 차단돼 있어요 — 브라우저 설정에서 허용해 주세요.' };

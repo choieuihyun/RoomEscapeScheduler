@@ -78,10 +78,10 @@ export const schedule = (branchId: string, date: string): Promise<ScheduleRespon
 /* 사용자에게 보일 말로 바꾼다. "서버가 없다"가 이 도구의 고장이 아니라는 걸 분명히 한다. */
 export function say(err: unknown): string {
   const e = err as ApiError;
-  if (e?.status === 404) return '그 날짜는 아직 수집되지 않았습니다. 다른 날짜를 골라 보세요.';
+  if (e?.status === 404) return '그 날짜는 아직 정보가 없어요. 다른 날짜를 골라 보세요.';
   if (e instanceof TypeError)              /* fetch가 못 닿으면 TypeError다 */
-    return `서버에 닿지 못했습니다 (${base() || DEFAULT_BASE}). 꺼져 있거나 주소가 다를 수 있어요 — 직접 입력과 사진은 그대로 쓸 수 있습니다.`;
-  return '불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    return `서버에 연결이 안 돼요 (${base() || DEFAULT_BASE}). 직접 입력과 사진 읽기는 그대로 쓸 수 있어요.`;
+  return '불러오지 못했어요. 잠시 뒤에 다시 해 주세요.';
 }
 
 /* "3분 전 기준" 같은 말. 취소표는 시간에 민감해서 언제 기준인지가 곧 신뢰다. */

@@ -48,9 +48,9 @@ export function useAuth() {
     const cleanId = id.trim().toLowerCase();
     setId(cleanId);
     const C = await cloud().catch(() => null);
-    if (!C) { setErr('로그인 모듈을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.'); return; }
-    if (!C.ID_RE.test(cleanId)) { setErr('아이디 형식이 맞지 않습니다 — ' + C.ID_HINT); return; }
-    if (pw.length < 6) { setErr('비밀번호는 6자 이상이어야 합니다.'); return; }
+    if (!C) { setErr('로그인을 준비하지 못했어요. 인터넷 연결을 확인해 주세요.'); return; }
+    if (!C.ID_RE.test(cleanId)) { setErr('아이디 형식이 맞지 않아요 — ' + C.ID_HINT); return; }
+    if (pw.length < 6) { setErr('비밀번호는 6자 이상으로 해 주세요.'); return; }
     setBusy(true); setErr('');
     try {
       const result = mode === 'up' ? await C.signUp(cleanId, pw) : await C.signIn(cleanId, pw);

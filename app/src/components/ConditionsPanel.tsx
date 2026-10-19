@@ -54,9 +54,9 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
       <p className={hint.className}>{hint.content}</p>
       <MoveTimeGrid s={s} />
       <div className="checks">
-        <label className="chk" title="끄면 어느 테마가 첫 타로 오든 도구가 순서까지 다 짚습니다 — 카드를 아무렇게나 넣어도 됩니다. 켜면 카드에 늘어놓은 순서 그대로 방문하고 회차만 맞춥니다(순서를 이미 정해 뒀을 때).">
+        <label className="chk" title="끄면 어떤 테마부터 갈지까지 알아서 찾아 줘요. 켜면 카드에 놓인 순서대로 가는 걸로 보고 시간만 맞춰요. 갈 순서를 이미 정했을 때 켜세요.">
           <input type="checkbox" checked={s.options.oFixedOrder} onChange={e => s.setOption('oFixedOrder', e.target.checked)} />
-          카드 순서 그대로 계산
+          순서 그대로 계산
         </label>
         <label className="chk">
           <input type="checkbox" checked={s.options.oPartial} onChange={e => s.setOption('oPartial', e.target.checked)} />
@@ -70,7 +70,7 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
           <input type="checkbox" checked={s.options.oTeam} onChange={e => s.setOption('oTeam', e.target.checked)} />
           여러 팀으로 나눠 배정
         </label>
-        <label className="chk" title="회차 시간표 자체는 매진이어도 그대로 있으니, 계산에만 포함시켜 어떤 조합이 되는지 미리 봅니다. 매진 회차가 낀 조합은 타임라인에 매진 표시로 남아 예약이 안 된다는 걸 그대로 보여줍니다 — 취소표를 노려볼 때 씁니다.">
+        <label className="chk" title="매진된 회차도 계산에 넣어서 어떤 조합이 나오는지 미리 봐요. 매진이 낀 조합은 타임라인에 매진으로 표시돼요. 취소표를 노릴 때 쓰세요.">
           <input type="checkbox" checked={s.options.oIncludeSoldout} onChange={e => s.setOption('oIncludeSoldout', e.target.checked)} />
           매진 회차도 포함해서 계산
         </label>
@@ -81,12 +81,12 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
         <TimePicker value={s.options.oMealTo} onChange={v => s.setOption('oMealTo', v)} />
         <span className="lb">사이에</span>
         <input className="mono" value={s.options.oMealMin} onChange={e => s.setOption('oMealMin', e.target.value)} />
-        <span className="lb">분 이상 공백을 남긴다</span>
+        <span className="lb">분 이상 비워 두기</span>
       </div>
       <TeamPanel s={s} />
       {mismatchDates.length > 1 && (
         <p className="datewarn">
-          ⚠ 테마마다 날짜가 달라요 ({mismatchDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날 회차로 맞춰야 정확한 조합이 나옵니다.
+          ⚠ 테마마다 날짜가 달라요 ({mismatchDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날 회차로 맞춰야 조합이 제대로 나와요.
         </p>
       )}
       <div className="run">

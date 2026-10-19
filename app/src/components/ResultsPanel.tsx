@@ -137,12 +137,12 @@ export function ResultsPanel({ s, onSave, watchCtl }: { s: Scheduler; onSave?: (
         <div id="results">
           <div className="empty">
             {teamStuck
-              ? <>이 조건으로는 남은 회차만으로 조합을 만들 수 없습니다. 앞선 팀이 너무 많은 회차를 가져갔을 수 있어요 — <b className="hi">마지막 팀 취소</b> 또는 <b className="hi">전체 초기화</b> 를 눌러보세요.</>
+              ? <>남은 회차로는 조합이 안 나와요. 앞 팀이 회차를 많이 가져갔을 수 있어요 — <b className="hi">마지막 팀 취소</b>나 <b className="hi">전체 초기화</b>를 눌러 보세요.</>
               : s.options.oFixedOrder
                 /* 순서가 고정된 동안에는 "이 순서에서만 안 나온다" 가 가장 흔한 원인이다 —
                    순서 자유로 두면 도구가 알아서 찾으므로 그쪽을 먼저 권한다(§4.46). */
-                ? <>이 순서로는 조건을 만족하는 조합이 없습니다. <b className="hi">카드 순서 그대로 계산</b> 을 꺼서 순서를 도구에 맡기거나, 최소 공백을 줄이거나 시간 범위를 넓혀보세요.</>
-                : '조건을 만족하는 조합이 없습니다. 최소 공백을 줄이거나 시간 범위를 넓혀보세요.'}
+                ? <>이 순서로는 조건에 맞는 조합이 없어요. <b className="hi">순서 그대로 계산</b>을 끄거나, 최소 공백을 줄이거나, 시간 범위를 넓혀 보세요.</>
+                : '조건에 맞는 조합이 없어요. 최소 공백을 줄이거나 시간 범위를 넓혀 보세요.'}
           </div>
         </div>
       </section>
@@ -155,14 +155,14 @@ export function ResultsPanel({ s, onSave, watchCtl }: { s: Scheduler; onSave?: (
         <div className="sec-head"><h2>결과</h2><span /></div>
         <div id="tabs"><ResultTabs s={s} /></div>
         <SortBar s={s} />
-        <div id="results"><div className="empty">이 묶음에는 조합이 없습니다.</div></div>
+        <div id="results"><div className="empty">여기엔 조합이 없어요.</div></div>
       </section>
     );
   }
 
-  const capped = s.searchCapped ? ' (탐색 한도 도달)' : '';
+  const capped = s.searchCapped ? ' (너무 많아서 일부만 찾았어요)' : '';
   const countText = list.length < pool.length
-    ? `상위 ${list.length.toLocaleString()}개만 표시됩니다 · 전체 ${pool.length.toLocaleString()}개 중${capped}`
+    ? `상위 ${list.length.toLocaleString()}개만 보여요 · 전체 ${pool.length.toLocaleString()}개${capped}`
     : `${pool.length.toLocaleString()}개${capped}`;
 
   return (

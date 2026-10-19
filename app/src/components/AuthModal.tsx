@@ -22,7 +22,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
       <div className="mbox">
         <h3>{up ? '가입' : '로그인'}</h3>
         <p className="msub">
-          {up ? '아이디와 비밀번호만 정하면 끝입니다. 이메일도, 인증 메일도 없습니다.' : '아이디와 비밀번호를 넣어 주세요.'}
+          {up ? '아이디랑 비밀번호만 정하면 끝이에요. 이메일 인증 같은 건 없어요.' : '아이디와 비밀번호를 넣어 주세요.'}
         </p>
         <div className="mrow">
           <label>아이디</label>
@@ -55,7 +55,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
           ) : (
             <>
               아이디가 없나요? <b style={lkStyle} onClick={() => auth.openAuth('up')}>가입</b> ·{' '}
-              <b>비밀번호를 잊으면 되찾을 방법이 없습니다.</b> 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.
+              <b>비밀번호를 잊어버리면 찾을 방법이 없어요.</b> 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.
             </>
           )}
         </p>
