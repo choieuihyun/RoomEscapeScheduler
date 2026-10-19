@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { parseKakaoTitle } from '../clubEvents';
-import { applyPaste, emptySeg, formFromEvent, MAX_SEGS, toInput, type FormSeg, type FormState } from '../eventForm';
+import { applyPaste, emptySeg, formFromEvent, MAX_SEGS, shouldApplyOnBlur, toInput, type FormSeg, type FormState } from '../eventForm';
 import { conflictOf, sayClub, type EventDto, type EventInput } from '../server';
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
@@ -99,7 +99,7 @@ function Body({ m, create, update }: Props) {
             const text = e.clipboardData.getData('text');
             if (parseKakaoTitle(text).segments.length > 0) { e.preventDefault(); fill(text); }
           }}
-          onBlur={() => { fill(f.title); }}
+          onBlur={() => { if (shouldApplyOnBlur(f)) fill(f.title); }}
         />
         {note && <p className="evf-note">{note}</p>}
       </div>
@@ -172,8 +172,8 @@ function Body({ m, create, update }: Props) {
         <div className="mrow">
           <label>예약</label>
           <div className="mseg">
-            <button type="button" className={f.booked ? '' : 'on'} onClick={() => set({ booked: false })}>예약 전</button>
-            <button type="button" className={f.booked ? 'on' : ''} onClick={() => set({ booked: true })}>예약 완료</button>
+            <button type="button" className={f.booked ? '' : 'on'} aria-pressed={!f.booked} onClick={() => set({ booked: false })}>예약 전</button>
+            <button type="button" className={f.booked ? 'on' : ''} aria-pressed={f.booked} onClick={() => set({ booked: true })}>예약 완료</button>
           </div>
         </div>
       )}

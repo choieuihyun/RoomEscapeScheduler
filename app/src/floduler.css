@@ -1086,7 +1086,7 @@ button:active{transform:scale(.97)}
 @media(max-width:560px){
   .evf-modal{padding:0}
   .evf-modal .mbox{max-width:none;height:100%;max-height:none;border-radius:0;border:none}
-  .mrow2{flex-direction:column;gap:0}
+  .evf .mrow2{flex-direction:column;gap:0}
   .evf-seg{flex-wrap:wrap}
   .evf-s-name{flex:1 1 calc(100% - 80px)}
   .evf-s-branch{flex:1 1 0}

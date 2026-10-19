@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { EventDto } from './server';
 import type { PathStep } from './core';
-import { applyPaste, emptyForm, formFromEvent, formFromSteps, toInput, type FormState } from './eventForm';
+import { applyPaste, shouldApplyOnBlur, emptyForm, formFromEvent, formFromSteps, toInput, type FormState } from './eventForm';
 
 const ev = (o: Partial<EventDto> = {}): EventDto => ({
   id: 1, title: '', date: '2026-10-20', startMin: null, endMin: null, location: null,
@@ -63,7 +63,7 @@ describe('eventForm', () => {
 
   it('끝이 시작보다 이르면 오류', () => {
     expect(err(base({ title: 'a', allDay: false, start: '14:00', end: '13:00' }))).toBe('끝 시각이 시작보다 늦어야 해요.');
-    expect(err(base({ title: 'a', allDay: false, start: '1pm', end: '13:00' }))).toBe('시각은 13:40 처럼 적어 주세요.');
+    expect(err(base({ title: 'a', allDay: false, start: '1pm', end: '13:00' }))).toBe('시작 시각은 13:40 처럼 적어 주세요.');
   });
 
   it('61자 제목은 오류', () => {
@@ -78,6 +78,17 @@ describe('eventForm', () => {
     expect(f.date).toBe('2026-10-25');
     expect(f.segs[0]).toMatchObject({ themeName: 'A', branchName: '강남점', start: '13:40', end: '14:50' });
     expect(f.segs[1].start).toBe('24:30');
+  });
+
+  it('구간이 있을 때 blur 로는 구간이 바뀌지 않는다', () => {
+    const seg = { themeName: 'A', branchName: '강남점', themeKey: 'k', start: '13:40', end: '14:50' };
+    expect(shouldApplyOnBlur(base({ segs: [seg] }))).toBe(false);
+    expect(shouldApplyOnBlur(base())).toBe(true);
+  });
+
+  it('구간 시각 오류는 몇 번째 테마인지 알려 준다', () => {
+    const ok = { themeName: 'A', branchName: '', themeKey: null, start: '13:40', end: '' };
+    expect(err(base({ segs: [ok, { ...ok, start: 'abc' }] }))).toBe('2번째 테마의 시작 시각은 13:40 처럼 적어 주세요.');
   });
 
   it('충돌이면 입력을 지키고 최신으로 바꿀 수 있다', () => {

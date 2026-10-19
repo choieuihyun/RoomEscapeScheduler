@@ -146,8 +146,8 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   };
 
   /* 동작 하나. 성공하면 돌아온 일정으로 목록을 바꾼다. 실패하면 서버 문구를 토스트로 보이고
-     (update 의 EVENT_CONFLICT 는 토스트 없이 — 화면이 직접 다룬다) 정원 초과·없는 일정이면 목록을 맞춘 뒤 던진다. */
-  const act = useCallback(async <T,>(id: number | null, quietConflict: boolean, call: (t: string, put: (ev: EventDto) => EventDto, live: () => boolean) => Promise<T>): Promise<T> => {
+     (만들기·고치기는 입력 창이 문구를 직접 보이니 토스트 없이, 충돌도 창이 다룬다) 정원 초과·없는 일정이면 목록을 맞춘 뒤 던진다. */
+  const act = useCallback(async <T,>(id: number | null, inForm: boolean, call: (t: string, put: (ev: EventDto) => EventDto, live: () => boolean) => Promise<T>): Promise<T> => {
     const ep = epoch.current;
     const live = () => alive.current && epoch.current === ep;
     if (id !== null) setBusy(id, true);
@@ -159,8 +159,7 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
       if (live()) invalidateReload();
       return out;
     } catch (e) {
-      const code = errorCode(e);
-      if (!(quietConflict && code === 'EVENT_CONFLICT')) showToast(noToken ? '로그인해 주세요.' : sayClub(e));
+      if (!inForm) showToast(noToken ? '로그인해 주세요.' : sayClub(e));
       if (id !== null) {
         const fix = afterActionError(e);
         if (fix === 'refresh') await refreshOne(id);
@@ -179,7 +178,7 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     try { await p; } catch { /* 토스트·목록 맞춤은 act 에서 끝났다 */ }
   };
 
-  const create = useCallback((input: EventInput) => act(null, false, (t, put) => createEvent(input, t).then(put)), [act]);
+  const create = useCallback((input: EventInput) => act(null, true, (t, put) => createEvent(input, t).then(put)), [act]);
   const update = useCallback(
     (id: number, input: EventInput, version: number) => act(id, true, (t, put) => updateEvent(id, input, version, t).then(put)),
     [act],

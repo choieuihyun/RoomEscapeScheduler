@@ -89,6 +89,10 @@ export function applyPaste(f: FormState, title: string): { form: FormState; note
   };
 }
 
+/* 제목 칸을 벗어날 때는 구간이 비어 있을 때만 카톡 제목으로 채운다 — 이미 있는 구간(지점·끝 시각)을
+   "정기 모임 19:00" 같은 평범한 제목이 덮어쓰지 못하게. 붙여넣기는 바로 적용한다. */
+export const shouldApplyOnBlur = (f: FormState): boolean => f.segs.length === 0;
+
 const MAX_MIN = 2879;
 
 function readClock(s: string): number | null {
@@ -110,19 +114,19 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
   if (rows.length > MAX_SEGS) return { error: `테마는 ${MAX_SEGS}개까지예요.` };
   const segments: SegmentInput[] = [];
   for (const [i, g] of rows.entries()) {
-    const label = `테마 ${i + 1}`;
+    const label = `${i + 1}번째 테마`;
     const themeName = g.themeName.trim();
     const branchName = g.branchName.trim();
     if (!themeName) return { error: `${label}의 이름을 적어 주세요.` };
     if (cpLen(themeName) > 40) return { error: `${label}의 이름은 40자까지예요.` };
     if (cpLen(branchName) > 40) return { error: `${label}의 지점은 40자까지예요.` };
     const startMin = readClock(g.start);
-    if (startMin === null) return { error: '시각은 13:40 처럼 적어 주세요.' };
+    if (startMin === null) return { error: `${label}의 시작 시각은 13:40 처럼 적어 주세요.` };
     let endMin: number | null = null;
     if (g.end.trim()) {
       endMin = readClock(g.end);
-      if (endMin === null) return { error: '시각은 13:40 처럼 적어 주세요.' };
-      if (endMin <= startMin) return { error: '끝 시각이 시작보다 늦어야 해요.' };
+      if (endMin === null) return { error: `${label}의 끝 시각은 13:40 처럼 적어 주세요.` };
+      if (endMin <= startMin) return { error: `${label}의 끝 시각이 시작보다 늦어야 해요.` };
     }
     segments.push({ themeName, branchName: branchName || null, themeKey: g.themeKey, startMin, endMin });
   }
@@ -133,10 +137,10 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
   let endMin: number | null = null;
   if (segments.length === 0 && !f.allDay) {
     startMin = readClock(f.start);
-    if (startMin === null) return { error: '시각은 13:40 처럼 적어 주세요.' };
+    if (startMin === null) return { error: '시작 시각은 13:40 처럼 적어 주세요.' };
     if (f.end.trim()) {
       endMin = readClock(f.end);
-      if (endMin === null) return { error: '시각은 13:40 처럼 적어 주세요.' };
+      if (endMin === null) return { error: '끝 시각은 13:40 처럼 적어 주세요.' };
       if (endMin <= startMin) return { error: '끝 시각이 시작보다 늦어야 해요.' };
     }
     /* 서버는 시작·끝이 둘 다 있거나 둘 다 없어야 한다 */
