@@ -1,7 +1,7 @@
 /* 동호회 일정의 화면 쪽 규칙 — React 밖의 순수 함수 (작업명세서 §4.7, 계획 Task E1).
    상태·제목 만들기, 카톡 제목 해석, 카톡에 올릴 글, 홈에 고를 일정. */
 import { fmt, toISO } from './core';
-import type { EventDto } from './server';
+import { errorCode, type EventDto } from './server';
 
 export type EventStatus = 'talk' | 'before' | 'done';
 
@@ -111,3 +111,28 @@ export function addDays(iso: string, n: number): string {
 
 /* 글자 수는 코드 포인트로 센다(이모지 1개 = 1자). */
 export const cpLen = (s: string): number => [...s].length;
+
+/* ── 목록 병합 (useClubEvents 가 쓴다) ── */
+
+/* from~to(양쪽 포함) 안의 기존 항목을 버리고 fresh 로 바꾼 뒤 정렬한다. 서버에서 지워진 일정이 사라진다. */
+export function mergeRange(cur: EventDto[], from: string, to: string, fresh: EventDto[]): EventDto[] {
+  return sortEvents([...cur.filter((e) => e.date < from || e.date > to), ...fresh]);
+}
+
+/* 같은 id 가 있으면 바꾸고 없으면 넣는다. */
+export function upsert(cur: EventDto[], ev: EventDto): EventDto[] {
+  return sortEvents([...cur.filter((e) => e.id !== ev.id), ev]);
+}
+
+export function dropEvent(cur: EventDto[], id: number): EventDto[] {
+  return cur.filter((e) => e.id !== id);
+}
+
+/* 동작이 실패한 뒤 목록을 어떻게 맞출지. 정원 초과면 그 일정을 다시 불러와 낡은 "참여" 단추를 없앤다,
+   이미 지워진 일정이면 목록에서 뺀다. 수정 충돌(EVENT_CONFLICT)은 화면(E5)이 직접 다룬다. */
+export function afterActionError(err: unknown): 'refresh' | 'drop' | 'none' {
+  const code = errorCode(err);
+  if (code === 'EVENT_FULL') return 'refresh';
+  if (code === 'NO_SUCH_EVENT') return 'drop';
+  return 'none';
+}

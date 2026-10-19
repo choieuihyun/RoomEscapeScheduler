@@ -3,6 +3,7 @@ import type { EventDto } from './server';
 import {
   eventStatus, eventTitle, timeLabel, parseKakaoTitle, kakaoPost,
   sortEvents, nextMine, upcoming, addDays, cpLen, STATUS_LABEL,
+  mergeRange, upsert, dropEvent, afterActionError,
 } from './clubEvents';
 
 const seg = (themeName: string, startMin: number, endMin: number | null = null) =>
@@ -96,5 +97,40 @@ describe('clubEvents', () => {
     expect(addDays('2026-10-31', 1)).toBe('2026-11-01');
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
     expect(cpLen('😀가')).toBe(2);
+  });
+});
+
+describe('clubEvents 목록 병합', () => {
+  const a = ev({ id: 1, date: '2026-10-01' });
+  const b = ev({ id: 2, date: '2026-10-20' });
+  const c = ev({ id: 3, date: '2026-11-05' });
+
+  it('범위 병합은 그 범위만 바꾼다', () => {
+    const d = ev({ id: 4, date: '2026-10-22' });
+    const r = mergeRange([a, b, c], '2026-10-15', '2026-10-31', [d]);
+    expect(r.map((e) => e.id)).toEqual([1, 4, 3]);
+  });
+
+  it('지워진 일정은 범위 병합에서 사라진다', () => {
+    expect(mergeRange([a, b, c], '2026-10-15', '2026-10-31', []).map((e) => e.id)).toEqual([1, 3]);
+  });
+
+  it('upsert 는 같은 id 를 바꾸고 정렬을 지킨다', () => {
+    const r = upsert([a, b, c], { ...b, date: '2026-09-01', title: '바뀜' });
+    expect(r.map((e) => e.id)).toEqual([2, 1, 3]);
+    expect(r[0].title).toBe('바뀜');
+    expect(upsert([a], b).map((e) => e.id)).toEqual([1, 2]);
+  });
+
+  it('dropEvent 는 그 id 만 뺀다', () => {
+    expect(dropEvent([a, b, c], 2).map((e) => e.id)).toEqual([1, 3]);
+  });
+
+  it('정원 초과 뒤에는 그 일정을 다시 불러온다', () => {
+    const err = (status: number, code: string) => ({ status, body: { error: code } });
+    expect(afterActionError(err(409, 'EVENT_FULL'))).toBe('refresh');
+    expect(afterActionError(err(404, 'NO_SUCH_EVENT'))).toBe('drop');
+    expect(afterActionError(err(409, 'EVENT_CONFLICT'))).toBe('none');
+    expect(afterActionError(new Error('x'))).toBe('none');
   });
 });
