@@ -21,6 +21,16 @@
   --blue:#00889C; --blue-hover:#117182; --blue-press:#117182; --blue-text:#117182;
   --blue-soft:#E2F1F5; --blue-line:#96D7E6;
   --blue-rgb:0,136,156;  /* rgba(var(--blue-rgb),.16) 처럼 옅은 바탕·그림자용 */
+
+  /* §4.48 — 컴포넌트 토큰. 참고 시스템의 버튼(외곽선)·입력칸·탭·칩·체크박스 값을 그대로
+     옮겼다. 입력칸 포커스는 청록 고리 대신 진회색 테두리, 고른 탭은 진회색 채움,
+     체크박스는 라이트에서 검정 채움 — 그쪽 시스템의 방식이다. */
+  --btn-bg:#FFFFFF; --btn-bg-hover:#F8F8F8; --btn-line:#E4E5E5; --btn-line-hover:#DBDCDC;
+  --field-bg:#FFFFFF; --field-line:#E4E5E5; --field-line-hover:#DBDCDC; --field-focus:#323333;
+  --tab-line:#CCCDCE; --tab-line-hover:#C0C1C2; --tab-text:#7A7B7D; --tab-on-bg:#323333;
+  --chip-bg:#EEEEEF; --chip-line:#E4E5E5; --chip-info:#E6EFFF;
+  --ctl-on:#1C1C1C;
+  --sun:#E5000A; --sat:#2261F8;   /* 캘린더 일·토요일 (§4.49) */
   --green:#00AF52; --green-text:#0D7738; --green-soft:#E0F4E2;
   --red:#FF502A;   --red-text:#C92208;  --red-soft:#FFE4DC;  --red-line:#FFBCAF;
   --amber:#E47B37; --amber-text:#99562C; --amber-soft:#FFEDDC; --amber-line:#FFD9B0;
@@ -64,6 +74,12 @@
     --blue:#00889C; --blue-hover:#117182; --blue-press:#3CBED7; --blue-text:#3CBED7;
     --blue-soft:#002831; --blue-line:#1D5A66;
     --blue-rgb:60,190,215;
+    --btn-bg:#1C1C1C; --btn-bg-hover:#323333; --btn-line:#525253; --btn-line-hover:#666768;
+    --field-bg:#1C1C1C; --field-line:#525253; --field-line-hover:#666768; --field-focus:#EEEEEF;
+    --tab-line:#7A7B7D; --tab-line-hover:#969799; --tab-text:#C0C1C2; --tab-on-bg:#00889C;
+    --chip-bg:#424343; --chip-line:#525253; --chip-info:#22446C;
+    --ctl-on:#08A7BF;
+    --sun:#FF8271; --sat:#84C3FF;
     --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
     --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
     --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
@@ -90,6 +106,12 @@
   --blue:#00889C; --blue-hover:#117182; --blue-press:#3CBED7; --blue-text:#3CBED7;
   --blue-soft:#002831; --blue-line:#1D5A66;
   --blue-rgb:60,190,215;
+  --btn-bg:#1C1C1C; --btn-bg-hover:#323333; --btn-line:#525253; --btn-line-hover:#666768;
+  --field-bg:#1C1C1C; --field-line:#525253; --field-line-hover:#666768; --field-focus:#EEEEEF;
+  --tab-line:#7A7B7D; --tab-line-hover:#969799; --tab-text:#C0C1C2; --tab-on-bg:#00889C;
+  --chip-bg:#424343; --chip-line:#525253; --chip-info:#22446C;
+  --ctl-on:#08A7BF;
+  --sun:#FF8271; --sat:#84C3FF;
   --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
   --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
   --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
@@ -118,16 +140,6 @@ body{
 }
 /* 숫자가 세로로 안 흔들리게. 시각은 표처럼 읽히는 게 맞다 */
 .mono{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:0}
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-
-/* ── header ── */
-header{padding:32px 0 26px}
-h1{font-size:30px;font-weight:700;letter-spacing:-.035em;margin:0 0 8px;color:var(--ink)}
-h1 .dim{color:var(--blue-text)}
-/* 카드 밖 바닥(body)에 직접 얹히는 캡션은 --ink3 대신 --ink2. 원목 배경 시절(§4.44)에
-   대비 때문에 올린 것인데, 회색 바닥(§4.47)에서도 --ink3(#7A7B7D)는 #F8F8F8 위 4.0:1 로
-   빠듯해서 그대로 둔다. 카드/모달 안의 --ink3는 그대로. */
-header p{margin:0;color:var(--ink2);font-size:14px;max-width:52ch}
 
 /* ── sections ── */
 .sec{margin-bottom:34px}
@@ -154,33 +166,39 @@ header p{margin:0;color:var(--ink2);font-size:14px;max-width:52ch}
 .card.drag{border-color:var(--blue);background:var(--surface)}
 .card-top{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 
+/* 입력칸 — 참고 시스템의 field l(높이 40, 모서리 12, 흰 바탕). 포커스는 고리 없이
+   테두리만 진해진다. 체크박스까지 이 높이를 받지 않게 높이는 글자 입력칸에만 준다. */
 input,textarea,select{
-  background:var(--surface2);border:1px solid var(--line);color:var(--ink);
-  border-radius:var(--r-sm);padding:10px 12px;font-family:inherit;font-size:14px;
+  background:var(--field-bg);border:1px solid var(--field-line);color:var(--ink);
+  border-radius:var(--r);padding:10px 12px;font-family:inherit;font-size:14px;
   transition:border-color .13s,box-shadow .13s,background .13s;
 }
+input:not([type=checkbox]):not([type=radio]):not([type=file]),select{height:40px;padding:0 12px}
+input:hover,textarea:hover,select:hover{border-color:var(--field-line-hover)}
 input::placeholder,textarea::placeholder{color:var(--placeholder)}
-input:focus,textarea:focus,select:focus{outline:none;background:var(--surface);
-  border-color:var(--blue);box-shadow:var(--ring)}
+input:focus,textarea:focus,select:focus{outline:none;background:var(--field-bg);
+  border-color:var(--field-focus)}
 .i-name{flex:1;min-width:120px;font-weight:600}
 .i-dur{width:84px;text-align:center}
 .unit{color:var(--ink3);font-size:13px;margin-left:-2px}
 textarea{width:100%;min-height:66px;resize:vertical;
   font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;line-height:1.85}
 .card-foot{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
-.btn-img{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);
-  border:1px solid var(--line);color:var(--ink2);padding:7px 13px;font-size:13px;
-  font-weight:500;border-radius:var(--r-sm);cursor:pointer}
-.btn-img:hover{background:var(--line);border-color:var(--line2)}
+.btn-img{display:inline-flex;align-items:center;gap:5px;background:var(--btn-bg);
+  border:1px solid var(--btn-line);color:var(--ink);height:32px;padding:0 12px;font-size:14px;
+  font-weight:400;border-radius:var(--r-sm);cursor:pointer;white-space:nowrap}
+.btn-img:hover{background:var(--btn-bg-hover);border-color:var(--btn-line-hover)}
 .btn-img input{display:none}
 
 /* 입력한 것이 어떻게 해석됐는지 바로 보여주는 줄.
    12시간 보정은 조용히 일어나면 사고가 되므로(순서가 섞이면 엉뚱한 값이 된다) 눈에 보이게 한다. */
 .parsed{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+/* 회차 칩 — 참고 시스템의 chip xs(높이 24, 알약, 회색 바탕+옅은 테두리). 12시간 보정된
+   회차는 information 칩(옅은 파랑 바탕)으로 가른다. */
 .parsed .t{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12px;
-  font-weight:600;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);
-  border-radius:var(--pill);padding:3px 10px}
-.parsed .t.fix{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue-press)}
+  font-weight:600;color:var(--ink);background:var(--chip-bg);border:1px solid var(--chip-line);
+  border-radius:var(--pill);height:24px;padding:0 8px;display:inline-flex;align-items:center}
+.parsed .t.fix{background:var(--chip-info);border-color:transparent;color:var(--ink)}
 .parsed .t.so{background:var(--red-soft);border-color:var(--red-line);color:var(--red-text);
   text-decoration:line-through}
 .parsed .t.over{background:var(--red-soft);border-color:var(--red-line);color:var(--red-text)}
@@ -199,15 +217,21 @@ button{font-family:inherit;cursor:pointer;border-radius:var(--r-sm);transition:.
   letter-spacing:-.01em}
 /* 눌렀다는 걸 손끝으로 느끼게 — 모든 버튼 공통(단, disabled는 :active 자체가 안 걸린다) */
 button:active{transform:scale(.97)}
-.btn{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);
-  padding:9px 15px;font-size:13.5px;font-weight:500}
-.btn:hover{background:var(--line);border-color:var(--line2);color:var(--ink)}
+/* 버튼 크기 — 참고 시스템의 단계를 그대로 쓴다.
+   s 28px·모서리 6 / m 32px·모서리 8 / l 40px·모서리 12 / xl 48px·모서리 12.
+   .btn 은 외곽선 basic(흰 바탕+옅은 테두리) m 이 기본이고, 자리별로 아래에서 l·s 로 바꾼다. */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;
+  background:var(--btn-bg);border:1px solid var(--btn-line);color:var(--ink);
+  height:32px;padding:0 12px;font-size:14px;font-weight:400;border-radius:var(--r-sm)}
+.btn:hover{background:var(--btn-bg-hover);border-color:var(--btn-line-hover);color:var(--ink)}
+.addrow .btn,.run .btn,.mbtns .btn,.morebtn{height:40px;padding:0 16px;font-weight:500;border-radius:var(--r)}
 .btn-x{background:none;border:1px solid transparent;color:var(--ink3);padding:5px 9px;
   font-size:17px;line-height:1;border-radius:var(--r-xs)}
 .btn-x:hover{color:var(--red);background:var(--red-soft)}
-.btn-go{
+/* 채움 major — xl(48px, 16px 굵게) */
+.btn-go{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;
   background:var(--blue);border:1px solid var(--blue);color:#fff;
-  padding:13px 30px;font-size:15px;font-weight:700;border-radius:var(--r-sm);
+  height:48px;padding:0 28px;font-size:16px;font-weight:600;border-radius:var(--r);
 }
 .btn-go:hover{background:var(--blue-hover);border-color:var(--blue-hover);
   box-shadow:0 2px 8px rgba(var(--blue-rgb),.24)}
@@ -216,8 +240,8 @@ button:active{transform:scale(.97)}
 /* ── options ── */
 .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px 18px;
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
-.opt label{display:flex;align-items:center;font-size:12.5px;color:var(--ink3);
-  letter-spacing:0;margin-bottom:6px;font-weight:500}
+.opt label{display:flex;align-items:center;font-size:14px;color:var(--ink);
+  margin-bottom:6px;font-weight:500}
 .opt input,.opt select{width:100%}
 .opt .tpicker{width:100%}
 .checks{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px}
@@ -264,7 +288,7 @@ button:active{transform:scale(.97)}
 .teamchip .dim{color:var(--ink3);font-size:12px}
 .teamnext{color:var(--ink3);font-size:12.5px;margin-top:2px}
 .teamctl{display:flex;gap:8px}
-.teamctl .btn{padding:6px 12px;font-size:12.5px}
+.teamctl .btn{height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs)}
 .teamctl .btn:disabled{opacity:.4;cursor:default}
 
 /* 드래그 손잡이 겸 순서 번호. 이 번호 순서가 곧 조합 순서다 (§4.14 후기) */
@@ -285,13 +309,16 @@ button:active{transform:scale(.97)}
 .card.dragging{opacity:.5;transform:scale(1.02) rotate(-.4deg);
   box-shadow:0 14px 32px rgba(0,0,0,.22),0 0 0 1px var(--blue-line)}
 .card.over{border-color:var(--blue);box-shadow:inset 0 4px 0 -1px var(--blue),var(--sh)}
-.btn-copy{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);
-  font-size:12px;font-weight:500;padding:4px 11px;border-radius:var(--pill)}
-.btn-copy:hover{background:var(--line);color:var(--ink)}
+.btn-copy{display:inline-flex;align-items:center;white-space:nowrap;
+  background:var(--btn-bg);border:1px solid var(--btn-line);color:var(--ink);
+  font-size:13px;font-weight:400;height:28px;padding:0 10px;border-radius:var(--r-xs)}
+.btn-copy:hover{background:var(--btn-bg-hover);border-color:var(--btn-line-hover)}
 .res-head .btn-copy:first-of-type{margin-left:auto}
-.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);
-  cursor:pointer;font-weight:500}
-.chk input{width:17px;height:17px;accent-color:var(--blue);cursor:pointer}
+/* 체크박스 — 참고 시스템은 16px·모서리 4, 체크하면 라이트는 검정, 다크는 청록으로 채운다.
+   글자는 본문색 보통 굵기. */
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);
+  cursor:pointer;font-weight:400}
+.chk input{width:16px;height:16px;margin:0;accent-color:var(--ctl-on);cursor:pointer}
 .run{display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap}
 .run .note{font-size:13px;color:var(--ink2)}
 .datewarn{font-size:13px;color:var(--amber-text);background:var(--amber-soft);
@@ -301,21 +328,19 @@ button:active{transform:scale(.97)}
 /* ── result tabs ── */
 .tabrow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
 .tabrow.sets{margin-bottom:14px}
-.tab{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
-  padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
-.tab b{color:var(--ink3);font-weight:700;margin-left:5px}
-.tab:hover{border-color:var(--line2)}
-.tab.on{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue-text);font-weight:600}
-.tab.on b{color:var(--blue-text);opacity:.72}
-.tabrow.sets .tab{font-size:12.5px;padding:5px 12px}
+/* 탭·정렬 칩 — 참고 시스템의 tab round-solid m(높이 32, 모서리 16). 안 고른 것은 흰 바탕+
+   회색 테두리+회색 글자, 고른 것은 진회색(다크는 청록)으로 채우고 흰 글자. */
+.tab,.sortbtn{display:inline-flex;align-items:center;white-space:nowrap;
+  background:var(--btn-bg);border:1px solid var(--tab-line);color:var(--tab-text);
+  height:32px;padding:0 12px;font-size:14px;font-weight:400;border-radius:16px}
+.tab b{color:inherit;font-weight:700;margin-left:5px;opacity:.8}
+.tab:hover,.sortbtn:hover{background:var(--btn-bg-hover);border-color:var(--tab-line-hover)}
+.tab.on,.sortbtn.on{background:var(--tab-on-bg);border-color:var(--tab-on-bg);color:#fff;font-weight:500}
+.tab.on b,.sortbtn.on b{color:#fff;opacity:.8}
+.tabrow.sets .tab{font-size:13px;height:28px;border-radius:14px}
 
 /* ── sort ── */
 .sorts{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
-.sortbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink2);
-  padding:7px 14px;font-size:13px;font-weight:500;border-radius:var(--pill)}
-.sortbtn:hover{border-color:var(--line2)}
-.sortbtn.on{background:var(--blue-soft);border-color:var(--blue-line);color:var(--blue-text);font-weight:600}
-.sortbtn.on b{color:var(--blue-text);opacity:.72}
 
 /* ── results ── */
 .res{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
@@ -337,7 +362,7 @@ button:active{transform:scale(.97)}
 
 /* ── 더 보기 ── */
 .showmore{text-align:center;padding:8px 0 4px}
-.morebtn{padding:11px 28px;font-size:14px}
+.morebtn{padding:0 28px}
 
 /* 블록 폭은 소요시간에 비례해야 하므로 이름 길이로 늘릴 수 없다 (시간축이 거짓말이 된다).
    대신 타임라인 전체를 필요한 만큼 넓히고 가로로 스크롤한다 — 비율은 그대로, 이름은 다 들어간다. */
@@ -411,13 +436,10 @@ button:active{transform:scale(.97)}
   .res-head{gap:10px;padding:12px 14px}
   .res-body{padding:14px}
   .card{padding:15px}
-  h1{font-size:24px}
-  .btn-go{padding:12px 24px;font-size:14px}
-  .cal-grid,.cal-weekday{gap:2px}
-  .cal-daynum{font-size:11.5px}
-  .cal-title{min-width:76px;font-size:13px}
+  .btn-go{height:44px;padding:0 22px;font-size:15px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}
+  .toast{animation:none}
   .blk .nm.roll i{animation:none}
   .blk .nm{text-overflow:ellipsis}
   .res{animation:none}
@@ -428,8 +450,6 @@ button:active{transform:scale(.97)}
 .acct{display:flex;justify-content:flex-end;align-items:center;gap:10px;
   padding-top:18px;font-size:13px;color:var(--ink2);min-height:28px;flex-wrap:wrap}
 .acct b{color:var(--ink);font-weight:700}
-.acct .btn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
-.acct .btn:hover{background:var(--surface2)}
 
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;
   display:flex;align-items:center;justify-content:center;padding:18px;
@@ -445,9 +465,9 @@ button:active{transform:scale(.97)}
   text-transform:none;color:var(--ink)}
 .mbox .msub{margin:0 0 20px;font-size:13.5px;color:var(--ink3);line-height:1.6}
 .mrow{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
-.mrow label{font-size:13px;color:var(--ink2);font-weight:500}
+.mrow label{font-size:14px;color:var(--ink);font-weight:500}
 .mrow label .dim{color:var(--ink3);font-weight:400}
-.mrow input,.mrow textarea,.mrow select{width:100%;box-sizing:border-box;padding:12px 14px;font-size:15px}
+.mrow input,.mrow textarea,.mrow select{width:100%;box-sizing:border-box;font-size:14px}
 .mseg{display:flex;gap:4px;border:none;border-radius:var(--r-sm);
   background:var(--surface2);padding:4px}
 .mseg button{flex:1;background:transparent;border:none;color:var(--ink3);
@@ -457,8 +477,7 @@ button:active{transform:scale(.97)}
   box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .merr{font-size:13px;color:var(--red-text);min-height:18px;line-height:1.45;font-weight:500}
 .mbtns{display:flex;gap:8px;margin-top:8px}
-.mbtns .btn-go{flex:1;padding:13px 0;font-size:15px}
-.mbtns .btn{padding:13px 18px;font-size:14px}
+.mbtns .btn-go{flex:1;height:40px;padding:0;font-size:14px;font-weight:500}
 .mnote{margin:18px 0 0;font-size:12.5px;color:var(--ink3);line-height:1.7;
   border-top:1px solid var(--line);padding-top:14px}
 .mnote b{color:var(--ink2);font-weight:600}
@@ -481,7 +500,7 @@ button:active{transform:scale(.97)}
 .plan .pseq{font-size:13px;color:var(--ink2);flex:1 1 100%;line-height:1.7;margin:0}
 .plan .pseq b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:700}
 .plan .pbtns{display:flex;gap:6px;margin-left:auto;flex:none}
-.plan .pbtns .btn{padding:6px 12px;font-size:12.5px;border-radius:var(--pill)}
+.plan .pbtns .btn{height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs)}
 @media(max-width:560px){
   .plan .pbtns{margin-left:0;flex:1 1 100%}
   .plan .pbtns .btn{flex:1}
@@ -498,7 +517,7 @@ button:active{transform:scale(.97)}
   border-bottom:1px solid var(--line)}
 .loaditem:last-child{border-bottom:none}
 .loaditem:hover{background:var(--surface)}
-.loaditem>input{margin:0;flex:none}
+.loaditem>input{margin:0;flex:none;width:16px;height:16px;accent-color:var(--ctl-on)}
 .loaditem img{width:38px;height:52px;object-fit:cover;border-radius:var(--r-xs);flex:none;background:var(--line)}
 .li-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .li-t strong{font-size:14.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
@@ -562,27 +581,111 @@ button:active{transform:scale(.97)}
   .pair .pv{width:64px}
 }
 
-.chk.mini{font-size:12.5px;color:var(--ink3);gap:6px;font-weight:500}
+/* .mini(배지 알약)와 클래스가 겹쳐 옅은 청록 알약이 씌워지던 것을 걷어 낸다 — 그냥 작은 체크박스 */
+.chk.mini{font-size:13px;color:var(--ink2);gap:6px;font-weight:400;background:none;padding:0;margin-left:0;border-radius:0}
+.chk.mini:hover{background:none}
 .chk.mini input{width:14px;height:14px}
 
-/* ── 사용법 투어 ── */
-/* 좁은 화면에서 사용법/다크모드 버튼과 로그인 영역이 한 줄에 다 안 들어가면,
-   줄바꿈 없는 버튼 글자를 억지로 욱여넣는 대신(단어 중간이 잘린다) 아예 다음 줄로
-   내려보낸다. */
-.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.hleft{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.tourbtn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
-.tourbtn:hover{background:var(--surface2)}
+/* ── 셸: 왼쪽 메뉴 + 본문 (§4.49) ─────────────────────────
+   그룹웨어식 LNB. 메뉴 항목은 참고 시스템의 Menu 항목 값(높이 40, 모서리 8, 14px,
+   hover 바탕 #F8F8F8)을 따르고, 고른 항목은 같은 바탕에 청록 글자로 표시한다.
+   폭 232px 은 참고 화면을 못 봐서(로그인 뒤) 직접 정한 값이다. */
+.shell{display:flex;min-height:100vh}
+.lnb{position:sticky;top:0;height:100vh;width:232px;flex:none;display:flex;flex-direction:column;
+  background:var(--surface);border-right:1px solid var(--line);padding:20px 12px 16px;overflow-y:auto;z-index:40}
+.lnb-top{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:2px 0 20px 10px}
+.lnb-logo{font-size:22px;font-weight:700;letter-spacing:-.035em;color:var(--ink);white-space:nowrap}
+.lnb-fold{flex:none;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;padding:0;
+  background:none;border:none;color:var(--ink3);border-radius:var(--r-xs)}
+.lnb-fold:hover{background:var(--btn-bg-hover);color:var(--ink)}
+.lnb-fold .lnb-ic{color:inherit}
+.lnb-logo .dim{color:var(--blue-text)}
+.lnb-menu{display:flex;flex-direction:column;gap:2px}
+.lnb-item{display:flex;align-items:center;gap:8px;width:100%;height:40px;padding:0 10px;
+  border:none;background:none;color:var(--ink);font-size:14px;font-weight:400;text-align:left;
+  border-radius:var(--r-sm);white-space:nowrap}
+.lnb-item:hover{background:var(--btn-bg-hover)}
+.lnb-item:active{transform:none}
+.lnb-item:focus-visible{outline:none;box-shadow:var(--ring)}
+.lnb-item.on{background:var(--surface2);color:var(--blue-text);font-weight:600}
+.lnb-ic{flex:none;color:var(--ink3)}
+.lnb-item.on .lnb-ic{color:var(--blue-text)}
+.lnb-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.lnb-count{font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.lnb-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:12px;border-top:1px solid var(--line)}
+.lnb-tool{color:var(--ink2)}
+.lnb-acct{justify-content:flex-start;padding:10px 10px 0;min-height:0;gap:8px}
 
-.nav-item{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;font-size:13px;
-  font-weight:500;color:var(--ink2);white-space:nowrap;border-radius:var(--r-sm);
-  background:none;border:none;font-family:inherit}
-.nav-item.disabled{cursor:not-allowed;opacity:.55}
-.nav-item:not(.disabled){cursor:pointer}
-.nav-item:not(.disabled):hover{background:var(--surface2);color:var(--ink2)}
-.nav-item:not(.disabled):focus-visible{outline:none;box-shadow:var(--ring)}
-.nav-soon{font-size:10.5px;font-weight:700;color:var(--blue-text);background:var(--blue-soft);
-  border-radius:var(--pill);padding:1px 7px}
+/* 접은 메뉴 — 아이콘만. 글자는 숨기고 마우스를 올리면 title 로 이름이 뜬다. */
+.lnb.folded{width:72px;padding-left:10px;padding-right:10px}
+.lnb.folded .lnb-top{flex-direction:column;padding:2px 0 16px;gap:8px}
+.lnb.folded .lnb-item{justify-content:center;padding:0}
+.lnb.folded .lnb-txt,.lnb.folded .lnb-count,.lnb.folded .lnb-acct>span{display:none}
+.lnb.folded .lnb-acct{padding:10px 0 0;justify-content:center}
+.lnb.folded .lnb-acct .btn{height:28px;padding:0 6px;font-size:12px}
+
+/* 캘린더 화면의 미니 달력 + 내 캘린더(§4.50) */
+.lnb-cal{margin-top:16px;padding:14px 4px 4px;border-top:1px solid var(--line)}
+.mini-head{display:flex;align-items:center;justify-content:space-between;padding:0 4px 6px;font-size:13.5px;color:var(--ink)}
+.mini-nav{width:24px;height:24px;padding:0;background:none;border:none;color:var(--ink2);font-size:15px;border-radius:var(--r-xs)}
+.mini-nav:hover{background:var(--btn-bg-hover);color:var(--ink)}
+.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px;text-align:center}
+.mini-wd{font-size:11px;color:var(--ink3);padding:2px 0}
+.mini-d{height:26px;padding:0;background:none;border:none;border-radius:999px;font-size:12px;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.mini-d:hover{background:var(--btn-bg-hover)}
+.mini-d:active{transform:none}
+.mini-wd.sun,.mini-d.sun{color:var(--sun)}
+.mini-wd.sat,.mini-d.sat{color:var(--sat)}
+.mini-d.out{opacity:.4}
+.mini-d.on{background:var(--blue-soft);color:var(--blue-text);font-weight:600}
+.mini-d.today{background:var(--ink);color:var(--surface);opacity:1}
+.lnb-sub{margin:16px 6px 6px;font-size:12px;font-weight:600;color:var(--ink3)}
+.lnb-check{display:flex;align-items:center;gap:8px;height:32px;padding:0 6px;font-size:13.5px;color:var(--ink);
+  cursor:pointer;border-radius:var(--r-sm)}
+.lnb-check:hover{background:var(--btn-bg-hover)}
+.lnb-check input{width:16px;height:16px;margin:0;accent-color:var(--ctl-on);cursor:pointer}
+
+/* 화면 아래 잠깐 뜨는 알림(§4.50) */
+.toasts{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:90;display:flex;
+  flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.toast{background:var(--ink);color:var(--surface);font-size:13.5px;padding:10px 16px;border-radius:var(--r-sm);
+  box-shadow:var(--sh-up);animation:toastIn .18s ease-out both;max-width:calc(100vw - 32px)}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.main{flex:1;min-width:0;padding:0 40px}
+.view{max-width:1080px;margin:0 auto}
+.view.off{display:none}
+.page-head{padding:32px 0 24px}
+.page-head h1{font-size:24px;font-weight:700;letter-spacing:-.03em;margin:0 0 6px;color:var(--ink)}
+/* 카드 밖 바닥(body)에 직접 얹히는 캡션은 --ink3 대신 --ink2. 원목 배경 시절(§4.44)에
+   대비 때문에 올린 것인데, 회색 바닥(§4.47)에서도 --ink3(#7A7B7D)는 #F8F8F8 위 4.0:1 로
+   빠듯해서 그대로 둔다. 카드/모달 안의 --ink3는 그대로. */
+.page-head p{margin:0;color:var(--ink2);font-size:14px;max-width:60ch}
+
+/* 좁은 화면 — 메뉴를 위쪽 막대로 접는다. 첫 줄은 로고와 도구(아이콘만)·계정,
+   둘째 줄은 화면 메뉴. 메뉴 줄만 넘치면 그 안에서 가로로 밀리고 페이지는 가로로
+   스크롤되지 않는다. */
+@media(max-width:900px){
+  .shell{flex-direction:column}
+  .lnb{position:sticky;top:0;height:auto;width:auto;flex-direction:row;flex-wrap:wrap;align-items:center;
+    gap:4px;padding:8px 12px 6px;border-right:0;border-bottom:1px solid var(--line);overflow:visible}
+  .lnb-top{padding:0 8px 0 4px;flex:none}
+  .lnb-logo{font-size:18px}
+  .lnb-fold,.lnb-cal{display:none}
+  .lnb.folded{width:auto;padding:8px 12px 6px}
+  .lnb.folded .lnb-menu .lnb-txt,.lnb.folded .lnb-count{display:inline}
+  .lnb.folded .lnb-item{padding:0 10px}
+  .lnb-menu{order:3;flex-basis:100%;flex-direction:row;gap:2px;overflow-x:auto}
+  .lnb-item{width:auto;height:36px;padding:0 10px}
+  .lnb-foot{margin:0 0 0 auto;flex-direction:row;align-items:center;border-top:0;padding:0}
+  .lnb-tool .lnb-txt{display:none}
+  .lnb-acct{padding:0 0 0 4px;flex-wrap:nowrap}
+  .lnb-acct>span{display:none}
+  .main{padding:0 16px}
+  .page-head{padding:22px 0 18px}
+  .page-head h1{font-size:21px}
+}
 
 /* ── F-16 감시 토글 ── */
 .watch-toggle{display:inline-flex;align-items:center;justify-content:center;
@@ -596,38 +699,152 @@ button:active{transform:scale(.97)}
 .blk-watch{position:absolute;top:2px;right:2px;width:16px;height:16px;
   background:var(--surface);box-shadow:0 0 0 1px var(--line)}
 
-/* ── 캘린더 — 저장 일정 + 감시 회차를 한 달 그리드로 ── */
-.cal-head{display:flex;align-items:center;gap:8px;margin:4px 0 10px}
-.cal-nav{background:none;border:1px solid var(--line);color:var(--ink2);width:28px;height:28px;
-  border-radius:var(--r-sm);cursor:pointer;font-size:15px;line-height:1;
+/* ── 캘린더 화면 (§4.49) — 저장 일정 + 감시 회차를 한 달 그리드로 ──────────
+   그룹웨어 월간 보기에서 옮긴 값: 주(週) 줄 높이 110px, 날짜 숫자 12px(오늘은 본문색
+   원 안에 바탕색 숫자), 일정 줄 높이 20px, 일요일 빨강·토요일 파랑, 이웃 달 날짜는
+   흐리게. 오른쪽 상세 패널(300px)과 일정 줄 색은 이 앱에 맞춰 정했다. */
+.cal-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.cal-nav{background:var(--btn-bg);border:1px solid var(--btn-line);color:var(--ink);width:28px;height:28px;
+  border-radius:var(--r-xs);cursor:pointer;font-size:15px;line-height:1;
   display:flex;align-items:center;justify-content:center;font-family:inherit}
-.cal-nav:hover{background:var(--surface2);color:var(--ink)}
-.cal-title{font-size:14.5px;font-weight:700;color:var(--ink);min-width:92px;text-align:center}
-.cal-today{margin-left:auto;padding:5px 12px;font-size:12.5px;border-radius:var(--pill)}
+.cal-nav:hover{background:var(--btn-bg-hover);border-color:var(--btn-line-hover)}
+.cal-title{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--ink);min-width:84px;
+  text-align:center;font-variant-numeric:tabular-nums}
+.cal-today{margin-left:6px;height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs)}
+.cal-modes{margin-left:auto;display:inline-flex;gap:4px}
+.cal-mode{height:28px;min-width:40px;padding:0 10px;font-size:13px;background:var(--btn-bg);color:var(--tab-text);
+  border:1px solid var(--tab-line);border-radius:14px}
+.cal-mode:hover{background:var(--btn-bg-hover);border-color:var(--tab-line-hover)}
+.cal-mode.on{background:var(--tab-on-bg);border-color:var(--tab-on-bg);color:#fff;font-weight:500}
+/* 종류별 보이기 — 넓은 화면에선 왼쪽 메뉴의 "내 캘린더" 가 하므로 좁은 화면에서만 보인다 */
+.cal-legend{display:none;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.cal-legend-item{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;font-size:12.5px;
+  color:var(--ink2);background:var(--btn-bg);border:1px solid var(--btn-line);border-radius:14px}
+.cal-legend-item.off{opacity:.45}
+.cal-legend-item.off .cal-key{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ev)}
+@media(max-width:900px){.cal-legend{display:flex}}
+.cal-key{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--ev)}
+.cal-note{margin:0 0 12px;font-size:13px;color:var(--ink2)}
 
-.cal-weekday{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;
-  font-size:11.5px;color:var(--ink3);text-align:center}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px}
-.cal-day{aspect-ratio:1;border:1px solid transparent;border-radius:var(--r-xs);background:none;
-  cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;color:var(--ink2);font-family:inherit}
-.cal-day:hover{background:var(--surface2)}
-.cal-day.out{color:var(--ink3);opacity:.45}
-.cal-day.today{border-color:var(--blue)}
-.cal-day.on{background:var(--blue-soft);color:var(--blue-text)}
-.cal-daynum{font-size:13px;font-variant-numeric:tabular-nums}
-.cal-day .dots{display:flex;align-items:center;gap:2px;height:8px}
-.cal-day .dot{width:5px;height:5px;border-radius:999px;background:var(--blue-press)}
-.cal-day .dot.done{background:var(--green-text)}
-.cal-day .cal-bell{color:var(--amber-text)}
+.cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.cal-month{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.cal-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.cal-wk span{padding:10px 10px;font-size:12px;font-weight:500;color:var(--ink2)}
+.cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.cal-week:last-child{border-bottom:0}
+.cal-cell{height:110px;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:2px;
+  padding:6px 6px 4px;background:none;border:none;border-right:1px solid var(--line);border-radius:0;
+  text-align:left;color:var(--ink);font-family:inherit;cursor:pointer;overflow:hidden}
+.cal-cell:last-child{border-right:0}
+.cal-cell:hover{background:var(--btn-bg-hover)}
+.cal-cell:active{transform:none}
+.cal-cell:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue)}
+.cal-cell.on{background:var(--blue-soft)}
+.cal-dnum{align-self:flex-start;flex:none;display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;border-radius:999px;font-size:12px;font-variant-numeric:tabular-nums}
+.cal-wk .sun,.cal-cell.sun .cal-dnum{color:var(--sun)}
+.cal-wk .sat,.cal-cell.sat .cal-dnum{color:var(--sat)}
+.cal-cell.out .cal-dnum{opacity:.4}
+.cal-cell.today .cal-dnum{background:var(--ink);color:var(--surface);opacity:1}
+.cal-evs{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cal-ev{display:block;height:20px;line-height:20px;padding:0 6px;border-radius:4px;font-size:12px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);
+  background:color-mix(in srgb, var(--ev) 14%, var(--surface));border-left:3px solid var(--ev)}
+.cal-ev.wish,.cal-key.wish{--ev:var(--blue)}
+.cal-ev.done,.cal-key.done{--ev:var(--green)}
+.cal-ev.watch,.cal-key.watch{--ev:var(--amber)}
+.cal-more{align-self:flex-start;font-size:11.5px;font-weight:600;color:var(--ink2);background:none;border:none;
+  padding:0 6px;height:18px;border-radius:4px;font-family:inherit}
+.cal-more:hover{background:var(--chip-bg);color:var(--ink)}
+.cal-more:active{transform:none}
 
-.cal-detail{min-height:52px}
+/* 주 보기 — 7칸을 세로로 길게, 줄 수 제한 없이 */
+.cal-weekview{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.cal-cell.col{height:auto;min-height:420px;gap:4px}
+.cal-col-h{display:flex;align-items:center;gap:4px;padding-bottom:6px;margin-bottom:2px;border-bottom:1px solid var(--line)}
+.cal-col-h em{font-style:normal;font-size:12px;color:var(--ink2)}
+.cal-cell.sun .cal-col-h em{color:var(--sun)}
+.cal-cell.sat .cal-col-h em{color:var(--sat)}
+
+/* 일 보기 — 시간 축(1시간 44px). 일정은 왼쪽, 감시(시작 시각만 있음)는 오른쪽 칸. */
+.cal-dayview{max-height:640px;overflow-y:auto}
+.cal-day-tl{position:relative;margin:8px 12px 8px 64px}
+.cal-hour{position:absolute;left:0;right:0;border-top:1px solid var(--line)}
+.cal-hour span{position:absolute;left:-56px;top:-8px;width:48px;text-align:right;font-size:11.5px;
+  color:var(--ink3);font-variant-numeric:tabular-nums}
+.cal-blk{position:absolute;left:4px;right:calc(40% + 4px);display:flex;flex-direction:column;gap:1px;
+  padding:3px 8px;border-radius:6px;overflow:hidden;font-size:12px;color:var(--ink);
+  background:color-mix(in srgb, var(--ev) 16%, var(--surface));border-left:3px solid var(--ev)}
+.cal-blk.right{left:calc(60% + 4px);right:4px}
+.cal-blk b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-blk span{font-size:11px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.cal-blk.wish{--ev:var(--blue)} .cal-blk.done{--ev:var(--green)} .cal-blk.watch{--ev:var(--amber)}
+
+/* "+n" 작은 창 */
+.cal-pop{position:absolute;z-index:45;width:260px;max-height:240px;overflow:auto;padding:10px 12px 12px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-up)}
+.cal-pop-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:13.5px;color:var(--ink)}
+.cal-pop .cal-evs{gap:3px}
+
+.cal-side{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;
+  box-shadow:var(--sh);position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.cal-side-title{margin:0 0 8px;font-size:16px;font-weight:700;color:var(--ink)}
+.cal-side-h{margin:0 0 4px;font-size:13px;font-weight:600;color:var(--ink)}
+.cal-detail .lmsg{padding:8px 0 4px;color:var(--ink3);font-size:13.5px;line-height:1.6}
 .cal-detail .pbtns{display:flex;gap:6px;align-items:center;flex:none}
-.cal-detail .pbtns .btn{padding:6px 12px;font-size:12.5px;border-radius:var(--pill)}
-.cal-daysched{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.cal-detail .pbtns .btn{height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs)}
+.cal-daysched{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .cal-daysched .branch-h{font-size:12.5px;font-weight:700;color:var(--ink2);margin:10px 0 4px}
-.cal-daysched>div:first-child .branch-h{margin-top:0}
 
+/* 지점 골라 보기(§4.51) — 고른 지점은 칩, 고르기는 매장별로 묶은 체크 목록 + 검색 */
+.db-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.db-head .cal-side-h{margin:0}
+.db-toggle{height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs);gap:6px}
+.db-toggle b{font-size:11.5px;font-weight:600;color:#fff;background:var(--blue);border-radius:999px;
+  min-width:18px;height:18px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center}
+.db-toggle.on{border-color:var(--field-focus)}
+.db-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.db-chip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 4px 0 10px;font-size:12.5px;
+  color:var(--ink);background:var(--chip-bg);border:1px solid var(--chip-line);border-radius:999px}
+.db-chip i{font-style:normal;font-size:11px;color:var(--ink3)}
+.db-chip.none{color:var(--ink3)}
+.db-chip button{width:20px;height:20px;padding:0;border:none;background:none;color:var(--ink3);
+  font-size:14px;line-height:1;border-radius:999px}
+.db-chip button:hover{background:var(--line);color:var(--ink)}
+.db-clear{height:28px;padding:0 6px;border:none;background:none;color:var(--ink3);font-size:12.5px}
+.db-clear:hover{color:var(--ink);text-decoration:underline}
+.db-picker{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;margin-bottom:12px;background:var(--surface)}
+.db-search{width:100%}
+.db-count{margin:8px 2px 4px;font-size:12px;color:var(--ink3)}
+.db-list{max-height:280px;overflow:auto;margin:0 -4px}
+.db-group+.db-group{margin-top:6px}
+.db-store{margin:6px 6px 2px;font-size:12px;font-weight:600;color:var(--ink2)}
+.db-opt{height:30px}
+.db-done{width:100%;margin-top:8px}
+.db-branch+.db-branch{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+
+@media(max-width:1100px){
+  .cal-layout{grid-template-columns:minmax(0,1fr)}
+  .cal-side{position:static;max-height:none}
+}
+/* 휴대폰 폭에선 칸에 글자가 안 들어간다 — 일정 줄을 색 점으로 바꾸고 상세는 아래 패널에서 본다. */
+@media(max-width:640px){
+  .cal-wk span{padding:8px 0;text-align:center}
+  .cal-cell{height:64px;padding:4px 2px;align-items:center}
+  .cal-dnum{align-self:center}
+  .cal-evs{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:3px}
+  .cal-ev{width:6px;height:6px;padding:0;border:0;border-radius:999px;font-size:0;background:var(--ev)}
+  .cal-more{font-size:10px;padding:0;height:auto;line-height:6px}
+  .cal-modes{margin-left:0}
+  .cal-cell.col{min-height:160px;padding:4px 2px;align-items:stretch}
+  .cal-weekview .cal-ev{width:auto;height:18px;font-size:10.5px;padding:0 3px;border-left:2px solid var(--ev);
+    border-radius:3px;background:color-mix(in srgb, var(--ev) 14%, var(--surface));line-height:18px}
+  .cal-weekview .cal-evs{flex-direction:column;flex-wrap:nowrap}
+  .cal-col-h{flex-direction:column;gap:0}
+  .cal-day-tl{margin-left:52px}
+}
+
+/* ── 사용법 투어 ── */
 .tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
 .tour-spot{position:fixed;z-index:80;border-radius:14px;pointer-events:none;
   box-shadow:0 0 0 9999px rgba(0,0,0,.66);
@@ -646,4 +863,4 @@ button:active{transform:scale(.97)}
   cursor:pointer;padding:6px 2px;font-family:inherit}
 .tour-skip:hover{color:var(--ink2)}
 .tour-next-group{display:flex;gap:6px}
-.tour-next-group .btn,.tour-next-group .btn-go{padding:9px 16px;font-size:13.5px}
+.tour-next-group .btn,.tour-next-group .btn-go{height:32px;padding:0 14px;font-size:14px;font-weight:500;border-radius:var(--r-sm)}

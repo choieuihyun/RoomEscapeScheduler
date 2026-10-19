@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Me, Plan } from './cloud';
+import { showToast } from './toast';
 
 /* "내 일정" 목록 — index.html의 loadPlans/renderPlans의 flip/del 부분 이식. */
 let cloudMod: typeof import('./cloud') | null = null;
@@ -44,6 +45,7 @@ export function usePlans(me: Me | null) {
       const C = await cloud();
       await C.removePlan(id);
       setPlans(ps => ps.filter(x => x.id !== id));
+      showToast('일정을 지웠어요.');
     } catch (e) {
       console.warn(e);
       setBusyIds(s => { const n = new Set(s); n.delete(id); return n; });

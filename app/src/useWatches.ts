@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Me } from './cloud';
 import { addWatch, listWatches, removeWatch, sayWatch, type WatchDto } from './server';
 import { requestPushPermission, silentlyRefreshPush } from './notify';
+import { showToast } from './toast';
 
 /* F-16 "빈자리 알림" 목록 — usePlans.ts와 같은 모양(reload on me 변경,
    busyIds로 행별 처리중 표시). cloud.ts는 토큰을 얻을 때만 지연 로드한다. */
@@ -94,6 +95,7 @@ export function useWatches(me: Me | null) {
       if (!token) return;
       await removeWatch(watchId, token);
       setWatches(ws => ws.filter(x => x.id !== watchId));
+      showToast('감시를 해제했어요.');
       setSlotToWatchId(m => {
         const n = new Map(m);
         for (const [slot, wid] of n) if (wid === watchId) n.delete(slot);

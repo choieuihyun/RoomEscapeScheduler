@@ -1,0 +1,357 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { fmt, monthGrid, toISO, WEEKDAYS } from '../core';
+import type { Plan } from '../cloud';
+import type { WatchDto } from '../server';
+import type { UseAuthReturn } from '../useAuth';
+import type { UsePlansReturn } from '../usePlans';
+import type { UseWatchesReturn } from '../useWatches';
+import type { CalFilter, CalKind, CalMode, UseCalendarReturn } from '../useCalendar';
+import { useDaySchedule } from '../useDaySchedule';
+import type { Scheduler } from '../scheduler/useScheduler';
+import { DayBranches } from './DayBranches';
+
+/* 캘린더 화면(§4.49) — 모달이던 것(§4.38·§4.40)을 왼쪽 메뉴의 한 화면으로 옮겼다.
+   그룹웨어 월간 보기처럼 날짜 칸 안에 일정·감시 회차를 줄로 보여주고, 고른 날짜의
+   상세(일정 불러오기·감시 해제·그날 열린 회차)는 오른쪽 패널에 둔다.
+
+   §4.50 — 월/주/일 보기, 칸의 "+n" 을 누르면 그날 전체를 띄우는 작은 창, 일정 줄에
+   마우스를 올리면 요약, ←/→ 키로 이동, 종류별 보이기(필터)를 더했다. */
+
+interface DayEntry { plans: Plan[]; watches: WatchDto[] }
+
+/* 칸·주·일 보기가 같이 쓰는 일정 한 줄. 일정(plan)은 시작~끝이 있고, 감시(watch)는
+   회차 시작 시각 하나뿐이다. */
+interface Ev { key: string; kind: CalKind; start: number; end: number | null; text: string; title: string }
+
+/* 칸 하나에 줄로 보여줄 최대 개수 — 주(週) 줄 높이 110px 에 날짜 숫자와 함께
+   들어가는 만큼. 넘치면 "+n" 으로 접는다. */
+const CELL_MAX = 3;
+
+function eventsOf(entry: DayEntry | undefined, filter: CalFilter): Ev[] {
+  if (!entry) return [];
+  const evs: Ev[] = [];
+  for (const p of entry.plans) {
+    const kind: CalKind = p.status === 'wish' ? 'wish' : 'done';
+    if (!filter[kind]) continue;
+    const route = p.steps?.length ? '\n' + p.steps.map(x => `${fmt(x.start)} ${x.name}`).join(' → ') : '';
+    evs.push({
+      key: 'p' + p.id, kind, start: p.start, end: p.end,
+      text: `${fmt(p.start)} ${p.count}연방`,
+      title: `${kind === 'wish' ? '하고 싶은 일정' : '다녀온 일정'} · ${fmt(p.start)}–${fmt(p.end)} · ${p.count}연방 · 공백 ${p.total}분`
+        + route + (p.memo ? '\n' + p.memo : ''),
+    });
+  }
+  if (filter.watch) {
+    for (const w of entry.watches) {
+      evs.push({
+        key: 'w' + w.id, kind: 'watch', start: w.t, end: null,
+        text: `${fmt(w.t)} ${w.theme}`,
+        title: `빈자리 감시 · ${w.branch} · ${w.theme} ${fmt(w.t)} · ${w.available ? '빈자리 있음' : '매진'}`,
+      });
+    }
+  }
+  return evs.sort((a, b) => a.start - b.start);
+}
+
+const EvLine = ({ e }: { e: Ev }) => <span className={'cal-ev ' + e.kind} title={e.title}>{e.text}</span>;
+
+function cellClass(d: Date, iso: string, today: string, selected: string, outOf?: number) {
+  const dow = d.getDay();
+  return ['cal-cell', outOf != null && d.getMonth() !== outOf && 'out', iso === today && 'today',
+    iso === selected && 'on', dow === 0 && 'sun', dow === 6 && 'sat'].filter(Boolean).join(' ');
+}
+
+function PlanDetailRow({ p, s, plans, onLoaded }: { p: Plan; s: Scheduler; plans: UsePlansReturn; onLoaded: () => void }) {
+  const wish = p.status === 'wish';
+  const busy = p.id != null && plans.busyIds.has(p.id);
+  return (
+    <div className="loaditem">
+      <div className="li-t">
+        <strong>{fmt(p.start)} → {fmt(p.end)}</strong>
+        <span className="li-m">{p.count}연방 · 공백 {p.total}분</span>
+        <span className={'tag ' + (wish ? 'wish' : 'done')}>{wish ? '하고 싶음' : '했음'}</span>
+      </div>
+      <span className="pbtns">
+        <button
+          className="btn" type="button"
+          /* 불러오기와 화면 전환이 같은 이벤트 안이라 React 가 한 번에 그린다 — 결과
+             타임라인은 계산 화면이 보이는 상태에서 너비를 잰다(숨긴 채로 재면 0). */
+          onClick={() => { if (s.loadSnapshot(p.snapshot, p.date)) onLoaded(); }}
+        >불러오기</button>
+        <button
+          className="btn-x" type="button" title="삭제" disabled={busy}
+          onClick={() => { if (p.id && confirm(`${p.date} 일정을 지울까요?`)) plans.remove(p.id); }}
+        >×</button>
+      </span>
+    </div>
+  );
+}
+
+function WatchDetailRow({ w, watches }: { w: WatchDto; watches: UseWatchesReturn }) {
+  const busy = watches.busyIds.has(w.id);
+  return (
+    <div className="loaditem">
+      <div className="li-t">
+        <strong>{w.theme}</strong>
+        <span className="li-m">{w.branch} · {fmt(w.t)}</span>
+        <span className="li-c">{w.available ? <b>빈자리 있음</b> : '매진'}</span>
+      </div>
+      <button
+        className="btn-x" type="button" title="감시 해제" disabled={busy}
+        onClick={() => { if (confirm(`${w.theme} ${fmt(w.t)} 감시를 해제할까요?`)) watches.remove(w.id); }}
+      >×</button>
+    </div>
+  );
+}
+
+const parseISO = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+const dayTitle = (iso: string) => {
+  const d = parseISO(iso);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[d.getDay()]})`;
+};
+const weekOf = (iso: string) => {
+  const d = parseISO(iso);
+  const sun = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+  return Array.from({ length: 7 }, (_, i) => new Date(sun.getFullYear(), sun.getMonth(), sun.getDate() + i));
+};
+const p2 = (n: number) => String(n).padStart(2, '0');
+
+function toolbarTitle(mode: CalMode, cursor: { y: number; m: number }, selected: string) {
+  if (mode === 'month') return `${cursor.y}.${p2(cursor.m + 1)}`;
+  if (mode === 'day') {
+    const d = parseISO(selected);
+    return `${d.getFullYear()}.${p2(d.getMonth() + 1)}.${p2(d.getDate())} (${WEEKDAYS[d.getDay()]})`;
+  }
+  const w = weekOf(selected);
+  const a = w[0], b = w[6];
+  return `${a.getFullYear()}.${p2(a.getMonth() + 1)}.${p2(a.getDate())} – ${p2(b.getMonth() + 1)}.${p2(b.getDate())}`;
+}
+
+/* 일 보기의 시간 축 — 이른 일정이 있으면 그 시각까지 위로 넓힌다. 1시간 = 44px. */
+const HOUR_PX = 44;
+function DayTimeline({ evs }: { evs: Ev[] }) {
+  const first = evs.length ? Math.min(...evs.map(e => e.start)) : 10 * 60;
+  const from = Math.min(9, Math.floor(first / 60));
+  const hours = Array.from({ length: 24 - from }, (_, i) => from + i);
+  const y = (m: number) => ((m - from * 60) / 60) * HOUR_PX;
+  return (
+    <div className="cal-day-tl" style={{ height: hours.length * HOUR_PX }}>
+      {hours.map(h => (
+        <div key={h} className="cal-hour" style={{ top: y(h * 60) }}><span>{p2(h)}:00</span></div>
+      ))}
+      {evs.map(e => {
+        /* 감시는 시작 시각만 있어 30분짜리 표시로 그린다. 일정과 겹치지 않게 감시는
+           오른쪽 칸, 일정은 왼쪽 칸에 둔다. */
+        const end = e.end ?? e.start + 30;
+        return (
+          <div
+            key={e.key} className={'cal-blk ' + e.kind + (e.kind === 'watch' ? ' right' : '')} title={e.title}
+            style={{ top: y(e.start), height: Math.max(22, y(end) - y(e.start)) }}
+          >
+            <b>{e.text}</b>
+            {e.end != null && <span>{fmt(e.start)}–{fmt(e.end)}</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function CalendarPage({
+  ctl, active, plans, watches, auth, s, onLoaded,
+}: {
+  ctl: UseCalendarReturn; active: boolean; plans: UsePlansReturn; watches: UseWatchesReturn;
+  auth: UseAuthReturn; s: Scheduler; onLoaded: () => void;
+}) {
+  const grid = useMemo(() => monthGrid(ctl.cursor.y, ctl.cursor.m), [ctl.cursor.y, ctl.cursor.m]);
+  const today = useMemo(() => toISO(new Date()), []);
+  const day = useDaySchedule(active);
+  useEffect(() => {
+    if (active) day.load(ctl.selected, ctl.branches);
+  }, [active, ctl.selected, ctl.branches, day.load]);
+  const byDate = useMemo(() => {
+    const m = new Map<string, DayEntry>();
+    const get = (k: string) => m.get(k) ?? (m.set(k, { plans: [], watches: [] }), m.get(k)!);
+    for (const p of plans.plans) if (p.date) get(p.date).plans.push(p);
+    for (const w of watches.watches) if (w.date) get(w.date).watches.push(w);
+    return m;
+  }, [plans.plans, watches.watches]);
+  const evsOf = (iso: string) => eventsOf(byDate.get(iso), ctl.filter);
+
+  /* "+n" 작은 창 — 칸은 overflow:hidden 이라 칸 안에 둘 수 없어 문서 기준 위치(absolute)로
+     띄운다. 바깥을 누르거나 Esc 면 닫힌다. 스크롤로는 닫지 않는다 — 날짜를 고르면 오른쪽
+     패널이 회차를 불러오며 길이가 바뀌고, 그때 브라우저가 스크롤을 살짝 보정하는 것만으로
+     창이 바로 닫혀 버렸다(헤드리스 실측). 문서 기준이라 스크롤하면 칸과 같이 움직인다. */
+  const [popRaw, setPop] = useState<{ iso: string; x: number; y: number } | null>(null);
+  const pop = active ? popRaw : null;   // 다른 화면으로 가면 창도 같이 사라진다
+  const popRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!pop) return;
+    const close = (e: Event) => {
+      if (e.type === 'keydown' && (e as KeyboardEvent).key !== 'Escape') return;
+      if (e.type === 'mousedown' && popRef.current?.contains(e.target as Node)) return;
+      setPop(null);
+    };
+    addEventListener('mousedown', close);
+    addEventListener('keydown', close);
+    return () => {
+      removeEventListener('mousedown', close);
+      removeEventListener('keydown', close);
+    };
+  }, [pop]);
+
+  /* ←/→ 로 이전·다음(보기 단위만큼). 글자를 치는 중이거나 모달·투어가 떠 있으면 안 먹는다. */
+  const { prev, next } = ctl;
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (document.querySelector('.modal.on, .tour-tip.on')) return;
+      e.preventDefault();
+      (e.key === 'ArrowLeft' ? prev : next)();
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [active, prev, next]);
+
+  const sel = ctl.selected;
+  const selEntry = byDate.get(sel);
+  const weeks = Array.from({ length: grid.length / 7 }, (_, i) => grid.slice(i * 7, i * 7 + 7));
+  const popEvs = pop ? evsOf(pop.iso) : [];
+
+  const kindBtn = (k: CalKind, label: string) => (
+    <button
+      type="button" className={'cal-legend-item' + (ctl.filter[k] ? '' : ' off')}
+      aria-pressed={ctl.filter[k]} onClick={() => ctl.toggleKind(k)}
+    ><i className={'cal-key ' + k} />{label}</button>
+  );
+
+  return (
+    <section className="calpage">
+      <div className="cal-toolbar">
+        <button className="cal-nav" type="button" onClick={ctl.prev} aria-label="이전" title="이전 (←)">‹</button>
+        <span className="cal-title">{toolbarTitle(ctl.mode, ctl.cursor, sel)}</span>
+        <button className="cal-nav" type="button" onClick={ctl.next} aria-label="다음" title="다음 (→)">›</button>
+        <button className="btn cal-today" type="button" onClick={ctl.goToday}>오늘</button>
+        <div className="cal-modes" role="group" aria-label="보기">
+          {(['month', 'week', 'day'] as const).map(m => (
+            <button
+              key={m} type="button" className={'cal-mode' + (ctl.mode === m ? ' on' : '')}
+              aria-pressed={ctl.mode === m} onClick={() => ctl.setMode(m)}
+            >{m === 'month' ? '월' : m === 'week' ? '주' : '일'}</button>
+          ))}
+        </div>
+      </div>
+      {/* 넓은 화면에선 왼쪽 메뉴의 "내 캘린더" 가 같은 일을 한다 — 좁은 화면에서만 보인다. */}
+      <div className="cal-legend">
+        {kindBtn('wish', '하고 싶은 일정')}{kindBtn('done', '다녀온 일정')}{kindBtn('watch', '빈자리 감시')}
+      </div>
+      {!auth.me && <p className="cal-note">로그인하면 저장한 일정과 감시 중인 자리가 달력에 표시됩니다.</p>}
+
+      <div className="cal-layout">
+        <div className="cal-month">
+          {ctl.mode === 'month' && (
+            <>
+              <div className="cal-wk">
+                {WEEKDAYS.map((w, i) => <span key={w} className={i === 0 ? 'sun' : i === 6 ? 'sat' : undefined}>{w}</span>)}
+              </div>
+              {weeks.map(week => (
+                <div className="cal-week" key={toISO(week[0])}>
+                  {week.map(d => {
+                    const iso = toISO(d);
+                    const evs = evsOf(iso);
+                    return (
+                      <div
+                        key={iso} className={cellClass(d, iso, today, sel, ctl.cursor.m)}
+                        role="button" tabIndex={0} aria-pressed={iso === sel}
+                        onClick={() => ctl.select(iso)}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ctl.select(iso); } }}
+                      >
+                        <span className="cal-dnum">{d.getDate()}</span>
+                        {evs.length > 0 && (
+                          <span className="cal-evs">
+                            {evs.slice(0, CELL_MAX).map(e => <EvLine key={e.key} e={e} />)}
+                            {evs.length > CELL_MAX && (
+                              <button
+                                type="button" className="cal-more"
+                                onClick={ev => {
+                                  ev.stopPropagation();
+                                  const r = (ev.currentTarget.closest('.cal-cell') as HTMLElement).getBoundingClientRect();
+                                  ctl.select(iso);
+                                  setPop({ iso, x: scrollX + Math.max(8, Math.min(r.left, innerWidth - 276)), y: scrollY + r.top });
+                                }}
+                              >+{evs.length - CELL_MAX}</button>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </>
+          )}
+
+          {ctl.mode === 'week' && (
+            <div className="cal-weekview">
+              {weekOf(sel).map(d => {
+                const iso = toISO(d);
+                const evs = evsOf(iso);
+                return (
+                  <div
+                    key={iso} className={cellClass(d, iso, today, sel) + ' col'}
+                    role="button" tabIndex={0} aria-pressed={iso === sel}
+                    onClick={() => ctl.select(iso)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ctl.select(iso); } }}
+                  >
+                    <span className="cal-col-h"><em>{WEEKDAYS[d.getDay()]}</em><span className="cal-dnum">{d.getDate()}</span></span>
+                    <span className="cal-evs">{evs.map(e => <EvLine key={e.key} e={e} />)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {ctl.mode === 'day' && (
+            <div className="cal-dayview">
+              <DayTimeline evs={evsOf(sel)} />
+            </div>
+          )}
+        </div>
+
+        <aside className="cal-side">
+          <p className="cal-side-title">{dayTitle(sel)}</p>
+          <div className="cal-detail">
+            {!selEntry || (selEntry.plans.length === 0 && selEntry.watches.length === 0) ? (
+              <div className="lmsg">이 날짜엔 저장한 일정도 감시 중인 자리도 없어요.</div>
+            ) : (
+              <>
+                {selEntry.plans.map(p => (
+                  <PlanDetailRow key={p.id} p={p} s={s} plans={plans} onLoaded={onLoaded} />
+                ))}
+                {selEntry.watches.map(w => <WatchDetailRow key={w.id} w={w} watches={watches} />)}
+              </>
+            )}
+            <DayBranches iso={sel} day={day} picked={ctl.branches} onToggle={ctl.toggleBranch} onClear={ctl.clearBranches} />
+          </div>
+        </aside>
+      </div>
+
+      {pop && (
+        <div ref={popRef} className="cal-pop" style={{ left: pop.x, top: pop.y }} role="dialog" aria-label={dayTitle(pop.iso)}>
+          <div className="cal-pop-h">
+            <b>{dayTitle(pop.iso)}</b>
+            <button type="button" className="btn-x" aria-label="닫기" onClick={() => setPop(null)}>×</button>
+          </div>
+          <div className="cal-evs">{popEvs.map(e => <EvLine key={e.key} e={e} />)}</div>
+        </div>
+      )}
+    </section>
+  );
+}
