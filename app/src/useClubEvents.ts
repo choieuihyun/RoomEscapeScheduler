@@ -47,7 +47,11 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     const my = ++seq.current;
     try {
       const t = await token();
-      if (!t) return;
+      if (!t) {
+        /* 토스트는 없이 상태만 — 첫 화면 결정(SchedulerPage)이 빈 화면에 갇히지 않게 오류로 알린다 */
+        if (alive.current && my === seq.current) setError('로그인해 주세요.');
+        return;
+      }
       const lists = await Promise.all(rangeList.map((r) => listEvents(r.from, r.to, t)));
       if (!alive.current || my !== seq.current) return;
       setEvents((cur) => rangeList.reduce((acc, r, i) => mergeRange(acc, r.from, r.to, lists[i]), cur));

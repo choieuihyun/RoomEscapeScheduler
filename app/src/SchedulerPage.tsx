@@ -61,7 +61,7 @@ export function SchedulerPage() {
     : auth.authLoading ? false
     : !auth.me ? true
     : auth.memberLoading ? false
-    : auth.member?.status === 'APPROVED' ? club.api !== 'unknown'
+    : auth.member?.status === 'APPROVED' ? club.api !== 'unknown' || club.error !== ''
     : true;
   const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, decided });
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);

@@ -28,6 +28,13 @@ export function readView(search: string, hash: string, o: Opts): View | null {
   return v;
 }
 
+/* 기본 화면은 한 번 정해지면 고정한다 — 그 뒤 승인·일정 API 확인 상태가 흔들려도 쓰는 사람 손 밑에서
+   화면이 바뀌지 않게. 다만 고정값이 홈인데 홈을 못 쓰게 되면(로그아웃·API 없음) 계산으로 보여 준다. */
+export function settleDefault(fixed: View | null, computed: View | null, homeOn: boolean): View | null {
+  if (fixed === null) return computed;
+  return fixed === 'home' && !homeOn ? 'calc' : fixed;
+}
+
 export function useView(o: Opts) {
   /* v 가 null 이면 주소에 ?view= 가 없는 것 — 그때만 hash 로 첫 화면을 고른다.
      go() 로 직접 옮긴 뒤엔 hash 를 무시한다(공유 링크 주소에서 홈 메뉴를 눌러도 홈으로 간다). */
@@ -52,7 +59,10 @@ export function useView(o: Opts) {
 
   /* 운영진 여부·승인 여부는 로그인 뒤 서버에서 늦게 온다 — raw 는 그대로 두고 보이는 화면만 걸러서,
      ?view=members 로 열었을 때 확인되는 순간 그 화면이 뜬다. */
-  const view = readView(raw.v ? `?view=${raw.v}` : '', raw.hash, o);
+  const [fixed, setFixed] = useState<View | null>(null);
+  const computed = readView(raw.v ? `?view=${raw.v}` : '', raw.hash, o);
+  if (raw.v === null && fixed === null && computed !== null) setFixed(computed);
+  const view = raw.v === null ? settleDefault(fixed, computed, o.homeOn) : computed;
   return { view, go };
 }
 

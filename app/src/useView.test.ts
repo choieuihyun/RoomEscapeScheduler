@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readView } from './useView';
+import { readView, settleDefault } from './useView';
 
 const on = { calendarOn: true, isAdmin: false, homeOn: true, decided: true };
 
@@ -52,5 +52,18 @@ describe('readView', () => {
   });
   it('decided 이고 homeOn 이 꺼졌으면 계산', () => {
     expect(readView('', '', { ...on, homeOn: false, decided: true })).toBe('calc');
+  });
+});
+
+describe('settleDefault', () => {
+  it('처음 calc 로 정해진 뒤 homeOn 이 true 가 돼도 calc', () => {
+    expect(settleDefault('calc', 'home', true)).toBe('calc');
+  });
+  it('고정값이 home 인데 homeOn 이 false 면 calc', () => {
+    expect(settleDefault('home', 'home', false)).toBe('calc');
+  });
+  it('고정값이 없으면 computed 그대로', () => {
+    expect(settleDefault(null, 'home', true)).toBe('home');
+    expect(settleDefault(null, null, false)).toBeNull();
   });
 });
