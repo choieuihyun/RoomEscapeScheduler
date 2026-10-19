@@ -154,7 +154,7 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     let noToken = false;
     try {
       const t = enabled ? await token() : null;
-      if (!t) { noToken = true; throw new Error('로그인해 주세요.'); }
+      if (!t) { noToken = true; throw Object.assign(new Error('로그인해 주세요.'), { body: { message: '로그인해 주세요.' } }); } /* sayClub 이 창 안에서 그대로 읽는다 */
       const out = await call(t, (ev) => { if (live()) setEvents((cur) => upsert(cur, ev)); return ev; }, live);
       if (live()) invalidateReload();
       return out;
