@@ -978,3 +978,50 @@ button:active{transform:scale(.97)}
     max-height:92vh;transform:translateY(24px)}
   .auth-modal.on .mbox{transform:none}
 }
+
+/* ── 멤버 관리(운영진, §4.54) ── */
+.lnb-badge{min-width:18px;height:18px;padding:0 6px;border-radius:var(--pill);background:var(--blue);color:#fff;
+  font-size:11.5px;font-weight:600;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}
+.lnb.folded .lnb-badge{display:none}
+.mem{display:flex;flex-direction:column;gap:22px;padding-bottom:48px}
+.mem-sec{display:flex;flex-direction:column;gap:10px}
+.mem-sec h2,.mem-fold{margin:0;font-size:17px;font-weight:700;color:var(--ink)}
+.mem-fold{display:flex;align-items:center;gap:6px;background:none;border:none;padding:4px 0;text-align:left}
+.mem-fold:focus-visible{outline:none;box-shadow:var(--ring)}
+.mem-caret{color:var(--ink3);width:12px}
+.mem-n{font-size:13px;font-weight:500;color:var(--blue-text);background:var(--blue-soft);border-radius:var(--pill);
+  padding:2px 10px;margin-left:6px}
+.mem-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.mem-scroll{overflow-x:auto}
+.mem-row{display:flex;align-items:center;gap:12px;padding:14px 18px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.mem-row:last-child{border-bottom:none}
+.mem-row b,.mem-table b{font-size:14.5px;font-weight:700;color:var(--ink)}
+.mem-sub{font-size:12.5px;color:var(--ink3)}
+.mem-warn{font-size:11.5px;font-weight:600;color:var(--amber-text);background:var(--amber-soft);border-radius:var(--pill);padding:2px 9px}
+.mem-btns{margin-left:auto;display:flex;gap:6px}
+.mem-ok,.mem-ok:hover{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.mem-ok:hover{background:var(--blue-hover);border-color:var(--blue-hover)}
+.mem .btn:disabled{opacity:.4;cursor:default}
+.mem-table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:620px}
+.mem-table th{text-align:left;font-weight:500;font-size:12.5px;color:var(--ink2);padding:12px 8px;border-bottom:1px solid var(--line)}
+.mem-table td{padding:12px 8px;border-bottom:1px solid var(--line);color:var(--ink2)}
+.mem-table th:first-child,.mem-table td:first-child{padding-left:18px}
+.mem-table th:last-child,.mem-table td:last-child{padding-right:18px}
+.mem-table tr:last-child td{border-bottom:none}
+.mem-role{font-size:11.5px;font-weight:600;color:var(--blue-text);background:var(--blue-soft);border-radius:var(--pill);padding:2px 9px}
+.mem-yes{color:var(--green-text)}
+.mem-no{color:var(--amber-text)}
+.mem-act{text-align:right;white-space:nowrap}
+.mem-act .btn{height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs);margin-left:6px}
+.mem-danger{color:var(--red-text);border-color:var(--red-line)}
+.mem-danger:hover{color:var(--red-text);background:var(--red-soft)}
+.mem-state{font-size:11.5px;font-weight:600;border-radius:var(--pill);padding:2px 9px;color:var(--ink2);background:var(--chip-bg)}
+.mem-state.REMOVED{color:var(--red-text);background:var(--red-soft)}
+.mem-note,.mem-empty{margin:0;font-size:12.5px;color:var(--ink2)}
+.mem-err{margin:0;padding:10px 14px;font-size:13.5px;color:var(--red-text);background:var(--red-soft);
+  border:1px solid var(--red-line);border-radius:var(--r-sm)}
+@media(max-width:640px){
+  .mem-row{padding:12px 14px}
+  .mem-btns{margin-left:0;width:100%}
+  .mem-btns .btn{flex:1}
+}

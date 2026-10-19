@@ -9,6 +9,8 @@ import { useSaveModal } from './useSaveModal';
 import { useWatches, buildWatchControl } from './useWatches';
 import { useCalendar } from './useCalendar';
 import { useView } from './useView';
+import { isClubAdmin, useMembers } from './useMembers';
+import { MembersPage } from './components/MembersPage';
 import { ThemeList } from './components/ThemeList';
 import { ConditionsPanel } from './components/ConditionsPanel';
 import { ResultsPanel } from './components/ResultsPanel';
@@ -43,7 +45,9 @@ export function SchedulerPage() {
     : auth.member.status === 'APPROVED';
   const watchCtl = auth.cloudOn ? buildWatchControl(watches, !!auth.me, approved) : undefined;
   const cal = useCalendar();
-  const nav = useView(auth.cloudOn);
+  const isAdmin = isClubAdmin(auth.member);
+  const nav = useView(auth.cloudOn, isAdmin);
+  const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
@@ -75,6 +79,7 @@ export function SchedulerPage() {
         view={nav.view} onView={nav.go} auth={auth}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
+        isAdmin={isAdmin} pendingCount={members.list?.filter(m => m.status === 'PENDING').length ?? 0}
       >
         {nav.view === 'calendar' && <CalendarSide ctl={cal} />}
       </SideNav>
@@ -94,15 +99,25 @@ export function SchedulerPage() {
         </div>
 
         {auth.cloudOn && (
-          <div className={'view' + (onCalc ? ' off' : '')}>
+          <div className={'view' + (nav.view === 'calendar' ? '' : ' off')}>
             <header className="page-head">
               <h1>캘린더</h1>
               <p>저장한 일정과 빈자리 알림을 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
             </header>
             <CalendarPage
-              ctl={cal} active={!onCalc} plans={plans} watches={watches} auth={auth} s={s}
+              ctl={cal} active={nav.view === 'calendar'} plans={plans} watches={watches} auth={auth} s={s}
               onLoaded={() => { nav.go('calc'); showToast('일정을 불러왔어요.'); }}
             />
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className={'view' + (nav.view === 'members' ? '' : ' off')}>
+            <header className="page-head">
+              <h1>멤버 관리</h1>
+              <p>가입 신청을 오픈채팅 닉네임과 맞춰 보고 승인해 주세요. 한 사람이 계정을 여러 개 만들었으면 하나만 승인하면 돼요.</p>
+            </header>
+            <MembersPage ctl={members} meUid={auth.member?.uid ?? ''} />
           </div>
         )}
       </main>

@@ -12,6 +12,7 @@ const Icon = ({ children }: { children: ReactNode }) => (
 );
 const IcCalc = () => <Icon><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" /></Icon>;
 const IcCal = () => <Icon><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></Icon>;
+const IcPeople = () => <Icon><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Icon>;
 const IcBell = () => <Icon><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></Icon>;
 const IcHelp = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></Icon>;
 const IcMoon = () => <Icon><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></Icon>;
@@ -23,11 +24,13 @@ const FOLD_KEY = 'flod.lnb.folded';
 const readFold = () => { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; } };
 
 export function SideNav({
-  view, onView, auth, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, children,
+  view, onView, auth, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, children,
 }: {
   view: View; onView: (v: View) => void; auth: UseAuthReturn;
   watchCount: number; watchLimit: number; onWatches: () => void;
   onTour: () => void; dark: boolean; onToggleTheme: () => void;
+  /* 운영진에게만 "멤버 관리" 메뉴와 승인 대기 숫자 */
+  isAdmin: boolean; pendingCount: number;
   /* 화면별로 메뉴 아래에 붙는 것 — 캘린더 화면의 미니 달력·내 캘린더(§4.50) */
   children?: ReactNode;
 }) {
@@ -64,6 +67,13 @@ export function SideNav({
           <button className="lnb-item" type="button" onClick={onWatches} title="빈자리 알림">
             <IcBell /><span className="lnb-txt">빈자리 알림</span>
             {gated ? <span className="lnb-tag">승인 후</span> : <span className="lnb-count">{watchCount}/{watchLimit}</span>}
+          </button>
+        )}
+        {isAdmin && (
+          <button className={item('members')} type="button" onClick={() => onView('members')} title="멤버 관리"
+            aria-current={view === 'members' ? 'page' : undefined}>
+            <IcPeople /><span className="lnb-txt">멤버 관리</span>
+            {pendingCount > 0 && <span className="lnb-badge" aria-label={`승인 대기 ${pendingCount}명`}>{pendingCount}</span>}
           </button>
         )}
       </nav>
