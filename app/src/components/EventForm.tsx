@@ -109,7 +109,8 @@ function Body({ m, create, update, adopt }: Props) {
       <div className="mrow2">
         <div className="mrow">
           <label htmlFor="evf-date">날짜</label>
-          <input id="evf-date" type="date" value={f.date} onChange={(e) => set({ date: e.target.value })} />
+          <input id="evf-date" type="date" value={f.date} onChange={(e) => set({ date: e.target.value, dateMoved: false })} />
+          {f.dateMoved && <p className="evf-past">자정이 지난 시각이라 날짜를 다음날로 옮겼어요.</p>}
           {past && <p className="evf-past">지난 날짜예요. 기록으로 남기려면 그대로 만들어도 돼요.</p>}
         </div>
         <div className="mrow">

@@ -1,7 +1,7 @@
 /* 일정 만들기·수정 창의 폼 상태 ↔ EventInput 변환과 검사 — React 밖의 순수 함수 (계획 Task E5).
    시각은 입력 칸 문자열("13:40", 24시간제), 서버로 보낼 때만 분으로 바꾸며 자정 넘김(다음날)을 채운다. */
 import { fmt, type PathStep } from './core';
-import { clockLabel, cpLen, parseClock24, parseKakaoTitle, rangeLabel, rollDays } from './clubEvents';
+import { addDays, clockLabel, cpLen, parseClock24, parseKakaoTitle, rangeLabel, rollDays } from './clubEvents';
 import type { EventDto, EventInput, SegmentInput } from './server';
 
 export interface FormSeg {
@@ -23,6 +23,8 @@ export interface FormState {
   booked: boolean;
   memo: string;
   segs: FormSeg[];
+  /* 불러온 첫 시각이 자정 뒤(1440 이상)라 날짜를 다음날로 옮겼다 — 창이 안내를 보이고, 날짜를 직접 바꾸면 끈다 */
+  dateMoved: boolean;
 }
 
 export const MAX_SEGS = 6;
@@ -34,14 +36,20 @@ const clockOrBlank = (min: number | null): string => (min === null ? '' : fmt(mi
 export function emptyForm(date: string): FormState {
   return {
     title: '', date, allDay: true, start: '', end: '', location: '',
-    capacity: null, booked: false, memo: '', segs: [],
+    capacity: null, booked: false, memo: '', segs: [], dateMoved: false,
   };
+}
+
+/* 첫 시각(첫 구간 시작, 없으면 일정 시작)이 1440 이상이면 날짜를 하루 뒤로 옮긴다. 칸은 fmt 로 24 에 접혀
+   그대로 맞고, 저장할 때 toInput 이 옮긴 날짜 기준으로 다시 다음날을 채운다 — 같은 순간이 그대로 저장된다. */
+function nextDayDate(date: string, first: number | null): { date: string; dateMoved: boolean } {
+  return first !== null && first >= 1440 ? { date: addDays(date, 1), dateMoved: true } : { date, dateMoved: false };
 }
 
 export function formFromEvent(ev: EventDto): FormState {
   return {
     title: ev.title,
-    date: ev.date,
+    ...nextDayDate(ev.date, ev.segments[0]?.startMin ?? ev.startMin),
     allDay: ev.startMin === null && ev.segments.length === 0,
     start: clockOrBlank(ev.startMin),
     end: clockOrBlank(ev.endMin),
@@ -63,6 +71,7 @@ export function formFromEvent(ev: EventDto): FormState {
 export function formFromSteps(date: string, steps: PathStep[]): FormState {
   return {
     ...emptyForm(date),
+    ...nextDayDate(date, steps[0]?.start ?? null),
     allDay: false,
     segs: steps.slice(0, MAX_SEGS).map((st) => ({
       themeName: st.name, branchName: st.place, themeKey: null,

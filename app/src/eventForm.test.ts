@@ -133,6 +133,30 @@ describe('eventForm', () => {
     expect(r.input.segments.map((g) => [g.startMin, g.endMin])).toEqual([[820, 890], [1470, 1530]]);
   });
 
+  it('첫 시각이 자정 뒤(1440 이상)면 날짜를 다음날로 옮기고 안내 표시', () => {
+    const step = (start: number, end: number) =>
+      ({ i: 0, name: 'A', place: '강남점', dur: end - start, start, end, soldout: false, move: 0 }) as PathStep;
+    const f = formFromSteps('2026-10-24', [step(1470, 1540)]);
+    expect([f.date, f.segs[0].start, f.segs[0].end, f.dateMoved]).toEqual(['2026-10-25', '00:30', '01:40', true]);
+    const r = toInput(f);
+    if ('error' in r) throw new Error(r.error);
+    expect([r.input.date, r.input.segments[0].startMin, r.input.segments[0].endMin]).toEqual(['2026-10-25', 30, 100]);
+    const seg = (startMin: number) => ({ themeName: 'A', branchName: null, themeKey: null, startMin, endMin: null });
+    const e = formFromEvent(ev({ date: '2026-10-24', segments: [seg(1470)] }));
+    expect([e.date, e.segs[0].start, e.dateMoved]).toEqual(['2026-10-25', '00:30', true]);
+    const t = formFromEvent(ev({ date: '2026-10-24', title: '번개', startMin: 1500, endMin: 1560 }));
+    expect([t.date, t.start, t.end, t.dateMoved]).toEqual(['2026-10-25', '01:00', '02:00', true]);
+  });
+
+  it('첫 시각이 23:59 이하면 날짜 그대로', () => {
+    const step = (start: number, end: number) =>
+      ({ i: 0, name: 'A', place: '', dur: end - start, start, end, soldout: false, move: 0 }) as PathStep;
+    const f = formFromSteps('2026-10-24', [step(1439, 1500), step(1520, 1580)]);
+    expect([f.date, f.dateMoved]).toEqual(['2026-10-24', false]);
+    const e = formFromEvent(ev({ date: '2026-10-24', segments: [{ themeName: 'A', branchName: null, themeKey: null, startMin: 1380, endMin: null }, { themeName: 'B', branchName: null, themeKey: null, startMin: 1470, endMin: null }] }));
+    expect([e.date, e.dateMoved]).toEqual(['2026-10-24', false]);
+  });
+
   it('구간이 있을 때 blur 로는 구간이 바뀌지 않는다', () => {
     const seg = { themeName: 'A', branchName: '강남점', themeKey: 'k', start: '13:40', end: '14:50' };
     expect(shouldApplyOnBlur(base({ segs: [seg] }))).toBe(false);
