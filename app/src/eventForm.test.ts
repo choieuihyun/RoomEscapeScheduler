@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { EventDto } from './server';
 import type { PathStep } from './core';
-import { applyPaste, shouldApplyOnBlur, emptyForm, formFromEvent, formFromSteps, segTimeText, toggleCandidate, toInput, type FormState } from './eventForm';
+import { applyPaste, shouldApplyOnBlur, emptyForm, formFromEvent, formFromSteps, segTimeText, switchDateMode, toggleCandidate, toInput, type FormState } from './eventForm';
 
 const ev = (o: Partial<EventDto> = {}): EventDto => ({
   id: 1, title: '', date: '2026-10-20', candidates: [], startMin: null, endMin: null, location: null,
@@ -321,5 +321,20 @@ describe('eventForm', () => {
       expect([f.dateMode, f.candidates, f.date]).toEqual(['fixed', ['2026-10-31'], '2026-10-20']);
       expect('candidates' in input(f)).toBe(false);
     });
+  });
+
+  it('날짜 모드를 몇 번 바꿔도 하루 옮긴 일정의 원래 날짜·1470 이 유지된다', () => {
+    const seg = { themeName: 'A', branchName: null, themeKey: null, startMin: 1470, endMin: null, playedBy: [] as string[] };
+    const f0 = formFromEvent(ev({ date: '2026-10-31', segments: [seg as never], candidates: [{ date: '2026-10-31', responses: [] } as never] }));
+    expect([f0.date, f0.dateMoved, f0.segs[0].start]).toEqual(['2026-11-01', true, '00:30']);
+    const f = ['candidates', 'fixed', 'candidates'].reduce((cur, m) => switchDateMode(cur, m as 'fixed' | 'candidates', '2026-10-20'), f0);
+    expect(f.dateMoved).toBe(true);
+    const r = toInput(f);
+    if ('error' in r) throw new Error(r.error);
+    expect([r.input.date, r.input.segments[0].startMin]).toEqual([null, 1470]);
+    const g = switchDateMode(switchDateMode(f0, 'candidates', '2026-10-20'), 'fixed', '2026-10-20');
+    const t = toInput(g);
+    if ('error' in t) throw new Error(t.error);
+    expect([t.input.date, t.input.segments[0].startMin]).toEqual(['2026-11-01', 30]);
   });
 });

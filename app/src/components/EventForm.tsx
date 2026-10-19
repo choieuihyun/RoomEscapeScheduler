@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { dayLabel, parseKakaoTitle, todayKst } from '../clubEvents';
 import { monthGrid } from '../core';
-import { applyPaste, emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, shouldApplyOnBlur, toggleCandidate, toInput, type FormSeg, type FormState } from '../eventForm';
+import { applyPaste, emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, shouldApplyOnBlur, switchDateMode, toggleCandidate, toInput, type FormSeg, type FormState } from '../eventForm';
 import { conflictOf, sayClub, type EventDto, type EventInput } from '../server';
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
@@ -33,6 +33,8 @@ function Body({ m, create, update, adopt }: Props) {
   const [note, setNote] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  /* 날짜 칸을 직접 고쳤나 — 안 고쳤으면 미정에서 넘어올 때 채운 가장 이른 후보 안내를 보인다 */
+  const [dateEdited, setDateEdited] = useState(false);
 
   const set = (patch: Partial<FormState>) => setF((cur) => ({ ...cur, ...patch }));
   const setSeg = (i: number, patch: Partial<FormSeg>) =>
@@ -55,10 +57,7 @@ function Body({ m, create, update, adopt }: Props) {
   const past = candMode ? f.candidates.some((d) => d < today) : !!f.date && f.date < today;
   /* 테마(구간)가 있으면 날짜 하나만 — 이미 후보 모드인 일정은 되돌릴 수 있게 고르는 칩을 남긴다 */
   const canPickMode = !hasSegs || candMode || editing?.date === null;
-  const setMode = (mode: FormState['dateMode']) => setF((cur) => (
-    mode === cur.dateMode ? cur : { ...cur, dateMode: mode, date: cur.date || todayKst(),
-      /* 후보 모드로 갈 때 하루 옮긴 표시를 남긴다 — toInput 이 원래 날짜 기준 시각(1470)으로 되돌려 보내는 데 쓴다 */
-      dateMoved: mode === 'candidates' && cur.dateMoved }));
+  const setMode = (mode: FormState['dateMode']) => setF((cur) => switchDateMode(cur, mode, todayKst()));
   /* 후보 목록의 최신 값 — 빠르게 연달아 눌러도 앞의 선택 위에 쌓이게 한다 */
   const candRef = useRef(f.candidates);
   const [capHit, setCapHit] = useState(false);
@@ -140,7 +139,10 @@ function Body({ m, create, update, adopt }: Props) {
           {candMode ? (
             <CandidatePicker picked={f.candidates} full={f.candidates.length >= MAX_CANDIDATES} capHit={capHit} onToggle={toggleCand} today={today} />
           ) : (
-            <input id="evf-date" type="date" value={f.date} onChange={(e) => set({ date: e.target.value, dateMoved: false })} />
+            <input id="evf-date" type="date" value={f.date} onChange={(e) => { setDateEdited(true); set({ date: e.target.value, dateMoved: false }); }} />
+          )}
+          {!candMode && !dateEdited && editing?.date === null && !f.dateMoved && f.candidates.length > 0 && f.date === f.candidates[0] && (
+            <p className="evf-past">가장 이른 후보 {+f.date.slice(5, 7)}/{+f.date.slice(8, 10)} 로 채웠어요.</p>
           )}
           {!candMode && f.dateMoved && <p className="evf-past">자정이 지난 시각이라 날짜를 다음날로 옮겼어요.</p>}
           {past && <p className="evf-past">지난 날짜예요. 기록으로 남기려면 그대로 만들어도 돼요.</p>}

@@ -62,6 +62,12 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
     if (a instanceof HTMLInputElement && a.classList.contains('evt-my-time') && (e.target as Element).closest('button')) e.preventDefault();
   };
 
+  /* 닫기(×)는 칸이 같이 사라져 blur 가 오지 않으니, 적던 시간을 먼저 보낸다 — 요청은 창이 닫힌 뒤에도 이어진다 */
+  const flushTime = () => {
+    const a = document.activeElement;
+    if (a instanceof HTMLInputElement && a.classList.contains('evt-my-time')) a.blur();
+  };
+
   async function openPick() {
     if (picking) { setPicking(false); return; }
     setPicking(true);
@@ -97,7 +103,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
               >삭제</button>
             </>
           )}
-          <button type="button" className="btn-x" aria-label="닫기" onClick={onClose}>×</button>
+          <button type="button" className="btn-x" aria-label="닫기" onClick={() => { flushTime(); onClose(); }}>×</button>
         </span>
       </div>
 

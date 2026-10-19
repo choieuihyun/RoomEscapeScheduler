@@ -46,6 +46,13 @@ export function toggleCandidate(list: string[], iso: string): { list: string[]; 
   return { list: [...list, iso].sort(), error: '' };
 }
 
+/* 날짜 칸 모드 바꾸기 — 하루 옮긴 표시(dateMoved)는 모드를 몇 번 바꿔도 그대로 둔다.
+   toInput 이 후보 모드로 보낼 때 원래 날짜 기준 시각(1470)으로 되돌리는 데 쓰고, 날짜 정하기에서는 옮긴 날짜 안내가 된다.
+   날짜를 직접 고치거나 붙여넣기로 시각이 바뀔 때만 꺼진다. */
+export function switchDateMode(cur: FormState, mode: FormState['dateMode'], today: string): FormState {
+  return mode === cur.dateMode ? cur : { ...cur, dateMode: mode, date: cur.date || today };
+}
+
 export const MAX_SEGS = 6;
 export const emptySeg = (): FormSeg => ({ themeName: '', branchName: '', themeKey: null, start: '', end: '' });
 
