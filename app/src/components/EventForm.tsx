@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { dayLabel, parseKakaoTitle, todayKst } from '../clubEvents';
 import { monthGrid } from '../core';
-import { applyPaste, emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, shouldApplyOnBlur, toInput, type FormSeg, type FormState } from '../eventForm';
+import { applyPaste, emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, shouldApplyOnBlur, toggleCandidate, toInput, type FormSeg, type FormState } from '../eventForm';
 import { conflictOf, sayClub, type EventDto, type EventInput } from '../server';
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
@@ -54,14 +54,14 @@ function Body({ m, create, update, adopt }: Props) {
   const candMode = f.dateMode === 'candidates';
   const past = candMode ? f.candidates.some((d) => d < today) : !!f.date && f.date < today;
   /* 테마(구간)가 있으면 날짜 하나만 — 이미 후보 모드인 일정은 되돌릴 수 있게 고르는 칩을 남긴다 */
-  const canPickMode = !hasSegs || candMode;
+  const canPickMode = !hasSegs || candMode || editing?.date === null;
   const setMode = (mode: FormState['dateMode']) => setF((cur) => (
     mode === cur.dateMode ? cur : { ...cur, dateMode: mode, date: cur.date || todayKst(), dateMoved: false }));
-  const toggleCand = (iso: string) => setF((cur) => {
-    const has = cur.candidates.includes(iso);
-    if (!has && cur.candidates.length >= MAX_CANDIDATES) return cur;
-    return { ...cur, candidatesTouched: true, candidates: has ? cur.candidates.filter((d) => d !== iso) : [...cur.candidates, iso].sort() };
-  });
+  const toggleCand = (iso: string) => {
+    const r = toggleCandidate(f.candidates, iso);
+    setErr(r.error);
+    if (r.list !== f.candidates) setF((cur) => ({ ...cur, candidatesTouched: true, candidates: r.list }));
+  };
 
   async function submit() {
     const r = toInput(f);
@@ -128,7 +128,7 @@ function Body({ m, create, update, adopt }: Props) {
             </div>
           )}
           {candMode ? (
-            <CandidatePicker picked={f.candidates} onToggle={toggleCand} today={today} />
+            <CandidatePicker picked={f.candidates} full={f.candidates.length >= MAX_CANDIDATES} onToggle={toggleCand} today={today} />
           ) : (
             <input id="evf-date" type="date" value={f.date} onChange={(e) => set({ date: e.target.value, dateMoved: false })} />
           )}
@@ -228,7 +228,7 @@ const iso = (d: Date): string => `${d.getFullYear()}-${String(d.getMonth() + 1).
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
 /* 후보 날짜 고르기 — 미니 달력에서 여러 날을 찍고, 고른 날은 칩(× 로 빼기)으로 보인다. 지난 날은 흐리지만 고를 수 있다. */
-function CandidatePicker({ picked, onToggle, today }: { picked: string[]; onToggle: (iso: string) => void; today: string }) {
+function CandidatePicker({ picked, full, onToggle, today }: { picked: string[]; full: boolean; onToggle: (iso: string) => void; today: string }) {
   const [y0, m0] = (picked[0] ?? today).split('-').map(Number);
   const [ym, setYm] = useState({ y: y0, m: m0 - 1 });
   const go = (n: number) => setYm((c) => { const d = new Date(c.y, c.m + n, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
@@ -246,7 +246,7 @@ function CandidatePicker({ picked, onToggle, today }: { picked: string[]; onTogg
             const k = iso(d);
             const on = picked.includes(k);
             return (
-              <button key={k} type="button" aria-pressed={on} aria-label={dayLabel(k)}
+              <button key={k} type="button" aria-pressed={on} aria-disabled={full && !on ? true : undefined} aria-label={dayLabel(k)}
                 className={'evf-cal-day' + (d.getMonth() !== ym.m ? ' out' : '') + (k < today ? ' past' : '') + (d.getDay() === 0 ? ' sun' : d.getDay() === 6 ? ' sat' : '')}
                 onClick={() => onToggle(k)}>{d.getDate()}</button>
             );

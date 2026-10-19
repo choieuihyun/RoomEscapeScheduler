@@ -37,6 +37,13 @@ export interface FormState {
 
 export const MAX_CANDIDATES = 14;
 
+/* 후보 날짜 찍기/빼기 — 가득 찼는데 새 날을 찍으면 목록은 그대로, 안내 문구를 돌려준다 */
+export function toggleCandidate(list: string[], iso: string): { list: string[]; error: string } {
+  if (list.includes(iso)) return { list: list.filter((d) => d !== iso), error: '' };
+  if (list.length >= MAX_CANDIDATES) return { list, error: `후보 날짜는 ${MAX_CANDIDATES}개까지예요.` };
+  return { list: [...list, iso].sort(), error: '' };
+}
+
 export const MAX_SEGS = 6;
 export const emptySeg = (): FormSeg => ({ themeName: '', branchName: '', themeKey: null, start: '', end: '' });
 

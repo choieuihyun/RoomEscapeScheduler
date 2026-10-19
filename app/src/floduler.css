@@ -12,6 +12,7 @@
   --ink:#1C1C1C;         /* 본문 */
   --ink2:#525253;        /* 보조 — surface 대비 7.8:1 */
   --ink3:#7A7B7D;        /* 흐린 설명 — surface 대비 4.2:1 */
+  --ink-past:#6A6B6D;    /* 달력의 지난 날 글자 — surface 대비 5.1:1 (opacity 없이 이 색만) */
   --placeholder:#969799;
 
   /* --blue 는 흰 글자를 얹는 버튼·배지용, --blue-text 는 배경 위에 직접 얹는 글자용.
@@ -79,7 +80,7 @@
   :root:not([data-theme="light"]){
     --bg:#1C1C1C; --surface:#2A2B2C; --surface2:#323333;
     --line:#424343; --line2:#525253;
-    --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --placeholder:#7A7B7D;
+    --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --ink-past:#969799; --placeholder:#7A7B7D;
 
     --blue:#00889C; --blue-hover:#117182; --blue-press:#3CBED7; --blue-text:#3CBED7;
     --blue-soft:#002831; --blue-line:#1D5A66;
@@ -117,7 +118,7 @@
 :root[data-theme="dark"]{
   --bg:#1C1C1C; --surface:#2A2B2C; --surface2:#323333;
   --line:#424343; --line2:#525253;
-  --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --placeholder:#7A7B7D;
+  --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --ink-past:#969799; --placeholder:#7A7B7D;
 
   --blue:#00889C; --blue-hover:#117182; --blue-press:#3CBED7; --blue-text:#3CBED7;
   --blue-soft:#002831; --blue-line:#1D5A66;
@@ -1308,11 +1309,12 @@ button:active{transform:scale(.97)}
 .evf-cal-dow.sat,.evf-cal-day.sat{color:var(--blue-text)}
 .evf-cal-day{height:34px;border:1px solid transparent;border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;cursor:pointer;padding:0}
 .evf-cal-day:hover{border-color:var(--line2)}
-.evf-cal-day.out,.evf-cal-day.past{color:var(--ink3);opacity:.7}
-.evf-cal-day[aria-pressed="true"]{border-color:var(--st-talk-line);color:var(--st-talk-fg);font-weight:700;opacity:1}
+.evf-cal-day.out,.evf-cal-day.past{color:var(--ink-past)}
+.evf-cal-day[aria-disabled="true"]{cursor:not-allowed;opacity:.45}
+.evf-cal-day[aria-pressed="true"]{border-color:var(--st-talk-line);color:var(--st-talk-fg);font-weight:700}
 .evf-cand-chips{display:flex;flex-wrap:wrap;gap:6px}
 .evf-cand-chip{height:28px;padding:0 6px 0 11px;font-size:13px;font-weight:500}
-.evf-cand-chip button{width:20px;height:20px;border:none;background:transparent;color:inherit;font-size:14px;cursor:pointer;padding:0}
+.evf-cand-chip button{width:32px;height:32px;margin:-2px -6px -2px -6px;border:none;background:transparent;color:inherit;font-size:14px;cursor:pointer;padding:0}
 .evf-cand-count{font-size:12px;color:var(--ink3);word-break:keep-all}
 @media(max-width:560px){
   .evf-modal{padding:0}

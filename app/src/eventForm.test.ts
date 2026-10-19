@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { EventDto } from './server';
 import type { PathStep } from './core';
-import { applyPaste, shouldApplyOnBlur, emptyForm, formFromEvent, formFromSteps, segTimeText, toInput, type FormState } from './eventForm';
+import { applyPaste, shouldApplyOnBlur, emptyForm, formFromEvent, formFromSteps, segTimeText, toggleCandidate, toInput, type FormState } from './eventForm';
 
 const ev = (o: Partial<EventDto> = {}): EventDto => ({
   id: 1, title: '', date: '2026-10-20', candidates: [], startMin: null, endMin: null, location: null,
@@ -276,6 +276,16 @@ describe('eventForm', () => {
       const f = formFromEvent(ev({ title: 'a', date: null, candidates: [{ date: '2026-11-07', responses: [] }, { date: '2026-10-31', responses: [] }] }));
       expect([f.dateMode, f.candidates, f.candidatesTouched, f.date]).toEqual(['candidates', ['2026-10-31', '2026-11-07'], false, '2026-10-31']);
       expect(input(f).date).toBeNull();
+    });
+
+    it('toggleCandidate: 찍고 빼고, 15번째는 안내만', () => {
+      expect(toggleCandidate(['2026-11-02'], '2026-11-01')).toEqual({ list: ['2026-11-01', '2026-11-02'], error: '' });
+      expect(toggleCandidate(['2026-11-02'], '2026-11-02')).toEqual({ list: [], error: '' });
+      const full = days(14);
+      const r = toggleCandidate(full, '2026-12-01');
+      expect(r.list).toBe(full);
+      expect(r.error).toBe('후보 날짜는 14개까지예요.');
+      expect(toggleCandidate(full, full[0]).list).toHaveLength(13);
     });
 
     it('정한 일정은 날짜 정하기로 열고 옛 후보를 들고만 있다', () => {
