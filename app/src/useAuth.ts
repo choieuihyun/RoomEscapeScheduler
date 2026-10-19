@@ -151,6 +151,14 @@ export function useAuth() {
     setMemberLoading(false);
   }, [loadMember]);
 
+  /* 로딩 표시 없이 조용히 다시 묻는다 — memberLoading 을 켜면 로그인 창·화면이 "확인 중"으로 깜빡이고
+     대기 패널이 사라진다. 실패(null)면 이전 member 를 그대로 두고, 성공 응답만 반영한다. */
+  const recheckMember = useCallback(async (): Promise<MeDto | null> => {
+    const m = await loadMember();
+    if (m) setMember(m);
+    return m;
+  }, [loadMember]);
+
   /* 승인 대기 중에는 창으로 돌아올 때마다 다시 묻는다 — 운영진이 승인해도 새로 고치기 전엔 몰랐다 */
   const pending = member?.status === 'PENDING';
   useEffect(() => {
@@ -160,7 +168,7 @@ export function useAuth() {
     const check = () => {
       if (inflight) return;
       inflight = true;
-      void refreshMember().finally(() => { inflight = false; });
+      void recheckMember().finally(() => { inflight = false; });
     };
     const onVisible = () => { if (document.visibilityState === 'visible') check(); };
     const onFocus = check;
@@ -170,7 +178,7 @@ export function useAuth() {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onFocus);
     };
-  }, [pending, refreshMember]);
+  }, [pending, recheckMember]);
 
   const openAuth = useCallback(() => {
     setErr(''); setOpen(true);
@@ -266,7 +274,7 @@ export function useAuth() {
 
   return {
     cloudOn, me, authLoading, open, id, setId, pw, setPw, err, busy, openAuth, closeAuth, submit, logout,
-    member, memberLoading, refreshMember, loginKakao, loginGoogle, linkKakao, linkGoogle, join,
+    member, memberLoading, refreshMember, recheckMember, loginKakao, loginGoogle, linkKakao, linkGoogle, join,
     inKakaoApp, legacyOpen, setLegacyOpen, linkErr, providerIds: uid ? providerIds : [],
   };
 }

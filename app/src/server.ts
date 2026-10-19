@@ -21,13 +21,16 @@ function base(): string {
 
 /* 서버가 응답 없이 멈춰도 10초 뒤엔 실패시킨다 — 안 그러면 "확인 중"이 끝나지 않는다 */
 const TIMEOUT_MS = 10_000;
+/* AbortSignal.timeout 은 iOS 15 이하에 없다 — 없으면 시간 제한 없이 보낸다(요청이 통째로 실패하는 것보다 낫다) */
+const timeoutSignal = (): AbortSignal | undefined =>
+  typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(TIMEOUT_MS) : undefined;
 
 interface ApiError extends Error {
   status?: number;
 }
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(base() + path, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const res = await fetch(base() + path, { headers: { Accept: 'application/json' }, signal: timeoutSignal() });
   if (!res.ok) {
     const e: ApiError = new Error('HTTP ' + res.status);
     e.status = res.status;
@@ -135,7 +138,7 @@ async function send<T>(path: string, token: string | null, method: 'GET' | 'POST
       ...(body != null ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body != null ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: timeoutSignal(),
   });
   if (!res.ok) {
     const e: WatchApiError = new Error('HTTP ' + res.status);

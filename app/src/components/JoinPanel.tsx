@@ -61,12 +61,15 @@ export function JoinPanel({ auth }: { auth: UseAuthReturn }) {
 export function PendingPanel({ auth }: { auth: UseAuthReturn }) {
   const nick = auth.member?.nickname ?? null;
   const [checking, setChecking] = useState(false);
-  const [still, setStill] = useState(false);
+  const [note, setNote] = useState('');
   /* 승인되면 member 가 바뀌어 이 패널이 사라진다. 여전히 대기면 짧게 알려 준다 */
   async function recheck() {
-    setChecking(true); setStill(false);
-    try { await auth.refreshMember(); setStill(true); }
-    finally { setChecking(false); }
+    setChecking(true); setNote('');
+    try {
+      const m = await auth.recheckMember();
+      if (!m) setNote('확인하지 못했어요. 잠시 뒤에 다시 해 주세요.');
+      else if (m.status === 'PENDING') setNote('아직 승인 전이에요.');
+    } finally { setChecking(false); }
   }
   return (
     <>
@@ -75,7 +78,7 @@ export function PendingPanel({ auth }: { auth: UseAuthReturn }) {
         운영진에게 카톡으로 "가입 신청했어요"라고 알려 주세요. 승인되면 캘린더와 빈자리 알림이 열려요.
       </p>
       {nick && <p className="auth-hint">신청한 닉네임: {nick}</p>}
-      {still && !checking && <p className="auth-hint" role="status">아직 승인 전이에요.</p>}
+      {note && !checking && <p className="auth-hint" role="status">{note}</p>}
       <div className="mbtns">
         <button className="btn" type="button" disabled={checking} onClick={recheck}>
           {checking ? '확인 중…' : '다시 확인'}
