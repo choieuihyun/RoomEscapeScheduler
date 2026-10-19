@@ -27,7 +27,15 @@ export interface FormState {
   dateMoved: boolean;
   /* 날짜를 옮기기 전 날짜 — 붙여넣어 시각이 바뀌면 옮긴 날짜가 틀리므로 되돌린다 */
   origDate?: string;
+  /* 날짜 정하기(fixed) / 후보 여러 개(candidates) — 후보 모드는 date 를 null 로 보낸다 (§4.8) */
+  dateMode: 'fixed' | 'candidates';
+  /* 후보 날짜 "YYYY-MM-DD" 오름차순. fixed 일정이 가진 옛 후보도 담는다(다시 미정으로 돌릴 때 쓰게) */
+  candidates: string[];
+  /* 창에서 후보를 고쳤나 — 고치지 않은 fixed 저장은 candidates 를 아예 보내지 않아 서버가 그대로 둔다 */
+  candidatesTouched: boolean;
 }
+
+export const MAX_CANDIDATES = 14;
 
 export const MAX_SEGS = 6;
 export const emptySeg = (): FormSeg => ({ themeName: '', branchName: '', themeKey: null, start: '', end: '' });
@@ -39,6 +47,7 @@ export function emptyForm(date: string): FormState {
   return {
     title: '', date, allDay: true, start: '', end: '', location: '',
     capacity: null, booked: false, memo: '', segs: [], dateMoved: false,
+    dateMode: 'fixed', candidates: [], candidatesTouched: false,
   };
 }
 
@@ -49,9 +58,16 @@ function nextDayDate(date: string, first: number | null): { date: string; dateMo
 }
 
 export function formFromEvent(ev: EventDto): FormState {
+  const undecided = ev.date === null;
   return {
     title: ev.title,
-    ...nextDayDate(sortKeyDate(ev), ev.segments[0]?.startMin ?? ev.startMin),
+    /* 미정 일정은 후보 모드로 연다 — 날짜 칸은 가장 이른 후보로 채워 두지만 모드가 candidates 라 보내지 않는다 */
+    ...(undecided
+      ? { date: sortKeyDate(ev), dateMoved: false }
+      : nextDayDate(ev.date as string, ev.segments[0]?.startMin ?? ev.startMin)),
+    dateMode: undecided ? 'candidates' : 'fixed',
+    candidates: ev.candidates.map((c) => c.date).sort(),
+    candidatesTouched: false,
     allDay: ev.startMin === null && ev.segments.length === 0,
     start: clockOrBlank(ev.startMin),
     end: clockOrBlank(ev.endMin),
@@ -149,7 +165,13 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
   if (cpLen(title) > 60) return { error: '제목은 60자까지예요.' };
   if (cpLen(location) > 60) return { error: '위치는 60자까지예요.' };
   if (cpLen(memo) > 500) return { error: '메모는 500자까지예요.' };
-  if (!f.date) return { error: '날짜를 골라 주세요.' };
+  if (f.dateMode === 'candidates') {
+    if (f.candidates.length === 0) return { error: '후보 날짜를 하나 이상 골라 주세요.' };
+    if (f.candidates.length > MAX_CANDIDATES) return { error: `후보 날짜는 ${MAX_CANDIDATES}개까지예요.` };
+  } else {
+    if (!f.date) return { error: '날짜를 골라 주세요.' };
+    if (f.candidatesTouched && f.candidates.length > MAX_CANDIDATES) return { error: `후보 날짜는 ${MAX_CANDIDATES}개까지예요.` };
+  }
 
   /* 완전히 빈 행은 없는 것으로 친다 */
   const rows = f.segs.filter((g) => g.themeName.trim() || g.branchName.trim() || g.start.trim() || g.end.trim());
@@ -204,14 +226,16 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
   if (f.capacity !== null && !(Number.isInteger(f.capacity) && f.capacity >= 2 && f.capacity <= 8)) {
     return { error: '인원은 2~8명이에요.' };
   }
-  return {
-    input: {
-      title, date: f.date, startMin, endMin,
-      location: location || null,
-      capacity: f.capacity,
-      booked: segments.length > 0 && f.booked,
-      memo: memo || null,
-      segments,
-    },
+  const input: EventInput = {
+    title, date: f.dateMode === 'candidates' ? null : f.date, startMin, endMin,
+    location: location || null,
+    capacity: f.capacity,
+    booked: segments.length > 0 && f.booked,
+    memo: memo || null,
+    segments,
   };
+  /* candidates 키: 후보 모드는 늘 보내고, 날짜 정하기는 창에서 고쳤을 때만(없으면 서버가 그대로 둔다 — §4.8 ★) */
+  if (f.dateMode === 'candidates') input.candidates = [...f.candidates].sort();
+  else if (f.candidatesTouched) input.candidates = [...f.candidates].sort();
+  return { input };
 }

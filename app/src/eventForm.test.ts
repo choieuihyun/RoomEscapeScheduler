@@ -239,4 +239,49 @@ describe('eventForm', () => {
     expect(latest.capacity).toBe(4);
     expect(JSON.stringify(mine)).toBe(snapshot);
   });
+  describe('후보 여러 개', () => {
+    const days = (n: number) => Array.from({ length: n }, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`);
+    const input = (f: FormState) => {
+      const r = toInput(f);
+      if ('error' in r) throw new Error(r.error);
+      return r.input;
+    };
+
+    it('후보 모드는 date null + candidates', () => {
+      const i = input(base({ title: 'a', dateMode: 'candidates', candidates: ['2026-11-07', '2026-10-31'] }));
+      expect(i.date).toBeNull();
+      expect(i.candidates).toEqual(['2026-10-31', '2026-11-07']);
+    });
+
+    it('날짜 정하기로 바꿔 저장하면 candidates 를 안 보낸다', () => {
+      const f = formFromEvent(ev({ title: 'a', date: null, candidates: [{ date: '2026-10-31', responses: [] }] }));
+      const i = input({ ...f, dateMode: 'fixed', date: '2026-10-31' });
+      expect(i.date).toBe('2026-10-31');
+      expect('candidates' in i).toBe(false);
+      expect('candidates' in input(base({ title: 'a' }))).toBe(false);
+    });
+
+    it('후보를 고친 뒤 날짜 정하기면 candidates 를 보낸다(비어도)', () => {
+      expect(input(base({ title: 'a', candidates: ['2026-11-01'], candidatesTouched: true })).candidates).toEqual(['2026-11-01']);
+      expect(input(base({ title: 'a', candidates: [], candidatesTouched: true })).candidates).toEqual([]);
+    });
+
+    it('0개·15개는 오류', () => {
+      expect(err(base({ title: 'a', dateMode: 'candidates', candidates: [] }))).toBe('후보 날짜를 하나 이상 골라 주세요.');
+      expect(err(base({ title: 'a', dateMode: 'candidates', candidates: days(15) }))).toBe('후보 날짜는 14개까지예요.');
+      expect(err(base({ title: 'a', dateMode: 'candidates', candidates: days(14) }))).toBeNull();
+    });
+
+    it('formFromEvent(미정 일정) → 후보 모드·후보 목록', () => {
+      const f = formFromEvent(ev({ title: 'a', date: null, candidates: [{ date: '2026-11-07', responses: [] }, { date: '2026-10-31', responses: [] }] }));
+      expect([f.dateMode, f.candidates, f.candidatesTouched, f.date]).toEqual(['candidates', ['2026-10-31', '2026-11-07'], false, '2026-10-31']);
+      expect(input(f).date).toBeNull();
+    });
+
+    it('정한 일정은 날짜 정하기로 열고 옛 후보를 들고만 있다', () => {
+      const f = formFromEvent(ev({ title: 'a', candidates: [{ date: '2026-10-31', responses: [] }] }));
+      expect([f.dateMode, f.candidates, f.date]).toEqual(['fixed', ['2026-10-31'], '2026-10-20']);
+      expect('candidates' in input(f)).toBe(false);
+    });
+  });
 });

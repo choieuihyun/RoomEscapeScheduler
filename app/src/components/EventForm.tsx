@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { parseKakaoTitle, todayKst } from '../clubEvents';
-import { applyPaste, emptySeg, formFromEvent, MAX_SEGS, segTimeText, shouldApplyOnBlur, toInput, type FormSeg, type FormState } from '../eventForm';
+import { dayLabel, parseKakaoTitle, todayKst } from '../clubEvents';
+import { monthGrid } from '../core';
+import { applyPaste, emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, shouldApplyOnBlur, toInput, type FormSeg, type FormState } from '../eventForm';
 import { conflictOf, sayClub, type EventDto, type EventInput } from '../server';
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
@@ -49,7 +50,18 @@ function Body({ m, create, update, adopt }: Props) {
   const hasSegs = f.segs.length > 0;
   const timeText = segTimeText(f.segs);
   /* 지난 날짜(한국 날짜 기준)는 막지 않고 알려만 준다 — 기록으로 남기는 일정도 있다 */
-  const past = !!f.date && f.date < todayKst();
+  const today = todayKst();
+  const candMode = f.dateMode === 'candidates';
+  const past = candMode ? f.candidates.some((d) => d < today) : !!f.date && f.date < today;
+  /* 테마(구간)가 있으면 날짜 하나만 — 이미 후보 모드인 일정은 되돌릴 수 있게 고르는 칩을 남긴다 */
+  const canPickMode = !hasSegs || candMode;
+  const setMode = (mode: FormState['dateMode']) => setF((cur) => (
+    mode === cur.dateMode ? cur : { ...cur, dateMode: mode, date: cur.date || todayKst(), dateMoved: false }));
+  const toggleCand = (iso: string) => setF((cur) => {
+    const has = cur.candidates.includes(iso);
+    if (!has && cur.candidates.length >= MAX_CANDIDATES) return cur;
+    return { ...cur, candidatesTouched: true, candidates: has ? cur.candidates.filter((d) => d !== iso) : [...cur.candidates, iso].sort() };
+  });
 
   async function submit() {
     const r = toInput(f);
@@ -108,9 +120,19 @@ function Body({ m, create, update, adopt }: Props) {
 
       <div className="mrow2">
         <div className="mrow">
-          <label htmlFor="evf-date">날짜</label>
-          <input id="evf-date" type="date" value={f.date} onChange={(e) => set({ date: e.target.value, dateMoved: false })} />
-          {f.dateMoved && <p className="evf-past">자정이 지난 시각이라 날짜를 다음날로 옮겼어요.</p>}
+          <label htmlFor={candMode ? undefined : 'evf-date'} id="evf-date-l">날짜</label>
+          {canPickMode && (
+            <div className="evf-chips" role="group" aria-labelledby="evf-date-l">
+              <button type="button" className={'chip-pick' + (candMode ? '' : ' on')} aria-pressed={!candMode} onClick={() => setMode('fixed')}>날짜 정하기</button>
+              <button type="button" className={'chip-pick' + (candMode ? ' on' : '')} aria-pressed={candMode} onClick={() => setMode('candidates')}>후보 여러 개</button>
+            </div>
+          )}
+          {candMode ? (
+            <CandidatePicker picked={f.candidates} onToggle={toggleCand} today={today} />
+          ) : (
+            <input id="evf-date" type="date" value={f.date} onChange={(e) => set({ date: e.target.value, dateMoved: false })} />
+          )}
+          {!candMode && f.dateMoved && <p className="evf-past">자정이 지난 시각이라 날짜를 다음날로 옮겼어요.</p>}
           {past && <p className="evf-past">지난 날짜예요. 기록으로 남기려면 그대로 만들어도 돼요.</p>}
         </div>
         <div className="mrow">
@@ -198,6 +220,51 @@ function Body({ m, create, update, adopt }: Props) {
         </button>
         <button className="btn" type="button" onClick={m.close}>취소</button>
       </div>
+    </div>
+  );
+}
+
+const iso = (d: Date): string => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+
+/* 후보 날짜 고르기 — 미니 달력에서 여러 날을 찍고, 고른 날은 칩(× 로 빼기)으로 보인다. 지난 날은 흐리지만 고를 수 있다. */
+function CandidatePicker({ picked, onToggle, today }: { picked: string[]; onToggle: (iso: string) => void; today: string }) {
+  const [y0, m0] = (picked[0] ?? today).split('-').map(Number);
+  const [ym, setYm] = useState({ y: y0, m: m0 - 1 });
+  const go = (n: number) => setYm((c) => { const d = new Date(c.y, c.m + n, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
+  return (
+    <div className="evf-cand">
+      <div className="evf-cal">
+        <div className="evf-cal-head">
+          <button type="button" aria-label="이전 달" onClick={() => go(-1)}>‹</button>
+          <b>{ym.y}.{String(ym.m + 1).padStart(2, '0')}</b>
+          <button type="button" aria-label="다음 달" onClick={() => go(1)}>›</button>
+        </div>
+        <div className="evf-cal-grid">
+          {DOW.map((d, i) => <span key={d} className={'evf-cal-dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '')}>{d}</span>)}
+          {monthGrid(ym.y, ym.m).map((d) => {
+            const k = iso(d);
+            const on = picked.includes(k);
+            return (
+              <button key={k} type="button" aria-pressed={on} aria-label={dayLabel(k)}
+                className={'evf-cal-day' + (d.getMonth() !== ym.m ? ' out' : '') + (k < today ? ' past' : '') + (d.getDay() === 0 ? ' sun' : d.getDay() === 6 ? ' sat' : '')}
+                onClick={() => onToggle(k)}>{d.getDate()}</button>
+            );
+          })}
+        </div>
+      </div>
+      {picked.length > 0 && (
+        <div className="evf-cand-chips">
+          {picked.map((k) => (
+            <span key={k} className="chip-info talk evf-cand-chip">{dayLabel(k)}
+              <button type="button" aria-label={`${dayLabel(k)} 빼기`} onClick={() => onToggle(k)}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <span className="evf-cand-count" aria-live="polite">
+        후보 {picked.length}개 · 최대 {MAX_CANDIDATES}개. 참여한 사람들이 날짜마다 되는 시간을 고르면 다 같이 되는 날이 보여요.
+      </span>
     </div>
   );
 }
