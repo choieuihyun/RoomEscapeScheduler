@@ -125,7 +125,7 @@ export interface WatchDto {
 }
 
 interface WatchApiError extends ApiError {
-  body?: { error?: string; message?: string };
+  body?: { error?: string; message?: string; event?: EventDto };
 }
 
 /* token 이 null 이면 Authorization 헤더를 싣지 않는다(카카오 로그인처럼 인증 전 POST). */
@@ -228,7 +228,7 @@ export function sayClub(err: unknown): string {
   return say(err);
 }
 
-/* ── 동호회 일정 (작업명세서 §4.7) — 타입만. 호출 함수는 E2 ── */
+/* ── 동호회 일정 (작업명세서 §4.7) ── */
 export interface SegmentInput {
   themeName: string;
   branchName: string | null;
@@ -275,4 +275,63 @@ export interface EventDto {
 export interface ClubMemberDto {
   uid: string;
   nickname: string;
+}
+
+const EVENTS = '/api/club/events';
+
+export const listEvents = (from: string, to: string, token: string): Promise<EventDto[]> =>
+  authed(`${EVENTS}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, token, 'GET');
+
+export const getEvent = (id: number, token: string): Promise<EventDto> =>
+  authed(`${EVENTS}/${id}`, token, 'GET');
+
+export const createEvent = (input: EventInput, token: string): Promise<EventDto> =>
+  authed(EVENTS, token, 'POST', input);
+
+/* version 은 화면이 받아 둔 값. 다르면 서버가 409 EVENT_CONFLICT 로 거절한다. */
+export const updateEvent = (id: number, input: EventInput, version: number, token: string): Promise<EventDto> =>
+  authed(`${EVENTS}/${id}`, token, 'POST', { ...input, version });
+
+/* 이미 지워졌으면(404) 목적은 이뤄진 것이라 성공으로 끝낸다. 그 밖의 오류는 그대로 던진다. */
+export async function deleteEvent(id: number, token: string): Promise<void> {
+  try {
+    await authed<unknown>(`${EVENTS}/${id}`, token, 'DELETE');
+  } catch (e) {
+    if ((e as WatchApiError)?.status === 404) return;
+    throw e;
+  }
+}
+
+export const joinEvent = (id: number, token: string): Promise<EventDto> =>
+  authed(`${EVENTS}/${id}/join`, token, 'POST');
+
+export const leaveEvent = (id: number, token: string): Promise<EventDto> =>
+  authed(`${EVENTS}/${id}/leave`, token, 'POST');
+
+export const addParticipant = (id: number, uid: string, token: string): Promise<EventDto> =>
+  authed(`${EVENTS}/${id}/participants`, token, 'POST', { uid });
+
+export const removeParticipant = (id: number, uid: string, token: string): Promise<EventDto> =>
+  authed(`${EVENTS}/${id}/participants/${encodeURIComponent(uid)}`, token, 'DELETE');
+
+export const setBooked = (id: number, booked: boolean, token: string): Promise<EventDto> =>
+  authed(`${EVENTS}/${id}/booking`, token, 'POST', { booked });
+
+export const listClubMembers = (token: string): Promise<ClubMemberDto[]> =>
+  authed('/api/club/members', token, 'GET');
+
+/* 수정 충돌(409 EVENT_CONFLICT)이면 서버가 실어 보낸 최신 일정을, 아니면 null. */
+export function conflictOf(err: unknown): EventDto | null {
+  const e = err as WatchApiError | null | undefined;
+  return e?.status === 409 && e.body?.error === 'EVENT_CONFLICT' ? e.body.event ?? null : null;
+}
+
+export function errorCode(err: unknown): string | null {
+  return (err as WatchApiError | null | undefined)?.body?.error ?? null;
+}
+
+/* 본문 없는 404 = 서버가 새 API 를 아직 모른다. NO_SUCH_EVENT 같은 본문 있는 404 와 구별한다. */
+export function isMissingApi(err: unknown): boolean {
+  const e = err as WatchApiError | null | undefined;
+  return e?.status === 404 && !e.body?.error;
 }
