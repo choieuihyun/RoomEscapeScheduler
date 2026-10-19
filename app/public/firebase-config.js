@@ -13,6 +13,10 @@
  * 번호)와 같은 값이다 — Firebase Cloud Messaging이 이 값을 요구하는데,
  * 없으면 "Missing App configuration value: messagingSenderId"로 조용히
  * 실패한다(서비스워커 콘솔에서만 보임, 페이지 콘솔엔 안 뜬다 — 실측 확인).
+ *
+ * KAKAO_CLIENT_ID — 카카오 REST API 키. 카카오 로그인 주소의 client_id 로
+ * 브라우저에 그대로 실리는 공개 값이라 커밋해도 된다. 비밀인 클라이언트
+ * 시크릿은 서버 .env 에만 있다(서버 배포.md ⑫).
  */
 window.FIREBASE_CONFIG = {
   apiKey:            "AIzaSyDSmp0yCSN2fqc7jvlzgLh4LliFi-XwoAk",
@@ -21,3 +25,5 @@ window.FIREBASE_CONFIG = {
   messagingSenderId: "13772151522",
   appId:             "1:13772151522:web:b0ce0adfb766fa81845cbb",
 };
+
+window.KAKAO_CLIENT_ID = "8977c8c9904f45f41451600a90d8151f";
