@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { readView } from './useView';
 
-const on = { calendarOn: true, isAdmin: false, homeOn: true };
+const on = { calendarOn: true, isAdmin: false, homeOn: true, decided: true };
 
 describe('readView', () => {
   it('승인 멤버는 기본이 홈', () => {
     expect(readView('', '', on)).toBe('home');
   });
   it('승인 전·로그아웃은 기본이 계산', () => {
-    expect(readView('', '', { ...on, homeOn: false })).toBe('calc');
+    expect(readView('', '', { ...on, homeOn: false, decided: true })).toBe('calc');
   });
   it('공유 링크는 홈이어도 계산으로', () => {
     expect(readView('', '#s=AAA', on)).toBe('calc');
@@ -21,7 +21,7 @@ describe('readView', () => {
     expect(readView('?view=calc', '', on)).toBe('calc');
   });
   it('홈이 꺼졌는데 ?view=home 이면 계산', () => {
-    expect(readView('?view=home', '', { ...on, homeOn: false })).toBe('calc');
+    expect(readView('?view=home', '', { ...on, homeOn: false, decided: true })).toBe('calc');
   });
   it('?view=home 은 해시가 공유 링크여도 홈', () => {
     expect(readView('?view=home', '#s=AAA', on)).toBe('home');
@@ -33,12 +33,24 @@ describe('readView', () => {
     expect(readView('?view=members', '', { ...on, isAdmin: true })).toBe('members');
   });
   it('계정 기능(캘린더)이 꺼져 있으면 members·calendar·일정 링크 모두 계산으로', () => {
-    const off = { calendarOn: false, isAdmin: true, homeOn: false };
+    const off = { calendarOn: false, isAdmin: true, homeOn: false, decided: true };
     expect(readView('?view=members', '', off)).toBe('calc');
     expect(readView('?view=calendar', '', off)).toBe('calc');
     expect(readView('', '#e=3', off)).toBe('calc');
   });
   it('calendar 는 계정 기능만 켜져 있으면 승인·운영진 여부와 상관없이 그대로', () => {
-    expect(readView('?view=calendar', '', { calendarOn: true, isAdmin: false, homeOn: false })).toBe('calendar');
+    expect(readView('?view=calendar', '', { calendarOn: true, isAdmin: false, homeOn: false, decided: true })).toBe('calendar');
+  });
+  it('승인 멤버인데 아직 모르면 null', () => {
+    expect(readView('', '', { ...on, homeOn: false, decided: false })).toBeNull();
+  });
+  it('아직 몰라도 #s= 면 계산', () => {
+    expect(readView('', '#s=AAA', { ...on, decided: false })).toBe('calc');
+  });
+  it('아직 몰라도 ?view=calendar 면 캘린더', () => {
+    expect(readView('?view=calendar', '', { ...on, decided: false })).toBe('calendar');
+  });
+  it('decided 이고 homeOn 이 꺼졌으면 계산', () => {
+    expect(readView('', '', { ...on, homeOn: false, decided: true })).toBe('calc');
   });
 });

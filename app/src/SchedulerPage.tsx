@@ -54,8 +54,16 @@ export function SchedulerPage() {
   const today = toISO(new Date());
   const club = useClubEvents(clubOn, [{ from: today, to: addDays(today, 61) }]);
   /* 새 API 가 아직 없는 서버(404)면 홈 메뉴·홈 화면을 숨기고 나머지는 그대로 돈다 */
-  const homeOn = clubOn && club.api !== 'missing';
-  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn });
+  const homeOn = clubOn && club.api === 'on';
+  /* 첫 화면은 로그인 복원·승인 확인·일정 API 확인이 끝나야 정한다 — 그 전엔 화면을 비워 두어
+     calc → 홈(또는 홈 → calc)으로 손 밑에서 바뀌지 않게 한다. */
+  const decided = !auth.cloudOn ? true
+    : auth.authLoading ? false
+    : !auth.me ? true
+    : auth.memberLoading ? false
+    : auth.member?.status === 'APPROVED' ? club.api !== 'unknown'
+    : true;
+  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, decided });
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
 
   useEffect(() => {

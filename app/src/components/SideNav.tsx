@@ -27,7 +27,7 @@ const readFold = () => { try { return localStorage.getItem(FOLD_KEY) === '1'; } 
 export function SideNav({
   view, onView, auth, homeOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, children,
 }: {
-  view: View; onView: (v: View) => void; auth: UseAuthReturn;
+  view: View | null; onView: (v: View) => void; auth: UseAuthReturn;
   /* 승인 멤버(이고 일정 API 가 있을 때)만 "홈" 메뉴 */
   homeOn: boolean;
   watchCount: number; watchLimit: number; onWatches: () => void;
