@@ -45,6 +45,7 @@
   /* 시간 협의 막대(§4.8) — 모두 되는 날 진한 보라, 나머지 옅은 보라, 빈 칸 */
   --talk-bar:#8B6CF2; --talk-bar-soft:#B9A6F7; --talk-track:#EEEFEF;
   --badge-bg:#117182; --badge-past-bg:#757678;  /* 숫자 동그라미 — 흰 글자 대비 4.5:1 이상 */
+  --toast-act:#3CBED7;   /* 토스트(--ink 바탕) 위 단추 글자 — #1C1C1C 대비 7.9:1 */
 
   /* 테마별 컬러 코딩 — ThemeCard 왼쪽 띠, 결과 타임라인 블록에 순환 적용
      (캘린더별 색). 참고 시스템의 사용자 지정 태그 색에서 서로 잘 갈리는 6개를 골랐다.
@@ -103,6 +104,7 @@
     --st-closed-fg:#B4B5B7;
     --talk-bar:#A58BFF; --talk-bar-soft:#6E58C2; --talk-track:#424343;
     --badge-bg:#117182; --badge-past-bg:#666768;
+    --toast-act:#117182;   /* 다크의 토스트는 흰 바탕 — 대비 5.7:1 */
 
     --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
     --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
@@ -142,6 +144,7 @@
   --st-closed-fg:#B4B5B7;
   --talk-bar:#A58BFF; --talk-bar-soft:#6E58C2; --talk-track:#424343;
   --badge-bg:#117182; --badge-past-bg:#666768;
+  --toast-act:#117182;
 
   --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
   --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
@@ -678,6 +681,12 @@ button:active{transform:scale(.97)}
   flex-direction:column;align-items:center;gap:8px;pointer-events:none}
 .toast{background:var(--ink);color:var(--surface);font-size:13.5px;padding:10px 16px;border-radius:var(--r-sm);
   box-shadow:var(--sh-up);animation:toastIn .18s ease-out both;max-width:calc(100vw - 32px)}
+/* 단추가 붙은 알림("지웠어요. 되돌리기") — 이 알림만 눌리게 한다 */
+.toast.has-act{display:flex;align-items:center;gap:14px;pointer-events:auto}
+.toast-act{flex:none;height:28px;margin:-4px -8px -4px 0;padding:0 8px;border:none;border-radius:var(--r-xs);background:none;
+  color:var(--toast-act);font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+.toast-act:hover{text-decoration:underline}
+.toast-act:focus-visible{outline:2px solid var(--toast-act);outline-offset:1px}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 .main{flex:1;min-width:0;padding:0 40px}
@@ -1382,4 +1391,81 @@ button:active{transform:scale(.97)}
   .evf-seg{flex-wrap:wrap}
   .evf-s-name{flex:1 1 calc(100% - 80px)}
   .evf-s-branch{flex:1 1 0}
+}
+
+/* ── 내 정보(계획 Task 7, §4.9) — 홈과 같은 카드(.home-card·.home-h·.home-avatar…)에 이 화면 것만 더한다.
+   세 칸 → 두 칸(프로필·지난 일정 | 해 본 테마) → 한 칸(프로필 → 해 본 테마 → 지난 일정) ── */
+.pf-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:start;padding-bottom:48px}
+.pf-col{display:flex;flex-direction:column;gap:24px;min-width:0}
+.pf-me{padding:32px 28px 24px}
+.pf-role{margin-top:4px}
+.pf-link{margin-top:4px;font-size:12.5px;color:var(--ink3)}
+.pf-stats{align-self:stretch;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));text-align:center}
+.pf-stats>div{display:flex;flex-direction:column;align-items:center;gap:2px}
+.pf-stats>div+div{border-left:1px solid var(--line)}
+.pf-stats b{font-size:24px;font-weight:600;color:var(--blue-text);font-variant-numeric:tabular-nums}
+.pf-stats span{font-size:12.5px;color:var(--ink2)}
+
+.pf-played,.pf-past{padding:20px 20px 16px;display:flex;flex-direction:column;gap:12px}
+.pf-past{gap:6px}
+.pf-played .home-h,.pf-past .home-h{margin:0}
+.pf-h{display:flex;align-items:baseline;gap:8px}
+.pf-n{font-size:13px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.pf-search{position:relative;display:flex;flex-direction:column;align-items:flex-start}
+.pf-q{width:100%;box-sizing:border-box;border-radius:10px}
+/* 전역 입력칸 규칙(input:not(...) — 안쪽 여백 12px)보다 세게 — 돋보기 자리를 비운다 */
+input.pf-q:not([type=checkbox]):not([type=radio]):not([type=file]){padding-left:36px}
+.pf-q-ic{position:absolute;left:12px;top:12px;color:var(--ink3);pointer-events:none}
+.pf-results{align-self:stretch;margin-top:6px;border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 4px 12px rgba(0,0,0,.06);max-height:320px;overflow-y:auto}
+.pf-res{display:flex;align-items:center;gap:6px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink)}
+.pf-res:last-child{border-bottom:0}
+.pf-res-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-res-b{flex:1;min-width:0;font-size:12px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-res.done{color:var(--ink3)}
+.pf-res-a{flex:none;font-size:12.5px;color:var(--ink3)}
+.pf-res-btn{flex:none;height:28px;padding:0 10px;border:1px solid var(--ink);border-radius:var(--pill);background:var(--surface);
+  color:var(--ink);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.pf-res-btn:hover:not(:disabled){background:var(--btn-bg-hover)}
+.pf-res-btn:disabled{opacity:.5;cursor:default}
+.pf-res-note{margin:0;padding:12px;font-size:13px;color:var(--ink3);line-height:1.5}
+.pf-manual-link{margin-top:6px;padding:4px 0;border:none;background:none;font-family:inherit;font-size:12.5px;color:var(--blue-text);cursor:pointer}
+.pf-manual-link:hover{text-decoration:underline}
+.pf-manual{align-self:stretch;margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);
+  display:flex;flex-direction:column;gap:10px}
+.pf-field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink2)}
+.pf-field em{font-style:normal;color:var(--ink3)}
+.pf-field input{width:100%;box-sizing:border-box}
+.pf-manual .merr{margin:0;min-height:0}
+.pf-manual-btns{display:flex;justify-content:flex-end;gap:6px}
+.pf-save{border-color:var(--ink);font-weight:600}
+.pf-tabs{margin:0}
+.pf-loading{padding:20px 0 12px;text-align:center;word-break:keep-all}
+.pf-list{list-style:none;margin:0;padding:0}
+.pf-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}
+.pf-row:last-child{border-bottom:0}
+.pf-row-main{flex:1;min-width:0}
+.pf-row-n{font-size:14px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-row-m{margin-top:2px;font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-src{height:20px;padding:0 8px;font-size:11px}
+.pf-del{flex:none;width:32px;height:32px;margin-right:-6px;padding:0;border:none;border-radius:var(--r-xs);background:transparent;
+  color:var(--ink3);font-size:17px;line-height:1;cursor:pointer}
+.pf-del:hover:not(:disabled){color:var(--red-text);background:var(--red-soft)}
+.pf-del:disabled{opacity:.4;cursor:default}
+.pf-past .chip-st{height:20px;padding:0 8px;font-size:11px}
+.pf-past .merr{margin:0}
+.pf-more{margin-top:6px;height:38px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);color:var(--ink);
+  font-family:inherit;font-size:13.5px;cursor:pointer}
+.pf-more:hover:not(:disabled){background:var(--btn-bg-hover);border-color:var(--btn-line-hover)}
+.pf-more:disabled{color:var(--ink3);cursor:default}
+@media(max-width:1100px){
+  .pf-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"me played" "past played"}
+  .pf-col{display:contents}
+  .pf-me{grid-area:me} .pf-played{grid-area:played} .pf-past{grid-area:past}
+}
+@media(max-width:600px){
+  .pf-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"me" "played" "past";gap:16px}
+  .pf-me{padding:24px 20px 16px}
+  .pf-played,.pf-past{padding:16px}
 }

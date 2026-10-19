@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { decideFirstScreen, readView, settleDefault } from './useView';
 
-const on = { calendarOn: true, isAdmin: false, homeOn: true, decided: true };
+const on = { calendarOn: true, isAdmin: false, homeOn: true, profileOn: true, decided: true };
 
 describe('readView', () => {
   it('승인 멤버는 기본이 홈', () => {
@@ -33,13 +33,13 @@ describe('readView', () => {
     expect(readView('?view=members', '', { ...on, isAdmin: true })).toBe('members');
   });
   it('계정 기능(캘린더)이 꺼져 있으면 members·calendar·일정 링크 모두 계산으로', () => {
-    const off = { calendarOn: false, isAdmin: true, homeOn: false, decided: true };
+    const off = { calendarOn: false, isAdmin: true, homeOn: false, profileOn: false, decided: true };
     expect(readView('?view=members', '', off)).toBe('calc');
     expect(readView('?view=calendar', '', off)).toBe('calc');
     expect(readView('', '#e=3', off)).toBe('calc');
   });
   it('calendar 는 계정 기능만 켜져 있으면 승인·운영진 여부와 상관없이 그대로', () => {
-    expect(readView('?view=calendar', '', { calendarOn: true, isAdmin: false, homeOn: false, decided: true })).toBe('calendar');
+    expect(readView('?view=calendar', '', { calendarOn: true, isAdmin: false, homeOn: false, profileOn: false, decided: true })).toBe('calendar');
   });
   it('승인 멤버인데 아직 모르면 null', () => {
     expect(readView('', '', { ...on, homeOn: false, decided: false })).toBeNull();
@@ -52,6 +52,16 @@ describe('readView', () => {
   });
   it('decided 이고 homeOn 이 꺼졌으면 계산', () => {
     expect(readView('', '', { ...on, homeOn: false, decided: true })).toBe('calc');
+  });
+  it('?view=profile 은 승인 멤버(내 정보 API 있음)면 내 정보', () => {
+    expect(readView('?view=profile', '', on)).toBe('profile');
+  });
+  it('?view=profile 은 승인 전·로그아웃·API 404(profileOn 꺼짐)면 계산', () => {
+    expect(readView('?view=profile', '', { ...on, homeOn: false, profileOn: false })).toBe('calc');
+    expect(readView('?view=profile', '', { ...on, profileOn: false })).toBe('calc');
+  });
+  it('계정 기능이 꺼져 있으면 ?view=profile 도 계산', () => {
+    expect(readView('?view=profile', '', { calendarOn: false, isAdmin: false, homeOn: false, profileOn: true, decided: true })).toBe('calc');
   });
 });
 

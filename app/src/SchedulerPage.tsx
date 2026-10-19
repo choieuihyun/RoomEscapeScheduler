@@ -10,6 +10,7 @@ import { useWatches, buildWatchControl } from './useWatches';
 import { useCalendar } from './useCalendar';
 import { useView, decideFirstScreen, type View } from './useView';
 import { useClubEvents } from './useClubEvents';
+import { useProfile } from './useProfile';
 import { addDays, sortKeyDate, todayKst, windowLabel, windowToCalc } from './clubEvents';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
@@ -17,6 +18,7 @@ import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './ser
 import { isClubAdmin, memberName, useMembers } from './useMembers';
 import { MembersPage } from './components/MembersPage';
 import { HomePage } from './components/HomePage';
+import { ProfilePage } from './components/ProfilePage';
 import { ThemeList } from './components/ThemeList';
 import { ConditionsPanel } from './components/ConditionsPanel';
 import { ResultsPanel } from './components/ResultsPanel';
@@ -91,7 +93,13 @@ export function SchedulerPage() {
     cloudOn: auth.cloudOn, authLoading: auth.authLoading, loggedIn: !!auth.me, memberChecked: auth.memberChecked,
     member: auth.member, clubApi: club.api, clubError: club.error,
   });
-  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, decided });
+  /* 내 정보(§4.9) — 해 본 테마 API 는 4단계라 일정 API 와 따로 본다. 승인 멤버면 바로 목록을 한 번 받아
+     서버가 모르면(본문 없는 404) 메뉴·화면을 숨긴다. 화면 안 데이터는 그 화면에 들어올 때 받는다. */
+  const [profileActive, setProfileActive] = useState(false);
+  const profile = useProfile(homeOn, profileActive, today);
+  const profileOn = homeOn && profile.api === 'on';
+  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided });
+  if (profileActive !== (nav.view === 'profile')) setProfileActive(nav.view === 'profile');
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
 
   /* ── 일정 상세 패널과 `#e=<id>` 링크 (계획 Task E6) ── */
@@ -114,6 +122,9 @@ export function SchedulerPage() {
   const goView = useCallback((v: View) => { if (v !== 'calendar') dropLink(); go(v); }, [dropLink, go]);
   /* 홈에서 줄·"일정 자세히 보기"를 누르면 캘린더 화면으로 넘어가 그 일정 상세를 연다 */
   const openFromHome = (ev: EventDto) => { goView('calendar'); openEvent(ev); };
+  /* 내 정보의 지난 일정 → 캘린더 상세. 지난 일정은 받아 둔 목록 범위 밖일 수 있어 먼저 목록에 넣는다
+     (없으면 '연 일정이 목록에서 사라짐' 처리가 패널을 바로 닫는다) */
+  const openFromProfile = (ev: EventDto) => { club.adopt(ev); goView('calendar'); openEvent(ev); };
   /* 홈 미니 달력의 날짜 → 캘린더 화면에서 그날을 고른다. 열려 있던 일정 상세는 닫는다(캘린더의 날짜 고르기와 같게) */
   const pickFromHome = (iso: string) => {
     goView('calendar');
@@ -229,7 +240,7 @@ export function SchedulerPage() {
   return (
     <div className="shell">
       <SideNav
-        view={nav.view} onView={goView} auth={auth} homeOn={homeOn}
+        view={nav.view} onView={goView} auth={auth} homeOn={homeOn} profileOn={profileOn}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
         isAdmin={isAdmin} pendingCount={pendingCount}
@@ -281,6 +292,18 @@ export function SchedulerPage() {
               club={club} clubOn={homeOn}
               onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent} onOpenEvent={openEvent}
               onCalcWindow={calcWindow}
+            />
+          </div>
+        )}
+
+        {profileOn && (
+          <div className={'view home-view' + (nav.view === 'profile' ? '' : ' off')}>
+            <header className="page-head">
+              <h1>내 정보</h1>
+            </header>
+            <ProfilePage
+              profile={profile} member={auth.member} providerIds={auth.providerIds} isAdmin={isAdmin}
+              onOpenEvent={openFromProfile}
             />
           </div>
         )}

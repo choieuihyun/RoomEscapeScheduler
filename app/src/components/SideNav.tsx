@@ -14,6 +14,7 @@ const IcHome = () => <Icon><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13
 const IcCalc = () => <Icon><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" /></Icon>;
 const IcCal = () => <Icon><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></Icon>;
 const IcPeople = () => <Icon><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Icon>;
+const IcMe = () => <Icon><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7.5 8-7.5s8 3.1 8 7.5" /></Icon>;
 const IcBell = () => <Icon><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></Icon>;
 const IcHelp = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></Icon>;
 const IcMoon = () => <Icon><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></Icon>;
@@ -25,11 +26,13 @@ const FOLD_KEY = 'flod.lnb.folded';
 const readFold = () => { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; } };
 
 export function SideNav({
-  view, onView, auth, homeOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, children,
+  view, onView, auth, homeOn, profileOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, children,
 }: {
   view: View | null; onView: (v: View) => void; auth: UseAuthReturn;
   /* 승인 멤버(이고 일정 API 가 있을 때)만 "홈" 메뉴 */
   homeOn: boolean;
+  /* 승인 멤버이고 서버가 해 본 테마 API 를 알 때만 "내 정보" 메뉴 */
+  profileOn: boolean;
   watchCount: number; watchLimit: number; onWatches: () => void;
   onTour: () => void; dark: boolean; onToggleTheme: () => void;
   /* 운영진에게만 "멤버 관리" 메뉴와 승인 대기 숫자 */
@@ -76,6 +79,12 @@ export function SideNav({
           <button className="lnb-item" type="button" onClick={onWatches} title="빈자리 알림">
             <IcBell /><span className="lnb-txt">빈자리 알림</span>
             {gated ? <span className="chip-info muted lnb-tag">승인 후</span> : <span className="badge-n muted lnb-count">{watchCount}/{watchLimit}</span>}
+          </button>
+        )}
+        {profileOn && (
+          <button className={item('profile')} type="button" onClick={() => onView('profile')} title="내 정보"
+            aria-current={view === 'profile' ? 'page' : undefined}>
+            <IcMe /><span className="lnb-txt">내 정보</span>
           </button>
         )}
         {isAdmin && (
