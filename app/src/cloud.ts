@@ -175,6 +175,9 @@ export function say(err: unknown): string {
     'popup-closed-by-user': '로그인 창이 닫혔어요.',
     'credential-already-in-use': '이 구글 계정은 이미 다른 계정에 연결돼 있어요.',
     'popup-blocked': '팝업이 막혔어요. 팝업을 허용하고 다시 눌러 주세요.',
+    'cancelled-popup-request': '로그인 창이 닫혔어요.',
+    /* Firebase 콘솔 → Authentication → 설정 → 승인된 도메인에 이 주소가 없을 때 */
+    'unauthorized-domain': '이 주소에서는 아직 구글 로그인을 쓸 수 없어요. 운영진에게 알려 주세요.',
     'network-request-failed': '인터넷 연결을 확인해 주세요.',
     'operation-not-allowed': '이메일/비밀번호 로그인이 아직 켜져 있지 않습니다 (Firebase 콘솔).',
     /* Authentication을 아예 시작하지 않은 프로젝트에서 나온다. */

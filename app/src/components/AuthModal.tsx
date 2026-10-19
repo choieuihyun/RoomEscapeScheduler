@@ -3,16 +3,26 @@ import type { UseAuthReturn } from '../useAuth';
 import { GoogleMark, KakaoMark } from './SsoMarks';
 import { JoinPanel, PendingPanel, RemovedPanel } from './JoinPanel';
 
-/* 로그인 모달. 로그인 전에는 카카오·구글·(접힌) 기존 아이디 로그인,
-   로그인 뒤 동호회 승인이 안 났으면 같은 창에서 가입 신청·승인 대기로 이어진다(§4.54). */
+/* 로그인 화면. 다우오피스 로그인처럼 화면 전체를 덮고 가운데 한 줄로 놓는다(§4.55).
+   로그인 전에는 카카오·구글·(접힌) 기존 아이디 로그인,
+   로그인 뒤 동호회 승인이 안 났으면 같은 화면에서 가입 신청·승인 대기로 이어진다(§4.54). */
 export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   const idRef = useRef<HTMLInputElement>(null);
   const pwRef = useRef<HTMLInputElement>(null);
+  const { open, closeAuth } = auth;
 
   /* 기존 아이디 칸을 펼쳤을 때만 아이디 칸으로 커서를 보낸다 — 열자마자 키보드가 올라오지 않게 */
   useEffect(() => {
     if (auth.open && auth.legacyOpen && !auth.me) setTimeout(() => idRef.current?.focus(), 30);
   }, [auth.open, auth.legacyOpen, auth.me]);
+
+  /* 화면 전체를 덮으니 바깥을 눌러 닫을 곳이 없다 — Esc 와 오른쪽 위 × 로 닫는다 */
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeAuth(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, closeAuth]);
 
   const status = auth.member?.status;
   let body;
@@ -35,15 +45,11 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   } else {
     body = (
       <>
-        <h3>로그인</h3>
-        <p className="msub">
+        <h3 className="auth-title">로그인</h3>
+        <p className="msub auth-intro">
           {auth.inKakaoApp
             ? '카카오톡 안에서 열었어요. 카카오 로그인은 여기서 바로 돼요.'
-            : '동호회 일정과 빈자리 알림은 로그인하고 운영진 승인을 받은 뒤에 쓸 수 있어요.'}
-        </p>
-        <p className="auth-box warn">
-          <b>아이디로 쓰던 계정이 있으면</b> 먼저 '기존 아이디로 로그인'으로 들어온 뒤 카카오·구글을 연결하세요.
-          카카오로 바로 들어오면 새 계정이 따로 만들어져요.
+            : '동호회 일정과 빈자리 알림은 운영진 승인 뒤에 쓸 수 있어요.'}
         </p>
         <div className="sso">
           <button className="sso-btn sso-kakao" type="button" disabled={auth.busy} onClick={auth.loginKakao}>
@@ -61,45 +67,42 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
           )}
         </div>
         <p className="merr" role="alert">{auth.err}</p>
+        {/* 아이디로 쓰던 사람이 카카오로 바로 들어오면 새 계정이 따로 생긴다 — 질문으로 먼저 붙잡는다 */}
         <details className="legacy" open={auth.legacyOpen} onToggle={e => auth.setLegacyOpen(e.currentTarget.open)}>
-          <summary>기존 아이디로 로그인</summary>
-          <div className="mrow">
-            <label htmlFor="auth-id">아이디</label>
-            <input
-              id="auth-id" ref={idRef}
-              autoComplete="username" autoCapitalize="off" spellCheck={false} placeholder="englishman"
-              value={auth.id} onChange={e => auth.setId(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') pwRef.current?.focus(); }}
-            />
-          </div>
-          <div className="mrow">
-            <label htmlFor="auth-pw">비밀번호 <span className="dim">(6자 이상)</span></label>
-            <input
-              id="auth-pw" ref={pwRef}
-              type="password" autoComplete="current-password" placeholder="••••••"
-              value={auth.pw} onChange={e => auth.setPw(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') auth.submit(); }}
-            />
-          </div>
-          <button className="btn legacy-go" type="button" disabled={auth.busy} onClick={auth.submit}>
-            {auth.busy ? '잠시만…' : '아이디로 로그인'}
+          <summary>아이디로 쓰던 계정이 있나요? <b>기존 아이디로 로그인</b></summary>
+          <p className="auth-box">
+            카카오로 바로 들어오면 새 계정이 따로 만들어져요. <b>먼저 아이디로 들어온 뒤</b> 카카오·구글을 연결해 두세요.
+          </p>
+          <label className="sr-only" htmlFor="auth-id">아이디</label>
+          <input
+            id="auth-id" ref={idRef} className="auth-field"
+            autoComplete="username" autoCapitalize="off" spellCheck={false} placeholder="아이디"
+            value={auth.id} onChange={e => auth.setId(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') pwRef.current?.focus(); }}
+          />
+          <label className="sr-only" htmlFor="auth-pw">비밀번호</label>
+          <input
+            id="auth-pw" ref={pwRef} className="auth-field"
+            type="password" autoComplete="current-password" placeholder="비밀번호"
+            value={auth.pw} onChange={e => auth.setPw(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') auth.submit(); }}
+          />
+          <button className="btn btn-go legacy-go" type="button" disabled={auth.busy} onClick={auth.submit}>
+            {auth.busy ? '잠시만…' : '로그인'}
           </button>
-          <p className="auth-hint">새 가입은 카카오·구글로만 받아요. 아이디 계정은 로그인한 뒤 카카오·구글을 연결해 두세요.</p>
           <p className="mnote"><b>비밀번호를 잊어버리면 찾을 방법이 없어요.</b> 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.</p>
         </details>
-        <div className="mbtns end">
-          <button className="btn" type="button" onClick={auth.closeAuth}>닫기</button>
-        </div>
       </>
     );
   }
 
   return (
-    <div
-      className={'modal auth-modal' + (auth.open ? ' on' : '')}
-      onClick={e => { if (e.target === e.currentTarget) auth.closeAuth(); }}
-    >
-      <div className="mbox">{body}</div>
+    <div className={'modal auth-modal' + (open ? ' on' : '')} role="dialog" aria-modal="true" aria-label="로그인">
+      <button className="auth-x" type="button" aria-label="닫기" onClick={closeAuth}>×</button>
+      <div className="mbox">
+        <div className="auth-logo" aria-hidden="true">Flo<span className="dim">duler</span></div>
+        {body}
+      </div>
     </div>
   );
 }
