@@ -36,6 +36,8 @@ export function SideNav({
     try { localStorage.setItem(FOLD_KEY, f ? '0' : '1'); } catch { /* 기억 못 해도 접기는 된다 */ }
     return !f;
   });
+  /* 로그인했지만 아직 승인 전이면 동호회 메뉴에 "승인 후" 꼬리표를 단다 */
+  const gated = !!auth.me && auth.member !== null && auth.member.status !== 'APPROVED';
   const item = (v: View) => 'lnb-item' + (view === v ? ' on' : '');
   return (
     <aside className={'lnb' + (folded ? ' folded' : '')}>
@@ -55,12 +57,13 @@ export function SideNav({
           <button className={item('calendar')} type="button" onClick={() => onView('calendar')} title="캘린더"
             aria-current={view === 'calendar' ? 'page' : undefined}>
             <IcCal /><span className="lnb-txt">캘린더</span>
+            {gated && <span className="lnb-tag">승인 후</span>}
           </button>
         )}
         {auth.cloudOn && (
           <button className="lnb-item" type="button" onClick={onWatches} title="빈자리 알림">
             <IcBell /><span className="lnb-txt">빈자리 알림</span>
-            <span className="lnb-count">{watchCount}/{watchLimit}</span>
+            {gated ? <span className="lnb-tag">승인 후</span> : <span className="lnb-count">{watchCount}/{watchLimit}</span>}
           </button>
         )}
       </nav>

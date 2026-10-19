@@ -888,3 +888,93 @@ button:active{transform:scale(.97)}
 .tour-skip:hover{color:var(--ink2)}
 .tour-next-group{display:flex;gap:6px}
 .tour-next-group .btn,.tour-next-group .btn-go{height:32px;padding:0 14px;font-size:14px;font-weight:500;border-radius:var(--r-sm)}
+
+/* ── 로그인 창·가입 신청·계정 자리 (§4.54) ── 카카오 노랑만 가이드 색을 그대로 쓰고
+   나머지는 토큰이다. 구글 버튼 테두리 #747775 도 구글 가이드 값. */
+.auth-modal .mbox{max-width:400px}
+.auth-box{margin:0 0 14px;padding:11px 13px;font-size:13px;line-height:1.6;color:var(--ink2);
+  background:var(--surface2);border:1px solid var(--line);border-radius:var(--r)}
+.auth-box b{color:var(--ink);font-weight:600}
+.auth-box.warn{color:var(--amber-text);background:var(--amber-soft);border-color:var(--amber-line)}
+.auth-box.warn b{color:var(--amber-text)}
+.auth-modal .msub{margin-bottom:14px}
+.auth-hint{margin:0;font-size:12px;line-height:1.6;color:var(--ink3)}
+.auth-hint.bad{color:var(--red-text);font-weight:500}
+.sso{display:flex;flex-direction:column;gap:10px}
+.sso .auth-box{margin:0}
+.sso-btn{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;width:100%;
+  border-radius:12px;font-family:inherit;font-size:15px;cursor:pointer}
+.sso-btn:disabled{opacity:.5;cursor:default}
+.sso-kakao{background:#FEE500;border:1px solid #FEE500;color:rgba(0,0,0,.85);font-weight:600}
+.sso-kakao:hover:not(:disabled){filter:brightness(.96)}
+.sso-google{background:var(--btn-bg);border:1px solid #747775;color:var(--ink);font-weight:500;gap:10px}
+.sso-google:hover:not(:disabled){background:var(--btn-bg-hover)}
+.sso-btn.sm{height:36px;border-radius:8px;font-size:13.5px}
+.sso-btn.sm svg{width:16px;height:16px}
+.sso-done{height:36px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13.5px;
+  color:var(--green-text);background:var(--btn-bg);border:1px solid var(--btn-line);border-radius:8px}
+.auth-modal .merr{margin:8px 0 0}
+.auth-modal .merr:empty{min-height:0;margin:0}
+.legacy{margin-top:6px;border-top:1px solid var(--line);padding-top:12px}
+.legacy summary{font-size:13px;color:var(--ink2);cursor:pointer;margin-bottom:2px}
+.legacy[open] summary{margin-bottom:12px}
+.legacy-go{width:100%;height:40px;margin-bottom:10px;border-radius:var(--r)}
+.legacy .mnote{margin-top:12px;padding-top:12px}
+.mbtns.col{flex-direction:column}
+.mbtns.col .btn-go,.mbtns.col .btn{flex:none;width:100%;height:40px}
+.mbtns.end{justify-content:flex-end}
+
+/* 계정 자리 */
+.acct-wrap{width:100%;display:flex;flex-direction:column;gap:10px;min-width:0}
+.acct-id{display:flex;align-items:center;gap:8px;min-width:0}
+.acct-ava{display:none;flex:none;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;
+  background:var(--blue-soft);color:var(--blue-text);font-size:13px;font-weight:700}
+.acct-who{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0}
+.acct-who b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.acct-sub{flex-basis:100%;font-size:12px;color:var(--ink3)}
+.acct-chip{font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.acct-chip.admin{color:var(--blue-text);background:var(--blue-soft)}
+.acct-chip.wait{color:var(--amber-text);background:var(--amber-soft)}
+.acct-join{align-self:flex-start;height:32px;padding:0 12px}
+.acct-out{align-self:flex-start;height:32px;padding:0 12px}
+.acct-linkbtn{display:none}
+.acct-link{display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--surface2);
+  border:1px solid var(--line);border-radius:var(--r)}
+.acct-link>b{font-size:13px;color:var(--ink)}
+.acct-link>span{font-size:12.5px;line-height:1.6;color:var(--ink2)}
+.acct-link .merr{margin:0;min-height:0;font-size:12.5px}
+.acct-link .merr:empty{display:none}
+.lnb-tag{margin-left:auto;font-size:11.5px;color:var(--ink3);white-space:nowrap}
+
+/* 접은 메뉴 — 머리글자만, 연결 상자는 눌러야 옆에 뜬다 */
+.lnb.folded .acct-wrap{align-items:center;gap:6px}
+.lnb.folded .acct-who{display:none}
+.lnb.folded .acct-ava{display:inline-flex}
+.lnb.folded .acct-join,.lnb.folded .acct-out,.lnb.folded .acct-linkbtn{display:inline-flex;align-self:stretch;
+  justify-content:center;height:28px;padding:0 2px;font-size:11.5px}
+.lnb.folded .lnb-tag{display:none}
+.lnb.folded .acct-wrap:not(.open) .acct-link{display:none}
+.lnb.folded .acct-wrap.open .acct-link{display:flex;position:fixed;left:80px;bottom:12px;width:280px;z-index:40;
+  box-shadow:var(--sh-up)}
+
+@media(max-width:900px){
+  .lnb-acct{min-width:0}
+  .acct-wrap{flex-direction:row;align-items:center;gap:6px;width:auto;position:relative}
+  .acct-who,.lnb.folded .acct-who{display:none}
+  .acct-ava,.lnb.folded .acct-ava{display:inline-flex}
+  .acct-join,.acct-out,.acct-linkbtn{display:inline-flex;height:30px;padding:0 9px;font-size:12.5px}
+  .acct-wrap:not(.open) .acct-link{display:none}
+  .acct-wrap.open .acct-link,.lnb.folded .acct-wrap.open .acct-link{display:flex;position:fixed;top:54px;right:12px;
+    left:auto;bottom:auto;width:min(300px,calc(100vw - 24px));z-index:40;box-shadow:var(--sh-up)}
+  .lnb.folded .lnb-tag{display:inline}
+  .lnb.folded .acct-join,.lnb.folded .acct-out,.lnb.folded .acct-linkbtn{align-self:auto;height:30px;padding:0 9px;
+    font-size:12.5px}
+}
+
+/* 좁은 화면의 로그인 창 — 아래에서 올라오는 시트 */
+@media(max-width:600px){
+  .auth-modal{align-items:flex-end;padding:0}
+  .auth-modal .mbox{max-width:none;border-radius:20px 20px 0 0;border-width:1px 0 0;padding:24px 20px 28px;
+    max-height:92vh;transform:translateY(24px)}
+  .auth-modal.on .mbox{transform:none}
+}

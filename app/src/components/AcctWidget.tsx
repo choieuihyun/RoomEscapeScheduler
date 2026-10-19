@@ -1,7 +1,12 @@
+import { useState } from 'react';
 import type { UseAuthReturn } from '../useAuth';
+import { GoogleMark, KakaoMark } from './SsoMarks';
 
-/* 헤더 계정 줄 — index.html의 renderAcct() 이식. */
+/* 왼쪽 메뉴 아래 계정 자리 — 닉네임·상태 칩·로그아웃, 아이디 계정이면 카카오·구글 연결 상자(§4.54).
+   접힌 메뉴·좁은 화면에선 이름 대신 동그란 머리글자만 두고, 연결 상자는 눌러야 뜨는 작은 창이 된다. */
 export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
+  const [linkOpen, setLinkOpen] = useState(false);
+
   if (!auth.cloudOn) {
     return (
       <span title="firebase-config.js가 비어 있습니다. README의 '계정 만들고 일정 저장하기' 참고">
@@ -13,15 +18,61 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
      않는다 — 실제론 로그아웃된 적 없는데 로그아웃된 것처럼 보이는 깜빡임. */
   if (auth.authLoading) return <span>확인 중…</span>;
 
-  return auth.me ? (
-    <>
-      <span><b>{auth.me.id}</b> 님</span>
-      <button className="btn" type="button" onClick={auth.logout}>로그아웃</button>
-    </>
-  ) : (
-    <>
-      <span>일정을 저장해 두려면</span>
-      <button className="btn" type="button" onClick={() => auth.openAuth()}>로그인</button>
-    </>
+  if (!auth.me) {
+    return (
+      <>
+        <span>일정을 저장해 두려면</span>
+        <button className="btn" type="button" onClick={() => auth.openAuth()}>로그인</button>
+      </>
+    );
+  }
+
+  const m = auth.member;
+  const nickname = m?.nickname ?? null;
+  const name = nickname || auth.me.id || '로그인됨';
+  const role = m?.role ?? null;
+  const chip = m?.status === 'PENDING' ? { cls: 'wait', text: '승인 대기' }
+    : m?.status === 'APPROVED' && role === 'ADMIN' ? { cls: 'admin', text: '운영진' }
+    : null;
+  const needJoin = m?.status === 'NONE' || m?.status === 'REJECTED';
+
+  const isPassword = auth.providerIds.includes('password');
+  const googleLinked = auth.providerIds.includes('google.com');
+  /* 카카오 연결은 서버 일이라 서버가 동호회 기능을 모르면(member null) 그 줄은 빼고 본다 */
+  const kakaoDone = m === null ? true : m.kakaoLinked;
+  const showLink = isPassword && !(googleLinked && kakaoDone);
+
+  return (
+    <div className={'acct-wrap' + (linkOpen ? ' open' : '')}>
+      <div className="acct-id">
+        <span className="acct-ava" aria-hidden="true">{[...name][0]}</span>
+        <div className="acct-who">
+          <b title={name}>{name} 님</b>
+          {chip && <span className={'acct-chip ' + chip.cls}>{chip.text}</span>}
+          {nickname && auth.me.id && <span className="acct-sub">아이디: {auth.me.id}</span>}
+        </div>
+      </div>
+      {needJoin && (
+        <button className="btn acct-join" type="button" onClick={() => auth.openAuth()}>가입 신청</button>
+      )}
+      {showLink && (
+        <>
+          <button className="btn acct-linkbtn" type="button" aria-expanded={linkOpen}
+            onClick={() => setLinkOpen(o => !o)}>연결</button>
+          <div className="acct-link">
+            <b>카카오·구글을 연결해 두세요</b>
+            <span>연결하면 다음부터 버튼 한 번으로 들어와요. 지금 일정과 빈자리 알림은 그대로 이어져요.</span>
+            {m !== null && (m.kakaoLinked
+              ? <div className="sso-done">✓ 카카오 연결됨</div>
+              : <button className="sso-btn sso-kakao sm" type="button" onClick={auth.linkKakao}><KakaoMark />카카오 연결</button>)}
+            {googleLinked
+              ? <div className="sso-done">✓ 구글 연결됨</div>
+              : <button className="sso-btn sso-google sm" type="button" onClick={auth.linkGoogle}><GoogleMark />구글 연결</button>}
+            {auth.linkErr && <p className="merr" role="alert">{auth.linkErr}</p>}
+          </div>
+        </>
+      )}
+      <button className="btn acct-out" type="button" onClick={auth.logout}>로그아웃</button>
+    </div>
   );
 }

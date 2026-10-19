@@ -50,6 +50,12 @@ export function useAuth() {
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  /* 계정 자리의 "카카오·구글 연결" 실패 문구 — 로그인 창의 err 와 섞이지 않게 따로 둔다 */
+  const [linkErr, setLinkErr] = useState('');
+  /* 이 계정에 붙은 로그인 수단('password'·'google.com') — 아이디 계정인지, 구글이 붙었는지 */
+  const [providerIds, setProviderIds] = useState<string[]>([]);
+  /* 방금 로그인했다 — 멤버 상태가 오면 가입 신청 단계를 로그인 창 안에서 이어서 보여 준다 */
+  const afterLogin = useRef(false);
 
   /* 예전에 로그인한 적이 있을 때만 SDK를 미리 깨운다 — 한 번도 안 쓴 사람에게
      짐을 지우지 않기 위해서다 (index.html의 SEEN_KEY 가드). */
@@ -83,7 +89,7 @@ export function useAuth() {
         endTrip: endKakaoTrip,
         kakaoLogin,
         kakaoLink,
-        signInWithCustom: t => cloud().then(C => C.signInWithCustom(t)).then(m => { setMe(m); return m; }),
+        signInWithCustom: t => cloud().then(C => C.signInWithCustom(t)).then(m => { afterLogin.current = true; setMe(m); return m; }),
         idToken: () => cloud().then(C => C.idToken()),
         redirectUri: appRedirectUri(location),
         cloudOn,
@@ -94,6 +100,7 @@ export function useAuth() {
         cloud().then(C => C.watch(u => setMe(u))).catch(() => { /* noop */ });
       } else if (r.kind === 'linked') {
         setMember(await loadMember());
+        cloud().then(C => C.providers()).then(setProviderIds).catch(() => { /* noop */ });
       } else if (r.kind === 'error') {
         setErr(r.message); setOpen(true);
       }
@@ -106,7 +113,16 @@ export function useAuth() {
     if (!uid) { setMember(null); setMemberLoading(false); pushedFor.current = ''; return; }
     let live = true;
     setMemberLoading(true);
-    loadMember().then(m => { if (live) { setMember(m); setMemberLoading(false); } });
+    loadMember().then(m => {
+      if (!live) return;
+      setMember(m); setMemberLoading(false);
+      if (afterLogin.current) {
+        /* 승인됐거나 서버가 동호회를 모르면 창을 닫고, 아니면 가입·대기 안내로 이어 간다 */
+        afterLogin.current = false;
+        setOpen(!!m && m.status !== 'APPROVED');
+      }
+    });
+    cloud().then(C => C.providers()).then(p => { if (live) setProviderIds(p); }).catch(() => { /* noop */ });
     /* 기기 등록 — 권한이 이미 허용된 경우에만 조용히 올린다. 로그인당 한 번 */
     if (pushedFor.current !== uid) {
       pushedFor.current = uid;
@@ -141,10 +157,11 @@ export function useAuth() {
     setBusy(true); setErr('');
     try {
       const result = await C.signIn(cleanId, pw);
+      afterLogin.current = true;
       setMe(result);
       setAuthLoading(false);
       localStorage.setItem(SEEN_KEY, '1');
-      setOpen(false); setPw('');
+      setPw('');
     } catch (e) {
       setErr(C.say(e));
     } finally {
@@ -162,9 +179,10 @@ export function useAuth() {
 
   /* 로그인한 계정에 카카오를 붙인다 — 갔다 오면 위의 돌아오기 처리가 link 로 마무리한다 */
   const linkKakao = useCallback(() => {
-    if (!cloudOn) { setErr('로그인이 아직 설정되지 않았어요.'); return; }
+    setLinkErr('');
+    if (!cloudOn) { setLinkErr('로그인이 아직 설정되지 않았어요.'); return; }
     const clientId = window.KAKAO_CLIENT_ID;
-    if (!clientId) { setErr('카카오 로그인이 아직 설정되지 않았어요.'); return; }
+    if (!clientId) { setLinkErr('카카오 로그인이 아직 설정되지 않았어요.'); return; }
     const state = beginKakaoTrip('link', location.hash);
     location.assign(kakaoAuthUrl(clientId, appRedirectUri(location), state));
   }, [cloudOn]);
@@ -174,10 +192,12 @@ export function useAuth() {
     if (!C) { setErr('로그인을 준비하지 못했어요. 인터넷 연결을 확인해 주세요.'); return; }
     setBusy(true); setErr('');
     try {
-      setMe(await C.signInWithGoogle());
+      const result = await C.signInWithGoogle();
+      afterLogin.current = true;
+      setMe(result);
       setAuthLoading(false);
       localStorage.setItem(SEEN_KEY, '1');
-      setOpen(false); setPw('');
+      setPw('');
     } catch (e) {
       setErr(C.say(e));
     } finally {
@@ -187,12 +207,13 @@ export function useAuth() {
 
   const linkGoogle = useCallback(async () => {
     const C = await cloud().catch(() => null);
-    if (!C) { setErr('로그인을 준비하지 못했어요. 인터넷 연결을 확인해 주세요.'); return; }
-    setErr('');
+    if (!C) { setLinkErr('로그인을 준비하지 못했어요. 인터넷 연결을 확인해 주세요.'); return; }
+    setLinkErr('');
     try {
       await C.linkGoogle();
+      setProviderIds(await C.providers());
     } catch (e) {
-      setErr(C.say(e));
+      setLinkErr(C.say(e));
     }
   }, []);
 
@@ -207,13 +228,14 @@ export function useAuth() {
     try { (await cloud()).signOut(); } catch { /* noop */ }
     localStorage.removeItem(SEEN_KEY);
     setMe(null);
+    setProviderIds([]); setLinkErr('');
     setAuthLoading(false);
   }, []);
 
   return {
     cloudOn, me, authLoading, open, id, setId, pw, setPw, err, busy, openAuth, closeAuth, submit, logout,
     member, memberLoading, refreshMember, loginKakao, loginGoogle, linkKakao, linkGoogle, join,
-    inKakaoApp, legacyOpen, setLegacyOpen,
+    inKakaoApp, legacyOpen, setLegacyOpen, linkErr, providerIds: uid ? providerIds : [],
   };
 }
 
