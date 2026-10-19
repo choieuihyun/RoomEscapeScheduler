@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { beginKakaoTrip, endKakaoTrip } from './kakaoTrip'
 
-/** 메모리 sessionStorage 대역. */
+/** 메모리 localStorage 대역. */
 function fakeStorage() {
   const m = new Map<string, string>()
   return {
@@ -12,7 +12,7 @@ function fakeStorage() {
 }
 
 beforeEach(() => {
-  vi.stubGlobal('sessionStorage', fakeStorage())
+  vi.stubGlobal('localStorage', fakeStorage())
 })
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -63,7 +63,7 @@ describe('카카오 왕복 보관', () => {
     expect(endKakaoTrip('x')).toBeNull()
   })
   it('깨진 JSON 이면 null', () => {
-    sessionStorage.setItem('flod.kakao.trip', '{oops')
+    localStorage.setItem('flod.kakao.trip', '{oops')
     expect(endKakaoTrip('x')).toBeNull()
   })
 })
@@ -73,7 +73,7 @@ describe('저장이 막힌 환경', () => {
     const boom = () => {
       throw new Error('blocked')
     }
-    vi.stubGlobal('sessionStorage', { getItem: boom, setItem: boom, removeItem: boom })
+    vi.stubGlobal('localStorage', { getItem: boom, setItem: boom, removeItem: boom })
   })
   it('begin 은 state 를 그대로 돌려준다', () => {
     expect(beginKakaoTrip('login', '#s=AAA', () => 'st')).toBe('st')

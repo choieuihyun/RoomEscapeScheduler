@@ -70,3 +70,19 @@ describe('sayClub', () => {
     expect(sayClub(err)).toBe('그런 멤버를 찾을 수 없어요.');
   });
 });
+
+describe('요청 시간 제한', () => {
+  it('타임아웃·중단 오류는 사람 말로 나온다', async () => {
+    const t = Object.assign(new Error('timed out'), { name: 'TimeoutError' });
+    const a = Object.assign(new Error('aborted'), { name: 'AbortError' });
+    expect(sayClub(t)).toBe('서버가 응답하지 않아요. 잠시 뒤에 다시 해 주세요.');
+    expect(sayClub(a)).toBe('서버가 응답하지 않아요. 잠시 뒤에 다시 해 주세요.');
+  });
+
+  it('요청에 AbortSignal 이 실린다', async () => {
+    const f = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    vi.stubGlobal('fetch', f);
+    await joinClub('a', 'T');
+    expect(f.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+  });
+});

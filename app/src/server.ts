@@ -19,12 +19,15 @@ function base(): string {
   return import.meta.env.DEV ? '' : DEFAULT_BASE;
 }
 
+/* 서버가 응답 없이 멈춰도 10초 뒤엔 실패시킨다 — 안 그러면 "확인 중"이 끝나지 않는다 */
+const TIMEOUT_MS = 10_000;
+
 interface ApiError extends Error {
   status?: number;
 }
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(base() + path, { headers: { Accept: 'application/json' } });
+  const res = await fetch(base() + path, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) {
     const e: ApiError = new Error('HTTP ' + res.status);
     e.status = res.status;
@@ -79,6 +82,7 @@ export const schedule = (branchId: string, date: string): Promise<ScheduleRespon
 export function say(err: unknown): string {
   const e = err as ApiError;
   if (e?.status === 404) return '그 날짜는 아직 정보가 없어요. 다른 날짜를 골라 보세요.';
+  if (e?.name === 'TimeoutError' || e?.name === 'AbortError') return '서버가 응답하지 않아요. 잠시 뒤에 다시 해 주세요.';
   if (e instanceof TypeError)              /* fetch가 못 닿으면 TypeError다 */
     return `서버에 연결이 안 돼요 (${base() || DEFAULT_BASE}). 직접 입력과 사진 읽기는 그대로 쓸 수 있어요.`;
   return '불러오지 못했어요. 잠시 뒤에 다시 해 주세요.';
@@ -131,6 +135,7 @@ async function send<T>(path: string, token: string | null, method: 'GET' | 'POST
       ...(body != null ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body != null ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) {
     const e: WatchApiError = new Error('HTTP ' + res.status);

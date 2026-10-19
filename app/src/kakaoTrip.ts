@@ -1,5 +1,8 @@
 /**
- * 카카오로 나갔다 돌아오기 — state 와 공유 링크 해시를 sessionStorage 에 맡겨 둔다.
+ * 카카오로 나갔다 돌아오기 — state 와 공유 링크 해시를 localStorage 에 맡겨 둔다.
+ * sessionStorage 가 아닌 이유: 휴대폰에서 "카카오톡으로 로그인"(앱 전환) 뒤 돌아올 때 새 탭으로 열리면
+ * 탭별 sessionStorage 의 trip 이 없어 모든 첫 가입이 "만료됐어요"가 된다. 128비트 1회용·10분·불일치 시 유지·
+ * 일치 시 즉시 삭제라 의미는 같고, 공격자는 피해자 저장소에 쓸 수 없어 CSRF 방어도 그대로다.
  * state 는 CSRF 방지용(돌아온 state 가 내가 보낸 것과 같은지 확인),
  * 해시(#s=·#z=)는 카카오 왕복 중 사라지니 돌아와서 되살리려고 맡긴다.
  * React·Firebase 를 import 하지 않는다(kakao.ts 와 같은 이유).
@@ -20,7 +23,7 @@ function defaultRand(): string {
 export function beginKakaoTrip(mode: KakaoMode, hash: string, rand: () => string = defaultRand): string {
   const state = rand()
   try {
-    sessionStorage.setItem(KEY, JSON.stringify({ state, mode, hash, at: Date.now() }))
+    localStorage.setItem(KEY, JSON.stringify({ state, mode, hash, at: Date.now() }))
   } catch {
     // 저장이 막힌 환경(시크릿 창 등): 맡기지 못해도 나가는 건 막지 않는다. 돌아올 때 end 가 null 로 실패 처리한다.
   }
@@ -33,11 +36,11 @@ export function beginKakaoTrip(mode: KakaoMode, hash: string, rand: () => string
  */
 export function endKakaoTrip(state: string, now: number = Date.now()): { mode: KakaoMode; hash: string } | null {
   try {
-    const raw = sessionStorage.getItem(KEY)
+    const raw = localStorage.getItem(KEY)
     if (!raw) return null
     const t = JSON.parse(raw) as { state?: unknown; mode?: unknown; hash?: unknown; at?: unknown }
     if (t.state !== state) return null
-    sessionStorage.removeItem(KEY)
+    localStorage.removeItem(KEY)
     if (typeof t.at !== 'number' || now - t.at > TTL_MS) return null
     if (t.mode !== 'login' && t.mode !== 'link') return null
     return { mode: t.mode, hash: typeof t.hash === 'string' ? t.hash : '' }
