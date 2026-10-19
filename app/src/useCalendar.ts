@@ -9,7 +9,8 @@ import { toISO } from './core';
    기준은 늘 `selected`(고른 날) 하나다. 주·일 보기는 그날이 든 주·그날을 보여주고,
    이전/다음은 보기 단위(달·주·일)만큼 움직인다. */
 export type CalMode = 'month' | 'week' | 'day';
-export type CalKind = 'wish' | 'done' | 'watch';
+/* club = 동호회 일정(계획 Task E6) — 승인 멤버이고 일정 API 가 있을 때만 필터 줄이 보인다. */
+export type CalKind = 'wish' | 'done' | 'watch' | 'club';
 export type CalFilter = Record<CalKind, boolean>;
 
 const FILTER_KEY = 'flod.cal.filter';
@@ -29,8 +30,18 @@ function save(key: string, v: unknown) {
 }
 const isMode = (v: unknown): v is CalMode => v === 'month' || v === 'week' || v === 'day';
 const isIds = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string');
-const isFilter = (v: unknown): v is CalFilter =>
-  !!v && typeof v === 'object' && ['wish', 'done', 'watch'].every(k => typeof (v as Record<string, unknown>)[k] === 'boolean');
+/* 저장된 필터를 읽는다. 동호회 일정 전에 저장한 값엔 club 키가 없다 — 그때는 켠 채로 채운다. */
+export function toFilter(v: unknown): CalFilter {
+  const ok = !!v && typeof v === 'object'
+    && ['wish', 'done', 'watch'].every(k => typeof (v as Record<string, unknown>)[k] === 'boolean');
+  if (!ok) return { wish: true, done: true, watch: true, club: true };
+  const f = v as Record<string, unknown>;
+  return { wish: f.wish as boolean, done: f.done as boolean, watch: f.watch as boolean,
+    club: typeof f.club === 'boolean' ? f.club : true };
+}
+function loadFilter(): CalFilter {
+  try { return toFilter(JSON.parse(localStorage.getItem(FILTER_KEY) || 'null')); } catch { return toFilter(null); }
+}
 
 const parseISO = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number);
@@ -47,10 +58,11 @@ export function useCalendar() {
   const [mini, setMini] = useState(() => ym(new Date()));
   const [selected, setSelected] = useState<string>(() => toISO(new Date()));
   const [mode, setModeRaw] = useState<CalMode>(() => load(MODE_KEY, 'month', isMode));
-  const [filter, setFilterRaw] = useState<CalFilter>(() =>
-    load(FILTER_KEY, { wish: true, done: true, watch: true }, isFilter));
+  const [filter, setFilterRaw] = useState<CalFilter>(() => loadFilter());
   /* "그날 열려 있는 회차" 에서 볼 지점(§4.51) — 날짜를 바꿔도, 다시 열어도 그대로. */
   const [branches, setBranches] = useState<string[]>(() => load(BRANCH_KEY, [], isIds));
+  /* 오른쪽 패널에 연 동호회 일정 id — null 이면 고른 날의 상세를 보인다 */
+  const [openEvent, setOpenEvent] = useState<number | null>(null);
 
   /* 날짜 하나를 고르면 큰 달력과 미니 달력이 둘 다 그 달로 따라간다. */
   const select = useCallback((iso: string) => {
@@ -92,7 +104,7 @@ export function useCalendar() {
   const miniNext = useCallback(() => setMini(c => addMonth(c, 1)), []);
 
   return {
-    cursor, selected, mode, filter, mini, branches,
+    cursor, selected, mode, filter, mini, branches, openEvent, setOpenEvent,
     prev, next, goToday, select, setMode, toggleKind, miniPrev, miniNext, toggleBranch, clearBranches,
   };
 }

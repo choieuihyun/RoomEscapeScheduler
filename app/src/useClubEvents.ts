@@ -136,6 +136,11 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     }
   }, [enabled, invalidateReload]);
 
+  /* 밖에서 받아 온 일정 하나를 목록에 넣는다 — `#e=` 링크로 연 일정이 지금 범위 밖이어도 패널이 바로 보이게. */
+  const adopt = useCallback((ev: EventDto) => {
+    if (enabled && alive.current) setEvents((cur) => upsert(cur, ev));
+  }, [enabled]);
+
   const setBusy = (id: number, on: boolean) => {
     if (!alive.current) return;
     setBusyIds((cur) => {
@@ -206,7 +211,9 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   );
 
   return {
-    events, api, error, reload, refreshOne,
+    events, api, error, reload, refreshOne, adopt,
     create, update, remove, join, leave, addPerson, removePerson, setBooked, busyIds,
   };
 }
+
+export type UseClubEventsReturn = ReturnType<typeof useClubEvents>;

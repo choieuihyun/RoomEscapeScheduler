@@ -291,6 +291,8 @@ export function readShareHash(hash: string): ShareHash {
   const [, tag, payload] = m;
   if (tag === 's') return { kind: 'plain', payload };
   if (tag === 'z') return { kind: 'packed', payload };
+  // #e= 는 동호회 일정 링크(eventLink.ts)다 — 공유 링크가 아니라서 계산 화면은 자동저장으로 간다.
+  if (tag === 'e') return { kind: 'none' };
   return { kind: 'unknown', tag };
 }
 

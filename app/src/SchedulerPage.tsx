@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useScheduler } from './scheduler/useScheduler';
 import { useTheme } from './useTheme';
 import { useTour } from './useTour';
@@ -11,7 +11,9 @@ import { useCalendar } from './useCalendar';
 import { useView, decideFirstScreen } from './useView';
 import { useClubEvents } from './useClubEvents';
 import { addDays } from './clubEvents';
-import { toISO } from './core';
+import { monthGrid, toISO } from './core';
+import { readEventHash } from './eventLink';
+import { errorCode, getEvent, isMissingApi, sayClub } from './server';
 import { isClubAdmin, useMembers } from './useMembers';
 import { MembersPage } from './components/MembersPage';
 import { ThemeList } from './components/ThemeList';
@@ -54,7 +56,13 @@ export function SchedulerPage() {
   /* 동호회 일정 목록은 여기서 한 번만 만든다 — 홈(E7)과 캘린더(E6)가 같이 쓴다. 승인 멤버만 부른다. */
   const clubOn = auth.cloudOn && auth.member?.status === 'APPROVED';
   const today = toISO(new Date());
-  const club = useClubEvents(clubOn, [{ from: today, to: addDays(today, 61) }]);
+  /* 캘린더 범위 — 월 보기는 보이는 달 칸(최대 42일), 주·일 보기는 고른 날이 든 달 칸. 홈 범위와 겹쳐도 병합이 중복을 없앤다. */
+  const calMonth = cal.mode === 'month' ? cal.cursor : { y: +cal.selected.slice(0, 4), m: +cal.selected.slice(5, 7) - 1 };
+  const calGrid = monthGrid(calMonth.y, calMonth.m);
+  const club = useClubEvents(clubOn, [
+    { from: today, to: addDays(today, 61) },
+    { from: toISO(calGrid[0]), to: toISO(calGrid[calGrid.length - 1]) },
+  ]);
   /* 새 API 가 아직 없는 서버(404)면 홈 메뉴·홈 화면을 숨기고 나머지는 그대로 돈다 */
   const homeOn = clubOn && club.api === 'on';
   /* 일정 만들기·수정 창 — 캘린더(E6)·홈(E7)·결과 카드(E8)가 이 하나를 연다 */
@@ -67,6 +75,74 @@ export function SchedulerPage() {
   });
   const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, decided });
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
+
+  /* ── 일정 상세 패널과 `#e=<id>` 링크 (계획 Task E6) ── */
+  const { setOpenEvent, select: calSelect } = cal;
+  /* 패널을 닫는다. 주소의 #e= 만 지우고(경로·?view= 는 그대로) 다른 해시는 건드리지 않는다. */
+  const closeEvent = useCallback(() => {
+    setOpenEvent(null);
+    if (readEventHash(location.hash) !== null) history.replaceState(history.state, '', location.pathname + location.search);
+  }, [setOpenEvent]);
+  /* 연 일정이 목록에서 사라지면(지움·로그아웃) 패널도 닫는다 */
+  const openGone = cal.openEvent !== null && !club.events.some(e => e.id === cal.openEvent);
+  useEffect(() => { if (openGone) closeEvent(); }, [openGone, closeEvent]);
+
+  /* 링크로 열 일정 id. 로그인 복원·멤버 확인이 끝난 뒤에 해시를 읽는다 — 그 전에 읽으면 저장된 로그인이
+     복원되기도 전에 로그인 창이 뜬다. 카카오 왕복은 돌아온 뒤 replaceState 로 해시를 되살려(hashchange 없음)
+     로그인한 사람이 바뀔 때도 다시 읽는다. */
+  const [linkId, setLinkId] = useState<number | null>(null);
+  const authSettled = !auth.authLoading && (!auth.me || auth.memberChecked);
+  const meUid = auth.me?.uid ?? '';
+  useEffect(() => {
+    if (!auth.cloudOn || !authSettled) return;
+    const read = () => { const id = readEventHash(location.hash); if (id !== null) setLinkId(id); };
+    void Promise.resolve().then(read); /* 한 틱 뒤에 — effect 안 동기 setState 경고를 피한다 */
+    addEventListener('hashchange', read);
+    return () => removeEventListener('hashchange', read);
+  }, [auth.cloudOn, authSettled, meUid]);
+
+  const askedFor = useRef<number | null>(null); // 로그인 창을 이미 띄운 링크 — 한 번만 띄운다
+  const linkBusy = useRef(false);
+  const { openAuth } = auth;
+  const { adopt } = club;
+  const { go } = nav;
+  const memberStatus = auth.member?.status ?? null;
+  useEffect(() => {
+    if (linkId === null || !authSettled) return;
+    if (!auth.me || (memberStatus !== null && memberStatus !== 'APPROVED')) {
+      /* 로그아웃·승인 전 — 로그인 창(승인 전이면 그 안에서 가입 신청·승인 대기)을 연다. 승인되면 이어서 연다 */
+      if (askedFor.current !== linkId) { askedFor.current = linkId; openAuth(); }
+      return;
+    }
+    if (!clubOn) { // 서버가 동호회 기능을 모른다(멤버 확인 404) — 링크는 버린다
+      void Promise.resolve().then(() => setLinkId(null));
+      return;
+    }
+    if (linkBusy.current) return;
+    linkBusy.current = true;
+    const id = linkId;
+    void (async () => {
+      try {
+        const t = await (await import('./cloud')).idToken();
+        if (!t) return;
+        const ev = await getEvent(id, t);
+        adopt(ev);
+        go('calendar');
+        calSelect(ev.date);
+        setOpenEvent(ev.id);
+      } catch (e) {
+        if (errorCode(e) === 'NO_SUCH_EVENT') {
+          showToast('일정을 찾을 수 없어요. 지워졌을 수 있어요.');
+          if (readEventHash(location.hash) === id) history.replaceState(history.state, '', location.pathname + location.search);
+        } else if (!isMissingApi(e)) {
+          showToast(sayClub(e));
+        }
+      } finally {
+        linkBusy.current = false;
+        setLinkId(cur => (cur === id ? null : cur));
+      }
+    })();
+  }, [linkId, authSettled, auth.me, memberStatus, clubOn, openAuth, adopt, go, calSelect, setOpenEvent]);
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
@@ -101,7 +177,7 @@ export function SchedulerPage() {
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
         isAdmin={isAdmin} pendingCount={members.list?.filter(m => m.status === 'PENDING').length ?? 0}
       >
-        {nav.view === 'calendar' && <CalendarSide ctl={cal} />}
+        {nav.view === 'calendar' && <CalendarSide ctl={cal} clubOn={homeOn} />}
       </SideNav>
 
       <main className="main">
@@ -130,11 +206,13 @@ export function SchedulerPage() {
           <div className={'view' + (nav.view === 'calendar' ? '' : ' off')}>
             <header className="page-head">
               <h1>캘린더</h1>
-              <p>저장한 일정과 빈자리 알림을 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
+              <p>{homeOn ? '동호회 일정과 저장한 일정, 빈자리 알림을' : '저장한 일정과 빈자리 알림을'} 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
             </header>
             <CalendarPage
               ctl={cal} active={nav.view === 'calendar'} plans={plans} watches={watches} auth={auth} s={s}
               onLoaded={() => { nav.go('calc'); showToast('일정을 불러왔어요.'); }}
+              club={club} clubOn={homeOn}
+              onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent}
             />
           </div>
         )}

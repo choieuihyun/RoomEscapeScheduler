@@ -794,6 +794,91 @@ button:active{transform:scale(.97)}
 .cal-blk span{font-size:11px;color:var(--ink2);font-variant-numeric:tabular-nums}
 .cal-blk.wish{--ev:var(--blue)} .cal-blk.done{--ev:var(--green)} .cal-blk.watch{--ev:var(--amber)}
 
+/* ── 동호회 일정(계획 Task E6) — 칩·상태 배지·상세 패널. 상태 색은 --st-* 토큰 세 쌍 ── */
+.cal-key.club{--ev:var(--blue-text)}
+:is(.st-badge,.cal-ev.club,.cal-dot,.evp-toggle button).talk{--st-fg:var(--st-talk-fg);--st-bg:var(--st-talk-bg)}
+:is(.st-badge,.cal-ev.club,.cal-dot,.evp-toggle button).before{--st-fg:var(--st-before-fg);--st-bg:var(--st-before-bg)}
+:is(.st-badge,.cal-ev.club,.cal-dot,.evp-toggle button).done{--st-fg:var(--st-done-fg);--st-bg:var(--st-done-bg)}
+.cal-dot{flex:none;display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--st-fg)}
+.cal-ev.club{--ev:var(--st-fg);display:flex;align-items:center;gap:5px;width:100%;flex:none;font-family:inherit;
+  text-align:left;cursor:pointer;border:none;border-left:0;background:var(--st-bg);color:var(--ink)}
+.cal-ev.club:active{transform:none}
+.cal-ev.club:hover{box-shadow:inset 0 0 0 1px var(--st-fg)}
+.cal-ev.club.on{box-shadow:inset 0 0 0 1.5px var(--blue-text)}
+.cal-ev.club.past{opacity:.55}
+.cal-ev.club:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+.cal-ev-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-ev-n{flex:none;color:var(--ink3);font-size:11px;font-variant-numeric:tabular-nums}
+.cal-new{height:32px;padding:0 14px;font-size:13px;font-weight:600;border-radius:var(--pill);margin-left:4px}
+.cal-stlegend{display:flex;gap:14px;flex-wrap:wrap;margin:-4px 0 12px;font-size:12px;color:var(--ink2)}
+.cal-stlegend span{display:inline-flex;align-items:center;gap:5px}
+.cal-day-club{padding:10px 12px 2px;gap:4px}
+.cal-day-club .cal-ev.club{height:26px;font-size:13px}
+.st-badge{flex:none;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:var(--pill);
+  color:var(--st-fg);background:var(--st-bg);white-space:nowrap}
+.cal-club-row{width:100%;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0 0 6px;padding:10px 12px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);text-align:left;color:var(--ink);
+  font-family:inherit;cursor:pointer}
+.cal-club-row:hover{background:var(--btn-bg-hover);border-color:var(--btn-line-hover)}
+.ccr-t{flex:1 1 0;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ccr-m{width:100%;font-size:12.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+
+.evp{display:flex;flex-direction:column;gap:16px;color:var(--ink)}
+.evp-head{display:flex;align-items:center;gap:8px}
+.evp-tools{margin-left:auto;display:flex;align-items:center;gap:4px}
+.evp-sm{height:30px;padding:0 10px;font-size:13px}
+.evp-del{color:var(--red-text);border-color:var(--red-line)}
+.evp-del:hover{color:var(--red-text);background:var(--red-soft);border-color:var(--red-line)}
+.evp-title{margin:0 0 4px;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1.35;overflow-wrap:anywhere}
+.evp-sub{margin:0;font-size:13.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.evp-segs,.evp-segwrap{display:flex;flex-direction:column;gap:6px}
+.evp-seg{display:flex;gap:10px;align-items:baseline;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm)}
+.evp-seg b{flex:none;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.evp-seg-n{min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.evp-seg-b{margin-left:auto;flex:none;font-size:12.5px;color:var(--ink3)}
+.evp-move{text-align:center;font-size:12px;color:var(--ink3)}
+.evp-people{display:flex;flex-direction:column;gap:10px}
+.evp-ph{display:flex;align-items:center}
+.evp-ph h3{margin:0;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.evp-ph span{margin-left:auto;font-size:12.5px;font-weight:500;color:var(--blue-text)}
+.evp-ph span.full{color:var(--ink3)}
+.evp-chips{display:flex;flex-wrap:wrap;gap:6px}
+.evp-chip{display:inline-flex;align-items:center;gap:5px;font-size:13px;background:var(--chip-bg);
+  border-radius:var(--pill);padding:4px 11px;min-height:28px;box-sizing:border-box}
+.evp-chip i{font-style:normal;font-size:11.5px;color:var(--ink3)}
+.evp-chip button{width:20px;height:20px;margin-right:-6px;padding:0;border:none;background:none;color:var(--ink3);
+  font-size:14px;line-height:1;border-radius:999px;cursor:pointer}
+.evp-chip button:hover{background:var(--line);color:var(--ink)}
+.evp-add{font-size:13px;min-height:28px;border:1px dashed var(--line2);background:var(--surface);border-radius:var(--pill);
+  padding:3px 11px;font-family:inherit;color:var(--ink2);cursor:pointer}
+.evp-add:disabled{opacity:.45;cursor:default}
+.evp-pick{display:flex;flex-wrap:wrap;gap:6px;padding:10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface2)}
+.evp-pick .merr{margin:0}
+.evp-pick-m{height:30px;padding:0 12px;border-radius:var(--pill);border:1px solid var(--btn-line);background:var(--btn-bg);
+  color:var(--ink);font-family:inherit;font-size:13px;cursor:pointer}
+.evp-pick-m:hover{border-color:var(--btn-line-hover);background:var(--btn-bg-hover)}
+.evp .evp-join{width:100%;height:44px;padding:0;font-size:14px;font-weight:600;border-radius:var(--r)}
+.evp .btn.evp-join:disabled{opacity:1;color:var(--ink3);background:var(--surface2);cursor:default}
+.evp-book{display:flex;flex-direction:column;gap:6px;padding-top:14px;border-top:1px solid var(--line)}
+.evp-row{display:flex;align-items:center;gap:10px}
+.evp-lbl{font-size:14px;font-weight:600;color:var(--ink)}
+.evp-toggle{margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.evp-toggle button{height:32px;padding:0 12px;border:none;background:var(--surface);font-family:inherit;font-size:13px;
+  color:var(--ink2);cursor:pointer}
+.evp-toggle button+button{border-left:1px solid var(--line)}
+.evp-toggle button:active{transform:none}
+.evp-toggle button.on{background:var(--st-bg);color:var(--st-fg);font-weight:600}
+.evp-hint{margin:0;font-size:12px;color:var(--ink3)}
+.evp-text{display:flex;flex-direction:column;gap:6px}
+.evp-text p{margin:0;font-size:13.5px;color:var(--ink2);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.evp-kakao{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--line)}
+/* 카카오 노랑은 토큰 밖 예외(계획 Global Constraints) */
+.evp-kakao-btn{height:44px;border:none;border-radius:var(--r);background:#FEE500;color:rgba(0,0,0,.85);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.evp-post{font-family:inherit;font-size:12.5px;color:var(--ink2);background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:8px 10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;
+  -webkit-user-select:all;user-select:all}
+
 /* "+n" 작은 창 */
 .cal-pop{position:absolute;z-index:45;width:260px;max-height:240px;overflow:auto;padding:10px 12px 12px;
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-up)}
@@ -878,6 +963,14 @@ button:active{transform:scale(.97)}
   .cal-weekview .cal-evs{flex-direction:column;flex-wrap:nowrap}
   .cal-col-h{flex-direction:column;gap:0}
   .cal-day-tl{margin-left:52px}
+  /* 동호회 일정 칩도 월 보기에선 상태 색 점으로. 주 보기·일 보기는 글자를 그대로 */
+  .cal-ev.club{width:6px;height:6px;padding:0;gap:0;background:var(--st-fg);flex:none}
+  .cal-ev.club>*{display:none}
+  .cal-weekview .cal-ev.club,.cal-day-club .cal-ev.club{width:auto;height:18px;padding:0 3px;background:var(--st-bg);
+    border-left:2px solid var(--st-fg);font-size:10.5px}
+  .cal-weekview .cal-ev.club>.cal-ev-t,.cal-day-club .cal-ev.club>*{display:inline}
+  .cal-day-club .cal-ev.club{height:26px;padding:0 8px;font-size:13px;gap:5px;border-left:0}
+  .cal-day-club .cal-ev.club>.cal-dot{display:inline-block}
 }
 
 /* ── 사용법 투어 ── */
