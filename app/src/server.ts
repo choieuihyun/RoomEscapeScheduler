@@ -166,6 +166,7 @@ export function sayWatch(err: unknown): string {
   const e = err as WatchApiError;
   if (e?.status === 409 && e.body?.message) return e.body.message;
   if (e?.status === 400 && e.body?.message) return e.body.message;
+  if (e?.status === 403 && e.body?.message) return e.body.message; // NOT_MEMBER
   return say(err);
 }
 

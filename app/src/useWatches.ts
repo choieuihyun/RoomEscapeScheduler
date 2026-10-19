@@ -133,7 +133,11 @@ export interface WatchControl {
   toggle: (slotId: number) => void;
 }
 
-export function buildWatchControl(w: UseWatchesReturn, loggedIn: boolean): WatchControl {
+/* approved: 동호회 승인 여부. 'loading' 은 멤버 상태를 아직 불러오는 중 — 승인 전과 같이
+   막되 문구만 "확인 중" 으로 달리한다(지시서의 boolean 시그니처를 최소한으로 넓힘). */
+export function buildWatchControl(
+  w: UseWatchesReturn, loggedIn: boolean, approved: boolean | 'loading',
+): WatchControl {
   return {
     loggedIn,
     atLimit: w.watches.length >= w.limit,
@@ -149,6 +153,8 @@ export function buildWatchControl(w: UseWatchesReturn, loggedIn: boolean): Watch
       const watchId = w.watchIdForSlot(slotId);
       if (watchId != null) { w.remove(watchId); return; }
       if (!loggedIn) { alert('로그인하면 빈자리 알림을 걸 수 있어요.'); return; }
+      if (approved === 'loading') { alert('확인 중이에요. 잠시 뒤 다시 눌러 주세요.'); return; }
+      if (!approved) { alert('동호회 승인을 받으면 빈자리 알림을 걸 수 있어요.'); return; }
       if (w.watches.length >= w.limit) {
         alert(`빈자리 알림은 최대 ${w.limit}개까지 걸 수 있어요.\n왼쪽 메뉴의 "빈자리 알림"에서 하나를 지우고 다시 걸어 주세요.`);
         return;

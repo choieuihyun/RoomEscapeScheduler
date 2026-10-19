@@ -35,7 +35,13 @@ export function SchedulerPage() {
     showToast('일정을 저장했어요.');
   });
   const watches = useWatches(auth.me);
-  const watchCtl = auth.cloudOn ? buildWatchControl(watches, !!auth.me) : undefined;
+  /* 빈자리 알림은 승인 멤버만. 다만 member 가 null 이면 서버가 동호회 기능을 아직 모르거나
+     못 불러온 것이라 지금처럼 로그인만으로 허용한다 — 서버가 실제로 막으면 403 NOT_MEMBER
+     문구가 그대로 나오므로 안전하다. 불러오는 중에는 승인 전과 같이 막는다. */
+  const approved: boolean | 'loading' = auth.memberLoading ? 'loading'
+    : auth.member === null ? true
+    : auth.member.status === 'APPROVED';
+  const watchCtl = auth.cloudOn ? buildWatchControl(watches, !!auth.me, approved) : undefined;
   const cal = useCalendar();
   const nav = useView(auth.cloudOn);
 

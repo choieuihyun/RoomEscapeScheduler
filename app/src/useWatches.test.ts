@@ -22,7 +22,7 @@ describe('buildWatchControl().toggle — 막지 않고 말한다', () => {
   it('로그인 전에는 알림 대신 이유를 띄운다', () => {
     const alert = vi.fn(); vi.stubGlobal('alert', alert);
     const w = fake();
-    buildWatchControl(w, false).toggle(172);
+    buildWatchControl(w, false, false).toggle(172);
     expect(w.add).not.toHaveBeenCalled();
     expect(alert.mock.calls[0][0]).toContain('로그인');
   });
@@ -30,7 +30,7 @@ describe('buildWatchControl().toggle — 막지 않고 말한다', () => {
   it('3개를 다 걸어 두면 "최대 3개" 를 말하고 등록하지 않는다', () => {
     const alert = vi.fn(); vi.stubGlobal('alert', alert);
     const w = fake({ watches: [{ id: 1 }, { id: 2 }, { id: 3 }] as UseWatchesReturn['watches'] });
-    buildWatchControl(w, true).toggle(172);
+    buildWatchControl(w, true, true).toggle(172);
     expect(w.add).not.toHaveBeenCalled();
     expect(alert.mock.calls[0][0]).toContain('최대 3개');
   });
@@ -38,7 +38,7 @@ describe('buildWatchControl().toggle — 막지 않고 말한다', () => {
   it('한도 안이면 조용히 등록한다', () => {
     const alert = vi.fn(); vi.stubGlobal('alert', alert);
     const w = fake({ watches: [{ id: 1 }] as UseWatchesReturn['watches'] });
-    buildWatchControl(w, true).toggle(172);
+    buildWatchControl(w, true, true).toggle(172);
     expect(w.add).toHaveBeenCalledWith(172);
     expect(alert).not.toHaveBeenCalled();
   });
@@ -49,7 +49,32 @@ describe('buildWatchControl().toggle — 막지 않고 말한다', () => {
       watches: [{ id: 1 }, { id: 2 }, { id: 3 }] as UseWatchesReturn['watches'],
       watchIdForSlot: (slotId: number) => (slotId === 172 ? 9 : undefined),
     });
-    buildWatchControl(w, true).toggle(172);
+    buildWatchControl(w, true, true).toggle(172);
+    expect(w.remove).toHaveBeenCalledWith(9);
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('승인 전에는 이유를 띄우고 등록하지 않는다', () => {
+    const alert = vi.fn(); vi.stubGlobal('alert', alert);
+    const w = fake();
+    buildWatchControl(w, true, false).toggle(172);
+    expect(w.add).not.toHaveBeenCalled();
+    expect(alert.mock.calls[0][0]).toContain('승인');
+    expect(alert.mock.calls[0][0]).toBe('동호회 승인을 받으면 빈자리 알림을 걸 수 있어요.');
+  });
+
+  it('멤버 상태를 불러오는 중이면 승인 전처럼 막고 잠시 뒤 다시 누르라고 한다', () => {
+    const alert = vi.fn(); vi.stubGlobal('alert', alert);
+    const w = fake();
+    buildWatchControl(w, true, 'loading').toggle(172);
+    expect(w.add).not.toHaveBeenCalled();
+    expect(alert.mock.calls[0][0]).toBe('확인 중이에요. 잠시 뒤 다시 눌러 주세요.');
+  });
+
+  it('승인 전이어도 이미 걸어 둔 알림은 해제할 수 있다', () => {
+    const alert = vi.fn(); vi.stubGlobal('alert', alert);
+    const w = fake({ watchIdForSlot: (slotId: number) => (slotId === 172 ? 9 : undefined) });
+    buildWatchControl(w, true, false).toggle(172);
     expect(w.remove).toHaveBeenCalledWith(9);
     expect(alert).not.toHaveBeenCalled();
   });
