@@ -10,7 +10,7 @@ import { useWatches, buildWatchControl } from './useWatches';
 import { useCalendar } from './useCalendar';
 import { useView, decideFirstScreen, type View } from './useView';
 import { useClubEvents } from './useClubEvents';
-import { addDays, sortKeyDate, todayKst } from './clubEvents';
+import { addDays, sortKeyDate, todayKst, windowLabel, windowToCalc } from './clubEvents';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
 import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
@@ -102,10 +102,11 @@ export function SchedulerPage() {
     if (readEventHash(location.hash) !== null) history.replaceState(history.state, '', location.pathname + location.search);
   }, []);
   const closeEvent = useCallback(() => { setOpenEvent(null); dropLink(); }, [setOpenEvent, dropLink]);
-  /* 칩·줄을 눌러 일정을 연다. 링크로 연 일정과 다른 일정이면 #e= 를 지운다 */
-  const openEvent = useCallback((ev: EventDto) => {
+  /* 칩·줄을 눌러 일정을 연다. 링크로 연 일정과 다른 일정이면 #e= 를 지운다.
+     날짜 미정 일정은 누른 후보 날짜(date)를, 없으면(홈·링크) 오늘 이후 가장 이른 후보를 고른다 */
+  const openEvent = useCallback((ev: EventDto, date?: string) => {
     if (readEventHash(location.hash) !== ev.id) dropLink();
-    calSelect(sortKeyDate(ev));
+    calSelect(date ?? sortKeyDate(ev, todayKst()));
     setOpenEvent(ev.id);
   }, [dropLink, calSelect, setOpenEvent]);
   /* 캘린더 밖 화면으로 옮길 때는 #e= 를 지운다 — 남으면 `?view=calc#e=12` 를 새로고침(iOS 탭 되살림)했을 때 캘린더로 끌려간다 */
@@ -118,6 +119,14 @@ export function SchedulerPage() {
     goView('calendar');
     calSelect(iso);
     if (cal.openEvent !== null) closeEvent();
+  };
+  /* 상세의 "이 시간대로 조합 계산" — 다 같이 되는 시간을 계산 조건(가장 이른 시작·가장 늦은 종료)에 넣고 계산 화면으로 */
+  const calcWindow = (w: { start: number; end: number }) => {
+    const o = windowToCalc(w);
+    s.setOption('oStart', o.oStart);
+    s.setOption('oEnd', o.oEnd);
+    goView('calc');
+    showToast(`다 같이 되는 시간(${windowLabel(w)})을 조건에 넣었어요. 테마를 불러와 계산해 보세요.`);
   };
   const pendingCount = members.list?.filter(m => m.status === 'PENDING').length ?? 0;
   /* 연 일정이 목록에서 사라지면(지움·로그아웃) 패널도 닫는다 */
@@ -164,7 +173,7 @@ export function SchedulerPage() {
         const ev = await getEvent(id, t);
         adopt(ev);
         go('calendar');
-        calSelect(sortKeyDate(ev));
+        calSelect(sortKeyDate(ev, todayKst()));
         setOpenEvent(ev.id);
       } catch (e) {
         if (errorCode(e) === 'NO_SUCH_EVENT') {
@@ -271,6 +280,7 @@ export function SchedulerPage() {
               onLoaded={() => { goView('calc'); showToast('일정을 불러왔어요.'); }}
               club={club} clubOn={homeOn}
               onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent} onOpenEvent={openEvent}
+              onCalcWindow={calcWindow}
             />
           </div>
         )}

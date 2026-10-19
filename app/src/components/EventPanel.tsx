@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { eventStatus, sortKeyDate, eventTitle, kakaoPost, longDayLabel, rangeLabel, STATUS_LABEL, timeLabel } from '../clubEvents';
+import { eventStatus, eventTitle, isUndecided, kakaoPost, longDayLabel, rangeLabel, STATUS_LABEL, timeLabel } from '../clubEvents';
 import { eventLink } from '../eventLink';
 import { listClubMembers, sayClub, type ClubMemberDto, type EventDto } from '../server';
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
+import { EventTalk, EventTalkDone } from './EventTalk';
 
 /* 캘린더 오른쪽 패널의 동호회 일정 상세 (계획 Task E6, 목업 "캘린더 + 일정 상세").
    보이는 일정은 늘 목록(useClubEvents)에서 꺼낸 최신 값이다 — 정원 초과 뒤 다시 불러온 값,
@@ -16,8 +17,10 @@ async function loadMembers(): Promise<ClubMemberDto[]> {
   return listClubMembers(t);
 }
 
-export function EventPanel({ ev, club, onClose, onEdit }: {
-  ev: EventDto; club: UseClubEventsReturn; onClose: () => void; onEdit: (ev: EventDto) => void;
+export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow }: {
+  ev: EventDto; club: UseClubEventsReturn; meUid: string; onClose: () => void; onEdit: (ev: EventDto) => void;
+  /* 정해진 날짜에 다 같이 되는 시간으로 조합 계산 조건을 채우고 계산 화면으로 */
+  onCalcWindow?: (w: { start: number; end: number }) => void;
 }) {
   const st = eventStatus(ev);
   const busy = club.busyIds.has(ev.id);
@@ -27,7 +30,10 @@ export function EventPanel({ ev, club, onClose, onEdit }: {
   const [pickErr, setPickErr] = useState('');
   const post = kakaoPost(ev, eventLink(ev.id, location));
 
-  const time = ev.segments.length === 0 ? (timeLabel(ev) || '하루 종일') : '';
+  const undecided = isUndecided(ev);
+  const time = ev.segments.length === 0 ? (timeLabel(ev) || (undecided ? '' : '하루 종일')) : '';
+  /* 날짜 미정이면 한 날짜를 정해진 것처럼 보이지 않게 후보 수만 */
+  const when = undecided ? `날짜 미정 · 후보 ${ev.candidates.length}개` : longDayLabel(ev.date as string);
   const left = ev.capacity === null ? '' : full ? '마감' : `${ev.capacity - ev.count}자리 남음`;
 
   async function openPick() {
@@ -71,9 +77,11 @@ export function EventPanel({ ev, club, onClose, onEdit }: {
       <div>
         <h2 className="evp-title">{eventTitle(ev)}</h2>
         <p className="evp-sub">
-          {longDayLabel(sortKeyDate(ev))}{time && ` ${time}`} · 만든 사람 {ev.createdBy.nickname}
+          {when}{time && (undecided ? ` · ${time}` : ` ${time}`)} · 만든 사람 {ev.createdBy.nickname}
         </p>
       </div>
+
+      {undecided && <EventTalk ev={ev} club={club} meUid={meUid} />}
 
       {ev.segments.length > 0 && (
         <div className="evp-segs">
@@ -154,6 +162,8 @@ export function EventPanel({ ev, club, onClose, onEdit }: {
           <p className="evp-hint">참여한 사람, 만든 사람, 운영진이 바꿀 수 있어요.</p>
         </div>
       )}
+
+      {!undecided && ev.candidates.length > 0 && <EventTalkDone ev={ev} club={club} onCalcWindow={onCalcWindow} />}
 
       {ev.location && (
         <div className="evp-text">

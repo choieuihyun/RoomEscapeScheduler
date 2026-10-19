@@ -206,6 +206,42 @@ export function candidateSummary(ev: Pick<EventDto, 'candidates' | 'participants
   return rows.sort((a, b) => Number(b.all) - Number(a.all) || b.yes - a.yes || (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
+/* 다 같이 되는 시간 표시 — 모두 종일이라 0~2879 그대로면 `종일` */
+export const windowLabel = (w: { start: number; end: number }): string =>
+  w.start === 0 && w.end >= 2 * DAY_MIN - 1 ? '종일' : rangeLabel(w.start, w.end);
+
+/* 내 응답의 시간 칸: 빈칸(또는 `종일`) = 종일, `14:00~22:00`(구분자 `~`·`-`·`–`). 24시간제,
+   자정 넘김은 §4.7 규칙(앞 시각 18시 이후 → 뒤 시각 6시 전)일 때만 다음날로 본다. */
+export type AvailTime = { startMin: number | null; endMin: number | null };
+export function parseAvailText(s: string): AvailTime | { error: string } {
+  const t = s.trim();
+  if (!t || t === '종일') return { startMin: null, endMin: null };
+  const m = t.match(/^(.+?)\s*[~\-–]\s*(.+)$/);
+  const start = m ? parseClock24(m[1]) : null;
+  const end = m ? parseClock24(m[2]) : null;
+  if (start === null || end === null) return { error: '14:00~22:00 처럼 24시간제로 적어 주세요. 비우면 종일이에요.' };
+  const rolled = rollDays([{ start, end }]);
+  if (!('rows' in rolled)) {
+    return { error: end < 6 * 60 && start >= 6 * 60
+      ? '자정을 넘기는 시간은 저녁 6시 이후에 시작할 때만 적을 수 있어요.'
+      : '끝 시각이 시작보다 늦어야 해요.' };
+  }
+  return { startMin: rolled.rows[0].start, endMin: rolled.rows[0].end };
+}
+
+/* 다 같이 되는 시간 → 조합 계산 조건(가장 이른 시작·가장 늦은 종료) 칸 값. 계산 쪽 parseClock 은 29:59 까지
+   읽으므로 자정 뒤는 `25:30` 처럼 이어 적는다(fmt 로 접으면 끝이 시작보다 앞이 된다). 종일 쪽 끝·29:59 를 넘는 끝은
+   "제한 없음"(빈칸). */
+export function windowToCalc(w: { start: number; end: number }): { oStart: string; oEnd: string } {
+  const hm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  const LAST = 29 * 60 + 59;
+  return { oStart: w.start === 0 || w.start > LAST ? '' : hm(w.start), oEnd: w.end > LAST ? '' : hm(w.end) };
+}
+
+/* 시간 칸에 다시 보일 글 — 24시간제로 접는다(1560 → `02:00`). 읽을 때 parseAvailText 가 다음날을 다시 채운다 */
+export const availText = (r: AvailTime): string =>
+  r.startMin === null || r.endMin === null ? '' : `${fmt(r.startMin)}~${fmt(r.endMin)}`;
+
 /* 정렬 기준 시각: 하루 종일(시각도 구간도 없음)은 맨 앞, 일정 시각이 없으면 첫 구간 시작. */
 function sortMin(ev: EventDto): number {
   if (ev.startMin !== null) return ev.startMin;

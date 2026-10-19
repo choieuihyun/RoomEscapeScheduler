@@ -68,9 +68,11 @@ export function HomePage({
   const shown = rows.slice(cur * PER_PAGE, cur * PER_PAGE + PER_PAGE);
   const tabInfo = TABS.find((t) => t.id === tab)!;
 
-  /* 미니 달력 — 날짜별 동호회 일정 수 */
+  /* 미니 달력 — 날짜별 동호회 일정 수. 날짜 미정 일정은 캘린더처럼 후보 날짜마다 센다 */
   const perDay = new Map<string, number>();
-  for (const e of events) perDay.set(sortKeyDate(e, today), (perDay.get(sortKeyDate(e, today)) ?? 0) + 1);
+  for (const e of events) {
+    for (const d of e.date !== null ? [e.date] : e.candidates.map((c) => c.date)) perDay.set(d, (perDay.get(d) ?? 0) + 1);
+  }
   const cells = monthGrid(month.y, month.m);
 
   const initial = [...nickname][0] ?? '?';
@@ -157,7 +159,9 @@ export function HomePage({
                         <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
                       </div>
                       <span className="home-row-m">
-                        <span className={dowClass(weekday(sortKeyDate(ev, today)))}>{dayLabel(sortKeyDate(ev, today))}</span>
+                        {/* 날짜 미정은 기준 후보 날짜 자리에 놓이지만 날짜를 정해진 것처럼 적지 않는다 */}
+                        {ev.date === null ? `날짜 미정 · 후보 ${ev.candidates.length}개`
+                          : <span className={dowClass(weekday(ev.date))}>{dayLabel(ev.date)}</span>}
                         {' · '}{ev.createdBy.nickname} · {people(ev)}
                       </span>
                     </div>

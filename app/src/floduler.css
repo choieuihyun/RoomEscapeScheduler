@@ -42,6 +42,8 @@
   /* 칩(다우오피스 계열, 2026-10-19) — 바탕은 --surface, 색은 테두리(-line)와 글자(-fg). 마감은 회색 */
   --st-talk-line:#8B6CF2; --st-before-line:#E47B37; --st-done-line:#00AF52; --st-closed-line:#C4C5C6;
   --st-closed-fg:#6B6C6E;  /* surface 대비 5.2:1 */
+  /* 시간 협의 막대(§4.8) — 모두 되는 날 진한 보라, 나머지 옅은 보라, 빈 칸 */
+  --talk-bar:#8B6CF2; --talk-bar-soft:#B9A6F7; --talk-track:#EEEFEF;
   --badge-bg:#117182; --badge-past-bg:#757678;  /* 숫자 동그라미 — 흰 글자 대비 4.5:1 이상 */
 
   /* 테마별 컬러 코딩 — ThemeCard 왼쪽 띠, 결과 타임라인 블록에 순환 적용
@@ -99,6 +101,7 @@
     --st-done-fg:#6ED688;
     --st-talk-line:#8B6CF2; --st-before-line:#E47B37; --st-done-line:#00AF52; --st-closed-line:#666768;
     --st-closed-fg:#B4B5B7;
+    --talk-bar:#A58BFF; --talk-bar-soft:#6E58C2; --talk-track:#424343;
     --badge-bg:#117182; --badge-past-bg:#666768;
 
     --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
@@ -137,6 +140,7 @@
   --st-done-fg:#6ED688;
   --st-talk-line:#8B6CF2; --st-before-line:#E47B37; --st-done-line:#00AF52; --st-closed-line:#666768;
   --st-closed-fg:#B4B5B7;
+  --talk-bar:#A58BFF; --talk-bar-soft:#6E58C2; --talk-track:#424343;
   --badge-bg:#117182; --badge-past-bg:#666768;
 
   --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
@@ -814,6 +818,10 @@ button:active{transform:scale(.97)}
 .cal-ev.club:hover{border-color:var(--st-line)}
 .cal-ev.club.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .cal-ev.club.past{opacity:.55}
+/* 날짜 미정 일정의 후보 날짜 칩 — 흐리게(점선 테두리·보조 글자, opacity 없이) */
+.cal-ev.club.cand{border-style:dashed;border-color:var(--st-talk-line);color:var(--ink2)}
+.cal-ev.club.cand .cal-dot{background:transparent;box-shadow:inset 0 0 0 1.5px var(--st-fg)}
+.cal-ev.club.cand.on{border-style:solid;border-color:var(--ink)}
 .cal-ev.club:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
 .cal-ev-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cal-ev-n{flex:none;color:var(--ink3);font-size:11px;font-variant-numeric:tabular-nums}
@@ -895,6 +903,43 @@ button:active{transform:scale(.97)}
 .evp-hint{margin:0;font-size:12px;color:var(--ink3)}
 .evp-text{display:flex;flex-direction:column;gap:6px}
 .evp-text p{margin:0;font-size:13.5px;color:var(--ink2);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+/* 시간 협의(§4.8, 계획 Task 5) — 언제 될까요?·내 응답·후보였던 날짜 */
+.evt{display:flex;flex-direction:column;gap:10px}
+.evt-h{display:flex;align-items:baseline}
+.evt-h h3,.evt-mine h3{margin:0;font-size:15px;font-weight:700}
+.evt-h span{margin-left:auto;font-size:12px;color:var(--ink3)}
+.evt-cand{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--line);border-radius:10px}
+.evt-cand.all{border-color:var(--st-talk-line)}
+.evt-cand-h{display:flex;align-items:center;gap:8px}
+.evt-cand-h>b{font-size:14px;font-variant-numeric:tabular-nums}
+.evt-cand-n{margin-left:auto;font-size:13px;font-variant-numeric:tabular-nums}
+.evt-bar{height:6px;border-radius:var(--pill);background:var(--talk-track);overflow:hidden}
+.evt-bar i{display:block;height:100%;background:var(--talk-bar-soft)}
+.evt-bar i.all{background:var(--talk-bar)}
+.evt-cand-f{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px}
+.evt-cand-t{flex:1 1 180px;min-width:0;font-size:13px;color:var(--ink2);line-height:1.5}
+.evt-cand-t b{color:var(--ink);font-variant-numeric:tabular-nums}
+.evp .evt-decide{flex:none;margin-left:auto;height:30px;padding:0 12px;font-size:12.5px;font-weight:600;border-radius:var(--r-sm)}
+.evt-mine{display:flex;flex-direction:column;gap:8px;padding:14px;background:var(--surface2);border-radius:10px}
+.evt-mine h3{font-size:14px}
+/* 날짜 | 안 돼요·돼요·시간 칸 — 좁은 패널에선 시간 칸이 버튼 아래로 내려가도 날짜 열은 그대로 */
+.evt-my{display:grid;grid-template-columns:68px minmax(0,1fr);align-items:start;gap:4px 6px;font-size:13px}
+.evt-my-d{line-height:30px;font-variant-numeric:tabular-nums}
+.evt-my-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.evt-my-pick{display:inline-flex;gap:6px}
+.evt-my-pick .chip-pick{height:30px;padding:0 11px;font-size:12.5px}
+.evt-my-time{flex:1 1 96px;min-width:96px;max-width:150px;height:30px;box-sizing:border-box;padding:0 8px;border:1px solid var(--line2);border-radius:var(--r-sm);
+  background:var(--surface);color:var(--ink);font-family:inherit;font-size:12.5px;font-variant-numeric:tabular-nums}
+.evt-my-time::placeholder{color:var(--ink3)}
+.evt-my-time[aria-invalid="true"]{border-color:var(--red-text)}
+.evt-my-err{grid-column:2;margin:0;font-size:12px;line-height:1.5;color:var(--red-text)}
+.evt-done{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
+.evt-calc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:13px;color:var(--ink2)}
+.evt-calc b{color:var(--ink);font-variant-numeric:tabular-nums}
+.evp .evt-calc-btn{margin-left:auto;height:32px;padding:0 12px;font-size:13px}
+.evt-was summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--ink)}
+.evt-was-b{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.evp .evt-reopen{align-self:flex-start;height:32px;padding:0 12px;font-size:13px}
 .evp-kakao{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--line)}
 /* 카카오 노랑은 토큰 밖 예외(계획 Global Constraints) */
 .evp-kakao-btn{height:44px;border:none;border-radius:var(--r);background:#FEE500;color:rgba(0,0,0,.85);
@@ -1104,6 +1149,10 @@ button:active{transform:scale(.97)}
   .cal-weekview .cal-ev.club>.cal-ev-t,.cal-day-club .cal-ev.club>*{display:inline}
   .cal-day-club .cal-ev.club{height:26px;padding:0 8px;font-size:13px;gap:5px;border:1px solid var(--line)}
   .cal-day-club .cal-ev.club>.cal-dot{display:inline-block}
+  /* 후보 날짜 칩은 속 빈 점 */
+  .cal-ev.club.cand{background:transparent;border:0;box-shadow:inset 0 0 0 1.5px var(--st-fg)}
+  .cal-weekview .cal-ev.club.cand,.cal-day-club .cal-ev.club.cand{background:var(--surface);box-shadow:none;
+    border:1px dashed var(--st-talk-line)}
 }
 
 /* ── 사용법 투어 ── */

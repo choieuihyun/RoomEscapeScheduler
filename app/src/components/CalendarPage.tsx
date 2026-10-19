@@ -10,7 +10,7 @@ import { useDaySchedule } from '../useDaySchedule';
 import type { Scheduler } from '../scheduler/useScheduler';
 import { DayBranches } from './DayBranches';
 import { EventPanel } from './EventPanel';
-import { eventStatus, sortKeyDate, eventTitle, STATUS_LABEL, timeLabel, todayKst } from '../clubEvents';
+import { eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel, todayKst } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
 
 /* 캘린더 화면(§4.49) — 모달이던 것(§4.38·§4.40)을 왼쪽 메뉴의 한 화면으로 옮겼다.
@@ -66,17 +66,21 @@ function chipText(ev: EventDto): string {
 }
 const peopleText = (ev: EventDto) => (ev.capacity === null ? `${ev.count}` : `${ev.count}/${ev.capacity}`);
 
-function ClubChip({ ev, on, past, onOpen }: { ev: EventDto; on: boolean; past: boolean; onOpen: (ev: EventDto) => void }) {
+/* 날짜 미정 일정은 후보 날짜마다 흐린 칩(cand)으로 — 누르면 그 후보 날짜를 고른 채 상세를 연다 */
+function ClubChip({ ev, iso, on, past, onOpen }: {
+  ev: EventDto; iso: string; on: boolean; past: boolean; onOpen: (ev: EventDto, date: string) => void;
+}) {
   const st = eventStatus(ev);
   const time = timeLabel(ev);
+  const cand = isUndecided(ev);
   return (
     <button
-      type="button" className={'cal-ev club ' + st + (on ? ' on' : '') + (past ? ' past' : '')}
-      title={`${STATUS_LABEL[st]} · ${eventTitle(ev)}${time ? ' · ' + time : ''} · 참여 ${peopleText(ev)}`}
+      type="button" className={'cal-ev club ' + st + (cand ? ' cand' : '') + (on ? ' on' : '') + (past ? ' past' : '')}
+      title={`${STATUS_LABEL[st]}${cand ? ` · 후보 날짜(${ev.candidates.length}개 중)` : ''} · ${eventTitle(ev)}${time ? ' · ' + time : ''} · 참여 ${peopleText(ev)}`}
       aria-pressed={on}
       /* 칸(role=button)의 클릭·Enter·Space 처리로 번지지 않게 — 칸은 그 키에 preventDefault 를 건다.
          다른 키(←/→ 달 이동 등)는 그대로 둔다 */
-      onClick={e => { e.stopPropagation(); onOpen(ev); }}
+      onClick={e => { e.stopPropagation(); onOpen(ev, iso); }}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
     >
       <i className="cal-dot" /><span className="cal-ev-t">{chipText(ev)}</span><span className="cal-ev-n">{peopleText(ev)}</span>
@@ -85,14 +89,15 @@ function ClubChip({ ev, on, past, onOpen }: { ev: EventDto; on: boolean; past: b
 }
 
 /* 고른 날 상세에 보이는 동호회 일정 한 줄 — 휴대폰에선 칸의 칩이 점이라 여기서 연다 */
-function ClubRow({ ev, onOpen }: { ev: EventDto; onOpen: (ev: EventDto) => void }) {
+function ClubRow({ ev, iso, onOpen }: { ev: EventDto; iso: string; onOpen: (ev: EventDto, date: string) => void }) {
   const st = eventStatus(ev);
   const time = timeLabel(ev);
+  const when = isUndecided(ev) ? `날짜 미정 · 후보 ${ev.candidates.length}개${time ? ' · ' + time : ''}` : time || '하루 종일';
   return (
-    <button type="button" className="cal-club-row" onClick={() => onOpen(ev)}>
+    <button type="button" className="cal-club-row" onClick={() => onOpen(ev, iso)}>
       <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
       <span className="ccr-t">{eventTitle(ev)}</span>
-      <span className="ccr-m">{time || '하루 종일'} · 참여 {peopleText(ev)}</span>
+      <span className="ccr-m">{when} · 참여 {peopleText(ev)}</span>
     </button>
   );
 }
@@ -203,15 +208,16 @@ function DayTimeline({ evs }: { evs: Ev[] }) {
 }
 
 export function CalendarPage({
-  ctl, active, plans, watches, auth, s, onLoaded, club, clubOn, onNewEvent, onEditEvent, onCloseEvent, onOpenEvent,
+  ctl, active, plans, watches, auth, s, onLoaded, club, clubOn, onNewEvent, onEditEvent, onCloseEvent, onOpenEvent, onCalcWindow,
 }: {
   ctl: UseCalendarReturn; active: boolean; plans: UsePlansReturn; watches: UseWatchesReturn;
   auth: UseAuthReturn; s: Scheduler; onLoaded: () => void;
   /* 동호회 일정 — clubOn 은 승인 멤버이고 일정 API 가 있을 때(SchedulerPage 의 homeOn) */
   club: UseClubEventsReturn; clubOn: boolean;
   onNewEvent: (date: string) => void; onEditEvent: (ev: EventDto) => void; onCloseEvent: () => void;
-  /* 일정을 패널에 연다(그 날짜도 고른다). 링크(#e=) 일정이 아니면 주소의 #e= 를 지운다 */
-  onOpenEvent: (ev: EventDto) => void;
+  /* 일정을 패널에 연다(그 날짜도 고른다 — 날짜 미정 일정은 누른 후보 날짜). 링크(#e=) 일정이 아니면 주소의 #e= 를 지운다 */
+  onOpenEvent: (ev: EventDto, date?: string) => void;
+  onCalcWindow: (w: { start: number; end: number }) => void;
 }) {
   const grid = useMemo(() => monthGrid(ctl.cursor.y, ctl.cursor.m), [ctl.cursor.y, ctl.cursor.m]);
   const today = useMemo(() => toISO(new Date()), []);
@@ -230,9 +236,14 @@ export function CalendarPage({
   }, [plans.plans, watches.watches]);
   const evsOf = (iso: string) => eventsOf(byDate.get(iso), ctl.filter);
   const showClub = clubOn && ctl.filter.club;
+  /* 날짜가 정해진 일정은 그 날짜에, 날짜 미정 일정은 후보 날짜마다 놓는다. 한 칸 안 순서는 그 칸 날짜 기준으로
+     다시 정렬한다 — 목록의 저장 순서(마지막 동작이 어떤 기준 날짜로 정렬했나)에 따라 칸 안 줄이 바뀌지 않게 */
   const clubByDate = useMemo(() => {
     const m = new Map<string, EventDto[]>();
-    for (const e of club.events) (m.get(sortKeyDate(e)) ?? (m.set(sortKeyDate(e), []), m.get(sortKeyDate(e))!)).push(e);
+    for (const e of club.events) {
+      for (const d of e.date !== null ? [e.date] : e.candidates.map(c => c.date)) (m.get(d) ?? (m.set(d, []), m.get(d)!)).push(e);
+    }
+    for (const [d, list] of m) m.set(d, sortEvents(list, d));
     return m;
   }, [club.events]);
   const clubOf = (iso: string) => (showClub ? clubByDate.get(iso) ?? [] : []);
@@ -241,9 +252,11 @@ export function CalendarPage({
   /* 날짜를 고르면 그날 상세로 돌아간다 */
   const pick = (iso: string) => { ctl.select(iso); if (ctl.openEvent !== null) onCloseEvent(); };
   /* 칸·창·주 보기가 같이 쓰는 줄 목록: 동호회 일정 먼저, 그다음 내 일정·빈자리 알림 */
+  /* 연 일정 표시 — 날짜 미정 일정은 고른(누른) 후보 칸에서만 */
+  const isOn = (ev: EventDto, iso: string) => ev.id === ctl.openEvent && (ev.date !== null || iso === ctl.selected);
   const lineOf = (iso: string) => [
     ...clubOf(iso).map(ev => (
-      <ClubChip key={'c' + ev.id} ev={ev} on={ev.id === ctl.openEvent} past={sortKeyDate(ev) < clubToday} onOpen={openClub} />
+      <ClubChip key={'c' + ev.id} ev={ev} iso={iso} on={isOn(ev, iso)} past={iso < clubToday} onOpen={openClub} />
     )),
     ...evsOf(iso).map(e => <EvLine key={e.key} e={e} />),
   ];
@@ -399,7 +412,7 @@ export function CalendarPage({
               {selClub.length > 0 && (
                 <div className="cal-day-club cal-evs">
                   {selClub.map(ev => (
-                    <ClubChip key={ev.id} ev={ev} on={ev.id === ctl.openEvent} past={sortKeyDate(ev) < clubToday} onOpen={openClub} />
+                    <ClubChip key={ev.id} ev={ev} iso={sel} on={isOn(ev, sel)} past={sel < clubToday} onOpen={openClub} />
                   ))}
                 </div>
               )}
@@ -410,12 +423,15 @@ export function CalendarPage({
 
         <aside className={'cal-side' + (openEv ? ' evp-on' : '')}>
           {openEv ? (
-            <EventPanel key={openEv.id} ev={openEv} club={club} onClose={onCloseEvent} onEdit={onEditEvent} />
+            <EventPanel
+              key={openEv.id} ev={openEv} club={club} meUid={auth.member?.uid ?? auth.me?.uid ?? ''}
+              onClose={onCloseEvent} onEdit={onEditEvent} onCalcWindow={onCalcWindow}
+            />
           ) : (
           <>
           <p className="cal-side-title">{dayTitle(sel)}</p>
           <div className="cal-detail">
-            {selClub.map(ev => <ClubRow key={ev.id} ev={ev} onOpen={openClub} />)}
+            {selClub.map(ev => <ClubRow key={ev.id} ev={ev} iso={sel} onOpen={openClub} />)}
             {!selEntry || (selEntry.plans.length === 0 && selEntry.watches.length === 0) ? (
               selClub.length === 0 && (
                 <div className="lmsg">

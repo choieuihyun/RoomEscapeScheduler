@@ -5,6 +5,7 @@ import {
   sortEvents, nextMine, upcoming, addDays, cpLen, STATUS_LABEL,
   mergeRange, upsert, isUndecided, sortKeyDate, candidateSummary, dropEvent, afterActionError,
   parseClock24, rollDays, todayKst, daysBetween, relDay, dayLabel, longDayLabel, clockLabel, rangeLabel,
+  parseAvailText, availText, windowLabel, windowToCalc,
 } from './clubEvents';
 
 const seg = (themeName: string, startMin: number, endMin: number | null = null) =>
@@ -341,5 +342,36 @@ describe('시간 협의 (§4.8)', () => {
       ],
     }));
     expect(rows.map((r) => r.date)).toEqual(['2026-11-01', '2026-10-30', '2026-10-31', '2026-10-29']);
+  });
+
+  it('내 응답 시간 칸 읽기 — 빈칸은 종일, 자정 넘김은 18시 이후 시작만', () => {
+    expect(parseAvailText('')).toEqual({ startMin: null, endMin: null });
+    expect(parseAvailText(' 종일 ')).toEqual({ startMin: null, endMin: null });
+    expect(parseAvailText('14:00~22:00')).toEqual({ startMin: 840, endMin: 1320 });
+    expect(parseAvailText('9:30 - 12:00')).toEqual({ startMin: 570, endMin: 720 });
+    expect(parseAvailText('14:00–22:00')).toEqual({ startMin: 840, endMin: 1320 });
+    expect(parseAvailText('22:00~02:00')).toEqual({ startMin: 1320, endMin: 1560 });
+    expect(parseAvailText('15:00~03:00')).toHaveProperty('error');
+    expect(parseAvailText('22:00~14:00')).toHaveProperty('error');
+    expect(parseAvailText('14:00~14:00')).toHaveProperty('error');
+    expect(parseAvailText('14:00')).toHaveProperty('error');
+    expect(parseAvailText('2시~5시')).toHaveProperty('error');
+    expect(parseAvailText('24:00~25:00')).toHaveProperty('error');
+  });
+
+  it('내 응답 시간 칸 글은 다시 읽으면 같은 값', () => {
+    expect(availText({ startMin: null, endMin: null })).toBe('');
+    expect(availText({ startMin: 1320, endMin: 1560 })).toBe('22:00~02:00');
+    expect(parseAvailText(availText({ startMin: 1320, endMin: 1560 }))).toEqual({ startMin: 1320, endMin: 1560 });
+  });
+
+  it('다 같이 되는 시간 표시와 조합 계산 조건', () => {
+    expect(windowLabel({ start: 0, end: 2879 })).toBe('종일');
+    expect(windowLabel({ start: 840, end: 1320 })).toBe('14:00–22:00');
+    expect(windowLabel({ start: 1320, end: 1560 })).toBe('22:00–다음날 02:00');
+    expect(windowToCalc({ start: 840, end: 1320 })).toEqual({ oStart: '14:00', oEnd: '22:00' });
+    expect(windowToCalc({ start: 1320, end: 1560 })).toEqual({ oStart: '22:00', oEnd: '26:00' });
+    expect(windowToCalc({ start: 0, end: 2879 })).toEqual({ oStart: '', oEnd: '' });
+    expect(windowToCalc({ start: 840, end: 2000 })).toEqual({ oStart: '14:00', oEnd: '' });
   });
 });
