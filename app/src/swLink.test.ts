@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { bannerOf, clickTarget, pickLink, swOpenId } from './swLink';
+import { bannerOf, clickTarget, pickClient, pickLink, swOpenId } from './swLink';
 
 const ROOT = 'https://choieuihyun.github.io/RoomEscapeScheduler/';
 
@@ -22,11 +22,11 @@ const CASES: [string, unknown, string][] = [
 ];
 
 /* public/firebase-messaging-sw.js 의 pickLink·clickTarget 을 꺼내 함수로 만든다 */
-function swCopy(): { pickLink: typeof pickLink; clickTarget: typeof clickTarget } {
+function swCopy(): { pickLink: typeof pickLink; clickTarget: typeof clickTarget; pickClient: typeof pickClient } {
   const src = readFileSync(new URL('../public/firebase-messaging-sw.js', import.meta.url), 'utf8');
   const m = /\/\/ pickLink 시작.*\n([\s\S]*?)\/\/ pickLink 끝/.exec(src);
   if (!m) throw new Error('서비스 워커에서 pickLink 를 못 찾았어요');
-  return new Function(`${m[1]}\nreturn { pickLink, clickTarget };`)();
+  return new Function(`${m[1]}\nreturn { pickLink, clickTarget, pickClient };`)();
 }
 
 /* [지금 창 주소, 고른 링크, 기대] */
@@ -36,6 +36,9 @@ const TARGETS: [string, string, string, string | null][] = [
   ['계산 화면 → 쿼리는 두고 해시만', ROOT + '?view=calc', ROOT + '#e=12', ROOT + '?view=calc#e=12'],
   ['다른 일정 링크 → 해시만 바꿈', ROOT + '?view=calendar#e=3', ROOT + '#e=12', ROOT + '?view=calendar#e=12'],
   ['이미 같은 해시 → 메시지', ROOT + '#e=12', ROOT + '#e=12', 'message'],
+  ['#e=0 은 일정 링크가 아니다 → 앞으로만', ROOT, ROOT + '#e=0', null],
+  ['#e=000 도 마찬가지', ROOT, ROOT + '#e=000', null],
+  ['#e=007 은 7 로 읽는 숫자 → 해시만 바꿈', ROOT, ROOT + '#e=007', ROOT + '#e=007'],
 ];
 
 describe('pickLink', () => {
@@ -57,6 +60,29 @@ describe('clickTarget', () => {
   it('서비스 워커 사본도 같은 결과', () => {
     const sw = swCopy();
     for (const [name, cur, link, want] of TARGETS) expect(sw.clickTarget(cur, link), name).toBe(want);
+  });
+});
+
+/* 창이 여럿일 때 */
+const W = (url: string, o: { visibilityState?: string; focused?: boolean } = {}) => ({ url, ...o });
+describe('pickClient', () => {
+  const a = W(ROOT + '?a', { visibilityState: 'hidden', focused: false });
+  const b = W(ROOT + '?b', { visibilityState: 'hidden', focused: true });
+  const c = W(ROOT + '?c', { visibilityState: 'visible', focused: false });
+  const other = W('https://evil.example/', { visibilityState: 'visible', focused: true });
+  const cases: [string, ReturnType<typeof W>[], ReturnType<typeof W> | undefined][] = [
+    ['보이는 창이 우선', [a, b, c], c],
+    ['보이는 창이 없으면 포커스된 창', [a, b], b],
+    ['둘 다 없으면 첫 창', [a], a],
+    ['앱 밖 창은 뽑지 않는다', [other, a], a],
+    ['앱 창이 없으면 undefined', [other], undefined],
+    ['빈 목록', [], undefined],
+  ];
+  for (const [name, list, want] of cases) it(name, () => expect(pickClient(list, ROOT)).toBe(want));
+
+  it('서비스 워커 사본도 같은 결과', () => {
+    const sw = swCopy();
+    for (const [name, list, want] of cases) expect(sw.pickClient(list, ROOT), name).toBe(want);
   });
 });
 

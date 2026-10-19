@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { currentDeviceToken, currentPushSupport, PUSH_READY_EVT, requestPushPermission } from './notify';
 import { guideVariant, isIOS, pushCard, shouldAutoGuide, type GuideVariant, type PushCard } from './pushState';
-import { deviceStatus, isMissingApi, pushTest, pushTestMessage, sayClub } from './server';
+import { deviceStatus, errorCode, isMissingApi, pushTest, pushTestMessage, sayClub } from './server';
 import { showToast } from './toast';
 
 /* 이 기기 알림 (작업명세서 §4.10, 계획 Task 11) — 내 정보 카드와 알림 켜기 안내(PushGuide)가 같이 쓴다.
@@ -78,17 +78,20 @@ export function usePushDevice(on: boolean, active: boolean) {
     }
   }, []);
 
-  const test = useCallback(async () => {
+  /* 보냈거나(성공) 서버가 너무 일러서 막았으면(429 TOO_SOON) true — 부르는 쪽이 쉬는 시간을 건다 */
+  const test = useCallback(async (): Promise<boolean> => {
     setBusy('test');
     try {
       const t = await idToken();
-      if (!t) { showToast('로그인해 주세요.'); return; }
+      if (!t) { showToast('로그인해 주세요.'); return false; }
       const r = await pushTest(t);
       showToast(pushTestMessage(r));
       if (r.devices === 0 || r.delivered === 0) void refresh();
+      return true;
     } catch (e) {
       if (isMissingApi(e)) setApi('off');
       else showToast(sayClub(e)); // 429 TOO_SOON 은 서버 문구 그대로
+      return errorCode(e) === 'TOO_SOON';
     } finally {
       setBusy(null);
     }

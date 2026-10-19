@@ -23,7 +23,8 @@ interface TourNodes { dim: HTMLDivElement; spot: HTMLDivElement; tip: HTMLDivEle
 export function useTour() {
   const nodesRef = useRef<TourNodes | null>(null);
   const stepRef = useRef(0);
-  const startedAutoRef = useRef(false);
+  /* 저절로 시작하는 예약(처음 온 기기, 500ms 뒤) — undefined = 아직 예약 안 함, -1 = 예약할 필요 없음. 그 전에 end 가 불리면 취소한다 */
+  const autoRef = useRef<number | undefined>(undefined);
   /* 투어가 떠 있거나 곧 뜰 예정(처음 온 기기) — 다른 안내(알림 켜기)가 그 위에 겹치지 않게 밖에서 본다 */
   const [active, setActive] = useState(() => {
     try { return !localStorage.getItem(TOUR_KEY); } catch { return false; }
@@ -50,6 +51,7 @@ export function useTour() {
   }
 
   function end() {
+    clearTimeout(autoRef.current);
     setActive(false);
     if (!nodesRef.current) return;
     unmount();
@@ -128,9 +130,8 @@ export function useTour() {
     };
     window.addEventListener('resize', reposition);
     window.addEventListener('scroll', onScroll, { passive: true, capture: true });
-    if (!startedAutoRef.current) {
-      startedAutoRef.current = true;
-      if (!localStorage.getItem(TOUR_KEY)) setTimeout(start, 500);
+    if (autoRef.current === undefined) {
+      autoRef.current = localStorage.getItem(TOUR_KEY) ? -1 : window.setTimeout(start, 500);
     }
     return () => {
       window.removeEventListener('resize', reposition);

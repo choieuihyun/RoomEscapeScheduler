@@ -46,18 +46,24 @@ function pickLink(data, root) {
 function clickTarget(clientUrl, link) {
   const i = link.indexOf('#');
   const hash = i < 0 ? '' : link.slice(i);
-  if (!/^#e=\d{1,15}$/.test(hash)) return null;
+  if (!/^#e=(?!0+$)\d{1,15}$/.test(hash)) return null;
   const u = new URL(clientUrl);
   if (u.hash === hash) return 'message';
   u.hash = hash;
   return u.href;
+}
+
+/* 같은 앱 창이 여럿이면 누른 사람이 보고 있을 창을 고른다: 보이는(visible) 창 → 포커스된 창 → 아무 창 */
+function pickClient(list, root) {
+  const mine = list.filter(c => c.url.startsWith(root));
+  return mine.find(c => c.visibilityState === 'visible') || mine.find(c => c.focused) || mine[0];
 }
 // pickLink 끝
 
 async function openLink(link) {
   /* includeUncontrolled — 서비스워커를 처음 등록한 탭은 아직 이 워커 관할이 아니어도 찾아야 한다 */
   const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-  const client = list.find(c => c.url.startsWith(ROOT));
+  const client = pickClient(list, ROOT);
   if (!client) {
     await self.clients.openWindow(link);
     return;

@@ -34,11 +34,18 @@ export function pickLink(data: unknown, root: string): string {
 export function clickTarget(clientUrl: string, link: string): string | 'message' | null {
   const i = link.indexOf('#');
   const hash = i < 0 ? '' : link.slice(i);
-  if (!/^#e=\d{1,15}$/.test(hash)) return null;
+  if (!/^#e=(?!0+$)\d{1,15}$/.test(hash)) return null;
   const u = new URL(clientUrl);
   if (u.hash === hash) return 'message';
   u.hash = hash;
   return u.href;
+}
+
+/* 알림을 눌렀을 때 앞으로 가져올 앱 창. 같은 앱 창이 여럿이면 보이는(visible) 창 → 포커스된 창 → 아무 창 순. 없으면 undefined. */
+export interface SwClientLike { url: string; visibilityState?: string; focused?: boolean }
+export function pickClient<T extends SwClientLike>(list: T[], root: string): T | undefined {
+  const mine = list.filter(c => c.url.startsWith(root));
+  return mine.find(c => c.visibilityState === 'visible') || mine.find(c => c.focused) || mine[0];
 }
 
 /* 서비스 워커가 창을 옮기지 못했을 때(navigate 거절) 보내는 `{ type: 'open', link }` 에서 일정 id 를 꺼낸다.

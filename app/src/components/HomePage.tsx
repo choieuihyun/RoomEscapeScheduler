@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { monthGrid, toISO, WEEKDAYS } from '../core';
 import {
   addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, sortKeyDate, STATUS_LABEL, timeLabel,
@@ -53,13 +53,21 @@ export function HomePage({
   const events = club.events;
   const [tab, setTab] = useState<Tab>('all');
   const [page, setPage] = useState(0);
+  /* 지금 시각 — 1분마다(탭이 보일 때만, 다시 보이면 바로) 갱신해 끝난 일정·자정 넘긴 '내일'이 띠와 다음 일정에 반영되게 한다 */
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const tick = () => { if (document.visibilityState === 'visible') setNow(new Date()); };
+    const t = window.setInterval(tick, 60_000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick); };
+  }, []);
 
   const homeLast = addDays(today, HOME_DAYS - 1);
   /* 내 다음 일정도 같은 범위에서 고른다 — 캘린더에서 넘겨 본 먼 달 일정이 수(0)와 따로 뜨지 않게 */
   const homeEvents = events.filter((e) => { const k = sortKeyDate(e, today); return k >= today && k <= homeLast; });
   const joinedCount = homeEvents.filter((e) => e.joined).length;
   /* 오늘 일정은 이미 끝났으면 건너뛴다(한국 시각) */
-  const next = nextMine(homeEvents, new Date());
+  const next = nextMine(homeEvents, now);
 
   const twoWeeks = upcoming(events, today, LIST_DAYS);
   const rows = tab === 'mine' ? twoWeeks.filter((e) => e.joined)
@@ -80,7 +88,8 @@ export function HomePage({
 
   const initial = [...nickname][0] ?? '?';
   /* 맨 위 띠 — 내가 참여한 오늘·내일 일정(푸시를 못 받는 사람용, §4.10). 오늘 이미 끝난 일정은 뺀다(한국 시각) */
-  const strip = todayStrip(events, new Date());
+  /* 목록을 못 받은 상태면 낡은 목록으로 띠를 만들지 않는다 */
+  const strip = club.error ? null : todayStrip(events, now);
 
   return (
     <>

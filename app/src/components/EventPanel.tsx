@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { eventStatus, eventTitle, isUndecided, kakaoPost, longDayLabel, rangeLabel, STATUS_LABEL, timeLabel } from '../clubEvents';
 import { eventLink } from '../eventLink';
 import { playedCount, playedNames, playedPerPerson } from '../played';
@@ -85,6 +85,14 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
     }
   }
 
+  const closeRef = useRef<HTMLButtonElement>(null);
+  /* 포커스가 어디에도 없을 때(앱 안 알림 띠의 "열기"가 사라지며 body 로 떨어진 뒤 등) 일정이 열리면 닫기 단추로 옮긴다 —
+     클릭한 칸 등 포커스가 이미 있으면 건드리지 않는다 */
+  useEffect(() => {
+    const a = document.activeElement;
+    if (!a || a === document.body) closeRef.current?.focus();
+  }, [ev.id]);
+
   const inIds = new Set(ev.participants.map((p) => p.uid));
   const candidates = (members ?? []).filter((m) => !inIds.has(m.uid));
 
@@ -103,7 +111,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
               >삭제</button>
             </>
           )}
-          <button type="button" className="btn-x" aria-label="닫기" onClick={() => { flushTime(); onClose(); }}>×</button>
+          <button type="button" className="btn-x" aria-label="닫기" ref={closeRef} onClick={() => { flushTime(); onClose(); }}>×</button>
         </span>
       </div>
 

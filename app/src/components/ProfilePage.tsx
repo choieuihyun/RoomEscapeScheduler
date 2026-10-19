@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { cpLen, dayLabel, eventStatus, eventTitle, STATUS_LABEL, weekday } from '../clubEvents';
+import { coolLeft, coolUntil, startCool, testLabel } from '../pushCool';
 import { isPlayableName, searchThemes, sourceLabel } from '../played';
 import type { EventDto, MeDto, PlayedDto, ThemeRef } from '../server';
 import { showToast } from '../toast';
@@ -132,6 +133,16 @@ const CARD_NOTE: Partial<Record<NonNullable<UsePushDeviceReturn['card']>, string
 
 function PushCard({ push }: { push: UsePushDeviceReturn }) {
   const { card, busy } = push;
+  /* 테스트 알림 쉬는 시간 — 1초마다 남은 시간을 다시 센다(끝나면 멈춘다) */
+  const [now, setNow] = useState(() => Date.now());
+  const [until, setUntil] = useState(coolUntil);
+  const sendTest = async () => { if (await push.test()) { startCool(); setUntil(coolUntil()); setNow(Date.now()); } };
+  useEffect(() => {
+    if (coolLeft(until, Date.now()) === 0) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [until]);
+  const left = coolLeft(until, now);
   const chip = card === null ? { text: '확인 중', cls: 'muted' } : CARD_CHIP[card];
   const note = card === null ? undefined : CARD_NOTE[card];
   const unable = card === 'ios-install' || card === 'kakao-inapp' || card === 'unsupported';
@@ -154,8 +165,8 @@ function PushCard({ push }: { push: UsePushDeviceReturn }) {
       )}
       {/* 5단계 전 서버(404)면 테스트 알림은 숨긴다 */}
       {card === '켜짐' && push.api === 'on' && (
-        <button type="button" className="pf-push-btn" disabled={busy !== null} onClick={() => void push.test()}>
-          {busy === 'test' ? '보내는 중…' : '테스트 알림 보내기'}
+        <button type="button" className="pf-push-btn" disabled={busy !== null || left > 0} onClick={() => void sendTest()}>
+          {testLabel(busy === 'test', left)}
         </button>
       )}
       {unable && <button type="button" className="pf-manual-link pf-push-more" onClick={() => push.openGuide()}>자세히 →</button>}
