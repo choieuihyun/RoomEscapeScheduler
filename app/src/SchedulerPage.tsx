@@ -210,7 +210,7 @@ export function SchedulerPage() {
   const failStrip = listFailed && (
     <div className="listfail" role="status">
       <span>동호회 일정을 불러오지 못했어요.</span>
-      <button type="button" className="btn ghost" onClick={() => void club.reload()}>다시 시도</button>
+      <button type="button" className="btn" onClick={() => void club.reload()}>다시 시도</button>
     </div>
   );
   return (
