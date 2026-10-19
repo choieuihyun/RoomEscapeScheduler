@@ -17,7 +17,11 @@ const DOMAIN = 'user.resched';
 export const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,19}$/;
 export const ID_HINT = '영문·숫자 3~20자 (밑줄, 점, 붙임표 가능)';
 const toEmail = (id: string) => id.toLowerCase() + '@' + DOMAIN;
-export const toId = (email: string) => String(email || '').replace('@' + DOMAIN, '');
+/* 아이디 계정(@user.resched)만 아이디가 있다. 소셜 계정은 ''(표시 이름은 멤버 닉네임). */
+export const toId = (email: string) => {
+  const m = String(email || '');
+  return m.endsWith('@' + DOMAIN) ? m.slice(0, -('@' + DOMAIN).length) : '';
+};
 
 declare global {
   interface Window {
@@ -102,6 +106,34 @@ export async function signIn(id: string, pw: string): Promise<Me> {
   return { uid: c.user.uid, id };
 }
 
+/* ── 소셜 로그인 ── 구글은 서버를 거치지 않고 Firebase 가 처리한다(작업명세서 §4.6). */
+
+export async function signInWithGoogle(): Promise<Me> {
+  await boot();
+  const c = await A.signInWithPopup(auth, new A.GoogleAuthProvider());
+  return { uid: c.user.uid, id: toId(c.user.email) };
+}
+
+/* 로그인한 기존 계정에 구글을 붙인다 — uid 가 그대로라 일정·알림이 끊기지 않는다 */
+export async function linkGoogle(): Promise<void> {
+  await boot();
+  if (!auth.currentUser) throw new Error('로그인해 주세요.');
+  await A.linkWithPopup(auth.currentUser, new A.GoogleAuthProvider());
+}
+
+/* 서버가 카카오 인가 코드와 맞바꿔 준 customToken 으로 로그인 */
+export async function signInWithCustom(token: string): Promise<Me> {
+  await boot();
+  const c = await A.signInWithCustomToken(auth, token);
+  return { uid: c.user.uid, id: toId(c.user.email) };
+}
+
+/* 현재 사용자에게 붙은 로그인 수단('password'·'google.com' 등) */
+export async function providers(): Promise<string[]> {
+  await boot();
+  return auth.currentUser?.providerData.map((p: { providerId: string }) => p.providerId) ?? [];
+}
+
 export async function signOut() {
   await boot();
   return A.signOut(auth);
@@ -129,6 +161,9 @@ export function say(err: unknown): string {
     'weak-password': '비밀번호는 6자 이상으로 해 주세요.',
     'invalid-email': '아이디에 쓸 수 없는 글자가 있어요.',
     'too-many-requests': '너무 여러 번 시도했어요. 잠시 뒤에 다시 해 주세요.',
+    'popup-closed-by-user': '로그인 창이 닫혔어요.',
+    'credential-already-in-use': '이 구글 계정은 이미 다른 계정에 연결돼 있어요.',
+    'popup-blocked': '팝업이 막혔어요. 팝업을 허용하고 다시 눌러 주세요.',
     'network-request-failed': '인터넷 연결을 확인해 주세요.',
     'operation-not-allowed': '이메일/비밀번호 로그인이 아직 켜져 있지 않습니다 (Firebase 콘솔).',
     /* Authentication을 아예 시작하지 않은 프로젝트에서 나온다. */

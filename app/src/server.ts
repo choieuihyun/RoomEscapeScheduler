@@ -121,12 +121,13 @@ interface WatchApiError extends ApiError {
   body?: { error?: string; message?: string };
 }
 
-async function authed<T>(path: string, token: string, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> {
+/* token 이 null 이면 Authorization 헤더를 싣지 않는다(카카오 로그인처럼 인증 전 POST). */
+async function send<T>(path: string, token: string | null, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> {
   const res = await fetch(base() + path, {
     method,
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
+      ...(token != null ? { Authorization: `Bearer ${token}` } : {}),
       ...(body != null ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body != null ? JSON.stringify(body) : undefined,
@@ -140,6 +141,9 @@ async function authed<T>(path: string, token: string, method: 'GET' | 'POST' | '
   if (res.status === 204) return undefined as T;
   return res.json();
 }
+
+const authed = <T>(path: string, token: string, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> =>
+  send<T>(path, token, method, body);
 
 /* 실측: GET은 배열이 아니라 { limit, watches } 객체로 온다(작업명세서 §4.5 문서와 다른 점). */
 export const listWatches = (token: string): Promise<{ limit: number; watches: WatchDto[] }> =>
@@ -162,5 +166,55 @@ export function sayWatch(err: unknown): string {
   const e = err as WatchApiError;
   if (e?.status === 409 && e.body?.message) return e.body.message;
   if (e?.status === 400 && e.body?.message) return e.body.message;
+  return say(err);
+}
+
+/* ── 동호회 계정 API (작업명세서 §4.6) ── 서버가 아직 모르면 404 가 온다.
+   토큰은 위 감시 API 와 같은 이유로 호출부가 넘긴다(cloud.ts 를 끌어오지 않는다). */
+export interface MeDto {
+  uid: string;
+  nickname: string | null;
+  role: 'ADMIN' | 'MEMBER' | null;
+  status: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REMOVED';
+  kakaoLinked: boolean;
+}
+
+export interface MemberDto {
+  uid: string;
+  nickname: string;
+  role: 'ADMIN' | 'MEMBER';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REMOVED';
+  createdAt: string;
+  decidedAt: string | null;
+  hasDevice: boolean;
+}
+
+/* 로그인 전이라 토큰이 없다 — 받은 customToken 으로 Firebase 에 로그인하는 건 호출부 몫. */
+export const kakaoLogin = (code: string, redirectUri: string): Promise<{ customToken: string }> =>
+  send('/api/auth/kakao', null, 'POST', { code, redirectUri });
+
+export const kakaoLink = (code: string, redirectUri: string, token: string): Promise<{ linked: boolean }> =>
+  authed('/api/auth/kakao/link', token, 'POST', { code, redirectUri });
+
+export const getMe = (token: string): Promise<MeDto> => authed('/api/me', token, 'GET');
+
+export const joinClub = (nickname: string, token: string): Promise<MeDto> =>
+  authed('/api/me/join', token, 'POST', { nickname });
+
+export const listMembers = (status: 'PENDING' | 'APPROVED' | 'ALL', token: string): Promise<MemberDto[]> =>
+  authed(`/api/admin/members?status=${status}`, token, 'GET');
+
+export const memberAction = (uid: string, action: 'approve' | 'reject' | 'remove', token: string): Promise<MemberDto> =>
+  authed(`/api/admin/members/${encodeURIComponent(uid)}/${action}`, token, 'POST');
+
+export const setMemberRole = (uid: string, role: 'ADMIN' | 'MEMBER', token: string): Promise<MemberDto> =>
+  authed(`/api/admin/members/${encodeURIComponent(uid)}/role`, token, 'POST', { role });
+
+/* 서버가 준 해요체 message 는 상태 코드와 상관없이 그대로 보여 준다(§4.6 에러 본문).
+   본문 없는 404 는 서버가 이 기능을 아직 배포받지 못한 것이다. */
+export function sayClub(err: unknown): string {
+  const e = err as WatchApiError;
+  if (e?.body?.message) return e.body.message;
+  if (e?.status === 404) return '서버가 아직 동호회 기능을 몰라요. 잠시 뒤 다시 열어 주세요.';
   return say(err);
 }
