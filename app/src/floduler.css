@@ -931,19 +931,24 @@ button:active{transform:scale(.97)}
 .home-tab:active{transform:none}
 .home-tab.on{border-bottom-color:var(--ink);color:var(--ink);font-weight:600}
 .home-list{list-style:none;margin:0;padding:0}
-.home-row{display:flex;align-items:center;gap:10px;padding:12px 6px;margin:0 -6px;border-bottom:1px solid var(--line);
-  border-radius:var(--r-xs);cursor:pointer}
+/* 줄 = 보통 li. 제목이 실제 단추이고 그 ::after 가 줄 전체를 덮는다(줄 어디를 눌러도 상세). 참여 단추는 z-index 로 그 위 */
+.home-row{position:relative;display:flex;align-items:center;gap:10px;padding:12px 6px;margin:0 -6px;border-bottom:1px solid var(--line);
+  border-radius:var(--r-xs)}
 .home-row:last-child{border-bottom:0}
 .home-row:hover{background:var(--btn-bg-hover)}
-.home-row:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+.home-row:has(.home-row-open:focus-visible){box-shadow:inset 0 0 0 2px var(--blue-text)}
 .home-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .home-row-t{display:flex;align-items:center;gap:6px;min-width:0}
-.home-row-t b{min-width:0;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-row-open{display:block;min-width:0;padding:0;border:none;background:none;font-family:inherit;color:var(--ink);text-align:left;
+  font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.home-row-open:active{transform:none}
+.home-row-open:focus-visible{outline:none;box-shadow:none}
+.home-row-open::after{content:'';position:absolute;inset:0;border-radius:inherit}
 .home-row-m{font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .home-row-m .sun{color:var(--sun)} .home-row-m .sat{color:var(--sat)}
 .home-row-a{flex:none;padding:0 6px;font-size:12.5px;color:var(--ink3);white-space:nowrap}
 .home-row-a.on{color:var(--blue-text);font-weight:600}
-.home-join{flex:none;height:30px;padding:0 12px;border:1px solid var(--blue-line);border-radius:var(--r-sm);background:var(--blue-soft);
+.home-join{position:relative;z-index:1;flex:none;height:30px;padding:0 12px;border:1px solid var(--blue-line);border-radius:var(--r-sm);background:var(--blue-soft);
   color:var(--blue-text);font-family:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
 .home-join:hover{border-color:var(--blue-text)}
 .home-join:disabled{opacity:.5;cursor:default}

@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useState } from 'react';
 import { fmt, monthGrid, toISO, WEEKDAYS } from '../core';
 import { addDays, eventStatus, eventTitle, nextMine, STATUS_LABEL, timeLabel, upcoming } from '../clubEvents';
 import type { EventDto } from '../server';
@@ -36,12 +36,6 @@ function nextDateLine(iso: string, today: string): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[d.getDay()]}) · ${rel}`;
 }
 
-/* 줄 전체가 눌리는 칸 — 안에 참여 단추가 있어 <button> 으로 감싸지 않는다 */
-const onEnter = (fn: () => void) => (e: KeyboardEvent) => {
-  if (e.target !== e.currentTarget) return;
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); }
-};
-
 export function HomePage({
   club, today, nickname, isAdmin, watchCount, watchLimit, pendingCount, month,
   onMonth, onWatches, onMembers, onNewEvent, onCalc, onOpenEvent, onPickDay,
@@ -68,8 +62,10 @@ export function HomePage({
   const [page, setPage] = useState(0);
 
   const homeLast = addDays(today, HOME_DAYS - 1);
-  const joinedCount = events.filter((e) => e.joined && e.date >= today && e.date <= homeLast).length;
-  const next = nextMine(events, today);
+  /* 내 다음 일정도 같은 범위에서 고른다 — 캘린더에서 넘겨 본 먼 달 일정이 수(0)와 따로 뜨지 않게 */
+  const homeEvents = events.filter((e) => e.date >= today && e.date <= homeLast);
+  const joinedCount = homeEvents.filter((e) => e.joined).length;
+  const next = nextMine(homeEvents, today);
 
   const twoWeeks = upcoming(events, today, LIST_DAYS);
   const rows = tab === 'mine' ? twoWeeks.filter((e) => e.joined)
@@ -163,14 +159,12 @@ export function HomePage({
                 const d = parse(ev.date);
                 const busy = club.busyIds.has(ev.id);
                 return (
-                  <li
-                    key={ev.id} className="home-row" role="button" tabIndex={0}
-                    onClick={() => onOpenEvent(ev)} onKeyDown={onEnter(() => onOpenEvent(ev))}
-                  >
+                  <li key={ev.id} className="home-row">
                     <div className="home-row-main">
                       <div className="home-row-t">
                         <span className={'st-badge ' + st}>{STATUS_LABEL[st]}</span>
-                        <b>{eventTitle(ev)}</b>
+                        {/* 제목 단추의 ::after 가 줄 전체를 덮어 줄 어디를 눌러도 연다. 참여 단추는 그 위에 따로 있다 */}
+                        <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
                       </div>
                       <span className="home-row-m">
                         <span className={dowClass(d)}>{d.getMonth() + 1}/{d.getDate()} ({WEEKDAYS[d.getDay()]})</span>
@@ -184,8 +178,7 @@ export function HomePage({
                     ) : (
                       <button
                         type="button" className="home-join" disabled={busy}
-                        onClick={(e) => { e.stopPropagation(); void club.join(ev.id); }}
-                        onKeyDown={(e) => e.stopPropagation()}
+                        onClick={() => void club.join(ev.id)}
                       >참여</button>
                     )}
                   </li>
@@ -233,7 +226,7 @@ export function HomePage({
               <button type="button" className="home-next-go" onClick={() => onOpenEvent(next)}>일정 자세히 보기</button>
             </>
           ) : (
-            <p className="home-empty-p">참여한 일정이 아직 없어요. 아래에서 골라 참여해 보세요.</p>
+            <p className="home-empty-p">참여한 일정이 아직 없어요. 다가오는 동호회 일정에서 골라 참여해 보세요.</p>
           )}
         </section>
 
