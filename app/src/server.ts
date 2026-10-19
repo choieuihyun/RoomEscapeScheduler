@@ -227,3 +227,52 @@ export function sayClub(err: unknown): string {
   if (e?.status === 404) return '서버가 아직 동호회 기능을 몰라요. 잠시 뒤 다시 열어 주세요.';
   return say(err);
 }
+
+/* ── 동호회 일정 (작업명세서 §4.7) — 타입만. 호출 함수는 E2 ── */
+export interface SegmentInput {
+  themeName: string;
+  branchName: string | null;
+  themeKey: string | null;
+  startMin: number;
+  endMin: number | null;
+}
+export type SegmentDto = SegmentInput;
+
+export interface EventInput {
+  title: string;
+  date: string;
+  startMin: number | null;
+  endMin: number | null;
+  location: string | null;
+  capacity: number | null;
+  booked: boolean;
+  memo: string | null;
+  segments: SegmentInput[];
+}
+
+export interface EventDto {
+  id: number;
+  title: string;
+  date: string;
+  startMin: number | null;
+  endMin: number | null;
+  location: string | null;
+  capacity: number | null;
+  booked: boolean;
+  memo: string | null;
+  segments: SegmentDto[];
+  version: number;
+  createdBy: { uid: string; nickname: string };
+  createdAt: string;
+  updatedAt: string;
+  participants: { uid: string; nickname: string; addedBy: string | null; joinedAt: string }[];
+  count: number;
+  joined: boolean;
+  mine: boolean;
+  canManage: boolean;
+}
+
+export interface ClubMemberDto {
+  uid: string;
+  nickname: string;
+}
