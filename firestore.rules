@@ -16,14 +16,24 @@ service cloud.firestore {
      * accounts:signUp 을 불러 아무 이메일로나 계정을 만들 수 있다 —
      * 화면의 아이디 형식 검사는 화면에서만 돌기 때문이다.
      * 그렇게 만든 계정은 남의 문서를 못 보지만(위 두 줄), 자기 uid 밑에
-     * 쓰기를 퍼부어 하루 한도를 태울 수는 있다. 도메인을 묶어 그 길을 좁힌다.
+     * 쓰기를 퍼부어 하루 한도를 태울 수는 있다. 그래서 이메일 계정은 우리
+     * 도메인(@user.resched)만 통과시켜 그 길을 좁힌다.
      *
-     * 주의: 나중에 구글 로그인을 붙이면 이 줄을 함께 고쳐야 한다.
+     * 구글(google.com)과 카카오(custom)도 통과시킨다(기획 §4.54).
+     * 구글은 구글 팝업을, 카카오는 우리 서버가 서명한 커스텀 토큰을 거쳐야 해서
+     * apiKey 만으로는 만들 수 없다. 그래서 도메인 조건과 따로 연다.
+     * 커스텀 토큰에는 이메일 클레임이 없으므로 이메일 쪽은 null 을 먼저 본다.
+     *
+     * 주의: 로그인 수단을 더 붙이면 아래 provider 목록도 함께 고친다.
      */
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null
                          && request.auth.uid == uid
-                         && request.auth.token.email.matches('.*@user[.]resched');
+                         && (
+                              (request.auth.token.email != null
+                               && request.auth.token.email.matches('.*@user[.]resched'))
+                              || request.auth.token.firebase.sign_in_provider in ['google.com', 'custom']
+                            );
     }
 
     /* 그 밖의 모든 경로는 차단 */
