@@ -8,7 +8,7 @@ import { usePlans } from './usePlans';
 import { useSaveModal } from './useSaveModal';
 import { useWatches, buildWatchControl } from './useWatches';
 import { useCalendar } from './useCalendar';
-import { useView, decideFirstScreen } from './useView';
+import { useView, decideFirstScreen, type View } from './useView';
 import { useClubEvents } from './useClubEvents';
 import { addDays } from './clubEvents';
 import { monthGrid, toISO, type SearchResultRow } from './core';
@@ -107,11 +107,14 @@ export function SchedulerPage() {
     calSelect(ev.date);
     setOpenEvent(ev.id);
   }, [dropLink, calSelect, setOpenEvent]);
+  /* 캘린더 밖 화면으로 옮길 때는 #e= 를 지운다 — 남으면 `?view=calc#e=12` 를 새로고침(iOS 탭 되살림)했을 때 캘린더로 끌려간다 */
+  const { go } = nav;
+  const goView = useCallback((v: View) => { if (v !== 'calendar') dropLink(); go(v); }, [dropLink, go]);
   /* 홈에서 줄·"일정 자세히 보기"를 누르면 캘린더 화면으로 넘어가 그 일정 상세를 연다 */
-  const openFromHome = (ev: EventDto) => { nav.go('calendar'); openEvent(ev); };
+  const openFromHome = (ev: EventDto) => { goView('calendar'); openEvent(ev); };
   /* 홈 미니 달력의 날짜 → 캘린더 화면에서 그날을 고른다. 열려 있던 일정 상세는 닫는다(캘린더의 날짜 고르기와 같게) */
   const pickFromHome = (iso: string) => {
-    nav.go('calendar');
+    goView('calendar');
     calSelect(iso);
     if (cal.openEvent !== null) closeEvent();
   };
@@ -138,7 +141,6 @@ export function SchedulerPage() {
   const linkBusy = useRef(false);
   const { openAuth } = auth;
   const { adopt } = club;
-  const { go } = nav;
   const memberStatus = auth.member?.status ?? null;
   useEffect(() => {
     if (linkId === null || !authSettled) return;
@@ -198,14 +200,14 @@ export function SchedulerPage() {
      넘어간 뒤(다음 틱, 요소가 다시 보인 다음) 시작한다. */
   const startTour = () => {
     if (nav.view === 'calc') tour.start();
-    else { nav.go('calc'); setTimeout(tour.start, 60); }
+    else { goView('calc'); setTimeout(tour.start, 60); }
   };
 
   const onCalc = nav.view === 'calc';
   return (
     <div className="shell">
       <SideNav
-        view={nav.view} onView={nav.go} auth={auth} homeOn={homeOn}
+        view={nav.view} onView={goView} auth={auth} homeOn={homeOn}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
         isAdmin={isAdmin} pendingCount={pendingCount}
@@ -236,8 +238,8 @@ export function SchedulerPage() {
               club={club} today={today} nickname={auth.member ? memberName(auth.member) : ''} isAdmin={isAdmin}
               watchCount={watches.watches.length} watchLimit={watches.limit} pendingCount={pendingCount}
               month={homeMonth} onMonth={stepHomeMonth}
-              onWatches={watches.openModal} onMembers={() => nav.go('members')}
-              onNewEvent={() => eventForm.openNew()} onCalc={() => nav.go('calc')}
+              onWatches={watches.openModal} onMembers={() => goView('members')}
+              onNewEvent={() => eventForm.openNew()} onCalc={() => goView('calc')}
               onOpenEvent={openFromHome} onPickDay={pickFromHome}
             />
           </div>
@@ -251,7 +253,7 @@ export function SchedulerPage() {
             </header>
             <CalendarPage
               ctl={cal} active={nav.view === 'calendar'} plans={plans} watches={watches} auth={auth} s={s}
-              onLoaded={() => { nav.go('calc'); showToast('일정을 불러왔어요.'); }}
+              onLoaded={() => { goView('calc'); showToast('일정을 불러왔어요.'); }}
               club={club} clubOn={homeOn}
               onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent} onOpenEvent={openEvent}
             />
@@ -272,7 +274,7 @@ export function SchedulerPage() {
       <AuthModal auth={auth} />
       <LoadModal m={loadModal} />
       <SaveModal m={saveModal} />
-      {clubOn && <EventForm m={eventForm} create={club.create} update={club.update} />}
+      {clubOn && <EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} />}
       {auth.cloudOn && <WatchListModal w={watches} />}
       <Toaster />
     </div>

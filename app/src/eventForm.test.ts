@@ -83,7 +83,14 @@ describe('eventForm', () => {
   it('구간이 있을 때 blur 로는 구간이 바뀌지 않는다', () => {
     const seg = { themeName: 'A', branchName: '강남점', themeKey: 'k', start: '13:40', end: '14:50' };
     expect(shouldApplyOnBlur(base({ segs: [seg] }))).toBe(false);
-    expect(shouldApplyOnBlur(base())).toBe(true);
+    expect(shouldApplyOnBlur(base({ title: '[예약O] A 13:40', segs: [seg] }))).toBe(false); // 구간이 있으면 마커가 있어도 안 덮는다
+  });
+
+  it('blur 는 카톡 표시가 있고 구간이 비었을 때만 적용한다', () => {
+    expect(shouldApplyOnBlur(base({ title: '정모 19:00' }))).toBe(false);
+    expect(shouldApplyOnBlur(base({ title: '정기 모임 7시' }))).toBe(false);
+    expect(shouldApplyOnBlur(base({ title: '[예약X] 정모 19:00' }))).toBe(true);
+    expect(shouldApplyOnBlur(base({ title: 'ABC 13:40 + DEF 15:20' }))).toBe(true);
   });
 
   it('구간 시각 오류는 몇 번째 테마인지 알려 준다', () => {

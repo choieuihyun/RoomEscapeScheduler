@@ -89,9 +89,11 @@ export function applyPaste(f: FormState, title: string): { form: FormState; note
   };
 }
 
-/* 제목 칸을 벗어날 때는 구간이 비어 있을 때만 카톡 제목으로 채운다 — 이미 있는 구간(지점·끝 시각)을
-   "정기 모임 19:00" 같은 평범한 제목이 덮어쓰지 못하게. 붙여넣기는 바로 적용한다. */
-export const shouldApplyOnBlur = (f: FormState): boolean => f.segs.length === 0;
+/* 제목 칸을 벗어날 때는 구간이 비어 있고 제목에 카톡 표시(맨 앞 `[예약…]` 대괄호나 조각 사이 `+`)가 있을 때만
+   카톡 제목으로 채운다 — 이미 있는 구간(지점·끝 시각)이나 "정모 19:00" 같은 평범한 제목(협의 중 일정)이
+   구간으로 바뀌지 못하게. 붙여넣기는 바로 적용한다. */
+const hasKakaoMarker = (t: string): boolean => /^\s*\[\s*예약/.test(t) || t.includes('+');
+export const shouldApplyOnBlur = (f: FormState): boolean => f.segs.length === 0 && hasKakaoMarker(f.title);
 
 const MAX_MIN = 2879;
 

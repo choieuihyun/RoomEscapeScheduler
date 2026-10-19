@@ -40,6 +40,9 @@ export function timeLabel(
 /* 조각 끝의 시각: `13:40`, `13시40분`, `13시`. 시는 core.ts parseClock 처럼 29 까지. */
 const PIECE = /^(.*?)\s*(?<!\d)(\d{1,2})(?::(\d{2})|시(?:\s*(\d{1,2})\s*분?)?)$/;
 
+/* 이름 끝에 시각이나 `~`·`-`·`–` 가 남아 있으면 시간 범위다 */
+const RANGE_TAIL = /(?:\d:\d{2}|\d\s*시|\d\s*분)\s*$|[~\-–]\s*$/;
+
 /* 카톡 제목 해석. 알아본 것만 채운다 — 조각 하나라도 시각이 없거나 테마명이 비면 구간은 비운다
    (틀리게 채우는 것보다 안 채우는 게 낫다). */
 export function parseKakaoTitle(s: string): {
@@ -48,10 +51,13 @@ export function parseKakaoTitle(s: string): {
 } {
   let rest = s.trim();
   let booked: boolean | null = null;
-  const mark = rest.match(/^\[\s*예약\s*([oOxX0])\s*\]\s*/);
-  if (mark) {
-    booked = mark[1] === 'x' || mark[1] === 'X' ? false : true;
-    rest = rest.slice(mark[0].length);
+  /* 맨 앞 대괄호는 늘 하나 걷어 낸다 — 예약 O/X 표시면 예약 여부를 읽고, `[공지]` 같은 모르는 말이면 버린다
+     (테마명 안에 남으면 틀리게 채우게 된다). */
+  const lead = rest.match(/^\[([^\]]*)\]\s*/);
+  if (lead) {
+    const mark = lead[1].match(/^\s*예약\s*([oOxX0])\s*$/);
+    if (mark) booked = mark[1] === 'x' || mark[1] === 'X' ? false : true;
+    rest = rest.slice(lead[0].length);
   }
   const segments: { themeName: string; startMin: number }[] = [];
   for (const piece of rest.split('+')) {
@@ -60,6 +66,8 @@ export function parseKakaoTitle(s: string): {
     const h = +m[2];
     const mi = m[3] !== undefined ? +m[3] : m[4] !== undefined ? +m[4] : 0;
     const themeName = m[1].trim();
+    /* `13:40~14:50` 같은 시간 범위: 끝 시각만 잡히고 이름에 앞 시각이 남는다 — 통째로 안 채운다 */
+    if (RANGE_TAIL.test(themeName)) return { booked, segments: [] };
     if (h > 29 || mi > 59 || !themeName) return { booked, segments: [] };
     segments.push({ themeName, startMin: h * 60 + mi });
   }

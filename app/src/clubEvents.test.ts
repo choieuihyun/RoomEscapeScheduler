@@ -77,6 +77,18 @@ describe('clubEvents', () => {
     expect(kakaoPost(talk, 'L')).toBe('테마, 일정 협의 · 2명\nL');
   });
 
+  it('시간 범위는 통째로 안 채운다', () => {
+    for (const sep of ['~', '-', '–', ' ~ ']) {
+      expect(parseKakaoTitle(`비밀의 화원 13:40${sep}14:50`).segments).toEqual([]);
+    }
+  });
+
+  it('모르는 맨 앞 대괄호는 걷어 내고 예약 여부는 null', () => {
+    const want = { booked: null, segments: [{ themeName: 'ABC', startMin: 820 }] };
+    expect(parseKakaoTitle('[예약] ABC 13:40')).toEqual(want);
+    expect(parseKakaoTitle('[공지] ABC 13:40')).toEqual(want);
+  });
+
   it('내 다음 일정', () => {
     const evs = [
       ev({ id: 1, date: '2026-10-18', joined: true }),

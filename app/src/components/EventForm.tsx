@@ -10,18 +10,20 @@ interface Props {
   /* useClubEvents 의 create / update — 실패하면 던지므로 입력을 그대로 둘 수 있다 */
   create: (input: EventInput) => Promise<EventDto>;
   update: (id: number, input: EventInput, version: number) => Promise<EventDto>;
+  /* 충돌로 받은 최신 일정을 공유 목록에 넣는다(useClubEvents.adopt) — 상세 패널이 낡은 채로 남지 않게 */
+  adopt: (ev: EventDto) => void;
 }
 
 /* 일정 만들기·수정 창 (계획 Task E5). 열릴 때마다 안쪽 본문이 새로 시작한다. */
-export function EventForm({ m, create, update }: Props) {
+export function EventForm({ m, create, update, adopt }: Props) {
   return (
     <div className={'modal evf-modal' + (m.open ? ' on' : '')}>
-      {m.open && <Body key={m.seq} m={m} create={create} update={update} />}
+      {m.open && <Body key={m.seq} m={m} create={create} update={update} adopt={adopt} />}
     </div>
   );
 }
 
-function Body({ m, create, update }: Props) {
+function Body({ m, create, update, adopt }: Props) {
   const editing = m.editing;
   const [f, setF] = useState<FormState>(m.initial);
   /* 고치는 기준 판 — 충돌 뒤 "새로 불러온 내용 보기"를 누르면 최신 판으로 바뀐다 */
@@ -60,7 +62,7 @@ function Body({ m, create, update }: Props) {
       m.close();
     } catch (e) {
       const latest = conflictOf(e);
-      if (latest) { setConflict(latest); setErr(''); }
+      if (latest) { adopt(latest); setConflict(latest); setErr(''); }
       else setErr(sayClub(e));
     } finally {
       setBusy(false);
