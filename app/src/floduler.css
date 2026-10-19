@@ -35,7 +35,7 @@
   --red:#FF502A;   --red-text:#C92208;  --red-soft:#FFE4DC;  --red-line:#FFBCAF;
   --amber:#E47B37; --amber-text:#99562C; --amber-soft:#FFEDDC; --amber-line:#FFD9B0;
   /* 동호회 일정 상태 색 — 협의 중 · 예약 전 · 예약 완료 (글자/바탕) */
-  --st-talk-fg:#525253;   --st-talk-bg:#EEEFEF;
+  --st-talk-fg:#5B3CC4;   --st-talk-bg:#EEE9FD;   /* 협의 중 — 회색이면 흰 바탕에 묻혀 보라로 (2026-10-19) */
   --st-before-fg:#99562C; --st-before-bg:#FFEDDC;
   --st-done-fg:#0D7738;   --st-done-bg:#E3F4E8;
 
@@ -89,7 +89,7 @@
     --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
     --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
     --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
-    --st-talk-fg:#C0C1C2;   --st-talk-bg:#424343;
+    --st-talk-fg:#CDB8FF;   --st-talk-bg:#33285A;
     --st-before-fg:#FFA45E; --st-before-bg:#64371A;
     --st-done-fg:#6ED688;   --st-done-bg:#194C28;
 
@@ -124,7 +124,7 @@
   --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
   --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
   --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
-  --st-talk-fg:#C0C1C2;   --st-talk-bg:#424343;
+  --st-talk-fg:#CDB8FF;   --st-talk-bg:#33285A;
   --st-before-fg:#FFA45E; --st-before-bg:#64371A;
   --st-done-fg:#6ED688;   --st-done-bg:#194C28;
 

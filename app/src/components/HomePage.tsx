@@ -7,11 +7,11 @@ import type { EventDto } from '../server';
 import type { UseClubEventsReturn } from '../useClubEvents';
 
 /* 홈(대시보드) — 계획 Task E7. 세 칸 카드(다우오피스 홈 배치):
-   ① 내 정보(참여한 일정 수·빈자리 알림·승인 대기) + 미니 달력, ② 다가오는 동호회 일정(2주, 탭·5줄씩),
+   ① 내 정보(참여한 일정 수·빈자리 알림·승인 대기) + 미니 달력, ② 가까운 일정(2주, 탭·5줄씩),
    ③ 내 다음 일정 + 바로가기. 데이터는 SchedulerPage 의 useClubEvents 목록 하나를 그대로 쓴다. */
 
 const HOME_DAYS = 62;   // 참여한 일정 수를 세는 범위 — 오늘 ~ 오늘+61 (SchedulerPage 의 홈 범위)
-const LIST_DAYS = 14;   // 다가오는 동호회 일정 — 2주
+const LIST_DAYS = 14;   // 가까운 일정 — 2주
 const PER_PAGE = 5;
 
 type Tab = 'all' | 'mine' | 'open';
@@ -127,8 +127,8 @@ export function HomePage({
       </div>
 
       <div className="home-col">
-        <section className="home-card home-up" aria-label="다가오는 동호회 일정">
-          <h2 className="home-h">다가오는 동호회 일정</h2>
+        <section className="home-card home-up" aria-label="가까운 일정">
+          <h2 className="home-h">가까운 일정</h2>
           <div role="tablist" className="home-tabs">
             {TABS.map((t) => (
               <button
@@ -216,7 +216,7 @@ export function HomePage({
               <button type="button" className="home-next-go" onClick={() => onOpenEvent(next)}>일정 자세히 보기</button>
             </>
           ) : (
-            <p className="home-empty-p">참여한 일정이 아직 없어요. 다가오는 동호회 일정에서 골라 참여해 보세요.</p>
+            <p className="home-empty-p">참여한 일정이 아직 없어요. 가까운 일정에서 골라 참여해 보세요.</p>
           )}
         </section>
 
