@@ -730,7 +730,7 @@ button:active{transform:scale(.97)}
 .cal-modes{margin-left:auto;display:inline-flex;gap:4px}
 /* 종류별 보이기 — 넓은 화면에선 왼쪽 메뉴의 "내 캘린더" 가 하므로 좁은 화면에서만 보인다 */
 .cal-legend{display:none;gap:6px;flex-wrap:wrap;margin:0 0 12px}
-.cal-legend-item{height:28px;padding:0 10px;font-size:12.5px}
+.chip-pick.cal-legend-item{height:28px;padding:0 10px;font-size:12.5px}
 .cal-legend-item.off{opacity:.55}
 .cal-legend-item.off .cal-key{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ev)}
 @media(max-width:900px){.cal-legend{display:flex}}
@@ -762,7 +762,8 @@ button:active{transform:scale(.97)}
 .cal-evs{display:flex;flex-direction:column;gap:2px;min-width:0}
 .cal-ev{display:block;height:20px;line-height:20px;padding:0 6px;border-radius:4px;font-size:12px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);
-  background:color-mix(in srgb, var(--ev) 14%, var(--surface));border-left:3px solid var(--ev)}
+  background:var(--surface);border:1px solid var(--line)}
+.cal-ev:not(.club)::before{content:"";display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--ev);margin-right:5px;vertical-align:1px}
 .cal-ev.wish,.cal-key.wish{--ev:var(--blue)}
 .cal-ev.done,.cal-key.done{--ev:var(--green)}
 .cal-ev.watch,.cal-key.watch{--ev:var(--amber)}
@@ -864,8 +865,8 @@ button:active{transform:scale(.97)}
 .evp-ph span{margin-left:auto;font-size:12.5px;font-weight:500;color:var(--blue-text)}
 .evp-ph span.full{color:var(--ink3)}
 .evp-chips{display:flex;flex-wrap:wrap;gap:6px}
-.evp-chip{display:inline-flex;align-items:center;gap:5px;font-size:13px;background:var(--chip-bg);
-  border-radius:var(--pill);padding:4px 11px;min-height:28px;box-sizing:border-box}
+.evp-chip{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line2);border-radius:var(--pill);padding:4px 11px;min-height:28px;box-sizing:border-box}
 .evp-chip i{font-style:normal;font-size:11.5px;color:var(--ink3)}
 .evp-chip button{width:20px;height:20px;margin-right:-6px;padding:0;border:none;background:none;color:var(--ink3);
   font-size:14px;line-height:1;border-radius:999px;cursor:pointer}
@@ -1027,9 +1028,9 @@ button:active{transform:scale(.97)}
 .db-toggle.on{border-color:var(--field-focus)}
 .db-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
 .db-chip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 4px 0 10px;font-size:12.5px;
-  color:var(--ink);background:var(--chip-bg);border:1px solid var(--chip-line);border-radius:999px}
+  color:var(--ink);background:var(--surface);border:1px solid var(--ink);font-weight:600;border-radius:999px}
 .db-chip i{font-style:normal;font-size:11px;color:var(--ink3)}
-.db-chip.none{color:var(--ink3)}
+.db-chip.none{color:var(--ink3);border-color:var(--line2);font-weight:400}
 .db-chip button{width:20px;height:20px;padding:0;border:none;background:none;color:var(--ink3);
   font-size:14px;line-height:1;border-radius:999px}
 .db-chip button:hover{background:var(--line);color:var(--ink)}
@@ -1078,21 +1079,23 @@ button:active{transform:scale(.97)}
   .cal-dnum{align-self:center}
   .cal-evs{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:3px}
   .cal-ev{width:6px;height:6px;padding:0;border:0;border-radius:999px;font-size:0;background:var(--ev)}
+  .cal-ev:not(.club)::before{display:none}
   .cal-more{font-size:10px;padding:0;height:auto;line-height:6px}
   .cal-modes{margin-left:0}
   .cal-cell.col{min-height:160px;padding:4px 2px;align-items:stretch}
-  .cal-weekview .cal-ev{width:auto;height:18px;font-size:10.5px;padding:0 3px;border-left:2px solid var(--ev);
-    border-radius:3px;background:color-mix(in srgb, var(--ev) 14%, var(--surface));line-height:18px}
+  .cal-weekview .cal-ev{width:auto;height:18px;font-size:10.5px;padding:0 3px;border:1px solid var(--line);
+    border-radius:3px;background:var(--surface);line-height:16px}
+  .cal-weekview .cal-ev:not(.club)::before{display:inline-block;width:6px;height:6px;margin-right:3px}
   .cal-weekview .cal-evs{flex-direction:column;flex-wrap:nowrap}
   .cal-col-h{flex-direction:column;gap:0}
   .cal-day-tl{margin-left:52px}
   /* 동호회 일정 칩도 월 보기에선 상태 색 점으로. 주 보기·일 보기는 글자를 그대로 */
-  .cal-ev.club{width:6px;height:6px;padding:0;gap:0;background:var(--st-fg);flex:none}
+  .cal-ev.club{width:6px;height:6px;padding:0;gap:0;border:0;background:var(--st-fg);flex:none}
   .cal-ev.club>*{display:none}
   .cal-weekview .cal-ev.club,.cal-day-club .cal-ev.club{width:auto;height:18px;padding:0 3px;background:var(--surface);
-    border-left:2px solid var(--st-fg);font-size:10.5px}
+    border:1px solid var(--line);border-left:2px solid var(--st-fg);font-size:10.5px}
   .cal-weekview .cal-ev.club>.cal-ev-t,.cal-day-club .cal-ev.club>*{display:inline}
-  .cal-day-club .cal-ev.club{height:26px;padding:0 8px;font-size:13px;gap:5px;border-left:0}
+  .cal-day-club .cal-ev.club{height:26px;padding:0 8px;font-size:13px;gap:5px;border:1px solid var(--line)}
   .cal-day-club .cal-ev.club>.cal-dot{display:inline-block}
 }
 
@@ -1214,7 +1217,7 @@ button:active{transform:scale(.97)}
   .acct-wrap:not(.open) .acct-link{display:none}
   .acct-wrap.open .acct-link,.lnb.folded .acct-wrap.open .acct-link{display:flex;position:fixed;top:54px;right:12px;
     left:auto;bottom:auto;width:min(300px,calc(100vw - 24px));z-index:40;box-shadow:var(--sh-up)}
-  .lnb.folded .lnb-tag{display:inline}
+  .lnb.folded .lnb-tag{display:inline-flex}
   .lnb.folded .acct-join,.lnb.folded .acct-out,.lnb.folded .acct-linkbtn{align-self:auto;height:30px;padding:0 9px;
     font-size:12.5px}
 }
