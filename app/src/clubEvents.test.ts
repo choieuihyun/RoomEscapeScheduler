@@ -378,24 +378,32 @@ describe('시간 협의 (§4.8)', () => {
 
 describe('홈 오늘·내일 띠 (§4.10)', () => {
   const T = '2026-10-19';
-  it('참여한 오늘 일정 — 첫 구간 시각 + 테마들', () => {
-    const s = todayStrip([ev({ id: 1, date: T, joined: true, title: '정모', startMin: 1110, segments: [seg('비밀의 화원', 1140), seg('셜록의 서재', 1230)] })], T);
-    expect(s && `${s.when} ${s.name}`).toBe('오늘 19:00 비밀의 화원 → 셜록의 서재');
+  /* 한국 시각 그날 hh:mm — 기본은 오늘 새벽(아무 일정도 아직 안 끝남) */
+  const at = (kst = '00:01', date = T) => new Date(`${date}T${kst}:00+09:00`);
+  const N = at();
+  it('참여한 오늘 일정 — 시각은 timeLabel 처럼 일정 시각 먼저, 이름은 테마들', () => {
+    const e = ev({ id: 1, date: T, joined: true, title: '정모', startMin: 1110, segments: [seg('비밀의 화원', 1140), seg('셜록의 서재', 1230)] });
+    const s = todayStrip([e], N);
+    expect(s && `${s.when} ${s.name}`).toBe('오늘 18:30 비밀의 화원 → 셜록의 서재');
+    expect(timeLabel(e).startsWith('18:30')).toBe(true); // 내 다음 일정 카드와 같은 시각
     expect(s?.more).toBe(0);
     expect(s?.event.id).toBe(1);
+    /* 일정 시각이 없으면 첫 구간 시작 */
+    const g = todayStrip([ev({ date: T, joined: true, segments: [seg('비밀의 화원', 1140), seg('셜록의 서재', 1230)] })], N);
+    expect(g?.when).toBe('오늘 19:00');
   });
 
   it('구간이 없으면 일정 시각 + 제목, 시각도 없으면 하루 종일, 제목도 없으면 동호회 일정', () => {
-    const a = todayStrip([ev({ date: T, joined: true, title: '보드게임', startMin: 1080 })], T);
+    const a = todayStrip([ev({ date: T, joined: true, title: '보드게임', startMin: 1080 })], N);
     expect(a && `${a.when} ${a.name}`).toBe('오늘 18:00 보드게임');
-    const b = todayStrip([ev({ date: T, joined: true, title: '보드게임' })], T);
+    const b = todayStrip([ev({ date: T, joined: true, title: '보드게임' })], N);
     expect(b && `${b.when} ${b.name}`).toBe('오늘 하루 종일 보드게임');
-    const c = todayStrip([ev({ date: T, joined: true })], T);
+    const c = todayStrip([ev({ date: T, joined: true })], N);
     expect(c && `${c.when} ${c.name}`).toBe('오늘 하루 종일 동호회 일정');
   });
 
   it('내일이면 내일, 자정 넘김은 다음날 표기', () => {
-    const s = todayStrip([ev({ date: '2026-10-20', joined: true, segments: [seg('심야', 1470)] })], T);
+    const s = todayStrip([ev({ date: '2026-10-20', joined: true, segments: [seg('심야', 1470)] })], N);
     expect(s?.when).toBe('내일 다음날 00:30');
   });
 
@@ -406,7 +414,7 @@ describe('홈 오늘·내일 띠 (§4.10)', () => {
       ev({ id: 3, date: '2026-10-21', joined: true }),
       ev({ id: 4, date: '2026-10-18', joined: true }),
     ];
-    expect(todayStrip(evs, T)).toBeNull();
+    expect(todayStrip(evs, N)).toBeNull();
   });
 
   it('여럿이면 정렬상 첫 것 + 오늘·내일 합친 나머지 개수', () => {
@@ -416,9 +424,42 @@ describe('홈 오늘·내일 띠 (§4.10)', () => {
       ev({ id: 3, date: T, joined: true, startMin: 900, title: '먼저' }),
       ev({ id: 4, date: T, joined: false, startMin: 60 }),
     ];
-    const s = todayStrip(evs, T);
+    const s = todayStrip(evs, N);
     expect(s?.event.id).toBe(3);
     expect(s?.when).toBe('오늘 15:00');
     expect(s?.more).toBe(2);
+  });
+
+  it('오늘 이미 끝난 일정은 빼서 내일 일정이 보인다 — 끝은 일정 끝 → 마지막 구간 끝 → 시작 + 2시간, 하루 종일은 24:00', () => {
+    const tmr = ev({ id: 9, date: '2026-10-20', joined: true, title: '내일 정모', startMin: 600 });
+    /* 일정 끝 */
+    const a = ev({ id: 1, date: T, joined: true, startMin: 600, endMin: 720 });
+    expect(todayStrip([a, tmr], at('11:59'))?.event.id).toBe(1);
+    expect(todayStrip([a, tmr], at('12:00'))?.event.id).toBe(9);
+    /* 마지막 구간 끝 */
+    const b = ev({ id: 2, date: T, joined: true, segments: [seg('A', 820, 890), seg('B', 920, 990)] });
+    expect(todayStrip([b, tmr], at('16:29'))?.event.id).toBe(2);
+    const s = todayStrip([b, tmr], at('16:30'));
+    expect(s?.event.id).toBe(9);
+    expect(s?.more).toBe(0); // 뺀 오늘 일정은 "외 n" 에도 안 든다
+    /* 끝을 모르면 시작 + 2시간 */
+    const c = ev({ id: 3, date: T, joined: true, startMin: 1140 });
+    expect(todayStrip([c, tmr], at('20:59'))?.event.id).toBe(3);
+    expect(todayStrip([c, tmr], at('21:00'))?.event.id).toBe(9);
+    /* 하루 종일은 그날 내내 */
+    const d = ev({ id: 4, date: T, joined: true });
+    expect(todayStrip([d, tmr], at('23:59'))?.event.id).toBe(4);
+    /* 자정을 넘기는 일정은 그날 밤에도 남는다 */
+    const e = ev({ id: 5, date: T, joined: true, startMin: 1320, endMin: 1500 });
+    expect(todayStrip([e, tmr], at('23:30'))?.event.id).toBe(5);
+    /* 끝난 오늘 일정만 있으면 띠가 없다 */
+    expect(todayStrip([a], at('13:00'))).toBeNull();
+  });
+
+  it('오늘·내일은 한국 날짜 — 기기 시간대와 무관', () => {
+    /* UTC 10/19 15:30 = 한국 10/20 00:30 → 10/20 이 오늘, 10/21 이 내일 */
+    const now = new Date('2026-10-19T15:30:00Z');
+    expect(todayStrip([ev({ date: '2026-10-21', joined: true })], now)?.when).toBe('내일 하루 종일');
+    expect(todayStrip([ev({ date: T, joined: true })], now)).toBeNull();
   });
 });

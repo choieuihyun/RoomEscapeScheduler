@@ -86,6 +86,12 @@ export async function getMessagingToken(vapidKey: string, swRegistration: Servic
   }
 }
 
+/* 앱 탭이 보이는 동안 온 푸시(서비스 워커가 창으로 넘긴 것). SDK 는 이때 알림을 띄우지 않는다. 끊는 함수를 돌려준다 */
+export async function onForegroundMessage(cb: (payload: unknown) => void): Promise<() => void> {
+  await bootMessaging();
+  return M.onMessage(M.getMessaging(app), cb);
+}
+
 /* ── 계정 ── */
 
 export async function watch(cb: (me: Me | null) => void) {

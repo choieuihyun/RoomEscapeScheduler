@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { clickTarget, pickLink, swOpenId } from './swLink';
+import { bannerOf, clickTarget, pickLink, swOpenId } from './swLink';
 
 const ROOT = 'https://choieuihyun.github.io/RoomEscapeScheduler/';
 
@@ -70,5 +70,31 @@ describe('swOpenId', () => {
     expect(swOpenId({ isFirebaseMessaging: true, messageType: 'notification-clicked', fcmOptions: { link: ROOT + '#e=1' } })).toBeNull();
     expect(swOpenId(null)).toBeNull();
     expect(swOpenId('open')).toBeNull();
+  });
+});
+
+describe('bannerOf (앱 안 알림 띠)', () => {
+  const ROOT = 'https://choieuihyun.github.io/RoomEscapeScheduler/';
+  it('notification 의 제목·본문, data.link 의 #e= 로 일정 id', () => {
+    expect(bannerOf({
+      notification: { title: '내일 동호회 일정이 있어요', body: '정모 · 13:40 비밀의 화원' },
+      data: { link: `${ROOT}#e=42` },
+    })).toEqual({ title: '내일 동호회 일정이 있어요', body: '정모 · 13:40 비밀의 화원', eventId: 42 });
+  });
+  it('data.link 에 일정이 없으면 fcmOptions.link 를 본다, 둘 다 없거나 일정 링크가 아니면 null', () => {
+    expect(bannerOf({ notification: { title: 'a' }, data: { link: ROOT }, fcmOptions: { link: `${ROOT}?view=calc#e=7` } })?.eventId).toBe(7);
+    expect(bannerOf({ notification: { title: '테스트 알림', body: '잘 와요' } })?.eventId).toBeNull();
+    expect(bannerOf({ notification: { title: 'a' }, data: { link: `${ROOT}#s=abc` } })?.eventId).toBeNull();
+    expect(bannerOf({ notification: { title: 'a' }, data: { link: `${ROOT}#e=0` } })?.eventId).toBeNull();
+  });
+  it('data 만 온 메시지는 서비스 워커와 같은 기본 문구', () => {
+    expect(bannerOf({ data: {} })).toEqual({ title: '빈자리 알림', body: '감시 중인 회차에 빈자리가 생겼어요.', eventId: null });
+    expect(bannerOf({ data: { title: 'x', body: 'y', link: '#e=3' } })).toEqual({ title: 'x', body: 'y', eventId: 3 });
+  });
+  it('보일 글이 없으면 null, 제목만 비면 "알림"', () => {
+    expect(bannerOf(null)).toBeNull();
+    expect(bannerOf('x')).toBeNull();
+    expect(bannerOf({ notification: {} })).toBeNull();
+    expect(bannerOf({ notification: { body: '본문만' } })).toEqual({ title: '알림', body: '본문만', eventId: null });
   });
 });

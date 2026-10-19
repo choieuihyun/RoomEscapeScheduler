@@ -3,6 +3,7 @@ import {
   addParticipant, conflictOf, createEvent, deleteEvent, errorCode, getEvent, isMissingApi, joinClub, kakaoLogin,
   leaveEvent, listClubMembers, listEvents, listMembers, memberAction, removeParticipant, sayClub, setBooked,
   setMemberRole, updateEvent, listPlayed, addPlayed, deletePlayed, memberPlayed, listThemes, myPastEvents, freshThemes, joinEvent, setAvailability, clearAvailability,
+  pushTest, deviceStatus, pushTestMessage,
 } from './server';
 import type { EventInput } from './server';
 
@@ -300,5 +301,47 @@ describe('해 본 테마 API 호출', () => {
     stubFetch(200, { date: '2026-11-01', collected: true, checkedAt: null, themes: [{ id: 'a', name: 'x' }] });
     const f = await freshThemes(7, '2026-11-01', 'T');
     expect([f.missing, f.noRecord, f.themes[0].playedBy, f.themes[0].sessions]).toEqual([[], [], [], []]);
+  });
+});
+
+describe('이 기기 알림 API (§4.10)', () => {
+  it('pushTest 는 본문 없이 POST /api/me/push-test, Bearer 를 싣는다', async () => {
+    const fn = stubFetch(200, { devices: 2, delivered: 2, failed: 0 });
+    const r = await pushTest('AUTH');
+    const { url, init, headers } = call(fn);
+    expect(url).toMatch(/\/api\/me\/push-test$/);
+    expect(init.method).toBe('POST');
+    expect(headers.Authorization).toBe('Bearer AUTH');
+    expect(init.body).toBeUndefined();
+    expect(r).toEqual({ devices: 2, delivered: 2, failed: 0 });
+  });
+  it('deviceStatus 는 기기 토큰을 본문 { token } 으로, 로그인 토큰은 Bearer 로', async () => {
+    const fn = stubFetch(200, { registered: true });
+    const r = await deviceStatus('DEV', 'AUTH');
+    const { url, init, headers } = call(fn);
+    expect(url).toMatch(/\/api\/devices\/status$/);
+    expect(init.method).toBe('POST');
+    expect(headers.Authorization).toBe('Bearer AUTH');
+    expect(JSON.parse(init.body as string)).toEqual({ token: 'DEV' });
+    expect(r.registered).toBe(true);
+  });
+  it('1분 안에 다시 보내면 429 — 서버 문구 그대로', async () => {
+    stubFetch(429, { error: 'TOO_SOON', message: '1분 뒤에 다시 보내 주세요.' });
+    const e = await pushTest('AUTH').catch((x) => x);
+    expect(errorCode(e)).toBe('TOO_SOON');
+    expect(sayClub(e)).toBe('1분 뒤에 다시 보내 주세요.');
+    expect(isMissingApi(e)).toBe(false);
+  });
+  it('5단계 전 서버(본문 없는 404)는 isMissingApi', async () => {
+    const fn = vi.fn(async () => new Response('', { status: 404 }));
+    vi.stubGlobal('fetch', fn);
+    expect(isMissingApi(await pushTest('AUTH').catch((x) => x))).toBe(true);
+    expect(isMissingApi(await deviceStatus('DEV', 'AUTH').catch((x) => x))).toBe(true);
+  });
+  it('테스트 알림 결과 문구 — 나간 수(delivered), 기기 없음, 하나도 못 보냄', () => {
+    expect(pushTestMessage({ devices: 2, delivered: 2, failed: 0 })).toBe('2대 기기로 보냈어요.');
+    expect(pushTestMessage({ devices: 3, delivered: 1, failed: 2 })).toBe('1대 기기로 보냈어요.');
+    expect(pushTestMessage({ devices: 0, delivered: 0, failed: 0 })).toBe('이 계정에 등록된 기기가 없어요. 알림 켜기를 먼저 해 주세요.');
+    expect(pushTestMessage({ devices: 1, delivered: 0, failed: 1 })).toBe('기기로 보내지 못했어요. 알림 켜기를 다시 해 주세요.');
   });
 });

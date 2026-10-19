@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { permissionLabel, pushSupport, type PushEnv } from './pushState';
+import { guideVariant, permissionLabel, pushCard, pushSupport, shouldAutoGuide, type PushEnv } from './pushState';
 
 const IPHONE_SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 const IPHONE_KAKAO = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 KAKAOTALK 10.8.5';
@@ -47,5 +47,37 @@ describe('permissionLabel', () => {
     expect(permissionLabel('granted', false)).toBe('꺼짐');
     expect(permissionLabel('granted', true)).toBe('켜짐');
     expect(permissionLabel('default', false)).toBe('꺼짐');
+  });
+});
+
+describe('pushCard', () => {
+  it('받을 수 없는 브라우저면 그 까닭, 아니면 권한·등록 글자, 허용인데 등록을 모르면 확인 중(null)', () => {
+    expect(pushCard('ios-install', null, null)).toBe('ios-install');
+    expect(pushCard('kakao-inapp', 'granted', true)).toBe('kakao-inapp');
+    expect(pushCard('unsupported', null, null)).toBe('unsupported');
+    expect(pushCard('ok', 'granted', null)).toBeNull();
+    expect(pushCard('ok', 'granted', true)).toBe('켜짐');
+    expect(pushCard('ok', 'granted', false)).toBe('꺼짐');
+    expect(pushCard('ok', 'default', null)).toBe('꺼짐');
+    expect(pushCard('ok', 'denied', null)).toBe('거부됨');
+  });
+});
+
+describe('guideVariant · shouldAutoGuide', () => {
+  it('카카오톡 안 → 아이폰 설치 → 불가 → 거부 → 켜기 차례', () => {
+    expect(guideVariant('kakao-inapp', null)).toBe('kakao');
+    expect(guideVariant('ios-install', null)).toBe('ios');
+    expect(guideVariant('unsupported', null)).toBe('unsupported');
+    expect(guideVariant('ok', 'denied')).toBe('denied');
+    expect(guideVariant('ok', 'default')).toBe('enable');
+    expect(guideVariant('ok', 'granted')).toBe('enable');
+  });
+  it('이 기기에서 한 번, 허용돼 있으면(켜짐으로 본다) 띄우지 않는다', () => {
+    expect(shouldAutoGuide(false, 'ok', 'default')).toBe(true);
+    expect(shouldAutoGuide(false, 'ok', 'denied')).toBe(true);
+    expect(shouldAutoGuide(false, 'ios-install', null)).toBe(true);
+    expect(shouldAutoGuide(false, 'kakao-inapp', 'granted')).toBe(true);
+    expect(shouldAutoGuide(false, 'ok', 'granted')).toBe(false);
+    expect(shouldAutoGuide(true, 'ok', 'default')).toBe(false);
   });
 });

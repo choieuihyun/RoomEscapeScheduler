@@ -321,15 +321,18 @@ export function nextMine(evs: EventDto[], now: Date): EventDto | null {
 }
 
 /* 홈 맨 위 띠(§4.10 "앱 안 띠" — 푸시를 못 받는 사람용): 내가 참여한 오늘·내일(한국 날짜) 일정. 날짜 미정은 뺀다.
-   첫 일정을 `오늘 19:00` + `비밀의 화원 → 셜록의 서재` 로, 나머지는 개수(` 외 n`). 시각은 첫 구간 시작 → 일정 시각,
-   둘 다 없으면 `하루 종일`. 이름은 구간의 테마들, 구간이 없으면 제목. 오늘 이미 끝난 일정도 그날은 남긴다. */
+   오늘 일정은 이미 끝났으면 뺀다(끝 = nextMine 과 같은 endOf) — 끝난 오늘 일정이 내일 일정을 가리지 않게.
+   첫 일정을 `오늘 19:00` + `비밀의 화원 → 셜록의 서재` 로, 나머지는 개수(` 외 n`, 뺀 뒤 센다).
+   시각은 timeLabel 과 같은 차례(일정 시각 → 첫 구간 시작) — 홈 "내 다음 일정" 카드와 같은 시각이 보이게. 둘 다 없으면 `하루 종일`.
+   이름은 구간의 테마들, 구간이 없으면 제목. */
 export interface TodayStrip { event: EventDto; when: string; name: string; more: number }
-export function todayStrip(evs: EventDto[], today: string): TodayStrip | null {
+export function todayStrip(evs: EventDto[], now: Date): TodayStrip | null {
+  const { iso: today, min } = kst(now);
   const tomorrow = addDays(today, 1);
-  const mine = sortEvents(evs.filter((e) => e.joined && (e.date === today || e.date === tomorrow)));
+  const mine = sortEvents(evs.filter((e) => e.joined && (e.date === tomorrow || (e.date === today && endOf(e) > min))));
   const first = mine[0];
   if (!first) return null;
-  const start = first.segments[0]?.startMin ?? first.startMin;
+  const start = first.startMin ?? first.segments[0]?.startMin ?? null;
   const name = first.segments.length > 0 ? first.segments.map((g) => g.themeName).join(' → ') : first.title || '동호회 일정';
   return {
     event: first,

@@ -33,3 +33,30 @@ export function permissionLabel(perm: NotificationPermission, registered: boolea
   if (perm === 'denied') return '거부됨';
   return perm === 'granted' && registered ? '켜짐' : '꺼짐';
 }
+
+/* 내 정보 "이 기기 알림" 카드의 상태(§4.10 화면 쪽 약속: 켜짐 / 꺼짐 / 이 브라우저에선 불가).
+   알림을 받을 수 없는 브라우저면 그 까닭(pushSupport), 아니면 permissionLabel. 허용됐는데 등록 여부를 아직 모르면 null(확인 중).
+   perm 은 Notification 이 없으면 null(그땐 support 가 이미 'ok' 가 아니다). */
+export type PushCard = PermissionLabel | Exclude<PushSupport, 'ok'>;
+export function pushCard(support: PushSupport, perm: NotificationPermission | null, registered: boolean | null): PushCard | null {
+  if (support !== 'ok') return support;
+  if (perm === 'granted' && registered === null) return null;
+  return permissionLabel(perm ?? 'default', registered ?? false);
+}
+
+/* 알림 켜기 안내(PushGuide)에 보일 내용. 카카오톡 안이면 "다른 브라우저로 열기"부터(아이폰이면 이어서 홈 화면 단계),
+   아이폰 사파리 탭이면 홈 화면 세 단계, 거부됐으면 설정 안내, 그 밖엔 "알림 켜기" 하나. */
+export type GuideVariant = 'kakao' | 'ios' | 'unsupported' | 'denied' | 'enable';
+export function guideVariant(support: PushSupport, perm: NotificationPermission | null): GuideVariant {
+  if (support === 'kakao-inapp') return 'kakao';
+  if (support === 'ios-install') return 'ios';
+  if (support === 'unsupported') return 'unsupported';
+  return perm === 'denied' ? 'denied' : 'enable';
+}
+
+/* 안내를 저절로 띄울지 — 이 기기에서 한 번(seen), 알림이 켜져 있을 것 같지 않을 때만.
+   허용돼 있으면 로그인할 때 조용히 등록되므로(silentlyRefreshPush) 켜짐으로 보고 띄우지 않는다 —
+   이 판단에 기기 토큰·서버 확인을 쓰지 않는다(그러려면 앱을 열자마자 메시징 SDK 를 받아야 한다). */
+export function shouldAutoGuide(seen: boolean, support: PushSupport, perm: NotificationPermission | null): boolean {
+  return !seen && !(support === 'ok' && perm === 'granted');
+}

@@ -78,8 +78,8 @@ export function HomePage({
   const cells = monthGrid(month.y, month.m);
 
   const initial = [...nickname][0] ?? '?';
-  /* 맨 위 띠 — 내가 참여한 오늘·내일 일정(푸시를 못 받는 사람용, §4.10) */
-  const strip = todayStrip(events, today);
+  /* 맨 위 띠 — 내가 참여한 오늘·내일 일정(푸시를 못 받는 사람용, §4.10). 오늘 이미 끝난 일정은 뺀다(한국 시각) */
+  const strip = todayStrip(events, new Date());
 
   return (
     <>

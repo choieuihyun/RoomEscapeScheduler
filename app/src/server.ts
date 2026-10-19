@@ -170,6 +170,25 @@ export const removeWatch = (id: number, token: string): Promise<void> =>
 export const registerDevice = (deviceToken: string, authToken: string): Promise<void> =>
   authed('/api/devices', authToken, 'POST', { token: deviceToken, platform: 'web' });
 
+/* ── 이 기기 알림 (작업명세서 §4.10, 5단계) ── 둘 다 로그인만 있으면 된다(승인 무관).
+   인자 차례는 registerDevice 와 같게 기기 토큰 → 로그인 토큰. 둘 다 문자열이라 바뀌어도 컴파일이 못 잡는다. */
+export interface PushTestDto { devices: number; delivered: number; failed: number }
+
+/* 부른 사람 기기에만 보낸다. 1분 안에 다시 부르면 429 TOO_SOON(본문 message 를 그대로 — sayClub) */
+export const pushTest = (authToken: string): Promise<PushTestDto> =>
+  authed('/api/me/push-test', authToken, 'POST');
+
+/* 이 기기 토큰이 내 계정에 등록돼 있는지. 남의 토큰·모르는 토큰이면 false */
+export const deviceStatus = (deviceToken: string, authToken: string): Promise<{ registered: boolean }> =>
+  authed('/api/devices/status', authToken, 'POST', { token: deviceToken });
+
+/* 테스트 알림 결과 문구. n 은 실제로 나간 수(delivered). 기기는 있는데 하나도 못 보냈으면(토큰이 낡음 등) 다시 켜라고 한다 */
+export function pushTestMessage(r: PushTestDto): string {
+  if (r.devices === 0) return '이 계정에 등록된 기기가 없어요. 알림 켜기를 먼저 해 주세요.';
+  if (r.delivered === 0) return '기기로 보내지 못했어요. 알림 켜기를 다시 해 주세요.';
+  return `${r.delivered}대 기기로 보냈어요.`;
+}
+
 /* 3개 제한(409 WATCH_LIMIT_EXCEEDED)은 서버가 이미 완성된 한국어 message를
    주므로 그대로 쓴다 — 나머지 에러는 say()와 같은 판단을 따른다. */
 export function sayWatch(err: unknown): string {

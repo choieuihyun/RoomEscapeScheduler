@@ -1524,13 +1524,61 @@ input.pf-q:not([type=checkbox]):not([type=radio]):not([type=file]){padding-left:
   font-family:inherit;font-size:13.5px;cursor:pointer}
 .pf-more:hover:not(:disabled){background:var(--btn-bg-hover);border-color:var(--btn-line-hover)}
 .pf-more:disabled{color:var(--ink3);cursor:default}
+/* 이 기기 알림(§4.10, 목업 ③ 왼쪽 아래) */
+.pf-push{display:flex;flex-direction:column;gap:12px}
+.pf-push-h{display:flex;align-items:center;gap:8px}
+.pf-push-h .home-h{margin:0}
+.pf-push-h .chip-info{margin-left:auto}
+.pf-push-list{margin:0;padding:0 0 0 18px;font-size:13px;color:var(--ink2);line-height:1.8}
+.pf-push-note{margin:0;font-size:13px;color:var(--ink2);line-height:1.6;word-break:keep-all}
+.pf-push-btn{height:40px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);color:var(--ink);
+  font-family:inherit;font-size:14px;cursor:pointer}
+.pf-push-btn.on{border-color:var(--ink);font-weight:600}
+.pf-push-btn:hover:not(:disabled){background:var(--btn-bg-hover)}
+.pf-push-btn:focus-visible{outline:none;box-shadow:var(--ring)}
+.pf-push-btn:disabled{color:var(--ink3);cursor:default}
+.pf-push-more{align-self:flex-start;margin-top:0}
 @media(max-width:1100px){
-  .pf-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"me played" "past played"}
+  .pf-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"me played" "push played" "past played"}
   .pf-col{display:contents}
-  .pf-me{grid-area:me} .pf-played{grid-area:played} .pf-past{grid-area:past}
+  .pf-me{grid-area:me} .pf-push{grid-area:push} .pf-played{grid-area:played} .pf-past{grid-area:past}
 }
 @media(max-width:600px){
-  .pf-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"me" "played" "past";gap:16px}
+  .pf-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"me" "push" "played" "past";gap:16px}
   .pf-me{padding:24px 20px 16px}
-  .pf-played,.pf-past{padding:16px}
+  .pf-played,.pf-past,.pf-push{padding:16px}
 }
+
+/* 알림 켜기 안내(목업 ④ 오른쪽) */
+.pg-box{max-width:390px;border-radius:20px;padding:28px 20px 24px}
+.pg-sub{margin-bottom:16px}
+.pg-steps{margin:0 0 16px;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.pg-steps li{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:12px;
+  font-size:13.5px;line-height:1.6;color:var(--ink)}
+.pg-n{flex:none;width:24px;height:24px;border-radius:var(--pill);background:var(--blue);color:#FFFFFF;font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.mbtns.col .btn-go.pg-go{height:48px;border-radius:12px;font-size:15px;font-weight:600}
+.pg-later{height:40px;border:none;background:transparent;font-family:inherit;font-size:13.5px;color:var(--ink2);cursor:pointer;border-radius:var(--r-sm)}
+.pg-later:hover{color:var(--ink)}
+.pg-later:focus-visible{outline:none;box-shadow:var(--ring)}
+.pg-note{margin:12px 0 0;font-size:12px;color:var(--ink3);line-height:1.6}
+
+/* 앱 탭이 보이는 동안 온 푸시 — 화면 위쪽 띠(토스트와 따로, 열기·닫기 단추가 있다) */
+.pushbanner-wrap{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:95;width:min(480px,calc(100vw - 32px));
+  pointer-events:none}
+.pushbanner{display:flex;align-items:flex-start;gap:10px;padding:12px 8px 12px 14px;background:var(--surface);
+  border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:var(--r);box-shadow:var(--sh-up);
+  color:var(--ink);pointer-events:auto;animation:bannerIn .18s ease-out both}
+@keyframes bannerIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.pushbanner-ic{flex:none;margin-top:1px;color:var(--blue-text)}
+.pushbanner-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13.5px;line-height:1.5}
+.pushbanner-txt b{font-weight:600}
+.pushbanner-txt span{color:var(--ink2);overflow-wrap:anywhere}
+.pushbanner-open{flex:none;height:30px;padding:0 12px;border:1px solid var(--ink);border-radius:var(--pill);background:var(--surface);
+  color:var(--ink);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.pushbanner-open:hover{background:var(--btn-bg-hover)}
+.pushbanner-x{flex:none;width:30px;height:30px;padding:0;border:none;border-radius:var(--r-xs);background:transparent;
+  color:var(--ink3);font-size:18px;line-height:1;cursor:pointer}
+.pushbanner-x:hover{color:var(--ink);background:var(--btn-bg-hover)}
+.pushbanner-open:focus-visible,.pushbanner-x:focus-visible{outline:none;box-shadow:var(--ring)}
+@media(prefers-reduced-motion:reduce){.pushbanner{animation:none}}

@@ -4,10 +4,11 @@ import { isPlayableName, searchThemes, sourceLabel } from '../played';
 import type { EventDto, MeDto, PlayedDto, ThemeRef } from '../server';
 import { showToast } from '../toast';
 import { pageRows, withoutPending, type UseProfileReturn } from '../useProfile';
+import type { UsePushDeviceReturn } from '../usePushDevice';
 
 /* 내 정보 — 계획 Task 7, 작업명세서 §4.9 "화면 쪽 약속". 홈과 같은 세 칸 카드:
-   ① 프로필(닉네임·역할·로그인 수단·숫자 둘), ② 해 본 테마(찾아서 기록·직접 적기·탭·지우기), ③ 지난 동호회 일정.
-   ① 아래 "이 기기 알림" 카드는 5단계(Task 11)가 붙인다. */
+   ① 프로필(닉네임·역할·로그인 수단·숫자 둘)과 그 아래 이 기기 알림(5단계, Task 11),
+   ② 해 본 테마(찾아서 기록·직접 적기·탭·지우기), ③ 지난 동호회 일정. */
 
 const PER_PAGE = 10;
 
@@ -24,9 +25,10 @@ const NAME_MAX = 40;
 const dowClass = (dow: number) => (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
 
 export function ProfilePage({
-  profile, member, providerIds, isAdmin, onOpenEvent,
+  profile, member, providerIds, isAdmin, onOpenEvent, push,
 }: {
   profile: UseProfileReturn;
+  push: UsePushDeviceReturn;
   member: MeDto | null;
   providerIds: string[];
   isAdmin: boolean;
@@ -61,6 +63,7 @@ export function ProfilePage({
             <div><b>{pastCount}</b><span>동호회 일정</span></div>
           </div>
         </section>
+        <PushCard push={push} />
       </div>
 
       <PlayedCard profile={profile} />
@@ -108,6 +111,60 @@ export function ProfilePage({
         )}
       </section>
     </div>
+  );
+}
+
+/* 이 기기 알림(§4.10, 목업 ③ 왼쪽 아래) — 상태 칩 · 받는 알림 세 줄 · 상태별 단추나 안내 */
+const CARD_CHIP: Record<NonNullable<UsePushDeviceReturn['card']>, { text: string; cls: string }> = {
+  '켜짐': { text: '켜짐', cls: 'ok' },
+  '꺼짐': { text: '꺼짐', cls: 'muted' },
+  '거부됨': { text: '거부됨', cls: 'warn' },
+  'ios-install': { text: '이 브라우저에선 불가', cls: 'muted' },
+  'kakao-inapp': { text: '이 브라우저에선 불가', cls: 'muted' },
+  'unsupported': { text: '이 브라우저에선 불가', cls: 'muted' },
+};
+const CARD_NOTE: Partial<Record<NonNullable<UsePushDeviceReturn['card']>, string>> = {
+  '거부됨': '브라우저 설정에서 이 사이트 알림을 허용해 주세요.',
+  'ios-install': '아이폰은 홈 화면에 추가한 앱에서만 알림이 와요.',
+  'kakao-inapp': '카카오톡 안에서는 알림을 받을 수 없어요. 다른 브라우저로 열어 주세요.',
+  'unsupported': '이 브라우저에선 알림을 받을 수 없어요. 크롬이나 사파리로 열어 주세요.',
+};
+
+function PushCard({ push }: { push: UsePushDeviceReturn }) {
+  const { card, busy } = push;
+  const chip = card === null ? { text: '확인 중', cls: 'muted' } : CARD_CHIP[card];
+  const note = card === null ? undefined : CARD_NOTE[card];
+  const unable = card === 'ios-install' || card === 'kakao-inapp' || card === 'unsupported';
+  return (
+    <section className="home-card pf-push" aria-label="이 기기 알림">
+      <div className="pf-push-h">
+        <h2 className="home-h">이 기기 알림</h2>
+        <span className={'chip-info ' + chip.cls}>{chip.text}</span>
+      </div>
+      <ul className="pf-push-list">
+        <li>일정 전날 저녁 8시</li>
+        <li>내 일정 자리가 다 찼을 때 · 예약이 끝났을 때</li>
+        <li>걸어 둔 빈자리가 났을 때</li>
+      </ul>
+      {note && <p className="pf-push-note">{note}</p>}
+      {card === '꺼짐' && (
+        <button type="button" className="pf-push-btn on" disabled={busy !== null} onClick={() => void push.enable()}>
+          {busy === 'enable' ? '켜는 중…' : '알림 켜기'}
+        </button>
+      )}
+      {/* 5단계 전 서버(404)면 테스트 알림은 숨긴다 */}
+      {card === '켜짐' && push.api === 'on' && (
+        <button type="button" className="pf-push-btn" disabled={busy !== null} onClick={() => void push.test()}>
+          {busy === 'test' ? '보내는 중…' : '테스트 알림 보내기'}
+        </button>
+      )}
+      {unable && <button type="button" className="pf-manual-link pf-push-more" onClick={() => push.openGuide()}>자세히 →</button>}
+      {/* 이 기기(컴퓨터·안드로이드)는 켜졌는데 아이폰에선 안 오는 사람용 — 아이폰은 홈 화면 앱이어야 해서 따로 안내한다.
+          아이폰에서 켜짐이면 이미 홈 화면 앱이라 띄우지 않는다 */}
+      {card === '켜짐' && !push.ios && (
+        <button type="button" className="pf-manual-link pf-push-more" onClick={() => push.openGuide('ios')}>아이폰에서 알림이 안 오나요? →</button>
+      )}
+    </section>
   );
 }
 

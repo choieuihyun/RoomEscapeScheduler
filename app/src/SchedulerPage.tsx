@@ -15,7 +15,9 @@ import { useProfile } from './useProfile';
 import { addDays, sortKeyDate, todayKst, windowLabel, windowToCalc } from './clubEvents';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
-import { swOpenId } from './swLink';
+import { bannerOf, swOpenId } from './swLink';
+import { listenForegroundPush, PUSH_READY_EVT } from './notify';
+import { usePushDevice } from './usePushDevice';
 import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
 import { isClubAdmin, memberName, useMembers } from './useMembers';
 import { MembersPage } from './components/MembersPage';
@@ -35,7 +37,16 @@ import { CalendarPage } from './components/CalendarPage';
 import { SideNav } from './components/SideNav';
 import { CalendarSide } from './components/CalendarSide';
 import { Toaster } from './components/Toaster';
-import { showToast } from './toast';
+import { PushGuide } from './components/PushGuide';
+import { PushBanner } from './components/PushBanner';
+import { showPushBanner, showToast } from './toast';
+
+/* 일정 링크 `#e=<id>` 로 연다 — 아래 hashchange 경로가 받는다. 이미 같은 해시면 바꿔도 이벤트가 없어 직접 알린다.
+   알림을 눌렀는데 서비스 워커가 창을 못 옮긴 경우와 앱 안 알림 띠의 "열기"가 쓴다. */
+function openEventHash(id: number) {
+  if (readEventHash(location.hash) === id) dispatchEvent(new HashChangeEvent('hashchange'));
+  else location.hash = `e=${id}`;
+}
 
 export function SchedulerPage() {
   const s = useScheduler();
@@ -109,6 +120,8 @@ export function SchedulerPage() {
   const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided });
   if (profileActive !== (nav.view === 'profile')) setProfileActive(nav.view === 'profile');
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
+  /* 이 기기 알림(§4.10) — 내 정보 카드와 알림 켜기 안내가 같이 쓴다 */
+  const push = usePushDevice(clubOn, nav.view === 'profile');
 
   /* ── 일정 상세 패널과 `#e=<id>` 링크 (계획 Task E6) ── */
   const { setOpenEvent, select: calSelect } = cal;
@@ -173,20 +186,35 @@ export function SchedulerPage() {
   }, [auth.cloudOn, authSettled, meUid]);
 
   /* 알림을 눌렀는데 서비스 워커가 이 창을 옮기지 못하면(관할 밖 창) `{ type: 'open', link }` 를 보낸다 —
-     주소를 #e= 로 바꿔 위의 hashchange 경로로 연다. 이미 같은 해시면 바꿔도 이벤트가 없어 직접 알린다.
-     로그인 확인 전이면 해시만 남고, 확인이 끝나면 위 effect 가 읽는다. */
+     주소를 #e= 로 바꿔 위의 hashchange 경로로 연다. 로그인 확인 전이면 해시만 남고, 확인이 끝나면 위 effect 가 읽는다. */
   useEffect(() => {
     const sw = navigator.serviceWorker;
     if (!sw) return;
     const onMsg = (e: MessageEvent) => {
       const id = swOpenId(e.data);
-      if (id === null) return;
-      if (readEventHash(location.hash) === id) dispatchEvent(new HashChangeEvent('hashchange'));
-      else location.hash = `e=${id}`;
+      if (id !== null) openEventHash(id);
     };
     sw.addEventListener('message', onMsg);
     return () => sw.removeEventListener('message', onMsg);
   }, []);
+
+  /* 앱 탭이 보이는 동안 온 푸시는 서비스 워커가 띄우지 않는다 — onMessage 로 받아 화면 위 띠로 보인다(§4.10).
+     로그인했고 알림이 허용됐을 때만 메시징 SDK 를 받는다. 권한은 바뀌어도 알려 주지 않아서, 이 기기가 등록될 때마다
+     (알림 켜기·로그인 때 조용한 등록) 다시 건다. */
+  const [pushReady, setPushReady] = useState(0);
+  useEffect(() => {
+    const on = () => setPushReady(n => n + 1);
+    addEventListener(PUSH_READY_EVT, on);
+    return () => removeEventListener(PUSH_READY_EVT, on);
+  }, []);
+  useEffect(() => {
+    if (!meUid) return;
+    let dead = false, off: (() => void) | null = null;
+    listenForegroundPush(p => { const b = bannerOf(p); if (b) showPushBanner(b); })
+      .then(u => { if (dead) u?.(); else off = u; })
+      .catch(e => console.warn('앱 안 알림 받기 실패:', e));
+    return () => { dead = true; off?.(); };
+  }, [meUid, pushReady]);
 
   const askedFor = useRef<number | null>(null); // 로그인 창을 이미 띄운 링크 — 한 번만 띄운다
   const linkBusy = useRef(false);
@@ -230,6 +258,12 @@ export function SchedulerPage() {
     })();
   }, [linkId, authSettled, auth.me, memberStatus, clubOn, openAuth, adopt, go, calSelect, setOpenEvent]);
 
+  /* 알림 켜기 안내 — 승인된 멤버에게 이 기기에서 한 번. 첫 화면이 정해지고, 로그인 창·일정 창·링크로 여는 일정과 겹치지 않을 때 */
+  const { maybeAutoGuide } = push;
+  const guideFree = clubOn && decided && !auth.open && !eventForm.open && !loadModal.open && !saveModal.open && linkId === null
+    && readEventHash(location.hash) === null;
+  useEffect(() => { if (guideFree) maybeAutoGuide(); }, [guideFree, maybeAutoGuide]);
+
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
       if (e.key !== 'Escape') return;
@@ -238,11 +272,12 @@ export function SchedulerPage() {
       if (saveModal.open) saveModal.close();
       if (eventForm.open) eventForm.close();
       if (watches.open) watches.close();
+      if (push.guide !== null) push.closeGuide();
       tour.end();
     }
     document.addEventListener('keydown', onKeydown);
     return () => document.removeEventListener('keydown', onKeydown);
-  }, [loadModal, auth, saveModal, eventForm, watches, tour]);
+  }, [loadModal, auth, saveModal, eventForm, watches, tour, push]);
 
   /* 화면을 바꾸면 새 화면의 맨 위부터 보여준다. */
   useEffect(() => { window.scrollTo({ top: 0 }); }, [nav.view]);
@@ -333,7 +368,7 @@ export function SchedulerPage() {
             </header>
             <ProfilePage
               profile={profile} member={auth.member} providerIds={auth.providerIds} isAdmin={isAdmin}
-              onOpenEvent={openFromProfile}
+              onOpenEvent={openFromProfile} push={push}
             />
           </div>
         )}
@@ -354,6 +389,8 @@ export function SchedulerPage() {
       <SaveModal m={saveModal} />
       {clubOn && <EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} />}
       {auth.cloudOn && <WatchListModal w={watches} />}
+      {clubOn && <PushGuide push={push} />}
+      <PushBanner onOpen={openEventHash} />
       <Toaster />
     </div>
   );

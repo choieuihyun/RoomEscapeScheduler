@@ -49,3 +49,25 @@ export function swOpenId(msg: unknown): number | null {
   const i = m.link.indexOf('#');
   return i < 0 ? null : readEventHash(m.link.slice(i));
 }
+
+/* 앱 탭이 보이는 동안 온 푸시(onMessage)를 앱 안 띠로 보일 내용. 서버가 보내는 알림은 notification 에 제목·본문을 담고,
+   data 만 온 메시지는 서비스 워커(onBackgroundMessage)와 같은 기본 문구를 쓴다. 링크(data.link → fcmOptions.link)에
+   `#e=<id>` 가 있으면 그 일정 id — "열기" 단추가 붙는다. 보일 글이 하나도 없으면 null. */
+export interface PushBannerData { title: string; body: string; eventId: number | null }
+export function bannerOf(payload: unknown): PushBannerData | null {
+  const p = bag(payload);
+  if (!p) return null;
+  const n = bag(p.notification), d = bag(p.data), o = bag(p.fcmOptions);
+  const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  const title = n ? str(n.title) : str(d?.title) || '빈자리 알림';
+  const body = n ? str(n.body) : str(d?.body) || '감시 중인 회차에 빈자리가 생겼어요.';
+  if (!title && !body) return null;
+  let eventId: number | null = null;
+  for (const link of [d?.link, o?.link]) {
+    if (typeof link !== 'string') continue;
+    const i = link.indexOf('#');
+    eventId = i < 0 ? null : readEventHash(link.slice(i));
+    if (eventId !== null) break;
+  }
+  return { title: title || '알림', body, eventId };
+}

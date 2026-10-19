@@ -30,20 +30,57 @@ export const currentPushSupport = (): PushSupport => pushSupport(pushEnv());
 
 export type PushResult = { ok: true } | { ok: false; reason: string };
 
-async function registerAndSend(authToken: string): Promise<PushResult> {
+/* 이 기기가 서버에 알림 주소를 올리면 window 에 알린다 — 앱 안 알림(onMessage)을 다시 걸고, 내 정보 카드가 상태를 다시 본다.
+   권한(Notification.permission)은 바뀌어도 알려 주지 않아서, "알림 켜기" 뒤 같은 화면에서 테스트 알림을 보내면 아무것도 안 뜬다. */
+export const PUSH_READY_EVT = 'flod:push-ready';
+
+/* 이번 페이지에서 받은 기기 토큰과, 진행 중인 등록. 로그인할 때의 조용한 등록과 내 정보 카드의 상태 확인이 동시에 돌면
+   카드가 등록 전 상태(꺼짐)를 잠깐 보이거나 안내가 잘못 뜬다 — 카드는 진행 중인 등록을 기다린다. */
+let lastToken: string | null = null;
+let inflight: Promise<PushResult> | null = null;
+
+/* base(§3 서브패스) 밑에서 서빙되므로 BASE_URL을 붙인다 — 안 그러면
+   흰 화면 버그와 같은 종류의 404가 재발한다. 같은 주소로 다시 불러도 새로 깔지 않는다. */
+const swRegister = () => navigator.serviceWorker.register(`${import.meta.env.BASE_URL}firebase-messaging-sw.js`);
+
+function registerAndSend(authToken: string): Promise<PushResult> {
+  inflight ??= (async (): Promise<PushResult> => {
+    try {
+      const swReg = await swRegister();
+      const C = await cloud();
+      const deviceToken = await C.getMessagingToken(VAPID_KEY, swReg);
+      if (!deviceToken) return { ok: false, reason: '알림 등록이 안 됐어요.' };
+      await registerDevice(deviceToken, authToken);
+      lastToken = deviceToken;
+      dispatchEvent(new Event(PUSH_READY_EVT));
+      return { ok: true };
+    } catch (e) {
+      console.warn('푸시 등록 실패:', e);
+      return { ok: false, reason: '알림 등록이 안 됐어요.' };
+    }
+  })().finally(() => { inflight = null; });
+  return inflight;
+}
+
+/* 이 기기의 FCM 토큰. 권한을 절대 묻지 않는다 — FCM getToken 은 권한이 'default' 면 스스로 물어서, 허용됐을 때만 부른다.
+   받을 수 없는 브라우저·허용 안 됨·발급 실패면 null. */
+export async function currentDeviceToken(): Promise<string | null> {
+  if (currentPushSupport() !== 'ok' || Notification.permission !== 'granted') return null;
+  if (inflight) await inflight;
+  if (lastToken) return lastToken;
   try {
-    /* base(§3 서브패스) 밑에서 서빙되므로 BASE_URL을 붙인다 — 안 그러면
-       흰 화면 버그와 같은 종류의 404가 재발한다. */
-    const swReg = await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}firebase-messaging-sw.js`);
-    const C = await cloud();
-    const deviceToken = await C.getMessagingToken(VAPID_KEY, swReg);
-    if (!deviceToken) return { ok: false, reason: '알림 등록이 안 됐어요.' };
-    await registerDevice(deviceToken, authToken);
-    return { ok: true };
+    return await (await cloud()).getMessagingToken(VAPID_KEY, await swRegister());
   } catch (e) {
-    console.warn('푸시 등록 실패:', e);
-    return { ok: false, reason: '알림 등록이 안 됐어요.' };
+    console.warn('기기 토큰 확인 실패:', e);
+    return null;
   }
+}
+
+/* 앱 탭이 보이는 동안 온 푸시는 서비스 워커가 알림을 띄우지 않고 이 창에 넘긴다 — 받아서 앱 안 띠로 보인다.
+   허용돼 있을 때만 메시징 SDK 를 받는다(부르는 쪽이 로그인 여부를 본다). 끊는 함수를 돌려준다. */
+export async function listenForegroundPush(cb: (payload: unknown) => void): Promise<(() => void) | null> {
+  if (currentPushSupport() !== 'ok' || Notification.permission !== 'granted') return null;
+  return (await cloud()).onForegroundMessage(cb);
 }
 
 /* 감시를 처음 걸 때(=벨을 처음 누를 때)만 부른다. 페이지를 열자마자 물으면
