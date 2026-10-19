@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readView, settleDefault } from './useView';
+import { decideFirstScreen, readView, settleDefault } from './useView';
 
 const on = { calendarOn: true, isAdmin: false, homeOn: true, decided: true };
 
@@ -65,5 +65,32 @@ describe('settleDefault', () => {
   it('고정값이 없으면 computed 그대로', () => {
     expect(settleDefault(null, 'home', true)).toBe('home');
     expect(settleDefault(null, null, false)).toBeNull();
+  });
+});
+
+describe('decideFirstScreen', () => {
+  const base = { cloudOn: true, authLoading: false, loggedIn: true, memberChecked: true,
+    member: { status: 'APPROVED' }, clubApi: 'on' as const, clubError: '' };
+  it('로그인했는데 멤버 확인 전이면 false', () => {
+    expect(decideFirstScreen({ ...base, memberChecked: false, member: null })).toBe(false);
+  });
+  it('승인 멤버인데 api 가 unknown 이면 false', () => {
+    expect(decideFirstScreen({ ...base, clubApi: 'unknown' })).toBe(false);
+  });
+  it('승인 멤버이고 api 가 on 이면 true', () => {
+    expect(decideFirstScreen(base)).toBe(true);
+  });
+  it('승인 멤버이고 error 가 있으면 true', () => {
+    expect(decideFirstScreen({ ...base, clubApi: 'unknown', clubError: '로그인해 주세요.' })).toBe(true);
+  });
+  it('로그아웃이면 true', () => {
+    expect(decideFirstScreen({ ...base, loggedIn: false, memberChecked: false, member: null })).toBe(true);
+  });
+  it('승인 대기면 true', () => {
+    expect(decideFirstScreen({ ...base, member: { status: 'PENDING' }, clubApi: 'unknown' })).toBe(true);
+  });
+  it('로그인 복원 중이면 false, 계정 기능이 꺼졌으면 true', () => {
+    expect(decideFirstScreen({ ...base, authLoading: true })).toBe(false);
+    expect(decideFirstScreen({ ...base, cloudOn: false })).toBe(true);
   });
 });

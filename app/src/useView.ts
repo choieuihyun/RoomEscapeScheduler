@@ -35,6 +35,20 @@ export function settleDefault(fixed: View | null, computed: View | null, homeOn:
   return fixed === 'home' && !homeOn ? 'calc' : fixed;
 }
 
+/* 첫 화면을 정할 정보가 다 왔는지. 로그인 복원·멤버 확인(memberChecked)·일정 API 확인이 끝나기 전엔 false —
+   그 전에 정하면 승인 멤버도 계산 화면으로 고정된다. memberLoading 은 쓰지 않는다(refreshMember 가 켜도 결정이 안 바뀌게). */
+export function decideFirstScreen(o: {
+  cloudOn: boolean; authLoading: boolean; loggedIn: boolean; memberChecked: boolean;
+  member: { status: string } | null; clubApi: 'unknown' | 'on' | 'missing'; clubError: string;
+}): boolean {
+  if (!o.cloudOn) return true;
+  if (o.authLoading) return false;
+  if (!o.loggedIn) return true;
+  if (!o.memberChecked) return false;
+  if (o.member?.status !== 'APPROVED') return true;
+  return o.clubApi !== 'unknown' || o.clubError !== '';
+}
+
 export function useView(o: Opts) {
   /* v 가 null 이면 주소에 ?view= 가 없는 것 — 그때만 hash 로 첫 화면을 고른다.
      go() 로 직접 옮긴 뒤엔 hash 를 무시한다(공유 링크 주소에서 홈 메뉴를 눌러도 홈으로 간다). */

@@ -8,7 +8,7 @@ import { usePlans } from './usePlans';
 import { useSaveModal } from './useSaveModal';
 import { useWatches, buildWatchControl } from './useWatches';
 import { useCalendar } from './useCalendar';
-import { useView } from './useView';
+import { useView, decideFirstScreen } from './useView';
 import { useClubEvents } from './useClubEvents';
 import { addDays } from './clubEvents';
 import { toISO } from './core';
@@ -57,12 +57,10 @@ export function SchedulerPage() {
   const homeOn = clubOn && club.api === 'on';
   /* 첫 화면은 로그인 복원·승인 확인·일정 API 확인이 끝나야 정한다 — 그 전엔 화면을 비워 두어
      calc → 홈(또는 홈 → calc)으로 손 밑에서 바뀌지 않게 한다. */
-  const decided = !auth.cloudOn ? true
-    : auth.authLoading ? false
-    : !auth.me ? true
-    : auth.memberLoading ? false
-    : auth.member?.status === 'APPROVED' ? club.api !== 'unknown' || club.error !== ''
-    : true;
+  const decided = decideFirstScreen({
+    cloudOn: auth.cloudOn, authLoading: auth.authLoading, loggedIn: !!auth.me, memberChecked: auth.memberChecked,
+    member: auth.member, clubApi: club.api, clubError: club.error,
+  });
   const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, decided });
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
 

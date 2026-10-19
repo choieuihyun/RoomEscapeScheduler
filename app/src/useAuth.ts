@@ -36,6 +36,8 @@ export function useAuth() {
   /* 동호회 멤버 상태 — 서버가 이 기능을 모르면(404) 계속 null 이고 화면은 동호회를 숨긴다 */
   const [member, setMember] = useState<MeDto | null>(null);
   const [memberLoading, setMemberLoading] = useState(false);
+  /* 이 uid 의 멤버 확인이 한 번 끝났다(성공·실패·404 모두). 로그인 직후 첫 렌더엔 false — memberLoading 은 effect 뒤에야 켜져 그 틈을 못 막는다. */
+  const [checkedUid, setCheckedUid] = useState('');
   const [legacyOpen, setLegacyOpen] = useState(false);
   const kakaoHandled = useRef(false);
   const pushedFor = useRef('');
@@ -118,7 +120,7 @@ export function useAuth() {
     setMemberLoading(true);
     loadMember().then(m => {
       if (!live) return;
-      setMember(m); setMemberLoading(false);
+      setMember(m); setMemberLoading(false); setCheckedUid(uid);
       if (afterLogin.current) {
         /* 승인됐거나 서버가 동호회를 모르면 창을 닫고, 아니면 가입·대기 안내로 이어 간다 */
         afterLogin.current = false;
@@ -274,7 +276,7 @@ export function useAuth() {
 
   return {
     cloudOn, me, authLoading, open, id, setId, pw, setPw, err, busy, openAuth, closeAuth, submit, logout,
-    member, memberLoading, refreshMember, recheckMember, loginKakao, loginGoogle, linkKakao, linkGoogle, join,
+    member, memberLoading, memberChecked: !!uid && checkedUid === uid, refreshMember, recheckMember, loginKakao, loginGoogle, linkKakao, linkGoogle, join,
     inKakaoApp, legacyOpen, setLegacyOpen, linkErr, providerIds: uid ? providerIds : [],
   };
 }
