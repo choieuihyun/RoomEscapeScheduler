@@ -1,143 +1,116 @@
 /* ── 토큰 ──────────────────────────────────────────────
-   Linear/Notion Calendar 톤: 그림자로 띄우는 대신 얇은 보더로 면을 가르고,
-   라운드는 작게, 액센트는 인디고 하나로 절제한다.
+   §4.47 — 그룹웨어(다우오피스 계열) 톤: 흰 카드 + 옅은 회색 바닥, 무채색 잉크,
+   액센트는 청록 하나. 값은 참고 디자인 시스템의 토큰 값을 역할에 맞춰 옮겨 왔다
+   (이름이 아니라 깊이 순서로 — 바닥 < 카드 < 안으로 파인 면).
    색은 역할로만 부르고 값은 여기서만 정한다. */
 :root{
-  --bg:#FAFAFA;          /* 페이지 바닥 */
-  /* §4.45 — 원목 데스크(§4.44)와 어울리도록 카드 계열을 아이보리/웜그레이로
-     데웠다. 순백·차가운 회색 대신 나무 쪽으로 살짝 치우친 중성색 — "선택한
-     중성색"이 되도록. 대비 실측(surface 대비 ink2 7.4:1, ink3 3.9:1) 확인. */
-  --surface:#FBF6EE;     /* 카드 — 아이보리 */
-  --surface2:#F1E9D8;    /* 입력칸처럼 안으로 파인 면 */
-  --line:#E6DAC0; --line2:#D8C29A;
+  --bg:#F8F8F8;          /* 페이지 바닥 */
+  --surface:#FFFFFF;     /* 카드 */
+  --surface2:#F8F8F8;    /* 입력칸처럼 안으로 파인 면 */
+  --line:#E4E5E5; --line2:#DBDCDC;
 
-  --ink:#221A10;         /* 본문 */
-  --ink2:#5C4F38;        /* 보조 */
-  --ink3:#8A7A5F;        /* 흐린 설명 */
-  --placeholder:#A08E6C;
+  --ink:#1C1C1C;         /* 본문 */
+  --ink2:#525253;        /* 보조 — surface 대비 7.8:1 */
+  --ink3:#7A7B7D;        /* 흐린 설명 — surface 대비 4.2:1 */
+  --placeholder:#969799;
 
-  /* --blue 는 흰 글자를 얹는 버튼·배지용, --blue-text 는 배경 위에 직접 얹는 글자용 —
-     라이트 모드에선 같은 색이 두 역할 다 하지만, 다크 모드에선 방향이 갈린다(아래 참고). */
-  --blue:#5E6AD2; --blue-hover:#4F5BC4; --blue-press:#4048A8; --blue-text:#5E6AD2;
-  --blue-soft:#EEF0FC; --blue-line:#C7CCF5;
-  --green:#1AAE73; --green-text:#0E8A5B; --green-soft:#E7F8F1;
-  --red:#EB5757;   --red-text:#D6483D;  --red-soft:#FDEDEC;  --red-line:#F7C6C1;
-  --amber:#C98A1D; --amber-text:#A06B12; --amber-soft:#FBF1E1; --amber-line:#EBCE9C;
+  /* --blue 는 흰 글자를 얹는 버튼·배지용, --blue-text 는 배경 위에 직접 얹는 글자용.
+     이름은 옛 인디고 시절 그대로 두고 값만 청록으로 바꿨다(소비처 수십 곳을 안 건드리려고).
+     참고 시스템의 대표색 #08A7BF 는 흰 글자 대비가 2.9:1 이라 채움에는 한 단계 진한
+     #00889C(4.2:1)를, 글자에는 #117182(5.7:1)를 쓴다. */
+  --blue:#00889C; --blue-hover:#117182; --blue-press:#117182; --blue-text:#117182;
+  --blue-soft:#E2F1F5; --blue-line:#96D7E6;
+  --blue-rgb:0,136,156;  /* rgba(var(--blue-rgb),.16) 처럼 옅은 바탕·그림자용 */
+  --green:#00AF52; --green-text:#0D7738; --green-soft:#E0F4E2;
+  --red:#FF502A;   --red-text:#C92208;  --red-soft:#FFE4DC;  --red-line:#FFBCAF;
+  --amber:#E47B37; --amber-text:#99562C; --amber-soft:#FFEDDC; --amber-line:#FFD9B0;
 
-  /* 선택된 탭/정렬 칩처럼 "글자색을 뒤집어 채우는" 자리 전용 — --ink 와 분리해 둬야
-     다크 모드에서 --ink 가 밝아져도 이 칩은 계속 또렷하게 채워진다. */
   /* 테마별 컬러 코딩 — ThemeCard 왼쪽 띠, 결과 타임라인 블록에 순환 적용
-     (Notion Calendar 식 캘린더별 색). 6개를 넘으면 다시 처음부터 돈다. */
-  --accent-0:#5E6AD2; --accent-1:#0E9F8E; --accent-2:#E0577B;
-  --accent-3:#C98A1D; --accent-4:#8B5CF6; --accent-5:#2894D6;
+     (캘린더별 색). 참고 시스템의 사용자 지정 태그 색에서 서로 잘 갈리는 6개를 골랐다.
+     6개를 넘으면 다시 처음부터 돈다. */
+  --accent-0:#0066FF; --accent-1:#00A030; --accent-2:#E52E2E;
+  --accent-3:#C08000; --accent-4:#6B44EF; --accent-5:#008B8B;
 
   /* 공백(잔여) 빗금 세 단계 — 기본/넓음/좁음 */
-  --gap-a:#EDF0F3; --gap-b:#E1E6EB;
-  --gap-big-a:#FFF3E0; --gap-big-b:#FFE3B8;
-  --gap-tight-a:#FFECEE; --gap-tight-b:#FFD4D9;
+  --gap-a:#EEEEEF; --gap-b:#E4E5E5;
+  --gap-big-a:#FFEDDC; --gap-big-b:#FFD9B0;
+  --gap-tight-a:#FFE4DC; --gap-tight-b:#FFD3C3;
 
   /* 이동 알약(채운 구간) */
-  --mv-line:#E9A23B; --mv-fill:#FFC96B; --mv-text:#6B3D00;
+  --mv-line:#FFA45E; --mv-fill:#FFD9B0; --mv-text:#774628;
 
   --r:12px; --r-sm:8px; --r-xs:6px; --pill:999px;
   --sh:0 1px 2px rgba(0,0,0,.04);
-  --sh-up:0 8px 24px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.06);
-  --ring:0 0 0 3px rgba(94,106,210,.16);
+  --sh-up:0 8px 24px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.05);
+  --ring:0 0 0 3px rgba(var(--blue-rgb),.18);
 
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,
          'Apple SD Gothic Neo','Segoe UI','Malgun Gothic',system-ui,sans-serif;
   --num:ui-monospace,SFMono-Regular,'SF Mono',Menlo,monospace;
-
-  /* 원목 데스크 배경 — 카드 "밖" 여백에만 보이는 질감(카드 자체는 --surface로 계속
-     평평하다). --wood-noise는 feTurbulence로 만든 결 노이즈(SVG data URI), 나머지는
-     그 위에 깔리는 판자 그러데이션+이음새. 값은 헤드리스로 확인한 우드 목업과 동일. */
-  --wood-1:#a97c46; --wood-2:#caa06a; --wood-3:#e3c191;
-  --wood-seam:rgba(0,0,0,.14); --wood-seam2:rgba(0,0,0,.07);
-  --wood-noise-blend:multiply;
-  --wood-noise:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSczMDAnIGhlaWdodD0nMzAwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjAxMiAwLjQnIG51bU9jdGF2ZXM9JzQnIHNlZWQ9JzExJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdtYXRyaXgnIHZhbHVlcz0nMCAwIDAgMCAwLjI4ICAwIDAgMCAwIDAuMTQgIDAgMCAwIDAgMC4wMiAgMCAwIDAgMC41NSAwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJy8+Cjwvc3ZnPgo=");
 }
 
 /* ── 다크 모드 ──────────────────────────────────────────
    같은 역할, 다른 값. 컴포넌트 CSS 는 전부 토큰만 참조하므로 여기 두 블록 밖은
    손댈 필요가 없다 — 시스템 설정을 따르는 경우([data-theme] 없음)와
-   수동 토글([data-theme="dark"])을 한 값으로 같이 챙긴다. */
+   수동 토글([data-theme="dark"])을 한 값으로 같이 챙긴다.
+   참고 시스템의 다크는 바닥(#1C1C1C)보다 카드(#2A2B2C)가 밝다 — 라이트와 이름 순서가
+   반대라 깊이 순서로 맞췄다. 소프트 바탕 위 청록 글자는 #002831 바탕이어야 7:1 이 나온다. */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#0E0E10; --surface:#17181C; --surface2:#1D1E23;
-    --line:#2A2B31; --line2:#3A3C44;
-    --ink:#EDEDEF; --ink2:#A1A1AA; --ink3:#8A8B93; --placeholder:#6C6D75;
+    --bg:#1C1C1C; --surface:#2A2B2C; --surface2:#323333;
+    --line:#424343; --line2:#525253;
+    --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --placeholder:#7A7B7D;
 
-    --blue:#7B85E8; --blue-hover:#8D96EE; --blue-press:#9AA3F5; --blue-text:#9AA3F5;
-    --blue-soft:#1E2040; --blue-line:#3A3F7A;
-    --green:#3FCB92; --green-text:#6FE3B0; --green-soft:#12301F;
-    --red:#F0776F;   --red-text:#FF9A93;  --red-soft:#3A1E1B;  --red-line:#6B3630;
-    --amber:#E0AC4E; --amber-text:#F0C57A; --amber-soft:#332510; --amber-line:#6B5320;
+    --blue:#00889C; --blue-hover:#117182; --blue-press:#3CBED7; --blue-text:#3CBED7;
+    --blue-soft:#002831; --blue-line:#1D5A66;
+    --blue-rgb:60,190,215;
+    --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
+    --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
+    --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
 
-    --accent-0:#7B85E8; --accent-1:#3FCBBA; --accent-2:#F0839C;
-    --accent-3:#E0AC4E; --accent-4:#A98CFA; --accent-5:#5CB3EA;
+    --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
+    --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
 
-    --gap-a:#232429; --gap-b:#2A2C33;
-    --gap-big-a:#332510; --gap-big-b:#403014;
-    --gap-tight-a:#3A1E1B; --gap-tight-b:#472621;
+    --gap-a:#323333; --gap-b:#3A3B3C;
+    --gap-big-a:#4A2C17; --gap-big-b:#64371A;
+    --gap-tight-a:#3A1E1B; --gap-tight-b:#4F2219;
 
-    --mv-line:#8C6427; --mv-fill:#4A340F; --mv-text:#FFCE85;
+    --mv-line:#B96530; --mv-fill:#64371A; --mv-text:#FFD9B0;
 
     --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
-    --sh-up:0 8px 24px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
-    --ring:0 0 0 3px rgba(123,133,232,.3);
-
-    --wood-1:#2e1c0e; --wood-2:#4a2f18; --wood-3:#6e4726;
-    --wood-seam:rgba(0,0,0,.4); --wood-seam2:rgba(0,0,0,.22);
-    --wood-noise-blend:overlay;
-    --wood-noise:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSczMDAnIGhlaWdodD0nMzAwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjAxMiAwLjQnIG51bU9jdGF2ZXM9JzQnIHNlZWQ9JzExJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdtYXRyaXgnIHZhbHVlcz0nMCAwIDAgMCAwLjA1ICAwIDAgMCAwIDAuMDIgIDAgMCAwIDAgMCAgMCAwIDAgMC44NSAwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJy8+Cjwvc3ZnPgo=");
+    --sh-up:0 8px 24px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.4);
+    --ring:0 0 0 3px rgba(var(--blue-rgb),.3);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0E0E10; --surface:#17181C; --surface2:#1D1E23;
-  --line:#2A2B31; --line2:#3A3C44;
-  --ink:#EDEDEF; --ink2:#A1A1AA; --ink3:#8A8B93; --placeholder:#6C6D75;
+  --bg:#1C1C1C; --surface:#2A2B2C; --surface2:#323333;
+  --line:#424343; --line2:#525253;
+  --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --placeholder:#7A7B7D;
 
-  --blue:#7B85E8; --blue-hover:#8D96EE; --blue-press:#9AA3F5; --blue-text:#9AA3F5;
-  --blue-soft:#1E2040; --blue-line:#3A3F7A;
-  --green:#3FCB92; --green-text:#6FE3B0; --green-soft:#12301F;
-  --red:#F0776F;   --red-text:#FF9A93;  --red-soft:#3A1E1B;  --red-line:#6B3630;
-  --amber:#E0AC4E; --amber-text:#F0C57A; --amber-soft:#332510; --amber-line:#6B5320;
+  --blue:#00889C; --blue-hover:#117182; --blue-press:#3CBED7; --blue-text:#3CBED7;
+  --blue-soft:#002831; --blue-line:#1D5A66;
+  --blue-rgb:60,190,215;
+  --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
+  --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
+  --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
 
-  --accent-0:#7B85E8; --accent-1:#3FCBBA; --accent-2:#F0839C;
-  --accent-3:#E0AC4E; --accent-4:#A98CFA; --accent-5:#5CB3EA;
+  --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
+  --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
 
-  --gap-a:#232429; --gap-b:#2A2C33;
-  --gap-big-a:#332510; --gap-big-b:#403014;
-  --gap-tight-a:#3A1E1B; --gap-tight-b:#472621;
+  --gap-a:#323333; --gap-b:#3A3B3C;
+  --gap-big-a:#4A2C17; --gap-big-b:#64371A;
+  --gap-tight-a:#3A1E1B; --gap-tight-b:#4F2219;
 
-  --mv-line:#8C6427; --mv-fill:#4A340F; --mv-text:#FFCE85;
+  --mv-line:#B96530; --mv-fill:#64371A; --mv-text:#FFD9B0;
 
   --sh:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
-  --sh-up:0 8px 24px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
-  --ring:0 0 0 3px rgba(123,133,232,.3);
-
-  --wood-1:#2e1c0e; --wood-2:#4a2f18; --wood-3:#6e4726;
-  --wood-seam:rgba(0,0,0,.4); --wood-seam2:rgba(0,0,0,.22);
-  --wood-noise-blend:overlay;
-  --wood-noise:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSczMDAnIGhlaWdodD0nMzAwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjAxMiAwLjQnIG51bU9jdGF2ZXM9JzQnIHNlZWQ9JzExJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdtYXRyaXgnIHZhbHVlcz0nMCAwIDAgMCAwLjA1ICAwIDAgMCAwIDAuMDIgIDAgMCAwIDAgMCAgMCAwIDAgMC44NSAwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJy8+Cjwvc3ZnPgo=");
+  --sh-up:0 8px 24px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.4);
+  --ring:0 0 0 3px rgba(var(--blue-rgb),.3);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-/* 원목 데스크 — 카드(.card/.res/.mbox 등)는 전부 자기 --surface 배경을 갖고 있어
-   그 위에 얹힌 종이처럼 그대로 클린하게 남는다. body는 그 카드들 "밖" 여백에서만
-   보인다(.sec은 자기 배경이 없어 34px 섹션 간격에 그대로 비친다). background-attachment:
-   fixed로 스크롤해도 책상은 그 자리에 있는 느낌을 준다. */
 body{
-  background-color:var(--wood-2); color:var(--ink);
-  background-image:
-    var(--wood-noise),
-    linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.08)),
-    repeating-linear-gradient(90deg, var(--wood-seam) 0 1px, transparent 1px 140px, var(--wood-seam2) 140px 142px, transparent 142px 260px),
-    linear-gradient(180deg, var(--wood-3) 0%, var(--wood-2) 55%, var(--wood-1) 100%);
-  background-repeat:repeat, no-repeat, repeat-x, no-repeat;
-  background-size:240px 240px, 100% 100%, 260px 100%, 100% 100%;
-  background-blend-mode:var(--wood-noise-blend), normal, normal, normal;
-  background-attachment:fixed;
+  background:var(--bg); color:var(--ink);
   font-family:var(--sans);
   font-size:14px; line-height:1.6; letter-spacing:-.01em;
   -webkit-font-smoothing:antialiased;
@@ -149,12 +122,11 @@ body{
 
 /* ── header ── */
 header{padding:32px 0 26px}
-h1{font-size:30px;font-weight:800;letter-spacing:-.035em;margin:0 0 8px;color:var(--ink)}
+h1{font-size:30px;font-weight:700;letter-spacing:-.035em;margin:0 0 8px;color:var(--ink)}
 h1 .dim{color:var(--blue-text)}
-/* --ink3는 원래 "카드 위의 흐린 캡션"용으로 잡은 값이라, 원목 배경(§4.43)처럼 대비가
-   낮은 바탕에 직접 얹히면 거의 안 보인다. 카드/모달처럼 자기 --surface를 가진 곳의
-   --ink3는 그대로 두고, body(원목)에 직접 얹히는 이 캡션들만 --ink2로 한 단계 진하게
-   — 실측(헤드리스 라이트 모드 스크린샷)으로 확인한 대비 문제. */
+/* 카드 밖 바닥(body)에 직접 얹히는 캡션은 --ink3 대신 --ink2. 원목 배경 시절(§4.44)에
+   대비 때문에 올린 것인데, 회색 바닥(§4.47)에서도 --ink3(#7A7B7D)는 #F8F8F8 위 4.0:1 로
+   빠듯해서 그대로 둔다. 카드/모달 안의 --ink3는 그대로. */
 header p{margin:0;color:var(--ink2);font-size:14px;max-width:52ch}
 
 /* ── sections ── */
@@ -175,43 +147,11 @@ header p{margin:0;color:var(--ink2);font-size:14px;max-width:52ch}
   border-left-width:3px;border-left-color:var(--accent,var(--line));
   padding:18px;box-shadow:var(--sh);
   transition:box-shadow .15s,border-color .15s,opacity .15s,transform .22s cubic-bezier(.34,1.56,.64,1)}
-/* 원목 데스크 위에서 카드를 손으로 살짝 들어올리는 느낌 — 스프링 이징이라 살짝
+/* 바닥에서 카드를 손으로 살짝 들어올리는 느낌 — 스프링 이징이라 살짝
    오버슈트했다 자리잡는다. 드래그 중(.dragging)의 transform과는 별개 상태라 충돌 없음. */
 .card:hover{border-color:var(--line2);border-left-color:var(--accent,var(--line2));
   transform:translateY(-2px) scale(1.012);box-shadow:var(--sh-up)}
 .card.drag{border-color:var(--blue);background:var(--surface)}
-/* 다크 모드에서만 카드 자체에도 결을 넣는다(§4.45, 사용자 요청 — "다크에서는
-   카드에 원목 질감 넣기는 어려운거지?"). 계산해서 확인: 어두운 나무(그림자~
-   하이라이트) 위 밝은 글자는 대비 4.8~13.9:1로 여유롭다. 라이트는 반대로
-   카드 위 글자(--ink3 등)와 원목의 명도대가 겹쳐 §4.44에서 이미 겪은 문제라
-   웜톤(위 :root 블록)까지만 — 이 컴포넌트 예외 규칙은 라이트엔 대응 짝이
-   없다("컴포넌트는 토큰만 참조" 원칙에서 의도적으로 벗어난 유일한 자리).
-   --wood-noise는 §4.44에서 body에 이미 쓰던 결 노이즈 SVG를 그대로 재사용 —
-   이 스코프 안에서는 다크 모드 값으로 풀린다. --ink3를 카드 지역에서
-   --ink2로 승격해 두면 .parsed .hint/.note/.chip 등 하위의 모든 --ink3
-   소비처가 한 번에 딸려 올라간다(개별 선택자를 안 뒤져도 됨). */
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .card{
-    --ink3:var(--ink2);
-    background-image:
-      linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.14)),
-      linear-gradient(165deg, #5a3b20 0%, #402813 55%, #2a1a0d 100%),
-      var(--wood-noise);
-    background-blend-mode:normal, normal, overlay;
-    background-repeat:no-repeat, no-repeat, repeat;
-    background-size:100% 100%, 100% 100%, 150px 150px;
-  }
-}
-:root[data-theme="dark"] .card{
-  --ink3:var(--ink2);
-  background-image:
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.14)),
-    linear-gradient(165deg, #5a3b20 0%, #402813 55%, #2a1a0d 100%),
-    var(--wood-noise);
-  background-blend-mode:normal, normal, overlay;
-  background-repeat:no-repeat, no-repeat, repeat;
-  background-size:100% 100%, 100% 100%, 150px 150px;
-}
 .card-top{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
 
 input,textarea,select{
@@ -270,7 +210,7 @@ button:active{transform:scale(.97)}
   padding:13px 30px;font-size:15px;font-weight:700;border-radius:var(--r-sm);
 }
 .btn-go:hover{background:var(--blue-hover);border-color:var(--blue-hover);
-  box-shadow:0 2px 8px rgba(94,106,210,.24)}
+  box-shadow:0 2px 8px rgba(var(--blue-rgb),.24)}
 .btn-go:disabled{opacity:.4;cursor:default;box-shadow:none}
 
 /* ── options ── */
@@ -383,7 +323,7 @@ button:active{transform:scale(.97)}
   transition:border-color .15s,transform .22s cubic-bezier(.34,1.56,.64,1);
   animation:resultIn .32s cubic-bezier(.34,1.56,.64,1) both}
 .res:hover{border-color:var(--line2);transform:translateY(-2px) scale(1.008)}
-.res.best{border-color:var(--blue-line);box-shadow:0 0 0 1px var(--blue-line),0 6px 22px rgba(94,106,210,.12)}
+.res.best{border-color:var(--blue-line);box-shadow:0 0 0 1px var(--blue-line),0 6px 22px rgba(var(--blue-rgb),.12)}
 .res-head{display:flex;align-items:center;gap:14px;padding:14px 18px;
   border-bottom:1px solid var(--line);flex-wrap:wrap}
 .rank{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12.5px;
@@ -491,7 +431,7 @@ button:active{transform:scale(.97)}
 .acct .btn{padding:7px 14px;font-size:13px;background:var(--surface);border-color:var(--line);white-space:nowrap}
 .acct .btn:hover{background:var(--surface2)}
 
-.modal{position:fixed;inset:0;background:rgba(15,15,17,.44);z-index:50;
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;
   display:flex;align-items:center;justify-content:center;padding:18px;
   backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
   opacity:0;visibility:hidden;pointer-events:none;
@@ -501,7 +441,7 @@ button:active{transform:scale(.97)}
   padding:26px 24px 24px;width:100%;max-width:370px;max-height:90vh;overflow:auto;
   box-shadow:var(--sh-up);transform:scale(.97);transition:transform .16s ease}
 .modal.on .mbox{transform:scale(1)}
-.mbox h3{margin:0 0 6px;font-size:21px;font-weight:800;letter-spacing:-.035em;
+.mbox h3{margin:0 0 6px;font-size:21px;font-weight:700;letter-spacing:-.035em;
   text-transform:none;color:var(--ink)}
 .mbox .msub{margin:0 0 20px;font-size:13.5px;color:var(--ink3);line-height:1.6}
 .mrow{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
@@ -514,7 +454,7 @@ button:active{transform:scale(.97)}
   padding:9px 0;font-size:13.5px;font-family:inherit;cursor:pointer;
   border-radius:var(--r-xs);font-weight:500}
 .mseg button.on{background:var(--surface);color:var(--ink);font-weight:700;
-  box-shadow:0 1px 3px rgba(25,31,40,.1)}
+  box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .merr{font-size:13px;color:var(--red-text);min-height:18px;line-height:1.45;font-weight:500}
 .mbtns{display:flex;gap:8px;margin-top:8px}
 .mbtns .btn-go{flex:1;padding:13px 0;font-size:15px}
@@ -690,7 +630,7 @@ button:active{transform:scale(.97)}
 
 .tour-dim{position:fixed;inset:0;z-index:79;background:transparent}
 .tour-spot{position:fixed;z-index:80;border-radius:14px;pointer-events:none;
-  box-shadow:0 0 0 9999px rgba(15,18,24,.72);
+  box-shadow:0 0 0 9999px rgba(0,0,0,.66);
   transition:top .28s cubic-bezier(.4,0,.2,1),left .28s cubic-bezier(.4,0,.2,1),
     width .28s cubic-bezier(.4,0,.2,1),height .28s cubic-bezier(.4,0,.2,1)}
 .tour-tip{position:fixed;z-index:81;background:var(--surface);border-radius:18px;
@@ -698,8 +638,8 @@ button:active{transform:scale(.97)}
   box-shadow:var(--sh-up);opacity:0;
   transition:top .28s cubic-bezier(.4,0,.2,1),left .28s cubic-bezier(.4,0,.2,1),opacity .18s}
 .tour-tip.on{opacity:1}
-.tour-tip .step{font-size:12px;font-weight:800;color:var(--blue-text);letter-spacing:.02em}
-.tour-tip h4{margin:6px 0 8px;font-size:17px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+.tour-tip .step{font-size:12px;font-weight:700;color:var(--blue-text);letter-spacing:.02em}
+.tour-tip h4{margin:6px 0 8px;font-size:17px;font-weight:700;letter-spacing:-.03em;color:var(--ink)}
 .tour-tip p{margin:0 0 16px;font-size:13.5px;line-height:1.6;color:var(--ink2)}
 .tour-btns{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .tour-skip{background:none;border:none;color:var(--ink3);font-size:12.5px;

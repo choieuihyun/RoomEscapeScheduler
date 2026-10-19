@@ -16,7 +16,7 @@ function applyTheme(t: string | null) {
   else document.documentElement.removeAttribute('data-theme');
   const dark = isDarkNow();
   const meta = document.getElementById('themeColorMeta') as HTMLMetaElement | null;
-  if (meta) meta.content = dark ? '#14161A' : '#F2F4F6';
+  if (meta) meta.content = dark ? '#1C1C1C' : '#F8F8F8';
   return dark;
 }
 
