@@ -65,7 +65,7 @@ function SortBar({ s }: { s: Scheduler }) {
   );
 }
 
-export function ResultsPanel({ s, onSave, watchCtl }: { s: Scheduler; onSave?: (r: Scheduler['found'][number]) => void; watchCtl?: WatchControl }) {
+export function ResultsPanel({ s, onSave, onClubPost, watchCtl }: { s: Scheduler; onSave?: (r: Scheduler['found'][number]) => void; onClubPost?: (r: Scheduler['found'][number]) => void; watchCtl?: WatchControl }) {
   const resRef = useRef<HTMLDivElement>(null);
 
   const pool = s.currentList;
@@ -175,7 +175,7 @@ export function ResultsPanel({ s, onSave, watchCtl }: { s: Scheduler; onSave?: (
           <ResultCard
             key={ri} r={r} rank={ri} lo={lo} hi={hi} span={span}
             themeCount={s.themesReady.length} teamModeOn={s.options.oTeam}
-            onConfirmTeam={s.confirmTeam} onSave={onSave} watchCtl={watchCtl}
+            onConfirmTeam={s.confirmTeam} onSave={onSave} onClubPost={onClubPost} watchCtl={watchCtl}
           />
         ))}
         {pool.length > list.length && (

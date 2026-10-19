@@ -11,7 +11,7 @@ import { useCalendar } from './useCalendar';
 import { useView, decideFirstScreen } from './useView';
 import { useClubEvents } from './useClubEvents';
 import { addDays } from './clubEvents';
-import { monthGrid, toISO } from './core';
+import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
 import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
 import { isClubAdmin, useMembers } from './useMembers';
@@ -67,6 +67,12 @@ export function SchedulerPage() {
   const homeOn = clubOn && club.api === 'on';
   /* 일정 만들기·수정 창 — 캘린더(E6)·홈(E7)·결과 카드(E8)가 이 하나를 연다 */
   const eventForm = useEventFormModal();
+  /* 결과 카드 → 일정 창. 날짜는 첫 스텝 테마를 불러올 때 고른 날짜, 없으면 오늘 */
+  const postToClub = (r: SearchResultRow) => {
+    const id = s.themesReady[r.steps[0]?.i]?.id;
+    const date = s.themes.find((t) => t.id === id)?.date;
+    eventForm.openFromSteps(date ?? toISO(new Date()), r.steps);
+  };
   /* 첫 화면은 로그인 복원·승인 확인·일정 API 확인이 끝나야 정한다 — 그 전엔 화면을 비워 두어
      calc → 홈(또는 홈 → calc)으로 손 밑에서 바뀌지 않게 한다. */
   const decided = decideFirstScreen({
@@ -197,7 +203,7 @@ export function SchedulerPage() {
           </header>
           <ThemeList s={s} onOpenLoad={loadModal.openModal} watchCtl={watchCtl} />
           <ConditionsPanel s={s} />
-          <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} watchCtl={watchCtl} />
+          <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} onClubPost={homeOn ? postToClub : undefined} watchCtl={watchCtl} />
           <PlanSection auth={auth} plans={plans} s={s} />
         </div>
 

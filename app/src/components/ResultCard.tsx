@@ -36,13 +36,14 @@ export interface ResultCardProps {
   teamModeOn: boolean;
   onConfirmTeam: (r: SearchResultRow) => void;
   onSave?: (r: SearchResultRow) => void;
+  onClubPost?: (r: SearchResultRow) => void;
   watchCtl?: WatchControl;
   /* 팀 확정 박스용 — 타임라인 시각화 대신 "시각 테마명" 세로 목록만 보여준다.
      상단 통계·복사 버튼은 그대로 둔다(사용자 요청). */
   simple?: boolean;
 }
 
-export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave, watchCtl, simple }: ResultCardProps) {
+export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave, onClubPost, watchCtl, simple }: ResultCardProps) {
   const pct = (m: number) => ((m - lo) / span) * 100;
   const tight = r.minWait < 10;
 
@@ -73,6 +74,7 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
           setTimeout(() => { btn.textContent = '복사'; }, 1500);
         }}>복사</button>
         {onSave && <button className="btn-copy btn-save" type="button" onClick={() => onSave(r)}>저장</button>}
+        {onClubPost && <button className="btn-copy btn-save" type="button" onClick={() => onClubPost(r)}>동호회 일정으로 올리기</button>}
         {teamModeOn && <button className="btn-copy btn-team" type="button" onClick={() => onConfirmTeam(r)}>팀 확정</button>}
       </div>
       <div className="res-body">
