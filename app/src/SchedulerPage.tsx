@@ -15,6 +15,7 @@ import { useProfile } from './useProfile';
 import { addDays, sortKeyDate, todayKst, windowLabel, windowToCalc } from './clubEvents';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
+import { swOpenId } from './swLink';
 import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
 import { isClubAdmin, memberName, useMembers } from './useMembers';
 import { MembersPage } from './components/MembersPage';
@@ -170,6 +171,22 @@ export function SchedulerPage() {
     addEventListener('hashchange', read);
     return () => removeEventListener('hashchange', read);
   }, [auth.cloudOn, authSettled, meUid]);
+
+  /* 알림을 눌렀는데 서비스 워커가 이 창을 옮기지 못하면(관할 밖 창) `{ type: 'open', link }` 를 보낸다 —
+     주소를 #e= 로 바꿔 위의 hashchange 경로로 연다. 이미 같은 해시면 바꿔도 이벤트가 없어 직접 알린다.
+     로그인 확인 전이면 해시만 남고, 확인이 끝나면 위 effect 가 읽는다. */
+  useEffect(() => {
+    const sw = navigator.serviceWorker;
+    if (!sw) return;
+    const onMsg = (e: MessageEvent) => {
+      const id = swOpenId(e.data);
+      if (id === null) return;
+      if (readEventHash(location.hash) === id) dispatchEvent(new HashChangeEvent('hashchange'));
+      else location.hash = `e=${id}`;
+    };
+    sw.addEventListener('message', onMsg);
+    return () => sw.removeEventListener('message', onMsg);
+  }, []);
 
   const askedFor = useRef<number | null>(null); // 로그인 창을 이미 띄운 링크 — 한 번만 띄운다
   const linkBusy = useRef(false);

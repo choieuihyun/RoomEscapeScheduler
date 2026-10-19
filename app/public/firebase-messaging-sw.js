@@ -6,6 +6,66 @@
  * 없어 window.FIREBASE_CONFIG를 못 읽으므로 값을 그대로 하드코딩한다 —
  * 비밀 아님(firebase-config.js 상단 주석 참고).
  */
+
+/* 앱 주소(스코프) — 알림을 누르면 이 밑의 링크만 연다 */
+const ROOT = self.registration.scope;
+
+/* 새 서비스워커를 바로 쓴다 — 캐시·fetch 처리가 없어 바꿔 끼워도 깨질 것이 없고,
+   안 하면 고친 알림 처리가 앱 탭을 다 닫을 때까지 안 먹는다. */
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+
+/* 알림을 누르면 그 일정(`#e=<id>`)을 연다 (작업명세서 §4.10).
+   SDK(12.9.0)도 notificationclick 을 거는데, 같은 주소의 창을 앞으로 가져오기만 하고 링크로 옮기지 않는다.
+   그래서 importScripts 보다 먼저 걸어 우리 것이 먼저 돌고, stopImmediatePropagation 으로 SDK 것을 막는다
+   (안 막으면 창이 두 번 열리거나, 앞으로 온 창이 그 일정을 안 연다). */
+
+// pickLink 시작 — app/src/swLink.ts 의 pickLink 와 똑같이 유지한다(swLink.test.ts 가 같은 표로 둘 다 돌린다)
+function pickLink(data, root) {
+  const bag = v => (v && typeof v === 'object' ? v : null);
+  const d = bag(data);
+  const fcm = bag(d?.FCM_MSG);
+  const tries = [
+    d?.link,
+    bag(fcm?.data)?.link,
+    bag(fcm?.fcmOptions)?.link,
+    bag(fcm?.notification)?.click_action,
+  ];
+  for (const t of tries) {
+    if (typeof t !== 'string' || !t) continue;
+    try {
+      const url = new URL(t, root).href;
+      if (url.startsWith(root)) return url;
+    } catch { /* 못 읽는 주소는 건너뛴다 */ }
+  }
+  return root;
+}
+// pickLink 끝
+
+async function openLink(link) {
+  /* includeUncontrolled — 서비스워커를 처음 등록한 탭은 아직 이 워커 관할이 아니어도 찾아야 한다 */
+  const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  const client = list.find(c => c.url.startsWith(ROOT));
+  if (!client) {
+    await self.clients.openWindow(link);
+    return;
+  }
+  /* 누른 직후에만 창을 앞으로 가져올 수 있어 focus 를 먼저 한다 */
+  await client.focus().catch(() => {});
+  try {
+    await client.navigate(link);
+  } catch {
+    /* 관할 밖 창은 navigate 가 거절된다 — 앱이 이 메시지를 받아 #e= 로 연다(SchedulerPage) */
+    client.postMessage({ type: 'open', link });
+  }
+}
+
+self.addEventListener('notificationclick', event => {
+  event.stopImmediatePropagation();
+  event.notification.close();
+  event.waitUntil(openLink(pickLink(event.notification.data, ROOT)));
+});
+
 importScripts('https://www.gstatic.com/firebasejs/12.9.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.9.0/firebase-messaging-compat.js');
 
@@ -19,11 +79,14 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+/* 서버는 모든 알림(빈자리·동호회)에 notification 을 담아 보낸다 — 그러면 SDK 가 알아서 띄우므로
+   여기서 또 띄우면 두 번 뜬다. notification 없이 data 만 온 메시지만 직접 띄우고, 누르면 열 링크를 data 에 싣는다. */
 messaging.onBackgroundMessage(payload => {
-  const title = payload.notification?.title || '빈자리 알림';
-  const body = payload.notification?.body || '감시 중인 회차에 빈자리가 생겼어요.';
-  self.registration.showNotification(title, {
-    body,
+  if (payload.notification) return;
+  const data = payload.data || {};
+  return self.registration.showNotification(data.title || '빈자리 알림', {
+    body: data.body || '감시 중인 회차에 빈자리가 생겼어요.',
     icon: 'icon-192.png',
+    data: { link: data.link || payload.fcmOptions?.link || ROOT },
   });
 });

@@ -2,6 +2,7 @@
    cloud.ts는 토큰을 얻을 때만 지연 로드한다(로그인 전 0바이트 불변식, §4.34).
    server.ts는 이미 useLoadModal.ts가 정적 import해서 항상 번들에 있으므로
    여기서도 정적 import한다(동적으로 해봤자 청크가 안 갈린다). */
+import { pushSupport, type PushEnv, type PushSupport } from './pushState';
 import { registerDevice } from './server';
 
 let cloudMod: typeof import('./cloud') | null = null;
@@ -12,15 +13,20 @@ const cloud = async () => (cloudMod ??= await import('./cloud'));
    apiKey와 같은 성격). */
 const VAPID_KEY = 'BLVEi-qgw6nf-6sx9m0XXyiOYZZaTE8-01xljL1dRhoqlGxoieMEm7FZKa88LH0zMNswWJ0S1eu3HU5D4I96mp0';
 
-/* 아이폰 사파리는 홈 화면에 추가해 "설치된 앱"으로 열어야만 푸시가 온다
-   (작업명세서 §4.5 ㉡, iOS 16.4+). 크롬/안드로이드/데스크톱은 해당 없음. */
-export function needsIOSInstall(): boolean {
-  const ua = navigator.userAgent;
-  const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && navigator.maxTouchPoints > 1);
-  const standalone = (navigator as unknown as { standalone?: boolean }).standalone === true
-    || window.matchMedia('(display-mode: standalone)').matches;
-  return isIOS && !standalone;
+/* 이 기기의 브라우저 값을 모아 pushState.ts 판단에 넘긴다(§4.10). 아이폰 사파리는 홈 화면에 추가해
+   "설치된 앱"으로 열어야만 푸시가 오고(iOS 16.4+), 카카오톡 안 브라우저는 다른 브라우저로 열어야 한다. */
+export function pushEnv(): PushEnv {
+  return {
+    ua: navigator.userAgent,
+    standalone: (navigator as unknown as { standalone?: boolean }).standalone === true
+      || window.matchMedia('(display-mode: standalone)').matches,
+    hasNotification: 'Notification' in window,
+    hasSW: 'serviceWorker' in navigator,
+    touchPoints: navigator.maxTouchPoints || 0,
+  };
 }
+
+export const currentPushSupport = (): PushSupport => pushSupport(pushEnv());
 
 export type PushResult = { ok: true } | { ok: false; reason: string };
 
@@ -44,10 +50,10 @@ async function registerAndSend(authToken: string): Promise<PushResult> {
    대부분 거절하고 브라우저가 다시 안 물어본다 — 그래서 이 함수는 반드시
    버튼 클릭 콜백 안에서만 호출한다. */
 export async function requestPushPermission(authToken: string): Promise<PushResult> {
-  if (needsIOSInstall()) return { ok: false, reason: '아이폰은 홈 화면에 추가해야 알림이 와요.' };
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-    return { ok: false, reason: '이 브라우저에선 알림을 받을 수 없어요.' };
-  }
+  const support = currentPushSupport();
+  if (support === 'kakao-inapp') return { ok: false, reason: '카카오톡 안에서는 알림을 받을 수 없어요 — 다른 브라우저로 열어 주세요.' };
+  if (support === 'ios-install') return { ok: false, reason: '아이폰은 홈 화면에 추가해야 알림이 와요.' };
+  if (support === 'unsupported') return { ok: false, reason: '이 브라우저에선 알림을 받을 수 없어요.' };
   if (Notification.permission === 'denied') {
     return { ok: false, reason: '알림이 차단돼 있어요 — 브라우저 설정에서 허용해 주세요.' };
   }
@@ -60,8 +66,6 @@ export async function requestPushPermission(authToken: string): Promise<PushResu
    브라우저가 알아서 갱신하므로 "한 번 등록하고 끝" 이면 어느 날부터
    알림이 조용히 끊긴다(작업명세서 §4.5 ㉡). 권한을 새로 묻지는 않는다. */
 export async function silentlyRefreshPush(authToken: string): Promise<void> {
-  if (needsIOSInstall()) return;
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-  if (!('serviceWorker' in navigator)) return;
+  if (currentPushSupport() !== 'ok' || Notification.permission !== 'granted') return;
   await registerAndSend(authToken);
 }

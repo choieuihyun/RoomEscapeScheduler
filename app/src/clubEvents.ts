@@ -320,6 +320,25 @@ export function nextMine(evs: EventDto[], now: Date): EventDto | null {
   return sortEvents(evs.filter((e) => e.joined && e.date !== null && e.date >= today && (e.date > today || endOf(e) > min)))[0] ?? null;
 }
 
+/* 홈 맨 위 띠(§4.10 "앱 안 띠" — 푸시를 못 받는 사람용): 내가 참여한 오늘·내일(한국 날짜) 일정. 날짜 미정은 뺀다.
+   첫 일정을 `오늘 19:00` + `비밀의 화원 → 셜록의 서재` 로, 나머지는 개수(` 외 n`). 시각은 첫 구간 시작 → 일정 시각,
+   둘 다 없으면 `하루 종일`. 이름은 구간의 테마들, 구간이 없으면 제목. 오늘 이미 끝난 일정도 그날은 남긴다. */
+export interface TodayStrip { event: EventDto; when: string; name: string; more: number }
+export function todayStrip(evs: EventDto[], today: string): TodayStrip | null {
+  const tomorrow = addDays(today, 1);
+  const mine = sortEvents(evs.filter((e) => e.joined && (e.date === today || e.date === tomorrow)));
+  const first = mine[0];
+  if (!first) return null;
+  const start = first.segments[0]?.startMin ?? first.startMin;
+  const name = first.segments.length > 0 ? first.segments.map((g) => g.themeName).join(' → ') : first.title || '동호회 일정';
+  return {
+    event: first,
+    when: `${first.date === today ? '오늘' : '내일'} ${start === null ? '하루 종일' : clockLabel(start)}`,
+    name,
+    more: mine.length - 1,
+  };
+}
+
 /* 오늘 ~ 오늘+days-1 (양쪽 포함). */
 export function upcoming(evs: EventDto[], today: string, days: number): EventDto[] {
   const last = addDays(today, days - 1);

@@ -20,6 +20,14 @@ const SEEN_KEY = 'resched.signedin';
 let cloudMod: typeof import('./cloud') | null = null;
 const cloud = async () => (cloudMod ??= await import('./cloud'));
 
+/* 알림 권한이 이미 허용돼 있으면 이 기기를 서버에 조용히 다시 올린다. 실패는 조용히 */
+async function refreshPushQuietly(): Promise<void> {
+  try {
+    const token = await (await cloud()).idToken();
+    if (token) await (await import('./notify')).silentlyRefreshPush(token);
+  } catch { /* 실패는 조용히 */ }
+}
+
 function cloudConfigured(): boolean {
   const c = window.FIREBASE_CONFIG;
   return !!(c && c.apiKey && c.projectId && c.appId);
@@ -131,15 +139,21 @@ export function useAuth() {
     /* 기기 등록 — 권한이 이미 허용된 경우에만 조용히 올린다. 로그인당 한 번 */
     if (pushedFor.current !== uid) {
       pushedFor.current = uid;
-      (async () => {
-        try {
-          const token = await (await cloud()).idToken();
-          if (token) await (await import('./notify')).silentlyRefreshPush(token);
-        } catch { /* 실패는 조용히 */ }
-      })();
+      void refreshPushQuietly();
     }
     return () => { live = false; };
   }, [uid, loadMember]);
+
+  /* 승인 직후에도 조용히 등록한다(§4.10 "기기 등록 시점") — 로그인 때 올린 건 승인 전이었다.
+     같은 사람의 상태가 승인 전(대기 등) → 승인으로 바뀔 때만. 처음 받은 상태가 승인이면(null → 승인) 위의 로그인 때 등록이 맡는다 */
+  const memberStatus = member?.status ?? null;
+  const prevStatus = useRef<{ uid: string; status: MeDto['status'] | null }>({ uid: '', status: null });
+  useEffect(() => {
+    const prev = prevStatus.current;
+    prevStatus.current = { uid, status: memberStatus };
+    if (!uid || memberStatus !== 'APPROVED' || prev.uid !== uid || prev.status === null || prev.status === 'APPROVED') return;
+    void refreshPushQuietly();
+  }, [uid, memberStatus]);
 
   /* 로그인 창이 열리면 Firebase SDK 를 미리 깨운다 — 구글 팝업이 클릭 직후 열려야 막히지 않는다 */
   useEffect(() => {

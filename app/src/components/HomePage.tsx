@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { monthGrid, toISO, WEEKDAYS } from '../core';
 import {
-  addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, nextMine, relDay, sortKeyDate, STATUS_LABEL, timeLabel, upcoming, weekday,
+  addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, nextMine, relDay, sortKeyDate, STATUS_LABEL, timeLabel, todayStrip, upcoming,
+  weekday,
 } from '../clubEvents';
 import { playedCount } from '../played';
 import type { EventDto } from '../server';
@@ -77,8 +78,21 @@ export function HomePage({
   const cells = monthGrid(month.y, month.m);
 
   const initial = [...nickname][0] ?? '?';
+  /* 맨 위 띠 — 내가 참여한 오늘·내일 일정(푸시를 못 받는 사람용, §4.10) */
+  const strip = todayStrip(events, today);
 
   return (
+    <>
+    {strip && (
+      /* 그리드 밖에 둔다 — 좁은 화면의 grid-template-areas 에 끼면 자리가 어긋난다 */
+      <button type="button" className="home-strip" onClick={() => onOpenEvent(strip.event)}>
+        <svg className="home-strip-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+        <b className="home-strip-when">{strip.when}</b>{' '}
+        <span className="home-strip-name">{strip.name}</span>
+        {strip.more > 0 && <>{' '}<span className="home-strip-more">외 {strip.more}</span></>}
+        <span className="home-strip-go" aria-hidden="true">›</span>
+      </button>
+    )}
     <div className="home-grid">
       <div className="home-col">
         <section className="home-card home-me" aria-label="내 정보">
@@ -246,5 +260,6 @@ export function HomePage({
         </section>
       </div>
     </div>
+    </>
   );
 }

@@ -5,7 +5,7 @@ import {
   sortEvents, nextMine, upcoming, addDays, cpLen, STATUS_LABEL,
   mergeRange, upsert, isUndecided, sortKeyDate, candidateSummary, dropEvent, afterActionError,
   parseClock24, rollDays, todayKst, daysBetween, relDay, dayLabel, longDayLabel, clockLabel, rangeLabel,
-  parseAvailText, availText, windowLabel, windowToCalc,
+  parseAvailText, availText, windowLabel, windowToCalc, todayStrip,
 } from './clubEvents';
 
 const seg = (themeName: string, startMin: number, endMin: number | null = null) =>
@@ -373,5 +373,52 @@ describe('시간 협의 (§4.8)', () => {
     expect(windowToCalc({ start: 1320, end: 1560 })).toEqual({ oStart: '22:00', oEnd: '26:00' });
     expect(windowToCalc({ start: 0, end: 2879 })).toEqual({ oStart: '', oEnd: '' });
     expect(windowToCalc({ start: 840, end: 2000 })).toEqual({ oStart: '14:00', oEnd: '' });
+  });
+});
+
+describe('홈 오늘·내일 띠 (§4.10)', () => {
+  const T = '2026-10-19';
+  it('참여한 오늘 일정 — 첫 구간 시각 + 테마들', () => {
+    const s = todayStrip([ev({ id: 1, date: T, joined: true, title: '정모', startMin: 1110, segments: [seg('비밀의 화원', 1140), seg('셜록의 서재', 1230)] })], T);
+    expect(s && `${s.when} ${s.name}`).toBe('오늘 19:00 비밀의 화원 → 셜록의 서재');
+    expect(s?.more).toBe(0);
+    expect(s?.event.id).toBe(1);
+  });
+
+  it('구간이 없으면 일정 시각 + 제목, 시각도 없으면 하루 종일, 제목도 없으면 동호회 일정', () => {
+    const a = todayStrip([ev({ date: T, joined: true, title: '보드게임', startMin: 1080 })], T);
+    expect(a && `${a.when} ${a.name}`).toBe('오늘 18:00 보드게임');
+    const b = todayStrip([ev({ date: T, joined: true, title: '보드게임' })], T);
+    expect(b && `${b.when} ${b.name}`).toBe('오늘 하루 종일 보드게임');
+    const c = todayStrip([ev({ date: T, joined: true })], T);
+    expect(c && `${c.when} ${c.name}`).toBe('오늘 하루 종일 동호회 일정');
+  });
+
+  it('내일이면 내일, 자정 넘김은 다음날 표기', () => {
+    const s = todayStrip([ev({ date: '2026-10-20', joined: true, segments: [seg('심야', 1470)] })], T);
+    expect(s?.when).toBe('내일 다음날 00:30');
+  });
+
+  it('참여 안 한 일정·날짜 미정(후보가 오늘이어도)·모레 일정은 뺀다', () => {
+    const evs = [
+      ev({ id: 1, date: T, joined: false }),
+      ev({ id: 2, date: null, joined: true, candidates: [{ date: T, responses: [] }] }),
+      ev({ id: 3, date: '2026-10-21', joined: true }),
+      ev({ id: 4, date: '2026-10-18', joined: true }),
+    ];
+    expect(todayStrip(evs, T)).toBeNull();
+  });
+
+  it('여럿이면 정렬상 첫 것 + 오늘·내일 합친 나머지 개수', () => {
+    const evs = [
+      ev({ id: 1, date: '2026-10-20', joined: true, startMin: 600 }),
+      ev({ id: 2, date: T, joined: true, startMin: 1200 }),
+      ev({ id: 3, date: T, joined: true, startMin: 900, title: '먼저' }),
+      ev({ id: 4, date: T, joined: false, startMin: 60 }),
+    ];
+    const s = todayStrip(evs, T);
+    expect(s?.event.id).toBe(3);
+    expect(s?.when).toBe('오늘 15:00');
+    expect(s?.more).toBe(2);
   });
 });

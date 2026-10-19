@@ -1014,6 +1014,17 @@ button:active{transform:scale(.97)}
    카드 제목 20/500. 1100 아래 두 칸, 600 아래 한 줄(내 정보 → 내 다음 일정 → 다가오는 → 캘린더 → 바로가기). ── */
 .view.home-view{max-width:1200px}
 .home-view .page-head h1{font-size:20px;font-weight:500;line-height:32px;letter-spacing:-.02em;margin:0}
+/* 홈 맨 위 오늘·내일 띠(§4.10) — 한 줄. 넘치면 테마 이름만 줄이고 시각·"외 n" 은 남긴다 */
+.home-strip{display:flex;align-items:center;gap:8px;width:100%;min-width:0;margin:0 0 24px;padding:12px 16px;
+  background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:var(--r);color:var(--ink);
+  font:inherit;font-size:15px;text-align:left;cursor:pointer}
+.home-strip:hover{border-color:var(--blue)}
+.home-strip:focus-visible{outline:none;box-shadow:var(--ring)}
+.home-strip-ic{flex:none;color:var(--blue-text)}
+.home-strip-when{flex:none;color:var(--blue-text);font-weight:700}
+.home-strip-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-strip-more{flex:none;color:var(--ink2)}
+.home-strip-go{flex:none;margin-left:auto;color:var(--blue-text);font-size:18px;line-height:1}
 .home-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:start;padding-bottom:48px}
 .home-col{display:flex;flex-direction:column;gap:24px;min-width:0}
 .home-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;color:var(--ink);min-width:0}
@@ -1114,6 +1125,7 @@ button:active{transform:scale(.97)}
   .home-up{grid-area:up} .home-cal{grid-area:cal} .home-quick{grid-area:quick}
 }
 @media(max-width:600px){
+  .home-strip{margin-bottom:16px;padding:10px 14px;font-size:14px}
   .home-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"me" "next" "up" "cal" "quick";gap:16px}
   .home-card{padding:16px}
   .home-me{padding:24px 20px 16px}
