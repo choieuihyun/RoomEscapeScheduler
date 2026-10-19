@@ -10,6 +10,7 @@ const Icon = ({ children }: { children: ReactNode }) => (
   <svg className="lnb-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
 );
+const IcHome = () => <Icon><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13V10M10 20v-5.5h4V20" /></Icon>;
 const IcCalc = () => <Icon><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" /></Icon>;
 const IcCal = () => <Icon><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></Icon>;
 const IcPeople = () => <Icon><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Icon>;
@@ -24,9 +25,11 @@ const FOLD_KEY = 'flod.lnb.folded';
 const readFold = () => { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; } };
 
 export function SideNav({
-  view, onView, auth, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, children,
+  view, onView, auth, homeOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, children,
 }: {
   view: View; onView: (v: View) => void; auth: UseAuthReturn;
+  /* 승인 멤버(이고 일정 API 가 있을 때)만 "홈" 메뉴 */
+  homeOn: boolean;
   watchCount: number; watchLimit: number; onWatches: () => void;
   onTour: () => void; dark: boolean; onToggleTheme: () => void;
   /* 운영진에게만 "멤버 관리" 메뉴와 승인 대기 숫자 */
@@ -52,6 +55,12 @@ export function SideNav({
         </button>
       </div>
       <nav className="lnb-menu" aria-label="메뉴">
+        {homeOn && (
+          <button className={item('home')} type="button" onClick={() => onView('home')} title="홈"
+            aria-current={view === 'home' ? 'page' : undefined}>
+            <IcHome /><span className="lnb-txt">홈</span>
+          </button>
+        )}
         <button className={item('calc')} type="button" onClick={() => onView('calc')} title="조합 계산"
           aria-current={view === 'calc' ? 'page' : undefined}>
           <IcCalc /><span className="lnb-txt">조합 계산</span>

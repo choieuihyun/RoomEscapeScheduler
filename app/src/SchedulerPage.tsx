@@ -9,6 +9,9 @@ import { useSaveModal } from './useSaveModal';
 import { useWatches, buildWatchControl } from './useWatches';
 import { useCalendar } from './useCalendar';
 import { useView } from './useView';
+import { useClubEvents } from './useClubEvents';
+import { addDays } from './clubEvents';
+import { toISO } from './core';
 import { isClubAdmin, useMembers } from './useMembers';
 import { MembersPage } from './components/MembersPage';
 import { ThemeList } from './components/ThemeList';
@@ -46,7 +49,13 @@ export function SchedulerPage() {
   const watchCtl = auth.cloudOn ? buildWatchControl(watches, !!auth.me, approved) : undefined;
   const cal = useCalendar();
   const isAdmin = isClubAdmin(auth.member);
-  const nav = useView(auth.cloudOn, isAdmin);
+  /* 동호회 일정 목록은 여기서 한 번만 만든다 — 홈(E7)과 캘린더(E6)가 같이 쓴다. 승인 멤버만 부른다. */
+  const clubOn = auth.cloudOn && auth.member?.status === 'APPROVED';
+  const today = toISO(new Date());
+  const club = useClubEvents(clubOn, [{ from: today, to: addDays(today, 61) }]);
+  /* 새 API 가 아직 없는 서버(404)면 홈 메뉴·홈 화면을 숨기고 나머지는 그대로 돈다 */
+  const homeOn = clubOn && club.api !== 'missing';
+  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn });
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
 
   useEffect(() => {
@@ -76,7 +85,7 @@ export function SchedulerPage() {
   return (
     <div className="shell">
       <SideNav
-        view={nav.view} onView={nav.go} auth={auth}
+        view={nav.view} onView={nav.go} auth={auth} homeOn={homeOn}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
         isAdmin={isAdmin} pendingCount={members.list?.filter(m => m.status === 'PENDING').length ?? 0}
@@ -97,6 +106,14 @@ export function SchedulerPage() {
           <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} watchCtl={watchCtl} />
           <PlanSection auth={auth} plans={plans} s={s} />
         </div>
+
+        {homeOn && (
+          <div className={'view' + (nav.view === 'home' ? '' : ' off')}>
+            <header className="page-head">
+              <h1>홈</h1>
+            </header>
+          </div>
+        )}
 
         {auth.cloudOn && (
           <div className={'view' + (nav.view === 'calendar' ? '' : ' off')}>
