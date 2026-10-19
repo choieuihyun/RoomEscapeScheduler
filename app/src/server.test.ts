@@ -255,6 +255,14 @@ describe('해 본 테마 API 호출', () => {
     await memberPlayed('kakao:1', 'T');
     expect(call(fn).url).toContain('/api/club/members/kakao%3A1/played');
   });
+  it('deletePlayed 는 keepalive, 받은 기록의 storeName 이 없으면 null', async () => {
+    let fn = stubFetch(200, { id: 5, deleted: true });
+    await deletePlayed(5, 'T');
+    expect(call(fn).init.keepalive).toBe(true);
+    fn = stubFetch(200, [{ id: 1, themeName: 'x' }]);
+    expect((await listPlayed('T'))[0].storeName).toBeNull();
+    expect(call(fn).init.keepalive).toBeUndefined();
+  });
   it('deletePlayed 는 404 를 성공으로 치지 않고 던진다', async () => {
     stubFetch(404, { error: 'NO_SUCH_PLAYED', message: 'x' });
     await expect(deletePlayed(9, 'T')).rejects.toBeTruthy();
@@ -266,12 +274,19 @@ describe('해 본 테마 API 호출', () => {
     expect(call(fn).headers?.Authorization).toBeUndefined();
   });
   it('myPastEvents·freshThemes 경로', async () => {
-    let fn = stubFetch(200, []);
-    await myPastEvents('2026-10-19', 20, 'T');
+    let fn = stubFetch(200, { events: [], total: 0 });
+    await myPastEvents({ before: '2026-10-19' }, 20, 'T');
     expect(call(fn).url).toContain('/api/me/events?before=2026-10-19&limit=20');
-    fn = stubFetch(200, []);
+    fn = stubFetch(200, { events: [], total: 0 });
     await myPastEvents(null, 20, 'T');
     expect(call(fn).url).toMatch(/\/api\/me\/events\?limit=20$/);
+    /* 커서는 앞 쪽 마지막 일정의 (date, id) 그대로, 응답은 { events, total } */
+    fn = stubFetch(200, { events: [{ id: 3, date: '2026-10-04', segments: [{ themeName: 'x', startMin: 600 }] }], total: 23 });
+    const r = await myPastEvents({ before: '2026-10-04', beforeId: 7 }, 10, 'T');
+    expect(call(fn).url).toContain('/api/me/events?before=2026-10-04&beforeId=7&limit=10');
+    expect(r.total).toBe(23);
+    expect(r.events[0].candidates).toEqual([]);
+    expect(r.events[0].segments[0].playedBy).toEqual([]);
     fn = stubFetch(200, {});
     await freshThemes(7, '2026-11-01', 'T');
     expect(call(fn).url).toContain('/api/club/events/7/fresh-themes?date=2026-11-01');

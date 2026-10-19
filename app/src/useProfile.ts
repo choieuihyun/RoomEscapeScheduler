@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   addPlayed, deletePlayed, deletePlayedNow, errorCode, isMissingApi, listPlayed, listThemes, myPastEvents, sayClub,
-  type EventDto, type PlayedDto, type PlayedInput, type ThemeRef,
+  type EventDto, type PastCursor, type PlayedDto, type PlayedInput, type ThemeRef,
 } from './server';
-import { addDays } from './clubEvents';
-import { clearToasts, showToast, type CloseReason } from './toast';
+import { showToast } from './toast';
 
 /* "내 정보" 화면의 데이터 — 해 본 테마·지난 동호회 일정(작업명세서 §4.9).
    해 본 테마 목록은 켜지자마자 한 번 받는다 — 서버가 이 API 를 모르면(본문 없는 404) 메뉴를 숨겨야 해서다.
@@ -13,39 +12,59 @@ import { clearToasts, showToast, type CloseReason } from './toast';
 export type ProfileApi = 'unknown' | 'on' | 'missing';
 
 export const PAST_PAGE = 10;
+/* 지운 줄이 "지웠어요 · 되돌리기"로 남아 있는 시간. 마우스·포커스가 그 줄에 있는 동안은 멈춘다 */
+export const UNDO_MS = 6000;
 
-/* 다음 쪽 요청. 서버는 `date < before` 라서 마지막 날짜를 before 로 주면 쪽 경계에 걸친 같은 날 일정이 빠진다.
-   그래서 마지막 날짜의 다음 날을 주고, 이미 받은 그날 일정 수만큼 더 받아 id 로 걸러 낸다.
-   한 개 더(+1) 받아 다음 쪽이 있는지 안다. 서버 상한은 50. */
-export function nextPastQuery(loaded: EventDto[], today: string): { before: string; limit: number } {
-  const last = loaded[loaded.length - 1]?.date;
-  if (!last) return { before: today, limit: PAST_PAGE + 1 };
-  const same = loaded.filter((e) => e.date === last).length;
-  return { before: addDays(last, 1), limit: Math.min(50, same + PAST_PAGE + 1) };
+/* 다음 쪽 커서 — 받은 쪽 마지막 일정의 (date, id) 그대로(서버가 (date, id) < (before, beforeId) 로 거른다).
+   처음은 오늘 이전. */
+export function nextPastCursor(loaded: EventDto[], today: string): PastCursor {
+  const last = loaded[loaded.length - 1];
+  return last?.date ? { before: last.date, beforeId: last.id } : { before: today };
 }
 
-/* 받은 쪽을 붙인다 — 이미 있는 id 는 빼고 새것은 한 쪽(10개)까지. 넘친 것은 다음 쪽 요청이 다시 받는다.
-   새것이 하나도 없는데 응답이 꽉 찼으면(한 날짜에 50개 넘게) 더 나아갈 수 없으니 끝으로 친다. */
-export function mergePast(loaded: EventDto[], fresh: EventDto[], limit: number): { list: EventDto[]; hasMore: boolean } {
+/* 받은 쪽을 붙인다. 겹치는 id 는 한 번만(그 사이 일정이 바뀌어도 두 줄이 되지 않게). 더 있는지는 서버의 total 로. */
+export function mergePast(loaded: EventDto[], fresh: EventDto[], total: number): { list: EventDto[]; hasMore: boolean } {
   const ids = new Set(loaded.map((e) => e.id));
-  const add = fresh.filter((e) => !ids.has(e.id));
-  return {
-    list: [...loaded, ...add.slice(0, PAST_PAGE)],
-    hasMore: add.length > PAST_PAGE || (fresh.length >= limit && add.length > 0),
-  };
+  const list = [...loaded, ...fresh.filter((e) => !ids.has(e.id))];
+  return { list, hasMore: fresh.length > 0 && list.length < total };
 }
 
-/* 지우기는 바로 보내지 않고 미룬다 — 줄은 곧바로 감추고 "되돌리기" 알림이 닫힐 때 정한다.
-   되돌리기를 눌렀으면 요청 없이 다시 보이고, 그 밖(시간이 다 됨·밀려남·지움)이면 그때 DELETE.
-   그래서 자동 기록의 출처(EVENT)·일정 연결(eventId)이 되돌려도 그대로 남는다. */
-export const onDeleteToastClose = (reason: CloseReason): 'restore' | 'send' => (reason === 'action' ? 'restore' : 'send');
-
-/* 지우려고 미뤄 둔 기록은 목록에서 뺀다 — 그 사이 목록을 새로 받아도 지운 줄이 다시 나타나지 않게 */
+/* 지우려고 미뤄 둔 기록은 센 수에서 뺀다 */
 export function withoutPending(list: PlayedDto[], pending: ReadonlySet<number>): PlayedDto[] {
   return pending.size === 0 ? list : list.filter((p) => !pending.has(p.id));
 }
 
-type Pending = { token: string; sending: boolean };
+/* 한 쪽에 보일 줄. 지운 줄(되돌리기 자리)은 쪽 넘김·수에 넣지 않고 원래 자리에 끼워 둔다 —
+   앞뒤 남은 줄 사이에 있으므로, 그 사이 경계가 이 쪽 안(쪽 첫 줄 앞 ~ 마지막 줄 뒤)이면 보인다. */
+export function pageRows<T extends { id: number }>(
+  rows: T[], pending: ReadonlySet<number>, page: number, per: number,
+): { shown: T[]; pages: number; count: number; cur: number } {
+  const count = rows.filter((r) => !pending.has(r.id)).length;
+  const pages = Math.max(1, Math.ceil(count / per));
+  const cur = Math.min(page, pages - 1);
+  const start = cur * per, end = Math.min(start + per, count);
+  const shown: T[] = [];
+  let k = 0; // 지금까지 지난 남은 줄 수
+  for (const r of rows) {
+    if (pending.has(r.id)) {
+      if (k >= start && k <= end) shown.push(r);
+    } else {
+      if (k >= start && k < end) shown.push(r);
+      k++;
+    }
+  }
+  return { shown, pages, count, cur };
+}
+
+type Pending = {
+  token: string;        // 지울 때 받아 둔 토큰 — 가려지거나 닫힐 때 기다리지 않고 보낸다
+  timer: number | undefined;
+  left: number;
+  start: number;
+  holds: Set<string>;   // 'hover' · 'focus' — 하나라도 있으면 멈춤
+  sending: boolean;
+  onGone?: () => void;  // 보내고 줄이 사라진 뒤 화면이 포커스를 옮기는 데 쓴다
+};
 
 async function token(): Promise<string | null> {
   return (await import('./cloud')).idToken();
@@ -56,17 +75,18 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
   const [played, setPlayed] = useState<PlayedDto[] | null>(null);
   const [error, setError] = useState('');
   const [past, setPast] = useState<EventDto[] | null>(null);
+  const [pastTotal, setPastTotal] = useState<number | null>(null);
   const [hasMorePast, setHasMorePast] = useState(false);
   const [pastBusy, setPastBusy] = useState(false);
   const [pastError, setPastError] = useState('');
   const [themes, setThemes] = useState<ThemeRef[] | null>(null);
   const [themesError, setThemesError] = useState('');
-  /* 지우기를 미뤄 둔 id(화면에서 감춤). 실제 대기 내용(미리 받아 둔 토큰·보내는 중)은 pendingRef */
+  /* 지우기를 미뤄 둔 id — 그 줄은 "지웠어요 · 되돌리기"로 보인다. 실제 대기 내용은 pendingRef */
   const [pendingIds, setPendingIds] = useState<ReadonlySet<number>>(new Set());
   const pendingRef = useRef(new Map<number, Pending>());
   const syncPending = useCallback(() => setPendingIds(new Set(pendingRef.current.keys())), []);
 
-  /* 켜짐 세대 — 꺼질 때(로그아웃·다른 사람) 올린다. 그 전에 떠난 요청·되돌리기가 새 사람 화면을 건드리지 못하게. */
+  /* 켜짐 세대 — 꺼질 때(로그아웃·다른 사람) 올린다. 그 전에 떠난 요청이 새 사람 화면을 건드리지 못하게. */
   const epoch = useRef(0);
   const playedSeq = useRef(0);
   const playedRef = useRef<PlayedDto[] | null>(null);
@@ -104,13 +124,18 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     }
   }, [enabled, missing]);
 
-  /* 미뤄 둔 지우기를 지금 보낸다 — 창을 닫거나(pagehide) 로그아웃할 때. 결과를 기다릴 수 없어 keepalive 로,
-     토큰은 지울 때 미리 받아 둔 것으로 보낸다. 보낸 줄은 목록에서도 뺀다. */
-  const flushPending = useCallback(() => {
-    const gone: number[] = [];
+  const dropRows = useCallback((ids: ReadonlySet<number>) => {
+    if (ids.size > 0) setPlayed((cur) => cur?.filter((p) => !ids.has(p.id)) ?? cur);
+  }, []);
+
+  /* 미뤄 둔 지우기를 지금 다 보낸다 — 화면이 가려질 때(앱 전환 뒤 OS 가 탭을 죽일 수 있다)·창을 닫을 때·로그아웃.
+     결과를 기다리지 않고(keepalive), 토큰은 지울 때 받아 둔 것. 보낸 기록은 되돌릴 수 없으니 되돌리기 자리도 없앤다. */
+  const flushPending = useCallback((): Set<number> => {
+    const gone = new Set<number>();
     for (const [id, p] of pendingRef.current) {
+      clearTimeout(p.timer);
       if (!p.sending) deletePlayedNow(id, p.token);
-      gone.push(id);
+      gone.add(id);
     }
     pendingRef.current.clear();
     return gone;
@@ -121,15 +146,15 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     if (!enabled) return;
     const ep = epoch.current;
     const loaded = first ? [] : (pastRef.current ?? []);
-    const q = nextPastQuery(loaded, today);
     setPastBusy(true);
     try {
       const t = await token();
       if (!t || ep !== epoch.current) return;
-      const fresh = await myPastEvents(q.before, q.limit, t);
+      const r = await myPastEvents(nextPastCursor(loaded, today), PAST_PAGE, t);
       if (ep !== epoch.current) return;
-      const m = mergePast(loaded, fresh, q.limit);
+      const m = mergePast(loaded, r.events, r.total);
       setPast(m.list);
+      setPastTotal(r.total);
       setHasMorePast(m.hasMore);
       setPastError('');
     } catch (e) {
@@ -141,37 +166,42 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     }
   }, [enabled, today, missing]);
 
-  /* 꺼지면 전부 비우고 세대를 올린다 */
+  /* 꺼지면 미뤄 둔 지우기를 보내고 전부 비운 뒤 세대를 올린다 */
   useEffect(() => {
     if (!enabled) return;
     const ep = epoch;
     return () => {
       flushPending();
       ep.current++;
-      clearToasts(); // 앞 사람의 "되돌리기"를 남기지 않는다(닫힐 때 세대가 달라 아무것도 안 한다)
       setPendingIds(new Set());
       setApi('unknown');
       setPlayed(null);
       setError('');
       setPast(null);
+      setPastTotal(null);
       setHasMorePast(false);
       setPastBusy(false);
       setPastError('');
     };
   }, [enabled, flushPending]);
 
-  /* 창을 닫거나 다른 페이지로 떠날 때 미뤄 둔 지우기를 보낸다 */
+  /* 화면이 가려질 때(hidden)·창을 떠날 때(pagehide) 바로 보낸다. pagehide 뒤 bfcache 로 돌아와도 되돌리기 자리가 남지 않는다 */
   useEffect(() => {
     if (!enabled) return;
-    const onHide = () => {
-      const gone = new Set(flushPending());
+    const flush = () => {
+      const gone = flushPending();
       if (gone.size === 0) return;
-      setPlayed((cur) => cur?.filter((p) => !gone.has(p.id)) ?? cur);
+      dropRows(gone);
       setPendingIds(new Set());
     };
-    addEventListener('pagehide', onHide);
-    return () => removeEventListener('pagehide', onHide);
-  }, [enabled, flushPending]);
+    const onVis = () => { if (document.visibilityState === 'hidden') flush(); };
+    document.addEventListener('visibilitychange', onVis);
+    addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      removeEventListener('pagehide', flush);
+    };
+  }, [enabled, flushPending, dropRows]);
 
   /* 켜질 때 — 해 본 테마 목록으로 이 API 가 있는지 본다 */
   useEffect(() => {
@@ -201,6 +231,68 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     }
   }, [themes]);
 
+  /* 되돌리기 — 요청 없이 원래 줄로. 이미 보내는 중이면 false */
+  const undo = useCallback((id: number): boolean => {
+    const p = pendingRef.current.get(id);
+    if (!p || p.sending) return false;
+    clearTimeout(p.timer);
+    pendingRef.current.delete(id);
+    syncPending();
+    return true;
+  }, [syncPending]);
+
+  /* 시간이 다 됨 — 그때 DELETE. 이미 없으면(NO_SUCH_PLAYED) 목적은 이뤘다. 그 밖의 실패는 알리고 줄이 다시 보인다. */
+  const expire = useCallback(async (id: number, ep: number) => {
+    const p = pendingRef.current.get(id);
+    if (ep !== epoch.current || !p || p.sending) return;
+    p.sending = true;
+    try {
+      await deletePlayed(id, (await token()) ?? p.token);
+      if (ep === epoch.current) dropRows(new Set([id]));
+    } catch (e) {
+      if (ep !== epoch.current) return;
+      if (errorCode(e) === 'NO_SUCH_PLAYED') dropRows(new Set([id]));
+      else showToast(sayClub(e));
+    } finally {
+      if (ep === epoch.current && pendingRef.current.get(id) === p) {
+        pendingRef.current.delete(id);
+        syncPending();
+        p.onGone?.();
+      }
+    }
+  }, [dropRows, syncPending]);
+
+  const arm = useCallback((id: number, p: Pending, ep: number) => {
+    p.start = Date.now();
+    p.timer = window.setTimeout(() => void expire(id, ep), p.left);
+  }, [expire]);
+
+  /* 마우스·포커스가 그 줄에 머무는 동안 멈춘다. 둘 다 떠나야 남은 시간으로 다시 간다(너무 짧으면 1.5초는 준다) */
+  const hold = useCallback((id: number, key: 'hover' | 'focus') => {
+    const p = pendingRef.current.get(id);
+    if (!p || p.sending || p.holds.has(key)) return;
+    if (p.holds.size === 0) { clearTimeout(p.timer); p.left -= Date.now() - p.start; }
+    p.holds.add(key);
+  }, []);
+  const release = useCallback((id: number, key: 'hover' | 'focus') => {
+    const p = pendingRef.current.get(id);
+    if (!p || p.sending || !p.holds.delete(key) || p.holds.size > 0) return;
+    p.left = Math.max(1500, p.left);
+    arm(id, p, epoch.current);
+  }, [arm]);
+
+  /* 지우기 — 묻지 않는다. 줄은 그 자리에 "지웠어요 · 되돌리기"로 남고 6초 뒤 보낸다.
+     토큰은 지금 받아 둔다(가려지거나 닫힐 때 기다리지 않고 보내야 해서). */
+  const remove = useCallback(async (row: PlayedDto, onGone?: () => void) => {
+    const ep = epoch.current;
+    const t = await token();
+    if (!t || ep !== epoch.current || pendingRef.current.has(row.id)) return;
+    const p: Pending = { token: t, timer: undefined, left: UNDO_MS, start: 0, holds: new Set(), sending: false, onGone };
+    pendingRef.current.set(row.id, p);
+    arm(row.id, p, ep);
+    syncPending();
+  }, [arm, syncPending]);
+
   /* 기록 하나 더하기. 같은 테마가 이미 있으면 서버가 있던 행을 그대로 준다(멱등) — 보내기 전 목록에 그 id 가 있었으면 existed.
      목록을 아직 못 받았으면 먼저 받고 나서 판정한다. 실패하면 서버 문구를 던진다(부르는 쪽이 칸 아래나 토스트로 보인다). */
   const add = useCallback(async (input: PlayedInput): Promise<{ existed: boolean }> => {
@@ -216,56 +308,16 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     }
     if (ep !== epoch.current) return { existed: false };
     /* 지우려고 미뤄 둔 그 기록이 돌아왔으면 — 지우기를 거두고 다시 보인다(새로 기록한 것과 같다) */
-    const revived = pendingRef.current.get(row.id);
-    if (revived && !revived.sending) { pendingRef.current.delete(row.id); syncPending(); }
+    const revived = undo(row.id);
     await reloadPlayed(); // 기록 날짜가 없는 행이 어디에 끼는지는 서버 순서를 따른다
     return { existed: !revived && !!known?.some((p) => p.id === row.id) };
-  }, [enabled, reloadPlayed, syncPending]);
-
-  /* 알림이 닫힐 때 미뤄 둔 지우기를 정한다(onDeleteToastClose). 세대가 바뀌었거나 이미 보냈으면(flush) 할 일이 없다. */
-  const settle = useCallback(async (p: PlayedDto, reason: CloseReason, ep: number, onRestored?: (id: number) => void) => {
-    const wait = pendingRef.current.get(p.id);
-    if (ep !== epoch.current || !wait || wait.sending) return;
-    if (onDeleteToastClose(reason) === 'restore') {
-      pendingRef.current.delete(p.id);
-      syncPending();
-      onRestored?.(p.id);
-      return;
-    }
-    wait.sending = true;
-    try {
-      await deletePlayed(p.id, (await token()) ?? wait.token);
-      if (ep === epoch.current) setPlayed((cur) => cur?.filter((x) => x.id !== p.id) ?? cur);
-    } catch (e) {
-      if (ep !== epoch.current) return;
-      if (errorCode(e) === 'NO_SUCH_PLAYED') setPlayed((cur) => cur?.filter((x) => x.id !== p.id) ?? cur); // 이미 없다 — 목적은 이뤘다
-      else showToast(sayClub(e)); // 못 지웠다 — 줄이 다시 보인다
-    } finally {
-      if (ep === epoch.current) { pendingRef.current.delete(p.id); syncPending(); }
-    }
-  }, [syncPending]);
-
-  /* 지우기 — 묻지 않는다. 줄을 바로 감추고 "지웠어요. 되돌리기" 알림이 닫힐 때 보낸다(settle).
-     토큰은 지금 받아 둔다 — 창을 닫을 때(pagehide) 기다리지 않고 보내야 해서. onRestored 는 되돌렸을 때 화면이 포커스를 돌리는 데 쓴다. */
-  const remove = useCallback(async (p: PlayedDto, onRestored?: (id: number) => void) => {
-    const ep = epoch.current;
-    const t = await token();
-    if (!t || ep !== epoch.current || pendingRef.current.has(p.id)) return;
-    pendingRef.current.set(p.id, { token: t, sending: false });
-    syncPending();
-    showToast('지웠어요.', {
-      action: { label: '되돌리기' },
-      onClose: (reason) => void settle(p, reason, ep, onRestored),
-    });
-  }, [settle, syncPending]);
-
-  const visible = useMemo(() => (played === null ? null : withoutPending(played, pendingIds)), [played, pendingIds]);
+  }, [enabled, reloadPlayed, undo]);
 
   return {
-    api, played: visible, error, reloadPlayed,
-    past, hasMorePast, pastBusy, pastError, morePast: () => loadPast(false), retryPast: () => loadPast(true),
+    api, played, pendingIds, error, reloadPlayed,
+    past, pastTotal, hasMorePast, pastBusy, pastError, morePast: () => loadPast(false), retryPast: () => loadPast(true),
     themes, themesError, loadThemes,
-    add, remove,
+    add, remove, undo, hold, release,
   };
 }
 

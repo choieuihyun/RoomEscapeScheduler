@@ -3,7 +3,7 @@ import { cpLen, dayLabel, eventStatus, eventTitle, STATUS_LABEL, weekday } from 
 import { isPlayableName, searchThemes, sourceLabel } from '../played';
 import type { EventDto, MeDto, PlayedDto, ThemeRef } from '../server';
 import { showToast } from '../toast';
-import type { UseProfileReturn } from '../useProfile';
+import { pageRows, withoutPending, type UseProfileReturn } from '../useProfile';
 
 /* 내 정보 — 계획 Task 7, 작업명세서 §4.9 "화면 쪽 약속". 홈과 같은 세 칸 카드:
    ① 프로필(닉네임·역할·로그인 수단·숫자 둘), ② 해 본 테마(찾아서 기록·직접 적기·탭·지우기), ③ 지난 동호회 일정.
@@ -33,6 +33,7 @@ export function ProfilePage({
   onOpenEvent: (ev: EventDto) => void;
 }) {
   const { played, past } = profile;
+  const kept = played === null ? null : withoutPending(played, profile.pendingIds);
   const nickname = member?.nickname?.trim() || '';
   const initial = [...nickname][0] ?? '?';
 
@@ -44,8 +45,8 @@ export function ProfilePage({
   const linkLine = linked.length > 0 ? `${linked.join(' · ')} 연결됨`
     : providerIds.includes('password') ? '아이디로 로그인해요' : '';
 
-  /* 지난 일정 수 — 서버가 총수를 주지 않아 받은 만큼 세고, 더 있으면 "+" */
-  const pastCount = past === null ? '–' : `${past.length}${profile.hasMorePast ? '+' : ''}`;
+  /* 지난 일정 수 — 서버가 주는 전체 수(받은 쪽 수와 상관없이) */
+  const pastCount = profile.pastTotal ?? '–';
 
   return (
     <div className="pf-grid">
@@ -56,7 +57,7 @@ export function ProfilePage({
           <span className={'chip-info pf-role' + (isAdmin ? ' role' : '')}>{isAdmin ? '운영진' : '멤버'}</span>
           {linkLine && <span className="pf-link">{linkLine}</span>}
           <div className="pf-stats">
-            <div><b>{played === null ? '–' : played.length}</b><span>해 본 테마</span></div>
+            <div><b>{kept === null ? '–' : kept.length}</b><span>해 본 테마</span></div>
             <div><b>{pastCount}</b><span>동호회 일정</span></div>
           </div>
         </section>
@@ -112,7 +113,9 @@ export function ProfilePage({
 
 /* 해 본 테마 카드 — 찾기(서버 테마 목록) · 직접 적기 · 탭 · 쪽 넘김 */
 function PlayedCard({ profile }: { profile: UseProfileReturn }) {
-  const { played } = profile;
+  const { played, pendingIds } = profile;
+  /* 지운 줄(되돌리기 자리)은 수·찾기 판정에서 뺀다 — 찾기에서 다시 "해 봤어요"를 누르면 지우기를 거둔다 */
+  const kept = useMemo(() => (played === null ? null : withoutPending(played, pendingIds)), [played, pendingIds]);
   const [q, setQ] = useState('');
   const [tab, setTab] = useState<Tab>('all');
   const [page, setPage] = useState(0);
@@ -132,34 +135,34 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
   }, [needle]);
   const { themes } = profile;
   const results = useMemo(
-    () => (dq && themes ? searchThemes(themes, dq, played ?? []) : []),
-    [dq, themes, played],
+    () => (dq && themes ? searchThemes(themes, dq, kept ?? []) : []),
+    [dq, themes, kept],
   );
-  const mine = played ?? [];
 
-  const rows = mine.filter((p) => inTab(p, tab));
-  const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
-  /* 지우면 마지막 쪽이 비어 없어질 수 있다 — 쪽 번호는 그리면서 맞춘다 */
-  const cur = Math.min(page, pages - 1);
-  const shown = rows.slice(cur * PER_PAGE, cur * PER_PAGE + PER_PAGE);
+  /* 지운 줄은 쪽 넘김·수에 넣지 않고 그 자리에 "지웠어요 · 되돌리기"로 남긴다(pageRows).
+     지우면 마지막 쪽이 비어 없어질 수 있다 — 쪽 번호는 그리면서 맞춘다 */
+  const rows = (played ?? []).filter((p) => inTab(p, tab));
+  const { shown, pages, count, cur } = pageRows(rows, pendingIds, page, PER_PAGE);
   const tabInfo = TABS.find((t) => t.id === tab)!;
 
-  /* 지운 줄의 × 에 있던 포커스를 다음 줄 × 로(없으면 앞 줄, 그것도 없으면 고른 탭). 되돌리면 그 줄 × 로 돌려 놓는다.
-     사용자가 이미 다른 곳으로 옮겼으면 건드리지 않는다. */
+  /* 포커스 — × 를 누르면 그 자리의 "되돌리기"로, 되돌리면 그 줄 × 로, 시간이 다 돼 줄이 사라지면 그 자리에 온 줄로
+     (없으면 앞 줄, 그것도 없으면 고른 탭). 사용자가 이미 다른 곳으로 옮겼으면 건드리지 않는다. */
   const listRef = useRef<HTMLUListElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
-  const lost = () => { const a = document.activeElement; return !a || a === document.body || !!a.closest('.toasts'); };
+  const lost = () => { const a = document.activeElement; return !a || a === document.body; };
   const fallback = () => tabsRef.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]');
+  const focusIn = (sel: string) => listRef.current?.querySelector<HTMLButtonElement>(sel);
   const del = async (p: PlayedDto, idx: number) => {
-    await profile.remove(p, (id) => requestAnimationFrame(() => {
+    await profile.remove(p, () => requestAnimationFrame(() => {
       if (!lost()) return;
-      (listRef.current?.querySelector<HTMLButtonElement>(`[data-pid="${id}"]`) ?? fallback())?.focus();
+      const items = listRef.current?.querySelectorAll<HTMLLIElement>(':scope > li');
+      const at = items?.[idx] ?? items?.[idx - 1];
+      (at?.querySelector<HTMLButtonElement>('button') ?? fallback())?.focus();
     }));
-    requestAnimationFrame(() => {
-      if (!lost()) return;
-      const dels = listRef.current?.querySelectorAll<HTMLButtonElement>('.pf-del');
-      (dels?.[idx] ?? dels?.[idx - 1] ?? fallback())?.focus();
-    });
+    requestAnimationFrame(() => focusIn(`[data-undo="${p.id}"]`)?.focus());
+  };
+  const undoRow = (p: PlayedDto) => {
+    if (profile.undo(p.id)) requestAnimationFrame(() => focusIn(`[data-pid="${p.id}"]`)?.focus());
   };
 
   const pick = async (ref: ThemeRef) => {
@@ -206,7 +209,7 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
     <section className="home-card pf-played" aria-label="해 본 테마">
       <div className="pf-h">
         <h2 className="home-h">해 본 테마</h2>
-        {played && <span className="pf-n">{played.length}개</span>}
+        {kept && <span className="pf-n">{kept.length}개</span>}
       </div>
 
       <div className="pf-search">
@@ -276,13 +279,26 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
             <button type="button" className="btn" onClick={() => void profile.reloadPlayed()}>다시 시도</button>
           </div>
         ) : <p className="home-empty-p pf-loading">불러오는 중…</p>
-      ) : shown.length === 0 ? (
+      ) : count === 0 && shown.length === 0 ? (
         <p className="home-empty-p pf-loading">{tabInfo.empty}</p>
       ) : (
         <ul className="pf-list" ref={listRef}>
           {shown.map((p, i) => {
+            if (pendingIds.has(p.id)) {
+              /* 지운 줄 — 6초 뒤 보낸다. 마우스·포커스가 이 줄에 있는 동안은 기다린다.
+                 마우스는 enter 대신 move 로 본다 — × 를 누른 그 자리에서 줄이 바뀌면 포인터가 이미 안에 있어 enter 가 오지 않는다 */
+              return (
+                <li key={p.id} className="pf-row pf-gone"
+                  onMouseMove={() => profile.hold(p.id, 'hover')} onMouseLeave={() => profile.release(p.id, 'hover')}
+                  onFocus={() => profile.hold(p.id, 'focus')} onBlur={() => profile.release(p.id, 'focus')}>
+                  <span className="pf-gone-t">지웠어요<span className="pf-gone-n"> · {p.themeName}</span></span>
+                  <button type="button" className="pf-undo" data-undo={p.id} aria-label={`${p.themeName} 되돌리기`}
+                    onClick={() => undoRow(p)}>되돌리기</button>
+                </li>
+              );
+            }
             const src = sourceLabel(p);
-            const meta = [p.branchName, p.playedOn && dayLabel(p.playedOn)].filter(Boolean).join(' · ');
+            const meta = [p.storeName, p.branchName, p.playedOn && dayLabel(p.playedOn)].filter(Boolean).join(' · ');
             return (
               <li key={p.id} className="pf-row">
                 <div className="pf-row-main">

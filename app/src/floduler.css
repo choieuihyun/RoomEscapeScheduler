@@ -45,7 +45,6 @@
   /* 시간 협의 막대(§4.8) — 모두 되는 날 진한 보라, 나머지 옅은 보라, 빈 칸 */
   --talk-bar:#8B6CF2; --talk-bar-soft:#B9A6F7; --talk-track:#EEEFEF;
   --badge-bg:#117182; --badge-past-bg:#757678;  /* 숫자 동그라미 — 흰 글자 대비 4.5:1 이상 */
-  --toast-act:#3CBED7;   /* 토스트(--ink 바탕) 위 단추 글자 — #1C1C1C 대비 7.9:1 */
 
   /* 테마별 컬러 코딩 — ThemeCard 왼쪽 띠, 결과 타임라인 블록에 순환 적용
      (캘린더별 색). 참고 시스템의 사용자 지정 태그 색에서 서로 잘 갈리는 6개를 골랐다.
@@ -104,7 +103,6 @@
     --st-closed-fg:#B4B5B7;
     --talk-bar:#A58BFF; --talk-bar-soft:#6E58C2; --talk-track:#424343;
     --badge-bg:#117182; --badge-past-bg:#666768;
-    --toast-act:#117182;   /* 다크의 토스트는 흰 바탕 — 대비 5.7:1 */
 
     --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
     --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
@@ -144,7 +142,6 @@
   --st-closed-fg:#B4B5B7;
   --talk-bar:#A58BFF; --talk-bar-soft:#6E58C2; --talk-track:#424343;
   --badge-bg:#117182; --badge-past-bg:#666768;
-  --toast-act:#117182;
 
   --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
   --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
@@ -681,12 +678,6 @@ button:active{transform:scale(.97)}
   flex-direction:column;align-items:center;gap:8px;pointer-events:none}
 .toast{background:var(--ink);color:var(--surface);font-size:13.5px;padding:10px 16px;border-radius:var(--r-sm);
   box-shadow:var(--sh-up);animation:toastIn .18s ease-out both;max-width:calc(100vw - 32px)}
-/* 단추가 붙은 알림("지웠어요. 되돌리기") — 이 알림만 눌리게 한다 */
-.toast.has-act{display:flex;align-items:center;gap:14px;pointer-events:auto}
-.toast-act{flex:none;height:28px;margin:-4px -8px -4px 0;padding:0 8px;border:none;border-radius:var(--r-xs);background:none;
-  color:var(--toast-act);font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
-.toast-act:hover{text-decoration:underline}
-.toast-act:focus-visible{outline:2px solid var(--toast-act);outline-offset:1px}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 .main{flex:1;min-width:0;padding:0 40px}
@@ -1453,6 +1444,14 @@ input.pf-q:not([type=checkbox]):not([type=radio]):not([type=file]){padding-left:
   color:var(--ink3);font-size:17px;line-height:1;cursor:pointer}
 .pf-del:hover:not(:disabled){color:var(--red-text);background:var(--red-soft)}
 .pf-del:disabled{opacity:.4;cursor:default}
+/* 지운 줄 — 그 자리에 "지웠어요 · 되돌리기"로 6초 남는다(쪽 수·줄 수에는 안 든다) */
+.pf-gone{min-height:52px;box-sizing:border-box;color:var(--ink3);font-size:13.5px}
+.pf-gone-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-gone-n{font-size:12.5px}
+.pf-undo{flex:none;height:32px;padding:0 12px;border:1px solid var(--ink);border-radius:var(--pill);background:var(--surface);
+  color:var(--ink);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.pf-undo:hover{background:var(--btn-bg-hover)}
+.pf-undo:focus-visible{outline:none;box-shadow:var(--ring)}
 .pf-past .chip-st{height:20px;padding:0 8px;font-size:11px}
 .pf-past .merr{margin:0}
 .pf-more{margin-top:6px;height:38px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);color:var(--ink);

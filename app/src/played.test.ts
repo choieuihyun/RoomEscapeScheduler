@@ -6,7 +6,7 @@ const seg = (playedBy: string[]) => ({ playedBy });
 const ref = (n: string, store = '키이스케이프', branch = '강남', key = `${store}-${branch}-${n}`): ThemeRef =>
   ({ themeKey: key, themeName: n, branchName: branch, storeName: store });
 const played = (o: Partial<PlayedDto>): PlayedDto => ({
-  id: 1, themeKey: null, themeName: 'x', branchName: null, playedOn: null, source: 'MANUAL', eventId: null,
+  id: 1, themeKey: null, themeName: 'x', branchName: null, storeName: null, playedOn: null, source: 'MANUAL', eventId: null,
   createdAt: '2026-10-19T00:00:00Z', ...o,
 });
 

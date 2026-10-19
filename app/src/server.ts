@@ -129,9 +129,11 @@ interface WatchApiError extends ApiError {
 }
 
 /* token 이 null 이면 Authorization 헤더를 싣지 않는다(카카오 로그인처럼 인증 전 POST). */
-async function send<T>(path: string, token: string | null, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> {
+/* keepalive: 탭이 닫히거나 가려진 뒤에도 요청이 끝까지 가게(미뤄 둔 지우기, §4.9 내 정보) */
+async function send<T>(path: string, token: string | null, method: 'GET' | 'POST' | 'DELETE', body?: unknown, keepalive = false): Promise<T> {
   const res = await fetch(base() + path, {
     method,
+    ...(keepalive ? { keepalive: true } : {}),
     headers: {
       Accept: 'application/json',
       ...(token != null ? { Authorization: `Bearer ${token}` } : {}),
@@ -369,6 +371,8 @@ export interface PlayedDto {
   themeKey: string | null;
   themeName: string;
   branchName: string | null;
+  /* 키로 서버가 아는 매장 이름. 직접 적은 기록은 null */
+  storeName: string | null;
   playedOn: string | null;
   /* 멱등 POST 는 이미 있던 행을 그대로 주므로, 보낸 source 와 다를 수 있다 */
   source: 'MANUAL' | 'EVENT' | 'PLAN';
@@ -403,34 +407,46 @@ export interface FreshDto {
   themes: FreshTheme[];
 }
 
-export const listPlayed = (token: string): Promise<PlayedDto[]> => authed('/api/me/played', token, 'GET');
+/* storeName 이 없던 서버(배포 경주)에서 받아도 null 로 채운다 — normEvent 와 같은 까닭 */
+const normPlayed = (p: PlayedDto): PlayedDto => ({ ...p, storeName: p.storeName ?? null });
 
-export const addPlayed = (body: PlayedInput, token: string): Promise<PlayedDto> =>
-  authed('/api/me/played', token, 'POST', body);
+export const listPlayed = async (token: string): Promise<PlayedDto[]> =>
+  (await authed<PlayedDto[]>('/api/me/played', token, 'GET')).map(normPlayed);
 
-/* 404 를 성공으로 치지 않는다 — 그대로 던진다 */
+export const addPlayed = async (body: PlayedInput, token: string): Promise<PlayedDto> =>
+  normPlayed(await authed<PlayedDto>('/api/me/played', token, 'POST', body));
+
+/* 404 를 성공으로 치지 않는다 — 그대로 던진다. 미뤄 뒀다 보내는 지우기라 keepalive(탭이 닫혀도 간다) */
 export const deletePlayed = (id: number, token: string): Promise<{ id: number; deleted: boolean }> =>
-  authed(`/api/me/played/${id}`, token, 'DELETE');
+  send(`/api/me/played/${id}`, token, 'DELETE', undefined, true);
 
-/* 창을 닫거나 로그아웃할 때 미뤄 둔 지우기를 보낸다 — keepalive 라 페이지가 사라져도 요청은 간다.
-   결과는 기다리지 않는다(받을 화면이 없다). 토큰은 부르는 쪽이 미리 받아 둔 것. */
+/* 창이 가려지거나 로그아웃할 때 미뤄 둔 지우기를 바로 보낸다 — 결과는 기다리지 않는다(받을 화면이 없을 수 있다).
+   토큰은 부르는 쪽이 미리 받아 둔 것. */
 export function deletePlayedNow(id: number, token: string): void {
-  try {
-    void fetch(base() + `/api/me/played/${id}`, {
-      method: 'DELETE', keepalive: true,
-      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-    }).catch(() => { /* 닫히는 중 — 알릴 곳이 없다 */ });
-  } catch { /* fetch 자체가 없을 때 */ }
+  deletePlayed(id, token).catch(() => { /* 닫히는 중 — 알릴 곳이 없다 */ });
 }
 
-export const memberPlayed = (uid: string, token: string): Promise<PlayedDto[]> =>
-  authed(`/api/club/members/${encodeURIComponent(uid)}/played`, token, 'GET');
+export const memberPlayed = async (uid: string, token: string): Promise<PlayedDto[]> =>
+  (await authed<PlayedDto[]>(`/api/club/members/${encodeURIComponent(uid)}/played`, token, 'GET')).map(normPlayed);
 
 /* 로그인 없이 — 은퇴한 테마도 들어 있고 매장·지점·이름 순 */
 export const listThemes = (): Promise<ThemeRef[]> => get('/api/themes');
 
-export const myPastEvents = (before: string | null, limit: number, token: string): Promise<EventDto[]> =>
-  evMany(authed(`/api/me/events?${before ? `before=${encodeURIComponent(before)}&` : ''}limit=${limit}`, token, 'GET'));
+/* 커서 = 앞 쪽 마지막 일정의 (date, id) — 서버가 (date, id) < (before, beforeId) 로 거른다. before 만 주면 date < before,
+   없으면 오늘(KST) 이전. beforeId 만 주면 400 BAD_RANGE 라 before 없이 싣지 않는다. total 은 커서와 상관없이 전체 수. */
+export type PastCursor = { before: string; beforeId?: number };
+export async function myPastEvents(
+  cursor: PastCursor | null, limit: number, token: string,
+): Promise<{ events: EventDto[]; total: number }> {
+  const q = new URLSearchParams();
+  if (cursor) {
+    q.set('before', cursor.before);
+    if (cursor.beforeId != null) q.set('beforeId', String(cursor.beforeId));
+  }
+  q.set('limit', String(limit));
+  const r = await authed<{ events: EventDto[]; total: number }>(`/api/me/events?${q}`, token, 'GET');
+  return { events: r.events.map(normEvent), total: r.total };
+}
 
 export const freshThemes = (eventId: number, date: string | null, token: string): Promise<FreshDto> =>
   authed(`${EVENTS}/${eventId}/fresh-themes${date ? `?date=${encodeURIComponent(date)}` : ''}`, token, 'GET');
