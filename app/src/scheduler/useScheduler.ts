@@ -191,7 +191,13 @@ export function useScheduler() {
     const t0 = performance.now();
     try {
       /* 사진 읽기 코드는 사진을 넣을 때 받는다(첫 로딩에서 뺀다) */
-      const { recognizeSessions } = await import('../ocr');
+      let recognizeSessions: typeof import('../ocr').recognizeSessions;
+      try {
+        ({ recognizeSessions } = await import('../ocr'));
+      } catch {
+        setThemes(ts => ts.map(t => (t.id === id ? { ...t, err: '사진 인식 기능을 불러오지 못했어요. 연결을 확인하고 다시 해 주세요.', busy: '' } : t)));
+        return;
+      }
       const sessions = await recognizeSessions(file, s => {
         setThemes(ts => ts.map(t => (t.id === id ? { ...t, busy: s } : t)));
       });

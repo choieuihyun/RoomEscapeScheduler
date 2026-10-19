@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { recordPlanPlayed } from './played';
 import { useScheduler } from './scheduler/useScheduler';
 import { useTheme } from './useTheme';
@@ -28,20 +28,33 @@ import { PlanSection } from './components/PlanSection';
 import { SideNav } from './components/SideNav';
 import { CalendarSide } from './components/CalendarSide';
 import { Toaster } from './components/Toaster';
+import { lazyRetry } from './lazyRetry';
+import { LazyBoundary, StaleNotice } from './components/LazyBoundary';
 import { PushBanner } from './components/PushBanner';
 import { showPushBanner, showToast } from './toast';
 
 /* 동호회·캘린더·내 정보 화면은 처음 쓸 때 받는다 — 로그인 전 첫 화면(조합 계산)이 이 코드를 받지 않게 한다 */
-const MembersPage = lazy(() => import('./components/MembersPage').then(m => ({ default: m.MembersPage })));
-const HomePage = lazy(() => import('./components/HomePage').then(m => ({ default: m.HomePage })));
-const ProfilePage = lazy(() => import('./components/ProfilePage').then(m => ({ default: m.ProfilePage })));
-const EventForm = lazy(() => import('./components/EventForm').then(m => ({ default: m.EventForm })));
-const CalendarPage = lazy(() => import('./components/CalendarPage').then(m => ({ default: m.CalendarPage })));
-const LoadModal = lazy(() => import('./components/LoadModal').then(m => ({ default: m.LoadModal })));
-const AuthModal = lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
-const SaveModal = lazy(() => import('./components/SaveModal').then(m => ({ default: m.SaveModal })));
-const WatchListModal = lazy(() => import('./components/WatchListModal').then(m => ({ default: m.WatchListModal })));
-const PushGuide = lazy(() => import('./components/PushGuide').then(m => ({ default: m.PushGuide })));
+const MembersPage = lazyRetry(() => import('./components/MembersPage').then(m => ({ default: m.MembersPage })));
+const HomePage = lazyRetry(() => import('./components/HomePage').then(m => ({ default: m.HomePage })));
+const ProfilePage = lazyRetry(() => import('./components/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const EventForm = lazyRetry(() => import('./components/EventForm').then(m => ({ default: m.EventForm })));
+const CalendarPage = lazyRetry(() => import('./components/CalendarPage').then(m => ({ default: m.CalendarPage })));
+const LoadModal = lazyRetry(() => import('./components/LoadModal').then(m => ({ default: m.LoadModal })));
+const AuthModal = lazyRetry(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
+const SaveModal = lazyRetry(() => import('./components/SaveModal').then(m => ({ default: m.SaveModal })));
+const WatchListModal = lazyRetry(() => import('./components/WatchListModal').then(m => ({ default: m.WatchListModal })));
+const PushGuide = lazyRetry(() => import('./components/PushGuide').then(m => ({ default: m.PushGuide })));
+
+/* 배포 뒤 옛 탭에서 청크를 못 찾으면(vite:preloadError) 맨 위 띠로 한 번 알린다 */
+function useStaleStrip(): boolean {
+  const [stale, setStale] = useState(false);
+  useEffect(() => {
+    const on = (e: Event) => { e.preventDefault(); setStale(true); };
+    window.addEventListener('vite:preloadError', on);
+    return () => window.removeEventListener('vite:preloadError', on);
+  }, []);
+  return stale;
+}
 
 /* 한 번이라도 참이었으면 계속 참 — 화면을 처음 열 때 코드를 받고, 이후엔 지우지 않고 숨기기만 해 안의 상태를 지킨다 */
 function useEver(on: boolean): boolean {
@@ -299,6 +312,9 @@ export function SchedulerPage() {
   };
 
   const onCalc = nav.view === 'calc';
+  const staleStrip = useStaleStrip();
+  /* 승인 멤버로 확인되면 홈 코드를 미리 받아 둔다 — 홈 본문이 비는 시간을 줄인다(실패해도 홈이 열릴 때 다시 시도한다) */
+  useEffect(() => { if (clubOn) void import('./components/HomePage').catch(() => {}); }, [clubOn]);
   /* 큰 화면은 처음 들어갈 때 받는다(홈은 승인 멤버 첫 화면이라 homeOn 이면 바로) */
   const calMounted = useEver(nav.view === 'calendar');
   const profileMounted = useEver(nav.view === 'profile');
@@ -333,6 +349,7 @@ export function SchedulerPage() {
       </SideNav>
 
       <main className="main">
+        {staleStrip && <StaleNotice />}
         {/* 계산 화면은 캘린더로 넘어가도 지우지 않고 숨기기만 한다 — 입력·결과·"더 보기"
             같은 컴포넌트 안 상태가 그대로 남아 돌아왔을 때 이어서 볼 수 있다. */}
         <div className={'view' + (onCalc ? '' : ' off')}>
@@ -352,14 +369,14 @@ export function SchedulerPage() {
             <header className="page-head">
               <h1>홈</h1>
             </header>
-            <Suspense fallback={null}><HomePage
+            <LazyBoundary><HomePage
               club={club} today={today} nickname={auth.member ? memberName(auth.member) : ''} isAdmin={isAdmin}
               watchCount={watches.watches.length} watchLimit={watches.limit} pendingCount={pendingCount}
               month={homeMonth} onMonth={stepHomeMonth}
               onWatches={watches.openModal} onMembers={() => goView('members')}
               onNewEvent={() => eventForm.openNew()} onCalc={() => goView('calc')}
               onOpenEvent={openFromHome} onPickDay={pickFromHome}
-            /></Suspense>
+            /></LazyBoundary>
           </div>
         )}
 
@@ -370,13 +387,13 @@ export function SchedulerPage() {
               <h1>캘린더</h1>
               <p>{homeOn ? '동호회 일정과 저장한 일정, 빈자리 알림을' : '저장한 일정과 빈자리 알림을'} 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
             </header>
-            <Suspense fallback={null}><CalendarPage
+            <LazyBoundary><CalendarPage
               ctl={cal} active={nav.view === 'calendar'} plans={plans} watches={watches} auth={auth} s={s}
               onLoaded={() => { goView('calc'); showToast('일정을 불러왔어요.'); }}
               club={club} clubOn={homeOn}
               onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent} onOpenEvent={openEvent}
               onCalcWindow={calcWindow} onCalcThemes={calcThemes}
-            /></Suspense>
+            /></LazyBoundary>
           </div>
         )}
 
@@ -385,10 +402,10 @@ export function SchedulerPage() {
             <header className="page-head">
               <h1>내 정보</h1>
             </header>
-            <Suspense fallback={null}><ProfilePage
+            <LazyBoundary><ProfilePage
               profile={profile} member={auth.member} providerIds={auth.providerIds} isAdmin={isAdmin}
               onOpenEvent={openFromProfile} push={push}
-            /></Suspense>
+            /></LazyBoundary>
           </div>
         )}
 
@@ -398,17 +415,17 @@ export function SchedulerPage() {
               <h1>멤버 관리</h1>
               <p>가입 신청을 오픈채팅 닉네임과 맞춰 보고 승인해 주세요. 한 사람이 계정을 여러 개 만들었으면 하나만 승인하면 돼요.</p>
             </header>
-            <Suspense fallback={null}><MembersPage ctl={members} meUid={auth.member?.uid ?? ''} /></Suspense>
+            <LazyBoundary><MembersPage ctl={members} meUid={auth.member?.uid ?? ''} /></LazyBoundary>
           </div>
         )}
       </main>
 
-      {authMounted && <Suspense fallback={null}><AuthModal auth={auth} /></Suspense>}
-      {loadMounted && <Suspense fallback={null}><LoadModal m={loadModal} /></Suspense>}
-      {saveMounted && <Suspense fallback={null}><SaveModal m={saveModal} /></Suspense>}
-      {clubOn && formMounted && <Suspense fallback={null}><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} /></Suspense>}
-      {auth.cloudOn && watchMounted && <Suspense fallback={null}><WatchListModal w={watches} /></Suspense>}
-      {clubOn && guideMounted && <Suspense fallback={null}><PushGuide push={push} /></Suspense>}
+      {authMounted && <LazyBoundary><AuthModal auth={auth} /></LazyBoundary>}
+      {loadMounted && <LazyBoundary><LoadModal m={loadModal} /></LazyBoundary>}
+      {saveMounted && <LazyBoundary><SaveModal m={saveModal} /></LazyBoundary>}
+      {clubOn && formMounted && <LazyBoundary><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} /></LazyBoundary>}
+      {auth.cloudOn && watchMounted && <LazyBoundary><WatchListModal w={watches} /></LazyBoundary>}
+      {clubOn && guideMounted && <LazyBoundary><PushGuide push={push} /></LazyBoundary>}
       <PushBanner onOpen={openEventHash} />
       <Toaster />
     </div>
