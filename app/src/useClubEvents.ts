@@ -35,6 +35,8 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   );
   const alive = useRef(true);
   const seq = useRef(0);
+  /* 켜짐 세대 — 꺼질 때 올린다. 떠 있던 동작·한 건 새로 받기 응답이 꺼진 뒤(전 사용자) 목록을 되살리지 못하게 한다. */
+  const epoch = useRef(0);
   useEffect(() => {
     alive.current = true;
     return () => { alive.current = false; };
@@ -67,8 +69,10 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   useEffect(() => {
     if (!enabled) return;
     const s = seq;
+    const ep = epoch;
     return () => {
       s.current++;
+      ep.current++;
       setEvents([]);
       setApi('unknown');
       setError('');
@@ -97,20 +101,34 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     };
   }, [enabled, reload]);
 
+  /* 동작·한 건 새로 받기가 목록을 바꾼 뒤 부른다. 그 전에 떠 있던 reload 는 낡은 참여 상태를 들고 올 수 있어
+     (참여·취소는 version 을 올리지 않는다) 버리고, 목록을 다시 받는다. */
+  const invalidateReload = useCallback(() => {
+    seq.current++;
+    void reload();
+  }, [reload]);
+
   /* 한 일정만 다시 받는다. 지워졌으면(404 NO_SUCH_EVENT) 목록에서 빼고 null. */
   const refreshOne = useCallback(async (id: number): Promise<EventDto | null> => {
     if (!enabled) return null;
+    const ep = epoch.current;
+    const live = () => alive.current && epoch.current === ep;
     try {
       const t = await token();
       if (!t) return null;
       const ev = await getEvent(id, t);
-      if (alive.current) setEvents((cur) => upsert(cur, ev));
+      if (!live()) return null;
+      setEvents((cur) => upsert(cur, ev));
+      invalidateReload();
       return ev;
     } catch (e) {
-      if (errorCode(e) === 'NO_SUCH_EVENT' && alive.current) setEvents((cur) => dropEvent(cur, id));
+      if (errorCode(e) === 'NO_SUCH_EVENT' && live()) {
+        setEvents((cur) => dropEvent(cur, id));
+        invalidateReload();
+      }
       return null;
     }
-  }, [enabled]);
+  }, [enabled, invalidateReload]);
 
   const setBusy = (id: number, on: boolean) => {
     if (!alive.current) return;
@@ -123,30 +141,30 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
 
   /* 동작 하나. 성공하면 돌아온 일정으로 목록을 바꾼다. 실패하면 서버 문구를 토스트로 보이고
      (update 의 EVENT_CONFLICT 는 토스트 없이 — 화면이 직접 다룬다) 정원 초과·없는 일정이면 목록을 맞춘 뒤 던진다. */
-  const act = useCallback(async <T,>(id: number | null, quietConflict: boolean, call: (t: string) => Promise<T>): Promise<T> => {
-    const t = await token();
-    if (!enabled || !t) throw new Error('로그인해 주세요.');
+  const act = useCallback(async <T,>(id: number | null, quietConflict: boolean, call: (t: string, put: (ev: EventDto) => EventDto, live: () => boolean) => Promise<T>): Promise<T> => {
+    const ep = epoch.current;
+    const live = () => alive.current && epoch.current === ep;
     if (id !== null) setBusy(id, true);
     try {
-      return await call(t);
+      const t = enabled ? await token() : null;
+      if (!t) throw new Error('로그인해 주세요.');
+      const out = await call(t, (ev) => { if (live()) setEvents((cur) => upsert(cur, ev)); return ev; }, live);
+      if (live()) invalidateReload();
+      return out;
     } catch (e) {
       const code = errorCode(e);
       if (!(quietConflict && code === 'EVENT_CONFLICT')) showToast(sayClub(e));
       if (id !== null) {
         const fix = afterActionError(e);
         if (fix === 'refresh') await refreshOne(id);
-        else if (fix === 'drop' && alive.current) setEvents((cur) => dropEvent(cur, id));
+        else if (fix === 'drop' && live()) { setEvents((cur) => dropEvent(cur, id)); invalidateReload(); }
       }
       throw e;
     } finally {
       if (id !== null) setBusy(id, false);
     }
-  }, [enabled, refreshOne]);
+  }, [enabled, refreshOne, invalidateReload]);
 
-  const apply = (ev: EventDto): EventDto => {
-    if (alive.current) setEvents((cur) => upsert(cur, ev));
-    return ev;
-  };
 
   /* 만들기·고치기는 입력 화면이 실패를 알아야 해서(입력을 지우지 않는다) 던진 채로 둔다.
      나머지는 토스트로 이미 알렸으니 삼킨다. */
@@ -154,30 +172,30 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     try { await p; } catch { /* 토스트·목록 맞춤은 act 에서 끝났다 */ }
   };
 
-  const create = useCallback((input: EventInput) => act(null, false, (t) => createEvent(input, t).then(apply)), [act]);
+  const create = useCallback((input: EventInput) => act(null, false, (t, put) => createEvent(input, t).then(put)), [act]);
   const update = useCallback(
-    (id: number, input: EventInput, version: number) => act(id, true, (t) => updateEvent(id, input, version, t).then(apply)),
+    (id: number, input: EventInput, version: number) => act(id, true, (t, put) => updateEvent(id, input, version, t).then(put)),
     [act],
   );
   const remove = useCallback(
-    (id: number) => quiet(act(id, false, async (t) => {
+    (id: number) => quiet(act(id, false, async (t, _put, live) => {
       await deleteEvent(id, t); // 이미 지워졌어도(404) 성공
-      if (alive.current) setEvents((cur) => dropEvent(cur, id));
+      if (live()) setEvents((cur) => dropEvent(cur, id));
     })),
     [act],
   );
-  const join = useCallback((id: number) => quiet(act(id, false, (t) => joinEvent(id, t).then(apply))), [act]);
-  const leave = useCallback((id: number) => quiet(act(id, false, (t) => leaveEvent(id, t).then(apply))), [act]);
+  const join = useCallback((id: number) => quiet(act(id, false, (t, put) => joinEvent(id, t).then(put))), [act]);
+  const leave = useCallback((id: number) => quiet(act(id, false, (t, put) => leaveEvent(id, t).then(put))), [act]);
   const addPerson = useCallback(
-    (id: number, uid: string) => quiet(act(id, false, (t) => addParticipant(id, uid, t).then(apply))),
+    (id: number, uid: string) => quiet(act(id, false, (t, put) => addParticipant(id, uid, t).then(put))),
     [act],
   );
   const removePerson = useCallback(
-    (id: number, uid: string) => quiet(act(id, false, (t) => removeParticipant(id, uid, t).then(apply))),
+    (id: number, uid: string) => quiet(act(id, false, (t, put) => removeParticipant(id, uid, t).then(put))),
     [act],
   );
   const setBooked = useCallback(
-    (id: number, booked: boolean) => quiet(act(id, false, (t) => setBookedApi(id, booked, t).then(apply))),
+    (id: number, booked: boolean) => quiet(act(id, false, (t, put) => setBookedApi(id, booked, t).then(put))),
     [act],
   );
 

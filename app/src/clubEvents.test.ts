@@ -115,6 +115,13 @@ describe('clubEvents 목록 병합', () => {
     expect(mergeRange([a, b, c], '2026-10-15', '2026-10-31', []).map((e) => e.id)).toEqual([1, 3]);
   });
 
+  it('범위 밖에 있던 일정이 범위 안으로 옮겨 오면 한 개만 남는다', () => {
+    const moved = { ...c, date: '2026-10-22' };
+    const r = mergeRange([a, b, c], '2026-10-15', '2026-10-31', [b, moved]);
+    expect(r.map((e) => e.id)).toEqual([1, 2, 3]);
+    expect(r[2].date).toBe('2026-10-22');
+  });
+
   it('upsert 는 같은 id 를 바꾸고 정렬을 지킨다', () => {
     const r = upsert([a, b, c], { ...b, date: '2026-09-01', title: '바뀜' });
     expect(r.map((e) => e.id)).toEqual([2, 1, 3]);

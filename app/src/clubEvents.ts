@@ -116,7 +116,8 @@ export const cpLen = (s: string): number => [...s].length;
 
 /* from~to(양쪽 포함) 안의 기존 항목을 버리고 fresh 로 바꾼 뒤 정렬한다. 서버에서 지워진 일정이 사라진다. */
 export function mergeRange(cur: EventDto[], from: string, to: string, fresh: EventDto[]): EventDto[] {
-  return sortEvents([...cur.filter((e) => e.date < from || e.date > to), ...fresh]);
+  const ids = new Set(fresh.map((e) => e.id)); // 범위 밖에서 범위 안으로 옮겨 온 일정이 둘로 남지 않게
+  return sortEvents([...cur.filter((e) => (e.date < from || e.date > to) && !ids.has(e.id)), ...fresh]);
 }
 
 /* 같은 id 가 있으면 바꾸고 없으면 넣는다. */
