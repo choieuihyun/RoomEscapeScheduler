@@ -126,7 +126,7 @@ export function SchedulerPage() {
     s.setOption('oStart', o.oStart);
     s.setOption('oEnd', o.oEnd);
     goView('calc');
-    showToast(`다 같이 되는 시간(${windowLabel(w)})을 조건에 넣었어요. 테마를 불러와 계산해 보세요.`);
+    showToast(`시간대(${windowLabel(w)})를 조건에 넣었어요. 테마를 불러와 계산해 보세요.`);
   };
   const pendingCount = members.list?.filter(m => m.status === 'PENDING').length ?? 0;
   /* 연 일정이 목록에서 사라지면(지움·로그아웃) 패널도 닫는다 */

@@ -917,9 +917,15 @@ button:active{transform:scale(.97)}
 .evt-bar i{display:block;height:100%;background:var(--talk-bar-soft)}
 .evt-bar i.all{background:var(--talk-bar)}
 .evt-cand-f{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px}
-.evt-cand-t{flex:1 1 180px;min-width:0;font-size:13px;color:var(--ink2);line-height:1.5}
+.evt-cand-t{flex:1 1 180px;min-width:0;font-size:13px;color:var(--ink2);line-height:1.5;word-break:keep-all;overflow-wrap:anywhere}
 .evt-cand-t b{color:var(--ink);font-variant-numeric:tabular-nums}
 .evp .evt-decide{flex:none;margin-left:auto;height:30px;padding:0 12px;font-size:12.5px;font-weight:600;border-radius:var(--r-sm)}
+/* 가장 좋은 줄 말고는 작은 글자 단추 — 누를 곳은 높이 30px 로 유지 */
+.evt-decide-sm{flex:none;margin-left:auto;height:30px;padding:0 4px;border:none;background:none;color:var(--blue-text);
+  font-family:inherit;font-size:12.5px;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.evt-decide-sm:hover{color:var(--ink)}
+.evt-decide-sm:disabled{opacity:.5;cursor:default}
+.evt-decide-sm:focus-visible{outline:none;box-shadow:var(--ring);border-radius:var(--r-xs)}
 .evt-mine{display:flex;flex-direction:column;gap:8px;padding:14px;background:var(--surface2);border-radius:10px}
 .evt-mine h3{font-size:14px}
 /* 날짜 | 안 돼요·돼요·시간 칸 — 좁은 패널에선 시간 칸이 버튼 아래로 내려가도 날짜 열은 그대로 */
@@ -934,6 +940,8 @@ button:active{transform:scale(.97)}
 .evt-my-time[aria-invalid="true"]{border-color:var(--red-text)}
 .evt-my-err{grid-column:2;margin:0;font-size:12px;line-height:1.5;color:var(--red-text)}
 .evt-done{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
+.evt-calc-w{display:flex;flex-direction:column;gap:6px}
+.evt-sub-h{margin:0;font-size:12.5px;font-weight:600;color:var(--ink2)}
 .evt-calc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:13px;color:var(--ink2)}
 .evt-calc b{color:var(--ink);font-variant-numeric:tabular-nums}
 .evp .evt-calc-btn{margin-left:auto;height:32px;padding:0 12px;font-size:13px}

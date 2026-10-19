@@ -17,10 +17,12 @@ async function loadMembers(): Promise<ClubMemberDto[]> {
   return listClubMembers(t);
 }
 
-export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow }: {
+export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onPicked }: {
   ev: EventDto; club: UseClubEventsReturn; meUid: string; onClose: () => void; onEdit: (ev: EventDto) => void;
   /* 정해진 날짜에 다 같이 되는 시간으로 조합 계산 조건을 채우고 계산 화면으로 */
   onCalcWindow?: (w: { start: number; end: number }) => void;
+  /* 정하기·다시 미정으로 뒤 캘린더에서 그 날짜를 고른다 */
+  onPicked?: (date: string) => void;
 }) {
   const st = eventStatus(ev);
   const busy = club.busyIds.has(ev.id);
@@ -35,6 +37,14 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow }: {
   /* 날짜 미정이면 한 날짜를 정해진 것처럼 보이지 않게 후보 수만 */
   const when = undecided ? `날짜 미정 · 후보 ${ev.candidates.length}개` : longDayLabel(ev.date as string);
   const left = ev.capacity === null ? '' : full ? '마감' : `${ev.capacity - ev.count}자리 남음`;
+
+  /* 내 응답 시간 칸에 적는 중에 패널의 다른 단추(정하기·참여 취소·예약 등)를 누르면, 칸의 blur 커밋이 먼저 요청을 보내
+     단추가 busy 로 잠기고 누른 동작이 사라진다. 그때만 누르는 순간 포커스를 옮기지 않는다(터치도 pointerdown 으로).
+     적던 시간은 칸에 남아 칸을 벗어날 때 보낸다. */
+  const keepTimeFocus = (e: React.PointerEvent | React.MouseEvent) => {
+    const a = document.activeElement;
+    if (a instanceof HTMLInputElement && a.classList.contains('evt-my-time') && (e.target as Element).closest('button')) e.preventDefault();
+  };
 
   async function openPick() {
     if (picking) { setPicking(false); return; }
@@ -57,7 +67,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow }: {
   const candidates = (members ?? []).filter((m) => !inIds.has(m.uid));
 
   return (
-    <div className="evp" aria-label="일정 상세">
+    <div className="evp" aria-label="일정 상세" onPointerDown={keepTimeFocus} onMouseDown={keepTimeFocus}>
       <div className="evp-head">
         <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
         <span className="evp-tools">
@@ -81,7 +91,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow }: {
         </p>
       </div>
 
-      {undecided && <EventTalk ev={ev} club={club} meUid={meUid} />}
+      {undecided && <EventTalk ev={ev} club={club} meUid={meUid} onPicked={onPicked} />}
 
       {ev.segments.length > 0 && (
         <div className="evp-segs">
@@ -163,7 +173,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow }: {
         </div>
       )}
 
-      {!undecided && ev.candidates.length > 0 && <EventTalkDone ev={ev} club={club} onCalcWindow={onCalcWindow} />}
+      {!undecided && ev.candidates.length > 0 && <EventTalkDone ev={ev} club={club} onCalcWindow={onCalcWindow} onPicked={onPicked} />}
 
       {ev.location && (
         <div className="evp-text">
