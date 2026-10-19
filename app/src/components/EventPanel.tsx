@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { fmt, WEEKDAYS } from '../core';
-import { eventStatus, eventTitle, kakaoPost, STATUS_LABEL, timeLabel } from '../clubEvents';
+import { eventStatus, eventTitle, kakaoPost, longDayLabel, rangeLabel, STATUS_LABEL, timeLabel } from '../clubEvents';
 import { eventLink } from '../eventLink';
 import { listClubMembers, sayClub, type ClubMemberDto, type EventDto } from '../server';
 import { showToast } from '../toast';
@@ -9,12 +8,6 @@ import type { UseClubEventsReturn } from '../useClubEvents';
 /* 캘린더 오른쪽 패널의 동호회 일정 상세 (계획 Task E6, 목업 "캘린더 + 일정 상세").
    보이는 일정은 늘 목록(useClubEvents)에서 꺼낸 최신 값이다 — 정원 초과 뒤 다시 불러온 값,
    수정 창에서 저장한 값이 그대로 여기 나온다. 고른 일정이 바뀌면 부르는 쪽이 key 로 새로 그린다. */
-
-const dateText = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  return `${m}월 ${d}일 (${WEEKDAYS[dt.getDay()]})`;
-};
 
 /* "대신 넣기" 고를 승인 멤버 목록 — 처음 펼칠 때 한 번만 받는다 */
 async function loadMembers(): Promise<ClubMemberDto[]> {
@@ -78,7 +71,7 @@ export function EventPanel({ ev, club, onClose, onEdit }: {
       <div>
         <h2 className="evp-title">{eventTitle(ev)}</h2>
         <p className="evp-sub">
-          {dateText(ev.date)}{time && ` ${time}`} · 만든 사람 {ev.createdBy.nickname}
+          {longDayLabel(ev.date)}{time && ` ${time}`} · 만든 사람 {ev.createdBy.nickname}
         </p>
       </div>
 
@@ -92,7 +85,7 @@ export function EventPanel({ ev, club, onClose, onEdit }: {
               <div key={i} className="evp-segwrap">
                 {move !== null && move >= 0 && <div className="evp-move">이동 {move}분</div>}
                 <div className="evp-seg">
-                  <b>{fmt(g.startMin)}{g.endMin !== null && `–${fmt(g.endMin)}`}</b>
+                  <b>{rangeLabel(g.startMin, g.endMin)}</b>
                   <span className="evp-seg-n">{g.themeName}</span>
                   {g.branchName && <span className="evp-seg-b">{g.branchName}</span>}
                 </div>

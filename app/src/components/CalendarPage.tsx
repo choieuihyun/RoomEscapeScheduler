@@ -10,7 +10,7 @@ import { useDaySchedule } from '../useDaySchedule';
 import type { Scheduler } from '../scheduler/useScheduler';
 import { DayBranches } from './DayBranches';
 import { EventPanel } from './EventPanel';
-import { eventStatus, eventTitle, STATUS_LABEL, timeLabel } from '../clubEvents';
+import { eventStatus, eventTitle, STATUS_LABEL, timeLabel, todayKst } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
 
 /* 캘린더 화면(§4.49) — 모달이던 것(§4.38·§4.40)을 왼쪽 메뉴의 한 화면으로 옮겼다.
@@ -215,6 +215,8 @@ export function CalendarPage({
 }) {
   const grid = useMemo(() => monthGrid(ctl.cursor.y, ctl.cursor.m), [ctl.cursor.y, ctl.cursor.m]);
   const today = useMemo(() => toISO(new Date()), []);
+  /* 동호회 일정의 '지난 날짜'는 한국 날짜로 본다. 칸의 오늘 표시(today)는 기존 캘린더처럼 기기 날짜 그대로 */
+  const clubToday = useMemo(() => todayKst(), []);
   const day = useDaySchedule(active);
   useEffect(() => {
     if (active) day.load(ctl.selected, ctl.branches);
@@ -241,7 +243,7 @@ export function CalendarPage({
   /* 칸·창·주 보기가 같이 쓰는 줄 목록: 동호회 일정 먼저, 그다음 내 일정·빈자리 알림 */
   const lineOf = (iso: string) => [
     ...clubOf(iso).map(ev => (
-      <ClubChip key={'c' + ev.id} ev={ev} on={ev.id === ctl.openEvent} past={ev.date < today} onOpen={openClub} />
+      <ClubChip key={'c' + ev.id} ev={ev} on={ev.id === ctl.openEvent} past={ev.date < clubToday} onOpen={openClub} />
     )),
     ...evsOf(iso).map(e => <EvLine key={e.key} e={e} />),
   ];
@@ -397,7 +399,7 @@ export function CalendarPage({
               {selClub.length > 0 && (
                 <div className="cal-day-club cal-evs">
                   {selClub.map(ev => (
-                    <ClubChip key={ev.id} ev={ev} on={ev.id === ctl.openEvent} past={ev.date < today} onOpen={openClub} />
+                    <ClubChip key={ev.id} ev={ev} on={ev.id === ctl.openEvent} past={ev.date < clubToday} onOpen={openClub} />
                   ))}
                 </div>
               )}

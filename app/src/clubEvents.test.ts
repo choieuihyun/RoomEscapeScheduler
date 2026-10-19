@@ -4,6 +4,7 @@ import {
   eventStatus, eventTitle, timeLabel, parseKakaoTitle, kakaoPost,
   sortEvents, nextMine, upcoming, addDays, cpLen, STATUS_LABEL,
   mergeRange, upsert, dropEvent, afterActionError,
+  parseClock24, rollDays, todayKst, daysBetween, relDay, dayLabel, longDayLabel, clockLabel, rangeLabel,
 } from './clubEvents';
 
 const seg = (themeName: string, startMin: number, endMin: number | null = null) =>
@@ -38,6 +39,15 @@ describe('clubEvents', () => {
     expect(timeLabel(ev({ segments: two }))).toBe('13:40');
   });
 
+  it('시각 표시 — 시작만 있는 일정, 다음날', () => {
+    expect(timeLabel(ev({ startMin: 1140, endMin: null }))).toBe('19:00');
+    expect(timeLabel(ev({ startMin: 1320, endMin: 1500 }))).toBe('22:00–다음날 01:00');
+    expect(clockLabel(1470)).toBe('다음날 00:30');
+    expect(clockLabel(1439)).toBe('23:59');
+    expect(rangeLabel(1480, 1550)).toBe('다음날 00:40–01:50'); // 시작이 다음날이면 끝에는 다시 안 붙인다
+    expect(rangeLabel(820, null)).toBe('13:40');
+  });
+
   it('카톡 제목 기본형', () => {
     expect(parseKakaoTitle('[예약O] 비밀의 화원 13:40 + 셜록의 서재 15:20')).toEqual({
       booked: true,
@@ -59,8 +69,9 @@ describe('clubEvents', () => {
     expect(parseKakaoTitle('13:40').segments).toEqual([]);
   });
 
-  it('자정 넘김', () => {
-    expect(parseKakaoTitle('ABC 24:30').segments[0].startMin).toBe(1470);
+  it('자정 넘김 — 24시간제라 24:30 은 못 읽고, 앞 시각보다 이르면 다음날', () => {
+    expect(parseKakaoTitle('ABC 24:30').segments).toEqual([]);
+    expect(parseKakaoTitle('ABC 23:00 + DEF 00:30').segments.map((x) => x.startMin)).toEqual([1380, 1470]);
     const e = ev({ booked: true, segments: [seg('ABC', 1470)], count: 2 });
     expect(kakaoPost(e, 'https://x/#e=1')).toContain('ABC 00:30');
     const late = ev({ id: 1, startMin: 1470 });
@@ -77,10 +88,45 @@ describe('clubEvents', () => {
     expect(kakaoPost(talk, 'L')).toBe('테마, 일정 협의 · 2명\nL');
   });
 
-  it('시간 범위는 통째로 안 채운다', () => {
+  it('시간 범위는 시작·끝을 다 채운다 (2026-10-19 다듬기 — 전에는 안 채웠다)', () => {
     for (const sep of ['~', '-', '–', ' ~ ']) {
-      expect(parseKakaoTitle(`비밀의 화원 13:40${sep}14:50`).segments).toEqual([]);
+      expect(parseKakaoTitle(`비밀의 화원 13:40${sep}14:50`).segments).toEqual([
+        { themeName: '비밀의 화원', startMin: 820, endMin: 890 },
+      ]);
     }
+    expect(parseKakaoTitle('A 23:30~00:40').segments).toEqual([{ themeName: 'A', startMin: 1410, endMin: 1480 }]);
+    expect(parseKakaoTitle('A 13:40-14:50 + B 15:20').segments).toEqual([
+      { themeName: 'A', startMin: 820, endMin: 890 }, { themeName: 'B', startMin: 920 },
+    ]);
+    expect(parseKakaoTitle('[예약O] A 13:40~14:50 + B 15:20~16:30').segments.map((x) => [x.startMin, x.endMin]))
+      .toEqual([[820, 890], [920, 990]]);
+  });
+
+  it('시간 범위를 못 읽으면 전체를 안 채운다', () => {
+    expect(parseKakaoTitle('A 13:40~25:00').segments).toEqual([]);
+    expect(parseKakaoTitle('A 13:40 14:50').segments).toEqual([]);
+    expect(parseKakaoTitle('A 13:40~13:40').segments).toEqual([]);
+    expect(parseKakaoTitle('A 13:40~14:50 + B').segments).toEqual([]);
+  });
+
+  it('parseClock24 는 00:00~23:59 만', () => {
+    expect(parseClock24('23:59')).toBe(1439);
+    expect(parseClock24('24:00')).toBeNull();
+    expect(parseClock24(' 9:05 ')).toBe(545);
+    expect(parseClock24('25:30')).toBeNull();
+    expect(parseClock24('13:60')).toBeNull();
+    expect(parseClock24('abc')).toBeNull();
+  });
+
+  it('자정 넘김 자동 (rollDays)', () => {
+    expect(rollDays([{ start: 1410, end: null }, { start: 40, end: null }])).toEqual([
+      { start: 1410, end: null }, { start: 1480, end: null }]);
+    expect(rollDays([{ start: 1320, end: 60 }])).toEqual([{ start: 1320, end: 1500 }]);
+    /* 한 번 넘기면 뒤 구간도 다음날 */
+    expect(rollDays([{ start: 1380, end: 1440 - 10 }, { start: 30, end: 90 }, { start: 100, end: null }])!.map((r) => r.start))
+      .toEqual([1380, 1470, 1540]);
+    /* 이틀 넘김은 범위(≤2879) 밖 */
+    expect(rollDays([{ start: 1380, end: null }, { start: 60, end: null }, { start: 30, end: null }])).toBeNull();
   });
 
   it('모르는 맨 앞 대괄호는 걷어 내고 예약 여부는 null', () => {
@@ -96,8 +142,47 @@ describe('clubEvents', () => {
       ev({ id: 4, date: '2026-10-22', joined: true }),
       ev({ id: 3, date: '2026-10-20', joined: true }),
     ];
-    expect(nextMine(evs, '2026-10-19')?.id).toBe(3);
-    expect(nextMine([evs[0]], '2026-10-19')).toBeNull();
+    const now = new Date('2026-10-19T03:00:00Z'); // 한국 10/19 12:00
+    expect(nextMine(evs, now)?.id).toBe(3);
+    expect(nextMine([evs[0]], now)).toBeNull();
+  });
+
+  it('내 다음 일정은 오늘 이미 끝난 일정을 건너뛴다(한국 시각)', () => {
+    const today = ev({ id: 1, date: '2026-10-19', joined: true, segments: [seg('A', 820, 890), seg('B', 920, 990)] });
+    const later = ev({ id: 2, date: '2026-10-21', joined: true });
+    const at = (kst: string) => new Date(`2026-10-19T${kst}:00+09:00`);
+    expect(nextMine([today, later], at('16:00'))?.id).toBe(1);
+    expect(nextMine([today, later], at('17:00'))?.id).toBe(2);
+    /* 끝을 모르면 시작 + 2시간 */
+    const noEnd = ev({ id: 3, date: '2026-10-19', joined: true, startMin: 1140 });
+    expect(nextMine([noEnd, later], at('20:59'))?.id).toBe(3);
+    expect(nextMine([noEnd, later], at('21:00'))?.id).toBe(2);
+    /* 하루 종일은 그날 내내 남는다 */
+    const allDay = ev({ id: 4, date: '2026-10-19', joined: true });
+    expect(nextMine([allDay, later], at('23:59'))?.id).toBe(4);
+    /* 자정을 넘기는 일정은 그날 밤에도 남는다 */
+    const late = ev({ id: 5, date: '2026-10-19', joined: true, startMin: 1320, endMin: 1500 });
+    expect(nextMine([late, later], at('23:30'))?.id).toBe(5);
+  });
+
+  it('오늘은 한국 날짜 — 기기 시간대와 무관', () => {
+    expect(todayKst(new Date('2026-10-19T15:30:00Z'))).toBe('2026-10-20');
+    expect(todayKst(new Date('2026-10-19T14:59:00Z'))).toBe('2026-10-19');
+    expect(todayKst(new Date('2026-12-31T15:00:00Z'))).toBe('2027-01-01');
+  });
+
+  it('daysBetween 과 relDay', () => {
+    expect(daysBetween('2026-10-19', '2026-10-24')).toBe(5);
+    expect(daysBetween('2026-10-24', '2026-10-19')).toBe(-5);
+    expect(daysBetween('2026-03-07', '2026-03-09')).toBe(2); // 다른 나라 서머타임 날에도 정수
+    const t = '2026-10-19';
+    expect([0, 1, 2, 5, -1].map((n) => relDay(addDays(t, n), t))).toEqual(['오늘', '내일', '모레', '5일 뒤', '1일 전']);
+  });
+
+  it('날짜 표기', () => {
+    expect(dayLabel('2026-10-24')).toBe('10/24 (토)');
+    expect(longDayLabel('2026-10-24')).toBe('2026년 10월 24일 (토)');
+    expect(dayLabel('2026-11-01')).toBe('11/1 (일)');
   });
 
   it('2주 목록', () => {

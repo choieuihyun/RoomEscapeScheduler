@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { fmt, monthGrid, toISO, WEEKDAYS } from '../core';
-import { addDays, eventStatus, eventTitle, nextMine, STATUS_LABEL, timeLabel, upcoming } from '../clubEvents';
+import { monthGrid, toISO, WEEKDAYS } from '../core';
+import {
+  addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, nextMine, relDay, STATUS_LABEL, timeLabel, upcoming, weekday,
+} from '../clubEvents';
 import type { EventDto } from '../server';
 import type { UseClubEventsReturn } from '../useClubEvents';
 
@@ -19,22 +21,10 @@ const TABS: { id: Tab; label: string; empty: string }[] = [
   { id: 'open', label: '자리 있음', empty: '2주 안에 자리가 남은 일정이 없어요.' },
 ];
 
-const parse = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-};
 const full = (ev: EventDto) => ev.capacity !== null && ev.count >= ev.capacity;
 const people = (ev: EventDto) => (ev.capacity === null ? `${ev.count}명` : `${ev.count}/${ev.capacity}명`);
 /* 토 파랑·일 빨강 — 캘린더와 같은 토큰 */
-const dowClass = (d: Date) => (d.getDay() === 0 ? 'sun' : d.getDay() === 6 ? 'sat' : '');
-
-/* "2026년 10월 24일 (토) · 5일 뒤" — 0일은 오늘, 1일은 내일 */
-function nextDateLine(iso: string, today: string): string {
-  const d = parse(iso);
-  const n = Math.round((d.getTime() - parse(today).getTime()) / 86_400_000);
-  const rel = n === 0 ? '오늘' : n === 1 ? '내일' : `${n}일 뒤`;
-  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[d.getDay()]}) · ${rel}`;
-}
+const dowClass = (dow: number) => (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
 
 export function HomePage({
   club, today, nickname, isAdmin, watchCount, watchLimit, pendingCount, month,
@@ -65,7 +55,8 @@ export function HomePage({
   /* 내 다음 일정도 같은 범위에서 고른다 — 캘린더에서 넘겨 본 먼 달 일정이 수(0)와 따로 뜨지 않게 */
   const homeEvents = events.filter((e) => e.date >= today && e.date <= homeLast);
   const joinedCount = homeEvents.filter((e) => e.joined).length;
-  const next = nextMine(homeEvents, today);
+  /* 오늘 일정은 이미 끝났으면 건너뛴다(한국 시각) */
+  const next = nextMine(homeEvents, new Date());
 
   const twoWeeks = upcoming(events, today, LIST_DAYS);
   const rows = tab === 'mine' ? twoWeeks.filter((e) => e.joined)
@@ -119,7 +110,7 @@ export function HomePage({
             {cells.map((d) => {
               const iso = toISO(d);
               const n = perDay.get(iso) ?? 0;
-              const cls = ['home-cal-d', dowClass(d), d.getMonth() !== month.m ? 'out' : '', iso === today ? 'today' : '']
+              const cls = ['home-cal-d', dowClass(d.getDay()), d.getMonth() !== month.m ? 'out' : '', iso === today ? 'today' : '']
                 .filter(Boolean).join(' ');
               return (
                 <button
@@ -156,7 +147,6 @@ export function HomePage({
             <ul className="home-list">
               {shown.map((ev) => {
                 const st = eventStatus(ev);
-                const d = parse(ev.date);
                 const busy = club.busyIds.has(ev.id);
                 return (
                   <li key={ev.id} className="home-row">
@@ -167,7 +157,7 @@ export function HomePage({
                         <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
                       </div>
                       <span className="home-row-m">
-                        <span className={dowClass(d)}>{d.getMonth() + 1}/{d.getDate()} ({WEEKDAYS[d.getDay()]})</span>
+                        <span className={dowClass(weekday(ev.date))}>{dayLabel(ev.date)}</span>
                         {' · '}{ev.createdBy.nickname} · {people(ev)}
                       </span>
                     </div>
@@ -204,12 +194,12 @@ export function HomePage({
           </div>
           {next ? (
             <>
-              <div className="home-next-date">{nextDateLine(next.date, today)}</div>
+              <div className="home-next-date">{longDayLabel(next.date)} · {relDay(next.date, today)}</div>
               {next.title && next.segments.length > 0 && <div className="home-next-title">{next.title}</div>}
               <div className="home-next-box">
                 {next.segments.length > 0 ? next.segments.map((g, i) => (
                   <div key={i} className="home-next-seg">
-                    <b>{fmt(g.startMin)}</b>
+                    <b>{clockLabel(g.startMin)}</b>
                     <span className="home-next-n">{g.themeName}</span>
                     {g.branchName && <span className="home-next-b">{g.branchName}</span>}
                   </div>

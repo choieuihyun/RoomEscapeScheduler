@@ -37,6 +37,8 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   const seq = useRef(0);
   /* 켜짐 세대 — 꺼질 때 올린다. 떠 있던 동작·한 건 새로 받기 응답이 꺼진 뒤(전 사용자) 목록을 되살리지 못하게 한다. */
   const epoch = useRef(0);
+  /* epoch 을 렌더에서 읽을 수 있게 따라 두는 값 — adopt 가 만들어질 때의 세대를 붙잡는다 */
+  const [gen, setGen] = useState(0);
   useEffect(() => {
     alive.current = true;
     return () => { alive.current = false; };
@@ -80,6 +82,7 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     return () => {
       s.current++;
       ep.current++;
+      setGen(ep.current);
       setEvents([]);
       setApi('unknown');
       setError('');
@@ -136,10 +139,12 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     }
   }, [enabled, invalidateReload]);
 
-  /* 밖에서 받아 온 일정 하나를 목록에 넣는다 — `#e=` 링크로 연 일정이 지금 범위 밖이어도 패널이 바로 보이게. */
+  /* 밖에서 받아 온 일정 하나를 목록에 넣는다 — `#e=` 링크로 연 일정이 지금 범위 밖이어도 패널이 바로 보이게.
+     부르는 쪽은 요청을 기다린 뒤 부르므로, 그 사이 꺼졌다 켜졌으면(다른 사용자) 버린다 — 이 함수가 만들어진 세대(gen)와
+     지금 세대(epoch)를 맞춰 본다. 꺼질 때 gen 이 바뀌어 새 함수가 만들어지고, 먼저 받아 둔 함수는 낡은 세대를 들고 있다. */
   const adopt = useCallback((ev: EventDto) => {
-    if (enabled && alive.current) setEvents((cur) => upsert(cur, ev));
-  }, [enabled]);
+    if (enabled && alive.current && epoch.current === gen) setEvents((cur) => upsert(cur, ev));
+  }, [enabled, gen]);
 
   const setBusy = (id: number, on: boolean) => {
     if (!alive.current) return;

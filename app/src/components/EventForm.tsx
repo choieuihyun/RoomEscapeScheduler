@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { parseKakaoTitle } from '../clubEvents';
-import { applyPaste, emptySeg, formFromEvent, MAX_SEGS, shouldApplyOnBlur, toInput, type FormSeg, type FormState } from '../eventForm';
+import { parseKakaoTitle, todayKst } from '../clubEvents';
+import { applyPaste, emptySeg, formFromEvent, MAX_SEGS, segTimeText, shouldApplyOnBlur, toInput, type FormSeg, type FormState } from '../eventForm';
 import { conflictOf, sayClub, type EventDto, type EventInput } from '../server';
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
@@ -47,9 +47,9 @@ function Body({ m, create, update, adopt }: Props) {
   };
 
   const hasSegs = f.segs.length > 0;
-  const timeText = hasSegs
-    ? (f.segs[0].start || '--:--') + (f.segs[f.segs.length - 1].end ? '–' + f.segs[f.segs.length - 1].end : '') + ' (테마에서)'
-    : '';
+  const timeText = segTimeText(f.segs);
+  /* 지난 날짜(한국 날짜 기준)는 막지 않고 알려만 준다 — 기록으로 남기는 일정도 있다 */
+  const past = !!f.date && f.date < todayKst();
 
   async function submit() {
     const r = toInput(f);
@@ -110,6 +110,7 @@ function Body({ m, create, update, adopt }: Props) {
         <div className="mrow">
           <label htmlFor="evf-date">날짜</label>
           <input id="evf-date" type="date" value={f.date} onChange={(e) => set({ date: e.target.value })} />
+          {past && <p className="evf-past">지난 날짜예요. 기록으로 남기려면 그대로 만들어도 돼요.</p>}
         </div>
         <div className="mrow">
           <label>시간</label>
@@ -126,7 +127,7 @@ function Body({ m, create, update, adopt }: Props) {
                   <input aria-label="시작 시각" inputMode="numeric" placeholder="13:40" value={f.start}
                     onChange={(e) => set({ start: e.target.value })} />
                   <span>–</span>
-                  <input aria-label="끝 시각" inputMode="numeric" placeholder="15:00" value={f.end}
+                  <input aria-label="끝 시각" inputMode="numeric" placeholder="끝(선택)" value={f.end}
                     onChange={(e) => set({ end: e.target.value })} />
                 </>
               )}

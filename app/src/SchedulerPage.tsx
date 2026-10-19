@@ -10,7 +10,7 @@ import { useWatches, buildWatchControl } from './useWatches';
 import { useCalendar } from './useCalendar';
 import { useView, decideFirstScreen, type View } from './useView';
 import { useClubEvents } from './useClubEvents';
-import { addDays } from './clubEvents';
+import { addDays, todayKst } from './clubEvents';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
 import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
@@ -56,12 +56,13 @@ export function SchedulerPage() {
   const isAdmin = isClubAdmin(auth.member);
   /* 동호회 일정 목록은 여기서 한 번만 만든다 — 홈(E7)과 캘린더(E6)가 같이 쓴다. 승인 멤버만 부른다. */
   const clubOn = auth.cloudOn && auth.member?.status === 'APPROVED';
-  const today = toISO(new Date());
+  /* 동호회 쪽 '오늘'은 한국 날짜(§4.7) — 홈 범위·홈 화면이 이 값을 쓴다 */
+  const today = todayKst();
   /* 캘린더 범위 — 월 보기는 보이는 달 칸(최대 42일), 주·일 보기는 고른 날이 든 달 칸. 홈 범위와 겹쳐도 병합이 중복을 없앤다. */
   const calMonth = cal.mode === 'month' ? cal.cursor : { y: +cal.selected.slice(0, 4), m: +cal.selected.slice(5, 7) - 1 };
   const calGrid = monthGrid(calMonth.y, calMonth.m);
   /* 홈 미니 달력이 보이는 달 — 그 달 칸도 범위에 넣어 다른 달로 넘겨도 일정 수가 보이게 한다(캘린더 범위와 같으면 뺀다) */
-  const [homeMonth, setHomeMonth] = useState(() => ({ y: new Date().getFullYear(), m: new Date().getMonth() }));
+  const [homeMonth, setHomeMonth] = useState(() => { const t = todayKst(); return { y: +t.slice(0, 4), m: +t.slice(5, 7) - 1 }; });
   const homeGrid = monthGrid(homeMonth.y, homeMonth.m);
   const calRange = { from: toISO(calGrid[0]), to: toISO(calGrid[calGrid.length - 1]) };
   const homeCalRange = { from: toISO(homeGrid[0]), to: toISO(homeGrid[homeGrid.length - 1]) };
@@ -82,7 +83,7 @@ export function SchedulerPage() {
   const postToClub = (r: SearchResultRow) => {
     const id = s.themesReady[r.steps[0]?.i]?.id;
     const date = s.themes.find((t) => t.id === id)?.date;
-    eventForm.openFromSteps(date ?? toISO(new Date()), r.steps);
+    eventForm.openFromSteps(date ?? todayKst(), r.steps);
   };
   /* 첫 화면은 로그인 복원·승인 확인·일정 API 확인이 끝나야 정한다 — 그 전엔 화면을 비워 두어
      calc → 홈(또는 홈 → calc)으로 손 밑에서 바뀌지 않게 한다. */
