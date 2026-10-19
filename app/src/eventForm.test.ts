@@ -22,6 +22,10 @@ describe('eventForm', () => {
     expect(err(base({ segs: [s('17:00', '01:00')] }))).toBe('1번째 테마: ' + EVENING);
     expect(err(base({ segs: [s('16:00'), s('01:00')] }))).toBe('2번째 테마: ' + EVENING);
     expect(err(base({ title: 'a', allDay: false, start: '13:00', end: '12:00' }))).toBe('끝 시각이 시작보다 늦어야 해요.');
+    const late = '끝 시각이 시작보다 늦어야 해요.';
+    expect(err(base({ title: 'a', allDay: false, start: '01:30', end: '01:00' }))).toBe(late);
+    expect(err(base({ title: 'a', allDay: false, start: '05:00', end: '03:00' }))).toBe(late);
+    expect(err(base({ segs: [s('00:40'), s('00:10')] }))).toBe('2번째 테마 시작이 앞 테마보다 이르네요. 순서를 확인해 주세요.');
   });
 
   it('날짜를 옮겨 연 창에 붙여넣으면 날짜도 원래대로', () => {
@@ -29,6 +33,8 @@ describe('eventForm', () => {
     expect([f.date, f.dateMoved]).toEqual(['2026-10-21', true]);
     const { form } = applyPaste(f, 'A 13:40 + B 15:20');
     expect([form.date, form.dateMoved]).toEqual(['2026-10-20', false]);
+    const night = applyPaste(f, '[예약O] A 00:30 + B 01:40').form;
+    expect([night.date, night.dateMoved]).toEqual(['2026-10-21', true]);
     const g = formFromEvent(ev({ date: '2026-10-20', startMin: null, segments: [{ themeName: 'A', branchName: null, themeKey: null, startMin: 1470, endMin: null } as never] }));
     expect(applyPaste(g, 'A 13:40 + B 15:20').form.date).toBe('2026-10-20');
   });

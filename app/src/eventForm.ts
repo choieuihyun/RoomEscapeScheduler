@@ -94,8 +94,11 @@ export function applyPaste(f: FormState, title: string): { form: FormState; note
   if (p.booked !== null) bits.push(p.booked ? '예약 완료' : '예약 전');
   bits.push(`테마 ${segs.length}개`);
   return {
-    /* 붙여넣은 시각은 옮긴 날짜와 무관 — 안내를 끄고 날짜도 원래대로 */
-    form: { ...f, title: '', segs, booked: p.booked ?? f.booked, date: f.dateMoved && f.origDate ? f.origDate : f.date, dateMoved: false, origDate: undefined },
+    /* 붙여넣은 첫 시각이 06시 전이면 자정 뒤 시각이라 옮긴 날짜가 맞다 — 그대로 두고 안내도 유지.
+       아니면 옮긴 날짜와 무관하니 날짜를 원래대로 되돌리고 안내를 끈다 */
+    form: p.segments[0].startMin < 6 * 60
+      ? { ...f, title: '', segs, booked: p.booked ?? f.booked }
+      : { ...f, title: '', segs, booked: p.booked ?? f.booked, date: f.dateMoved && f.origDate ? f.origDate : f.date, dateMoved: false, origDate: undefined },
     note: (p.booked !== null ? '카톡 제목에서 ' : '') + bits.join(' · ') + '를 채웠어요.',
   };
 }
@@ -134,7 +137,7 @@ function isEarlyOvernight(rows: TimeRow[], bad: 'start' | 'end', i: number): boo
   for (let k = 1; k <= i; k++) if (rows[k].start < rows[k - 1].start && !(bad === 'start' && k === i)) return false;
   const early = bad === 'start' ? rows[i - 1].start : rows[i].start;
   const late = bad === 'start' ? rows[i].start : rows[i].end;
-  return late !== null && late < early && late < 6 * 60 && early < 18 * 60;
+  return late !== null && late < early && late < 6 * 60 && early >= 6 * 60 && early < 18 * 60;
 }
 
 const TIME_HINT = '13:40 처럼 24시간제로 적어 주세요.';

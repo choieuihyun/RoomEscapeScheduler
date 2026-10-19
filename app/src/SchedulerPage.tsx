@@ -205,12 +205,16 @@ export function SchedulerPage() {
   };
 
   const onCalc = nav.view === 'calc';
+  const [retrying, setRetrying] = useState(false);
   /* 첫 목록을 못 받아 빈 채로 열린 승인 멤버 — 계산·캘린더 위에 띠로 알린다(성공하면 error 가 비어 사라진다) */
   const listFailed = clubOn && club.error !== '' && club.events.length === 0;
   const failStrip = listFailed && (
     <div className="listfail" role="status">
       <span>동호회 일정을 불러오지 못했어요.</span>
-      <button type="button" className="btn" onClick={() => void club.reload()}>다시 시도</button>
+      <button type="button" className="btn" disabled={retrying} onClick={() => {
+        setRetrying(true);
+        void club.reload().finally(() => setRetrying(false));
+      }}>{retrying ? '불러오는 중…' : '다시 시도'}</button>
     </div>
   );
   return (
