@@ -95,7 +95,9 @@ function MyRow({ ev, date, mine, club }: {
     <div className="evt-my">
       <span className="evt-my-d">{label}</span>
       <div className="evt-my-row">
-        <span className="evt-my-pick" role="group" aria-label={`${label} 되는지`}>
+        {/* 시간을 적다가 바로 누를 때 칸의 blur 가 먼저 시간 응답을 보내 단추가 잠기고 누른 것이 사라지지 않게,
+            누르는 동안 포커스를 옮기지 않는다(적던 시간은 버리고 누른 쪽을 보낸다) */}
+        <span className="evt-my-pick" role="group" aria-label={`${label} 되는지`} onMouseDown={(e) => e.preventDefault()}>
           <button type="button" className="chip-pick" aria-pressed={mine?.available === false} disabled={busy}
             onClick={() => pick(false)}>안 돼요</button>
           <button type="button" className="chip-pick" aria-pressed={mine?.available === true} disabled={busy}
