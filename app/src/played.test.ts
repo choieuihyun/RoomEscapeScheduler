@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  freshMessage, helperDates, isPlayableName, noRecordNames, noRecordText, playedCount, playedNames, playedPerPerson, searchThemes, sourceLabel,
+  freshMessage, helperDates, isPlayableName, noRecordNames, noRecordText, playedCount, playedNames, playedPerPerson, searchThemes, sourceLabel, stepsToPlayed,
 } from './played';
 import type { EventDto, FreshDto, PlayedDto, ThemeRef } from './server';
 
@@ -87,5 +87,19 @@ describe('협의 도우미(§4.9 fresh-themes)', () => {
     } as Pick<EventDto, 'date' | 'candidates' | 'participants'>;
     expect(helperDates(ev, today)).toEqual({ dates: ['2026-10-25', '2026-10-31', '2026-11-01'], first: '2026-11-01' });
     expect(helperDates({ ...ev, candidates: [ev.candidates[0]] }, today)).toBeNull();
+  });
+});
+
+describe('stepsToPlayed', () => {
+  it('빈 이름·글자 없는 이름은 뺀다', () => {
+    expect(stepsToPlayed([{ name: '' }, { name: '  ' }, { name: '!!!' }, { name: '시간의 방' }], '2026-10-18'))
+      .toEqual([{ themeName: '시간의 방', branchName: null, playedOn: '2026-10-18' }]);
+  });
+  it('같은 테마는 한 번만(공백·대소문자 무시)', () => {
+    expect(stepsToPlayed([{ name: 'Time Room' }, { name: ' time room ' }, { name: '다른 방', place: ' 강남 ' }], '2026-10-18').map((x) => x.themeName))
+      .toEqual(['Time Room', '다른 방']);
+  });
+  it('매장이 있으면 branchName, 날짜가 없으면 playedOn null', () => {
+    expect(stepsToPlayed([{ name: 'A방', place: '홍대' }], '')).toEqual([{ themeName: 'A방', branchName: '홍대', playedOn: null }]);
   });
 });

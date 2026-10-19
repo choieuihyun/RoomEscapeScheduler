@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { recordPlanPlayed } from './played';
 import { useScheduler } from './scheduler/useScheduler';
 import { useTheme } from './useTheme';
 import { useTour } from './useTour';
@@ -41,11 +42,14 @@ export function SchedulerPage() {
   const tour = useTour();
   const loadModal = useLoadModal(s.addServerThemes);
   const auth = useAuth();
-  const plans = usePlans(auth.me);
+  /* 동호회 API 가 켜진 승인 멤버일 때만 다녀온 일정을 해 본 테마로 잇는다(homeOn 은 아래에서 정해진다) */
+  const planDoneRef = useRef<((steps: { name: string }[], date: string) => void) | undefined>(undefined);
+  const onPlanDone = useCallback((steps: { name: string }[], date: string) => planDoneRef.current?.(steps, date), []);
+  const plans = usePlans(auth.me, onPlanDone);
   const saveModal = useSaveModal(auth, () => s.lastSnapshot.current || s.serializeNow(), () => {
     plans.reload();
     showToast('일정을 저장했어요.');
-  });
+  }, onPlanDone);
   const watches = useWatches(auth.me);
   /* 빈자리 알림은 승인 멤버만. 다만 member 가 null 이면 서버가 동호회 기능을 아직 모르거나
      못 불러온 것이라 지금처럼 로그인만으로 허용한다 — 서버가 실제로 막으면 403 NOT_MEMBER
@@ -79,6 +83,9 @@ export function SchedulerPage() {
   });
   /* 새 API 가 아직 없는 서버(404)면 홈 메뉴·홈 화면을 숨기고 나머지는 그대로 돈다 */
   const homeOn = clubOn && club.api === 'on';
+  useEffect(() => {
+    planDoneRef.current = homeOn ? (steps, date) => { void recordPlanPlayed(steps, date); } : undefined;
+  }, [homeOn]);
   /* 일정 만들기·수정 창 — 캘린더(E6)·홈(E7)·결과 카드(E8)가 이 하나를 연다 */
   const eventForm = useEventFormModal();
   /* 결과 카드 → 일정 창. 날짜는 첫 스텝 테마를 불러올 때 고른 날짜, 없으면 오늘 */

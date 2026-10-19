@@ -12,7 +12,9 @@ const today = () => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-export function useSaveModal(auth: UseAuthReturn, getSnapshot: () => string, onSaved: () => void) {
+export function useSaveModal(auth: UseAuthReturn, getSnapshot: () => string, onSaved: () => void,
+  /* 다녀온 일정으로 저장했을 때 해 본 테마로 잇는다 — 동호회 API 가 켜진 승인 멤버일 때만 넘어온다 */
+  onDone?: (steps: { name: string }[], date: string) => void) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<SearchResultRow | null>(null);
   const [date, setDate] = useState('');
@@ -47,6 +49,7 @@ export function useSaveModal(auth: UseAuthReturn, getSnapshot: () => string, onS
         snapshot: getSnapshot(),
       });
       setOpen(false); setPending(null);
+      if (status === 'done') onDone?.(pending.steps, date);
       onSaved();
       document.getElementById('planSec')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
@@ -55,7 +58,7 @@ export function useSaveModal(auth: UseAuthReturn, getSnapshot: () => string, onS
     } finally {
       setBusy(false);
     }
-  }, [pending, date, status, memo, getSnapshot, onSaved]);
+  }, [pending, date, status, memo, getSnapshot, onSaved, onDone]);
 
   return { open, pending, date, setDate, status, setStatus, memo, setMemo, err, busy, openSave, close, submit };
 }

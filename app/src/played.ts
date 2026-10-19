@@ -90,3 +90,40 @@ export function helperDates(
   const first = candidateSummary(ev).find((r) => r.date >= today)?.date;
   return first ? { dates, first } : null;
 }
+
+/* ── 개인 "다녀온 일정" → 해 본 테마(§4.9 source PLAN) ── */
+
+/* 일정 단계에서 기록할 것만 — 서버가 400 BAD_PLAYED 로 거절할 이름·같은 테마 중복은 뺀다.
+   개인 일정 단계에는 매장·지점이 없어 branchName 은 null. 날짜가 없으면 playedOn 도 null. */
+export function stepsToPlayed(
+  steps: { name: string; place?: string | null }[], date: string | null | undefined,
+): { themeName: string; branchName: string | null; playedOn: string | null }[] {
+  const seen = new Set<string>();
+  const out: { themeName: string; branchName: string | null; playedOn: string | null }[] = [];
+  for (const s of steps) {
+    const themeName = (s.name ?? '').trim();
+    if (!isPlayableName(themeName)) continue;
+    const key = normalizeName(themeName);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ themeName, branchName: s.place?.trim() || null, playedOn: date || null });
+  }
+  return out;
+}
+
+/* 저장·"다녀옴으로" 뒤에 부른다. 실패는 조용히 — 일정 저장에는 영향이 없다. 서버는 같은 기록이면 기존 행을 돌려줘 되풀이해도 괜찮다. */
+export async function recordPlanPlayed(steps: { name: string }[], date: string): Promise<void> {
+  try {
+    const items = stepsToPlayed(steps, date);
+    if (items.length === 0) return;
+    const [{ addPlayed }, { idToken }] = await Promise.all([import('./server'), import('./cloud')]);
+    const t = await idToken();
+    if (!t) return;
+    for (const it of items) {
+      try { await addPlayed({ themeKey: null, ...it, source: 'PLAN' }, t); }
+      catch (e) { console.warn('해 본 테마 기록 실패:', e); }
+    }
+  } catch (e) {
+    console.warn('해 본 테마 기록 실패:', e);
+  }
+}

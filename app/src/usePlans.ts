@@ -6,7 +6,7 @@ import { showToast } from './toast';
 let cloudMod: typeof import('./cloud') | null = null;
 const cloud = async () => (cloudMod ??= await import('./cloud'));
 
-export function usePlans(me: Me | null) {
+export function usePlans(me: Me | null, onDone?: (steps: { name: string }[], date: string) => void) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
@@ -32,12 +32,13 @@ export function usePlans(me: Me | null) {
       const C = await cloud();
       await C.patchPlan(id, { status: next });
       setPlans(ps => ps.map(x => (x.id === id ? { ...x, status: next } : x)));
+      if (next === 'done') onDone?.(p.steps, p.date);
     } catch (e) {
       console.warn(e);
     } finally {
       setBusyIds(s => { const n = new Set(s); n.delete(id); return n; });
     }
-  }, [plans]);
+  }, [plans, onDone]);
 
   const remove = useCallback(async (id: string) => {
     setBusyIds(s => new Set(s).add(id));
