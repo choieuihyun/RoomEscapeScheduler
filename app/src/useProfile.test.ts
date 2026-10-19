@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { mergePast, nextPastCursor, pageRows, withoutPending } from './useProfile';
+import { describe, expect, it, vi } from 'vitest';
+import { mergePast, nextPastCursor, pageRows, tryPlayed, withoutPending } from './useProfile';
 import type { EventDto, PlayedDto } from './server';
 
 const ev = (id: number, date: string) => ({ id, date } as EventDto);
@@ -54,5 +54,26 @@ describe('미뤄 둔 지우기', () => {
     const r = pageRows(rows, new Set([1, 2]), 3, 10);
     expect(r).toMatchObject({ count: 0, pages: 1, cur: 0 });
     expect(ids(r.shown)).toEqual([1, 2]);
+  });
+});
+
+describe('해 본 테마 첫 요청 — 일시 오류로 굳지 않는다', () => {
+  const httpErr = (status: number, body?: unknown) => Object.assign(new Error('x'), { status, body });
+  const noWait = () => Promise.resolve();
+  it('첫 요청이 500 이어도 두 번째가 되면 ok(→ api on)', async () => {
+    const load = vi.fn().mockRejectedValueOnce(httpErr(500, { error: 'INTERNAL' })).mockResolvedValueOnce([row(1)]);
+    const r = await tryPlayed(load, noWait);
+    expect(r).toEqual({ kind: 'ok', list: [row(1)] });
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+  it('404(본문 없음)는 바로 missing — 다시 하지 않는다', async () => {
+    const load = vi.fn().mockRejectedValue(httpErr(404));
+    expect(await tryPlayed(load, noWait)).toEqual({ kind: 'missing' });
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+  it('두 번 다 실패하면 error 로 돌려준다(missing 으로 굳히지 않는다)', async () => {
+    const e = httpErr(503);
+    const r = await tryPlayed(vi.fn().mockRejectedValue(e), noWait);
+    expect(r).toEqual({ kind: 'error', error: e });
   });
 });

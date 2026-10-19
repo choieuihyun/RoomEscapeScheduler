@@ -58,6 +58,25 @@ export function pageRows<T extends { id: number }>(
   return { shown, pages, count, cur };
 }
 
+/* 해 본 테마 목록 첫 요청 — 일시 오류(네트워크·5xx)는 한 번 더 해 본다. 404(이 API 를 모름)는 바로 알려 준다.
+   일시 오류 한 번으로 이 API 가 없다고 굳히지 않게(굳으면 "내 정보" 메뉴·이 기기 알림 카드가 그 세션 내내 사라진다).
+   그래도 안 되면 오류를 그대로 돌려주고, 호출하는 쪽이 포커스·온라인 복귀 때 다시 해 본다. */
+export const PLAYED_RETRY_MS = 3000;
+export type PlayedTry = { kind: 'ok'; list: PlayedDto[] } | { kind: 'missing' } | { kind: 'error'; error: unknown };
+export async function tryPlayed(
+  load: () => Promise<PlayedDto[]>, wait: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<PlayedTry> {
+  for (let i = 0; ; i++) {
+    try {
+      return { kind: 'ok', list: await load() };
+    } catch (error) {
+      if (isMissingApi(error)) return { kind: 'missing' };
+      if (i > 0) return { kind: 'error', error };
+      await wait(PLAYED_RETRY_MS);
+    }
+  }
+}
+
 type Pending = {
   token: string;        // 지울 때 받아 둔 토큰 — 가려지거나 닫힐 때 기다리지 않고 보낸다
   timer: number | undefined;
@@ -109,22 +128,24 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     if (!enabled) return null;
     const ep = epoch.current;
     const my = ++playedSeq.current;
-    try {
-      const t = await token();
-      if (!t || ep !== epoch.current || my !== playedSeq.current) return null;
-      const list = await listPlayed(t);
-      if (ep !== epoch.current || my !== playedSeq.current) return null;
-      playedRef.current = list;
-      setPlayed(list);
-      setApi('on');
-      setError('');
-      return list;
-    } catch (e) {
-      if (ep !== epoch.current || my !== playedSeq.current) return null;
-      if (isMissingApi(e)) missing();
-      else setError(sayClub(e));
+    let t: string | null;
+    try { t = await token(); } catch (e) {
+      if (ep === epoch.current && my === playedSeq.current) setError(sayClub(e));
       return null;
     }
+    if (!t || ep !== epoch.current || my !== playedSeq.current) return null;
+    const r = await tryPlayed(() => listPlayed(t));
+    if (ep !== epoch.current || my !== playedSeq.current) return null;
+    if (r.kind === 'ok') {
+      playedRef.current = r.list;
+      setPlayed(r.list);
+      setApi('on');
+      setError('');
+      return r.list;
+    }
+    if (r.kind === 'missing') missing();
+    else setError(sayClub(r.error));
+    return null;
   }, [enabled, missing]);
 
   const dropRows = useCallback((ids: ReadonlySet<number>) => {
@@ -211,6 +232,15 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
   useEffect(() => {
     if (enabled) void Promise.resolve().then(reloadPlayed); /* 한 틱 뒤에 — effect 안 동기 setState 경고를 피한다 */
   }, [enabled, reloadPlayed]);
+
+  /* 첫 요청이 일시 오류로 끝났으면(api 가 아직 unknown 이고 오류가 남아 있음) 창으로 돌아오거나 연결이 돌아올 때 다시 본다 */
+  useEffect(() => {
+    if (!enabled || api !== 'unknown' || error === '') return;
+    const retry = () => { void reloadPlayed(); };
+    const evs = ['focus', 'online'];
+    evs.forEach((n) => addEventListener(n, retry));
+    return () => evs.forEach((n) => removeEventListener(n, retry));
+  }, [enabled, api, error, reloadPlayed]);
 
   /* 화면에 들어올 때마다 해 본 테마를 새로 받고(밤사이 자동 기록), 지난 일정은 처음 한 번 */
   useEffect(() => {

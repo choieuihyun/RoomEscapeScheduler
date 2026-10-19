@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { monthGrid, toISO, WEEKDAYS } from '../core';
 import {
-  addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, nextMine, relDay, sortKeyDate, STATUS_LABEL, timeLabel, todayStrip, upcoming,
+  addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, sortKeyDate, STATUS_LABEL, timeLabel,
   weekday,
 } from '../clubEvents';
+import { nextMine, relDay, todayStrip, upcoming } from '../homeStrip';
 import { playedCount } from '../played';
 import type { EventDto } from '../server';
 import type { UseClubEventsReturn } from '../useClubEvents';

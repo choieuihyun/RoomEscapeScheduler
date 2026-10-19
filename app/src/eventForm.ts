@@ -4,6 +4,8 @@ import { fmt, type PathStep } from './core';
 import { addDays, sortKeyDate, clockLabel, cpLen, parseClock24, parseKakaoTitle, rangeLabel, rollDays, type TimeRow } from './clubEvents';
 import type { EventDto, EventInput, SegmentInput } from './server';
 
+const DAY_MIN = 1440;
+
 export interface FormSeg {
   themeName: string;
   branchName: string;
@@ -232,6 +234,17 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
   }
   if (f.capacity !== null && !(Number.isInteger(f.capacity) && f.capacity >= 2 && f.capacity <= 8)) {
     return { error: '인원은 2~8명이에요.' };
+  }
+  /* 날짜를 하루 옮겨 연 정해진 일정(첫 시각 24:00 넘김)을 후보 모드로 돌리면, 화면의 00:30 은 "옮긴 날 00:30" 이다.
+     후보 일정은 날짜가 없어 이 보정이 안 되므로 원래 날짜 기준(1470)으로 되돌려 보낸다 — 안 그러면 후보 날짜마다 하루 어긋난다.
+     첫 시각이 아직 새벽(06시 전)일 때만 — 그 사이 첫 시각을 낮 시각으로 고쳤으면 옮긴 날짜와 상관없다. */
+  if (f.dateMode === 'candidates' && f.dateMoved) {
+    const first = segments.length > 0 ? segments[0].startMin : startMin;
+    if (first !== null && first < 6 * 60) {
+      for (const g of segments) { g.startMin += DAY_MIN; if (g.endMin !== null) g.endMin += DAY_MIN; }
+      if (startMin !== null) startMin += DAY_MIN;
+      if (endMin !== null) endMin += DAY_MIN;
+    }
   }
   const input: EventInput = {
     title, date: f.dateMode === 'candidates' ? null : f.date, startMin, endMin,

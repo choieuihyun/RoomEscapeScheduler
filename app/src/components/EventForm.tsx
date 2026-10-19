@@ -56,7 +56,9 @@ function Body({ m, create, update, adopt }: Props) {
   /* 테마(구간)가 있으면 날짜 하나만 — 이미 후보 모드인 일정은 되돌릴 수 있게 고르는 칩을 남긴다 */
   const canPickMode = !hasSegs || candMode || editing?.date === null;
   const setMode = (mode: FormState['dateMode']) => setF((cur) => (
-    mode === cur.dateMode ? cur : { ...cur, dateMode: mode, date: cur.date || todayKst(), dateMoved: false }));
+    mode === cur.dateMode ? cur : { ...cur, dateMode: mode, date: cur.date || todayKst(),
+      /* 후보 모드로 갈 때 하루 옮긴 표시를 남긴다 — toInput 이 원래 날짜 기준 시각(1470)으로 되돌려 보내는 데 쓴다 */
+      dateMoved: mode === 'candidates' && cur.dateMoved }));
   /* 후보 목록의 최신 값 — 빠르게 연달아 눌러도 앞의 선택 위에 쌓이게 한다 */
   const candRef = useRef(f.candidates);
   const [capHit, setCapHit] = useState(false);

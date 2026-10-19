@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import type { EventDto } from './server';
 import {
   eventStatus, eventTitle, timeLabel, parseKakaoTitle, kakaoPost,
-  sortEvents, nextMine, upcoming, addDays, cpLen, STATUS_LABEL,
+  sortEvents, addDays, cpLen, STATUS_LABEL,
   mergeRange, upsert, isUndecided, sortKeyDate, candidateSummary, dropEvent, afterActionError,
-  parseClock24, rollDays, todayKst, daysBetween, relDay, dayLabel, longDayLabel, clockLabel, rangeLabel,
-  parseAvailText, availText, windowLabel, windowToCalc, todayStrip,
+  parseClock24, rollDays, todayKst, daysBetween, dayLabel, longDayLabel, clockLabel, rangeLabel,
+  parseAvailText, availText, windowLabel, windowToCalc,
 } from './clubEvents';
+import { nextMine, relDay, todayStrip, upcoming } from './homeStrip';
 
 const seg = (themeName: string, startMin: number, endMin: number | null = null) =>
   ({ themeName, branchName: null, themeKey: null, startMin, endMin, playedBy: [] as string[] });
@@ -402,9 +403,24 @@ describe('홈 오늘·내일 띠 (§4.10)', () => {
     expect(c && `${c.when} ${c.name}`).toBe('오늘 하루 종일 동호회 일정');
   });
 
-  it('내일이면 내일, 자정 넘김은 다음날 표기', () => {
-    const s = todayStrip([ev({ date: '2026-10-20', joined: true, segments: [seg('심야', 1470)] })], N);
-    expect(s?.when).toBe('내일 다음날 00:30');
+  it('내일이면 내일', () => {
+    expect(todayStrip([ev({ date: '2026-10-20', joined: true, segments: [seg('심야', 1140)] })], N)?.when).toBe('내일 19:00');
+  });
+
+  it('24:00 을 넘는 시각은 그 시각이 오는 날로 센다 — "다음날" 말 없이', () => {
+    /* 오늘 일정의 1470 = 내일 00:30 */
+    const a = todayStrip([ev({ date: T, joined: true, segments: [seg('심야', 1470)] })], N);
+    expect(a?.when).toBe('내일 00:30');
+    /* 어제 일정의 1470 = 오늘 00:30 (지금 00:01 이면 아직 안 끝남) */
+    const b = todayStrip([ev({ date: '2026-10-18', joined: true, segments: [seg('심야', 1470, 1560)] })], N);
+    expect(b?.when).toBe('오늘 00:30');
+    /* 그 일정이 끝난 뒤(02:00)엔 빠진다 */
+    expect(todayStrip([ev({ date: '2026-10-18', joined: true, segments: [seg('심야', 1470, 1560)] })], at('02:00'))).toBeNull();
+    /* 내일 일정의 1470 = 모레 00:30 → 띠에서 뺀다 */
+    expect(todayStrip([ev({ date: '2026-10-20', joined: true, segments: [seg('심야', 1470)] })], N)).toBeNull();
+    /* 어제 일정의 새벽은 오늘 낮 일정보다 앞 */
+    const c = todayStrip([ev({ id: 2, date: T, joined: true, startMin: 600 }), ev({ id: 1, date: '2026-10-18', joined: true, segments: [seg('심야', 1470, 1560)] })], N);
+    expect([c?.event.id, c?.more]).toEqual([1, 1]);
   });
 
   it('참여 안 한 일정·날짜 미정(후보가 오늘이어도)·모레 일정은 뺀다', () => {

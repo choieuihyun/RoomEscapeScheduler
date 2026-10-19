@@ -288,6 +288,34 @@ describe('eventForm', () => {
       expect(toggleCandidate(full, full[0]).list).toHaveLength(13);
     });
 
+    it('첫 시각이 1470 인 정해진 일정을 다시 미정으로 돌려도 하루 어긋나지 않는다(원래 날짜·1470 그대로)', () => {
+      const e = ev({
+        title: '', date: '2026-10-31', segments: [{ themeName: '심야', branchName: null, themeKey: null, startMin: 1470, endMin: 1560, playedBy: [] }],
+        candidates: [{ date: '2026-10-31', responses: [] }, { date: '2026-11-07', responses: [] }],
+      });
+      const f = formFromEvent(e);
+      expect([f.date, f.dateMoved, f.segs[0].start]).toEqual(['2026-11-01', true, '00:30']); // 화면은 하루 옮겨 열림
+      const i = input({ ...f, dateMode: 'candidates' });
+      expect(i.date).toBeNull();
+      expect(i.candidates).toEqual(['2026-10-31', '2026-11-07']);
+      expect([i.segments[0].startMin, i.segments[0].endMin]).toEqual([1470, 1560]);
+      /* 날짜 정하기로 두면 옮긴 날짜 + 30 (같은 순간) */
+      const j = input(f);
+      expect([j.date, j.segments[0].startMin]).toEqual(['2026-11-01', 30]);
+    });
+
+    it('첫 시각이 정각 24:00(1440)인 일정도 1440 으로 돌아간다', () => {
+      const e = ev({ date: '2026-10-31', segments: [{ themeName: '심야', branchName: null, themeKey: null, startMin: 1440, endMin: null, playedBy: [] }] });
+      const i = input({ ...formFromEvent(e), dateMode: 'candidates', candidates: ['2026-10-31'] });
+      expect(i.segments[0].startMin).toBe(1440);
+    });
+
+    it('하루 옮긴 일정도 첫 시각을 낮으로 고쳤으면 더하지 않는다', () => {
+      const f = base({ title: 'a', dateMode: 'candidates', candidates: ['2026-10-31'], dateMoved: true, allDay: false, start: '14:00', end: '15:00' });
+      const i = input(f);
+      expect([i.startMin, i.endMin]).toEqual([840, 900]);
+    });
+
     it('정한 일정은 날짜 정하기로 열고 옛 후보를 들고만 있다', () => {
       const f = formFromEvent(ev({ title: 'a', candidates: [{ date: '2026-10-31', responses: [] }] }));
       expect([f.dateMode, f.candidates, f.date]).toEqual(['fixed', ['2026-10-31'], '2026-10-20']);

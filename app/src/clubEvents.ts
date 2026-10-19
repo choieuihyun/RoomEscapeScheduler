@@ -27,7 +27,7 @@ export function eventTitle(ev: Pick<EventDto, 'title' | 'segments'>): string {
 /* ── 날짜·시각 (2026-10-19 다듬기, 작업명세서 §4.7 "시각") ──
    입력은 평범한 24시간제(00:00~23:59). 저장 값은 자정부터 분이라 다음날이면 1440 이상(최대 2879). */
 
-const DAY_MIN = 1440;
+export const DAY_MIN = 1440;
 
 /* 동호회 쪽 시각 칸 해석: `13:40`, `9:05`, 앞뒤 공백 허용. 24시 이상은 못 읽은 것(null).
    조합 계산의 core.ts parseClock(예약 사이트의 `24:30` 표기용, 29시까지)과는 따로 둔다. */
@@ -264,7 +264,7 @@ const KST = new Intl.DateTimeFormat('en-US', {
   timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
   hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
 });
-function kst(now: Date): { iso: string; min: number } {
+export function kst(now: Date): { iso: string; min: number } {
   const p = Object.fromEntries(KST.formatToParts(now).map((x) => [x.type, x.value]));
   return { iso: `${p.year}-${p.month}-${p.day}`, min: +p.hour * 60 + +p.minute };
 }
@@ -293,59 +293,6 @@ export function dayLabel(iso: string): string {
 export function longDayLabel(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   return `${y}년 ${m}월 ${d}일 (${WEEKDAYS[weekday(iso)]})`;
-}
-
-/* 오늘 / 내일 / 모레 / n일 뒤 / n일 전 */
-export function relDay(iso: string, today: string): string {
-  const n = daysBetween(today, iso);
-  if (n === 0) return '오늘';
-  if (n === 1) return '내일';
-  if (n === 2) return '모레';
-  return n > 0 ? `${n}일 뒤` : `${-n}일 전`;
-}
-
-/* 일정이 끝나는 시각(그 날짜 자정부터 분). 일정 끝 → 마지막 구간 끝 → 마지막 구간 시작(없으면 일정 시작) + 2시간,
-   하루 종일이면 그날 24:00. */
-function endOf(ev: EventDto): number {
-  const last = ev.segments[ev.segments.length - 1];
-  if (ev.endMin !== null) return ev.endMin;
-  if (last?.endMin != null) return last.endMin;
-  const start = last?.startMin ?? ev.startMin;
-  return start === null ? DAY_MIN : start + 120;
-}
-
-/* 내 다음 일정: 참여 중이고 오늘(한국 날짜) 이후인 것 중 가장 이른 것. 오늘 일정은 이미 끝났으면 건너뛴다. */
-export function nextMine(evs: EventDto[], now: Date): EventDto | null {
-  const { iso: today, min } = kst(now);
-  return sortEvents(evs.filter((e) => e.joined && e.date !== null && e.date >= today && (e.date > today || endOf(e) > min)))[0] ?? null;
-}
-
-/* 홈 맨 위 띠(§4.10 "앱 안 띠" — 푸시를 못 받는 사람용): 내가 참여한 오늘·내일(한국 날짜) 일정. 날짜 미정은 뺀다.
-   오늘 일정은 이미 끝났으면 뺀다(끝 = nextMine 과 같은 endOf) — 끝난 오늘 일정이 내일 일정을 가리지 않게.
-   첫 일정을 `오늘 19:00` + `비밀의 화원 → 셜록의 서재` 로, 나머지는 개수(` 외 n`, 뺀 뒤 센다).
-   시각은 timeLabel 과 같은 차례(일정 시각 → 첫 구간 시작) — 홈 "내 다음 일정" 카드와 같은 시각이 보이게. 둘 다 없으면 `하루 종일`.
-   이름은 구간의 테마들, 구간이 없으면 제목. */
-export interface TodayStrip { event: EventDto; when: string; name: string; more: number }
-export function todayStrip(evs: EventDto[], now: Date): TodayStrip | null {
-  const { iso: today, min } = kst(now);
-  const tomorrow = addDays(today, 1);
-  const mine = sortEvents(evs.filter((e) => e.joined && (e.date === tomorrow || (e.date === today && endOf(e) > min))));
-  const first = mine[0];
-  if (!first) return null;
-  const start = first.startMin ?? first.segments[0]?.startMin ?? null;
-  const name = first.segments.length > 0 ? first.segments.map((g) => g.themeName).join(' → ') : first.title || '동호회 일정';
-  return {
-    event: first,
-    when: `${first.date === today ? '오늘' : '내일'} ${start === null ? '하루 종일' : clockLabel(start)}`,
-    name,
-    more: mine.length - 1,
-  };
-}
-
-/* 오늘 ~ 오늘+days-1 (양쪽 포함). */
-export function upcoming(evs: EventDto[], today: string, days: number): EventDto[] {
-  const last = addDays(today, days - 1);
-  return sortEvents(evs.filter((e) => { const k = sortKeyDate(e, today); return k >= today && k <= last; }), today);
 }
 
 /* "YYYY-MM-DD" 에 n 일을 더한다(날짜만 — 시간대와 무관). */

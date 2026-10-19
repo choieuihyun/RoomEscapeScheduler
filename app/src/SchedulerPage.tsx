@@ -280,9 +280,9 @@ export function SchedulerPage() {
     })();
   }, [linkId, authSettled, auth.me, memberStatus, clubOn, openAuth, adopt, go, calSelect, setOpenEvent]);
 
-  /* 알림 켜기 안내 — 승인된 멤버에게 이 기기에서 한 번. 첫 화면이 정해지고, 로그인 창·일정 창·링크로 여는 일정과 겹치지 않을 때 */
+  /* 알림 켜기 안내 — 승인된 멤버에게 이 기기에서 한 번. 첫 화면이 정해지고, 로그인 창·일정 창·빈자리 알림 창·사용법 투어·링크로 여는 일정과 겹치지 않을 때 */
   const { maybeAutoGuide } = push;
-  const guideFree = clubOn && decided && !auth.open && !eventForm.open && !loadModal.open && !saveModal.open && linkId === null
+  const guideFree = clubOn && decided && !auth.open && !eventForm.open && !loadModal.open && !saveModal.open && !watches.open && !tour.active && linkId === null
     && readEventHash(location.hash) === null;
   useEffect(() => { if (guideFree) maybeAutoGuide(); }, [guideFree, maybeAutoGuide]);
 

@@ -67,7 +67,7 @@ export function usePushDevice(on: boolean, active: boolean) {
     try {
       const t = await idToken();
       if (!t) { showToast('로그인해 주세요.'); return false; }
-      const r = await requestPushPermission(t);
+      const r = await requestPushPermission(t, 'event');
       setPerm(permNow());
       if (!r.ok) { showToast(r.reason); return false; }
       showToast('알림을 켰어요.');

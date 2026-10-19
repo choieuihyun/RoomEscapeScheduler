@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /* 화면을 어둡게 덮고 설명할 요소 하나만 구멍을 뚫어 보여주는 스포트라이트 방식.
    index.html의 사용법 투어(§4.23) 이식 — DOM을 직접 만들고 움직이는 방식 그대로 가져왔다,
@@ -24,6 +24,10 @@ export function useTour() {
   const nodesRef = useRef<TourNodes | null>(null);
   const stepRef = useRef(0);
   const startedAutoRef = useRef(false);
+  /* 투어가 떠 있거나 곧 뜰 예정(처음 온 기기) — 다른 안내(알림 켜기)가 그 위에 겹치지 않게 밖에서 본다 */
+  const [active, setActive] = useState(() => {
+    try { return !localStorage.getItem(TOUR_KEY); } catch { return false; }
+  });
 
   function mount(): TourNodes {
     if (nodesRef.current) return nodesRef.current;
@@ -46,6 +50,7 @@ export function useTour() {
   }
 
   function end() {
+    setActive(false);
     if (!nodesRef.current) return;
     unmount();
     localStorage.setItem(TOUR_KEY, '1');
@@ -98,6 +103,7 @@ export function useTour() {
   }
 
   function start() {
+    setActive(true);
     stepRef.current = 0;
     mount();
     showStep(0);
@@ -135,5 +141,5 @@ export function useTour() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { start, end };
+  return { start, end, active };
 }
