@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { clockLabel, dayLabel, todayKst } from '../clubEvents';
 import { freshMessage, helperDates, noRecordNames, noRecordText, playedNames } from '../played';
 import { ago, freshThemes, isMissingApi, sayClub, toSessions, type EventDto, type FreshDto, type FreshTheme } from '../server';
@@ -13,8 +13,8 @@ const PAGE = 10; // 처음 보이는 줄 수 — 모으는 매장이 40곳 남�
 /* 서버가 이 API 를 아직 모르면(본문 없는 404) 이 창이 살아 있는 동안 다시 묻지 않고 숨긴다 */
 let apiMissing = false;
 
-/* 날짜마다 받은 결과. who = 받을 때의 참여자 — 바뀌었으면(playedBy·noRecord 가 달라진다) 다시 펼칠 때 새로 받는다 */
-type Slot = { who: string; dto?: FreshDto; err?: string };
+/* (날짜, 참여자)마다 받은 결과. 참여자가 바뀌면 playedBy·noRecord 가 달라지니 키를 나눈다. 없으면 받는 중 */
+type Slot = { dto?: FreshDto; err?: string };
 
 async function load(eventId: number, date: string): Promise<FreshDto> {
   const t = await (await import('../cloud')).idToken();
@@ -23,8 +23,10 @@ async function load(eventId: number, date: string): Promise<FreshDto> {
 }
 
 const toAdded = (t: FreshTheme, dto: FreshDto): AddedTheme => ({
-  /* 회차 불러오기(useLoadModal.addPicked)와 같은 모양 — toSessions 가 시각 순으로 세운다 */
-  name: t.name, place: t.place || '', dur: t.dur || 70, sessions: toSessions(t.sessions), fresh: ago(dto.checkedAt), date: dto.date,
+  /* 회차 불러오기(useLoadModal.addPicked)와 같은 모양 — toSessions 가 시각 순으로 세운다.
+     서버가 place 를 안 주면 매장·지점 이름으로(이동 시간 표의 매장 칸) */
+  name: t.name, place: t.place || `${t.storeName} ${t.branchName}`.trim(), dur: t.dur || 70,
+  sessions: toSessions(t.sessions), fresh: ago(dto.checkedAt), date: dto.date,
 });
 
 export function EventHelper({ ev, onCalcThemes }: {
@@ -34,37 +36,57 @@ export function EventHelper({ ev, onCalcThemes }: {
 }) {
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(apiMissing);
-  const [picked, setPicked] = useState<string | null>(null); // 고른 날짜(미정 일정의 날짜 칩)
+  const [picked, setPicked] = useState<string | null>(null); // 사람이 날짜 칩으로 고른 날짜
   const [slots, setSlots] = useState<Map<string, Slot>>(new Map());
-  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [ids, setIds] = useState<Set<string>>(new Set());
   const [more, setMore] = useState(false);
+  /* 키마다 마지막 요청 번호 — 늦게 온 옛 응답이 새 결과를 덮지 않게. 받는 중인 키도 여기서 안다 */
+  const seq = useRef(0);
+  const latest = useRef(new Map<string, number>());
 
   const plan = helperDates(ev, todayKst());
-  if (hidden || !plan) return null;
-  /* 고른 날짜가 후보에서 빠졌으면 처음 날짜로 */
-  const date = picked && plan.dates.includes(picked) ? picked : plan.first;
+  /* 직접 고른 날짜가 없거나 후보에서 빠졌으면 기준 날짜(정해진 날, 미정이면 "언제 될까요?" 맨 위 줄)를 따라간다 */
+  const date = !plan ? null : picked && plan.dates.includes(picked) ? picked : plan.first;
   const who = ev.participants.map((p) => p.uid).sort().join(',');
-  const slot = slots.get(date);
+  const key = date ? `${date}|${who}` : '';
+  /* 날짜가 바뀌면(직접 고르든 기준 날짜가 옮겨 가든) 고른 테마·더 보기를 비운다 — 렌더 중에 앞 값과 견줘 맞춘다 */
+  const [shownDate, setShownDate] = useState(date);
+  if (date !== shownDate) {
+    setShownDate(date);
+    setIds(new Set());
+    setMore(false);
+  }
 
-  /* 받는 중이거나 같은 참여자로 받아 둔 게 있으면 다시 받지 않는다(오류였으면 다시) */
-  function fetchFor(d: string) {
-    const cur = slots.get(d);
-    if (cur && cur.who === who && !cur.err) return;
-    setSlots((m) => new Map(m).set(d, { who, dto: cur?.dto }));
+  const fetchKey = useCallback((d: string, k: string) => {
+    const n = ++seq.current;
+    latest.current.set(k, n);
     load(ev.id, d).then(
-      (dto) => setSlots((m) => new Map(m).set(d, { who, dto })),
+      (dto) => { if (latest.current.get(k) === n) setSlots((m) => new Map(m).set(k, { dto })); },
       (e) => {
+        if (latest.current.get(k) !== n) return;
         if (isMissingApi(e)) { apiMissing = true; setHidden(true); return; }
-        setSlots((m) => new Map(m).set(d, { who, err: sayClub(e) }));
+        setSlots((m) => new Map(m).set(k, { err: sayClub(e) }));
       },
     );
-  }
+  }, [ev.id]);
+
+  /* 펼쳐져 있는 동안 날짜나 참여자가 바뀌면 다시 받는다. 이미 받았거나 받는 중인 키는 건너뛴다 */
+  const have = slots.has(key);
+  useEffect(() => {
+    if (!open || hidden || !date || have || latest.current.has(key)) return;
+    fetchKey(date, key);
+  }, [open, hidden, date, key, have, fetchKey]);
+
+  if (hidden || !plan || !date) return null;
+  const slot = slots.get(key);
+
   function pickDate(d: string) {
-    if (d === date) return;
-    setPicked(d);
-    setChecked(new Set());
-    setMore(false);
-    fetchFor(d);
+    if (d !== date) setPicked(d);
+  }
+  /* 오류였던 키를 지우고 다시 — effect 가 받는다 */
+  function retry() {
+    latest.current.delete(key);
+    setSlots((m) => { const n = new Map(m); n.delete(key); return n; });
   }
 
   const dto = slot?.err ? null : slot?.dto ?? null;
@@ -72,21 +94,17 @@ export function EventHelper({ ev, onCalcThemes }: {
   const themes = dto && !msg ? dto.themes : [];
   const shown = more ? themes : themes.slice(0, PAGE);
   const noRec = dto && themes.length > 0 ? noRecordNames(dto, ev) : [];
-  const pickedThemes = themes.filter((t) => checked.has(t.id));
-  const toggle = (id: string, on: boolean) => setChecked((s) => {
-    const n = new Set(s);
+  const pickedThemes = themes.filter((t) => ids.has(t.id));
+  const toggle = (id: string, on: boolean) => {
+    const n = new Set(ids);
     if (on) n.add(id); else n.delete(id);
-    return n;
-  });
+    setIds(n);
+  };
 
   return (
     <details
       className="evh" open={open}
-      onToggle={(e) => {
-        const o = e.currentTarget.open;
-        setOpen(o);
-        if (o) fetchFor(date);
-      }}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
     >
       <summary>
         <span className="evh-t">어떤 테마가 좋을까요?</span>
@@ -104,7 +122,7 @@ export function EventHelper({ ev, onCalcThemes }: {
         {slot?.err && (
           <div className="evh-err">
             <p className="merr">{slot.err}</p>
-            <button type="button" className="btn evp-sm" onClick={() => fetchFor(date)}>다시 시도</button>
+            <button type="button" className="btn evp-sm" onClick={retry}>다시 시도</button>
           </div>
         )}
         {msg && <p className="evh-msg">{msg}</p>}
@@ -116,14 +134,14 @@ export function EventHelper({ ev, onCalcThemes }: {
               return (
                 <li key={t.id} className={'evh-row' + (by.length > 0 ? ' played' : '')}>
                   <input
-                    type="checkbox" id={`evh-${ev.id}-${t.id}`} checked={checked.has(t.id)}
+                    type="checkbox" id={`evh-${ev.id}-${t.id}`} checked={ids.has(t.id)}
                     onChange={(e) => toggle(t.id, e.target.checked)}
                   />
                   <label htmlFor={`evh-${ev.id}-${t.id}`} className="evh-main">
                     <span className="evh-n">{t.name} <span className="evh-at">· {t.storeName} {t.branchName}{t.dur ? ` · ${t.dur}분` : ''}</span></span>
                     <span className="evh-ss">
                       {toSessions(t.sessions).map((s, i) => (
-                        <span key={s.id ?? i}>{i > 0 && ' · '}{s.soldout ? <s aria-label={`${clockLabel(s.t)} 매진`}>{clockLabel(s.t)}</s> : clockLabel(s.t)}</span>
+                        <span key={s.id ?? i}>{i > 0 && ' · '}{s.soldout ? <><s>{clockLabel(s.t)}</s><span className="sr-only"> 매진</span></> : clockLabel(s.t)}</span>
                       ))}
                     </span>
                     {by.length > 0 && <span className="evh-by">{by.join(', ')} 님이 해 봤어요</span>}

@@ -51,8 +51,8 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
   const left = ev.capacity === null ? '' : full ? '마감' : `${ev.capacity - ev.count}자리 남음`;
   const played = playedCount(ev);
   const perPerson = playedPerPerson(ev);
-  /* 협의 도우미 — 참여자만. 날짜 미정이면 "언제 될까요?" 바로 아래, 정해진 날이면 후보 기록 아래 */
-  const helper = ev.joined && onCalcThemes ? <EventHelper ev={ev} onCalcThemes={onCalcThemes} /> : null;
+  /* 협의 도우미 — 협의 중·예약 전 일정의 참여자만(예약 완료면 테마가 이미 정해졌다). 날짜 미정이면 "언제 될까요?" 바로 아래, 정해진 날이면 후보 기록 아래 */
+  const helper = ev.joined && (undecided || !ev.booked) && onCalcThemes ? <EventHelper ev={ev} onCalcThemes={onCalcThemes} /> : null;
 
   /* 내 응답 시간 칸에 적는 중에 패널의 다른 단추(정하기·참여 취소·예약 등)를 누르면, 칸의 blur 커밋이 먼저 요청을 보내
      단추가 busy 로 잠기고 누른 동작이 사라진다. 그때만 누르는 순간 포커스를 옮기지 않는다(터치도 pointerdown 으로).

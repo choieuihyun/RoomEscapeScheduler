@@ -882,7 +882,7 @@ button:active{transform:scale(.97)}
 .evp-seg-b{margin-left:auto;flex:none;font-size:12.5px;color:var(--ink3)}
 .evp-move{text-align:center;font-size:12px;color:var(--ink3)}
 /* 이미 해 본 테마(§4.9, 계획 Task 8) — 구간 카드 테두리 주황 + 아래 경고 줄 */
-.evp-seg-played{border:1px solid var(--amber-line);border-radius:var(--r-sm);overflow:hidden}
+.evp-seg-played{border:1px solid var(--st-before-line);border-radius:var(--r-sm);overflow:hidden}
 .evp-seg-played .evp-seg{border:none;border-radius:0}
 .evp-seg-warn{display:flex;align-items:flex-start;gap:6px;margin:0;padding:8px 12px;background:var(--amber-soft);
   border-top:1px solid var(--amber-line);font-size:12.5px;line-height:1.5;color:var(--amber-text);word-break:keep-all;overflow-wrap:anywhere}
@@ -966,7 +966,13 @@ button:active{transform:scale(.97)}
 .evp .evt-reopen{align-self:flex-start;height:32px;padding:0 12px;font-size:13px}
 /* 협의 도우미 "어떤 테마가 좋을까요?"(§4.9, 계획 Task 8) — 펼칠 때 받는다 */
 .evh{display:flex;flex-direction:column;padding-top:14px;border-top:1px solid var(--line)}
-.evh>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px;cursor:pointer}
+.evh>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 8px;cursor:pointer;list-style:none}
+.evh>summary::-webkit-details-marker{display:none}
+/* flex 로 두면 기본 펼침 표시가 사라진다 — 꺾쇠를 직접 그린다(접힘 ›, 펼침 ⌄) */
+.evh>summary::before{content:'';flex:none;align-self:center;width:6px;height:6px;margin:0 2px 0 1px;
+  border-right:2px solid var(--ink2);border-bottom:2px solid var(--ink2);transform:rotate(-45deg);transition:transform .15s}
+.evh[open]>summary::before{transform:rotate(45deg) translate(-2px,-2px)}
+.evh>summary:focus-visible{outline:none;box-shadow:var(--ring);border-radius:var(--r-xs)}
 .evh-t{font-size:15px;font-weight:700}
 .evh-d{font-size:12.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
 .evh-b{display:flex;flex-direction:column;gap:10px;margin-top:10px}
