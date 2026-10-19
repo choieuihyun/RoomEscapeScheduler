@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mergePast, nextPastCursor, pageRows, tryPlayed, withoutPending } from './useProfile';
+import { nextRetryDelay, PROFILE_RETRY_MS, wasRecorded, mergePast, nextPastCursor, pageRows, tryPlayed, withoutPending } from './useProfile';
 import type { EventDto, PlayedDto } from './server';
 
 const ev = (id: number, date: string) => ({ id, date } as EventDto);
@@ -75,5 +75,23 @@ describe('해 본 테마 첫 요청 — 일시 오류로 굳지 않는다', () =
     const e = httpErr(503);
     const r = await tryPlayed(vi.fn().mockRejectedValue(e), noWait);
     expect(r).toEqual({ kind: 'error', error: e });
+  });
+});
+
+describe('첫 요청 스스로 다시 해 보기', () => {
+  it('30초·2분·2분, 세 번까지만', () => {
+    expect(PROFILE_RETRY_MS).toEqual([30_000, 120_000, 120_000]);
+    expect([0, 1, 2, 3].map(nextRetryDelay)).toEqual([30_000, 120_000, 120_000, null]);
+  });
+});
+
+describe('기록 더한 뒤 이미 있었나(wasRecorded)', () => {
+  it('보내기 전 목록에 그 id 가 있으면 이미 있던 것', () => {
+    expect(wasRecorded([row(1), row(2)], 2, false)).toBe(true);
+    expect(wasRecorded([row(1)], 2, false)).toBe(false);
+  });
+  it('되돌리기로 살린 줄이거나 목록을 못 받았으면 새 기록', () => {
+    expect(wasRecorded([row(2)], 2, true)).toBe(false);
+    expect(wasRecorded(null, 2, false)).toBe(false);
   });
 });

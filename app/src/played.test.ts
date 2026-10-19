@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  freshMessage, helperDates, isPlayableName, noRecordNames, noRecordText, playedCount, playedNames, playedPerPerson, searchThemes, sourceLabel, stepsToPlayed,
+  freshMessage, helperDates, isPlayableName, noRecordNames, noRecordText, playedCount, playedNames, playedPerPerson, searchThemes, sourceLabel, stepsToPlayed, freshStale, FRESH_STALE_MS,
 } from './played';
 import type { EventDto, FreshDto, PlayedDto, ThemeRef } from './server';
 
@@ -96,10 +96,17 @@ describe('stepsToPlayed', () => {
       .toEqual([{ themeName: '시간의 방', branchName: null, playedOn: '2026-10-18' }]);
   });
   it('같은 테마는 한 번만(공백·대소문자 무시)', () => {
-    expect(stepsToPlayed([{ name: 'Time Room' }, { name: ' time room ' }, { name: '다른 방', place: ' 강남 ' }], '2026-10-18').map((x) => x.themeName))
+    expect(stepsToPlayed([{ name: 'Time Room' }, { name: ' time room ' }, { name: '다른 방' }], '2026-10-18').map((x) => x.themeName))
       .toEqual(['Time Room', '다른 방']);
   });
   it('매장이 있으면 branchName, 날짜가 없으면 playedOn null', () => {
-    expect(stepsToPlayed([{ name: 'A방', place: '홍대' }], '')).toEqual([{ themeName: 'A방', branchName: '홍대', playedOn: null }]);
+    expect(stepsToPlayed([{ name: 'A방' }], '')).toEqual([{ themeName: 'A방', branchName: null, playedOn: null }]);
+  });
+});
+
+describe('도우미 결과 낡음', () => {
+  it('5분을 넘기면 낡았다고 본다(딱 5분은 아직)', () => {
+    expect(freshStale(1000, 1000 + FRESH_STALE_MS)).toBe(false);
+    expect(freshStale(1000, 1000 + FRESH_STALE_MS + 1)).toBe(true);
   });
 });

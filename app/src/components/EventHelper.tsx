@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clockLabel, dayLabel, todayKst } from '../clubEvents';
-import { freshMessage, helperDates, noRecordNames, noRecordText, playedNames } from '../played';
+import { freshMessage, freshStale, helperDates, noRecordNames, noRecordText, playedNames } from '../played';
 import { ago, freshThemes, isMissingApi, sayClub, toSessions, type EventDto, type FreshDto, type FreshTheme } from '../server';
 import type { AddedTheme } from '../useLoadModal';
 
@@ -14,7 +14,9 @@ const PAGE = 10; // 처음 보이는 줄 수 — 모으는 매장이 40곳 남�
 let apiMissing = false;
 
 /* (날짜, 참여자)마다 받은 결과. 참여자가 바뀌면 playedBy·noRecord 가 달라지니 키를 나눈다. 없으면 받는 중 */
-type Slot = { dto?: FreshDto; err?: string };
+type Slot = { dto?: FreshDto; err?: string; at?: number };
+
+const nowMs = () => Date.now();
 
 async function load(eventId: number, date: string): Promise<FreshDto> {
   const t = await (await import('../cloud')).idToken();
@@ -61,7 +63,7 @@ export function EventHelper({ ev, onCalcThemes }: {
     const n = ++seq.current;
     latest.current.set(k, n);
     load(ev.id, d).then(
-      (dto) => { if (latest.current.get(k) === n) setSlots((m) => new Map(m).set(k, { dto })); },
+      (dto) => { if (latest.current.get(k) === n) setSlots((m) => new Map(m).set(k, { dto, at: nowMs() })); },
       (e) => {
         if (latest.current.get(k) !== n) return;
         if (isMissingApi(e)) { apiMissing = true; setHidden(true); return; }
@@ -89,6 +91,12 @@ export function EventHelper({ ev, onCalcThemes }: {
     setSlots((m) => { const n = new Map(m); n.delete(key); return n; });
   }
 
+  /* 열어 둔 사이 낡은 결과는 다시 받는다 — 받을 때까지는 옛 목록을 그대로 둔다 */
+  function onToggle(o: boolean) {
+    setOpen(o);
+    if (o && !hidden && date && slot?.dto && slot.at !== undefined && freshStale(slot.at, nowMs())) fetchKey(date, key);
+  }
+
   const dto = slot?.err ? null : slot?.dto ?? null;
   const msg = dto ? freshMessage(dto) : null;
   const themes = dto && !msg ? dto.themes : [];
@@ -104,7 +112,7 @@ export function EventHelper({ ev, onCalcThemes }: {
   return (
     <details
       className="evh" open={open}
-      onToggle={(e) => setOpen(e.currentTarget.open)}
+      onToggle={(e) => onToggle(e.currentTarget.open)}
     >
       <summary>
         <span className="evh-t">어떤 테마가 좋을까요?</span>

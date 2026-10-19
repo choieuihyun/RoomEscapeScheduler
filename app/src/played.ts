@@ -71,6 +71,10 @@ export function freshMessage(dto: Pick<FreshDto, 'collected' | 'themes'>): strin
   return null;
 }
 
+/* 도우미 결과가 낡았나 — 열 때 이만큼 묵었으면 다시 가져온다(시간표는 몇 분 단위로 바뀐다) */
+export const FRESH_STALE_MS = 5 * 60_000;
+export const freshStale = (fetchedAt: number, now: number): boolean => now - fetchedAt > FRESH_STALE_MS;
+
 /* 해 본 테마 기록이 하나도 없는 참여자 닉네임 — 이 사람들 때문에 "아무도 안 해 봄"이 틀릴 수 있다 */
 export function noRecordNames(dto: Pick<FreshDto, 'noRecord'>, ev: Pick<EventDto, 'participants'>): string[] {
   return playedNames({ playedBy: dto.noRecord }, ev);
@@ -94,9 +98,9 @@ export function helperDates(
 /* ── 개인 "다녀온 일정" → 해 본 테마(§4.9 source PLAN) ── */
 
 /* 일정 단계에서 기록할 것만 — 서버가 400 BAD_PLAYED 로 거절할 이름·같은 테마 중복은 뺀다.
-   개인 일정 단계에는 매장·지점이 없어 branchName 은 null. 날짜가 없으면 playedOn 도 null. */
+   개인 일정 단계에는 매장·지점이 없어 branchName 은 늘 null. 날짜가 없으면 playedOn 도 null. */
 export function stepsToPlayed(
-  steps: { name: string; place?: string | null }[], date: string | null | undefined,
+  steps: { name: string }[], date: string | null | undefined,
 ): { themeName: string; branchName: string | null; playedOn: string | null }[] {
   const seen = new Set<string>();
   const out: { themeName: string; branchName: string | null; playedOn: string | null }[] = [];
@@ -106,7 +110,7 @@ export function stepsToPlayed(
     const key = normalizeName(themeName);
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ themeName, branchName: s.place?.trim() || null, playedOn: date || null });
+    out.push({ themeName, branchName: null, playedOn: date || null });
   }
   return out;
 }

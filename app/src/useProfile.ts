@@ -77,6 +77,14 @@ export async function tryPlayed(
   }
 }
 
+/* 첫 요청이 일시 오류로 두 번 연달아 끝난 뒤, 포커스·온라인을 기다리지 않고 스스로 다시 해 보는 간격(최대 3번) */
+export const PROFILE_RETRY_MS = [30_000, 120_000, 120_000];
+export const nextRetryDelay = (tries: number): number | null => PROFILE_RETRY_MS[tries] ?? null;
+
+/* 기록을 더한 뒤 "이미 기록돼 있었나" — 되돌리기로 살린 줄은 새로 기록한 것과 같다. 보내기 전 목록을 못 알면 새 기록으로 본다 */
+export const wasRecorded = (known: PlayedDto[] | null, id: number, revived: boolean): boolean =>
+  !revived && !!known?.some((p) => p.id === id);
+
 type Pending = {
   token: string;        // 지울 때 받아 둔 토큰 — 가려지거나 닫힐 때 기다리지 않고 보낸다
   timer: number | undefined;
@@ -96,6 +104,9 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
   const [api, setApi] = useState<ProfileApi>('unknown');
   const [played, setPlayed] = useState<PlayedDto[] | null>(null);
   const [error, setError] = useState('');
+  /* 첫 요청이 실패한 횟수(타이머 다시 시도를 거는 신호) · 타이머로 다시 해 본 횟수 */
+  const [fails, setFails] = useState(0);
+  const autoTries = useRef(0);
   const [past, setPast] = useState<EventDto[] | null>(null);
   const [pastTotal, setPastTotal] = useState<number | null>(null);
   const [hasMorePast, setHasMorePast] = useState(false);
@@ -130,7 +141,7 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     const my = ++playedSeq.current;
     let t: string | null;
     try { t = await token(); } catch (e) {
-      if (ep === epoch.current && my === playedSeq.current) setError(sayClub(e));
+      if (ep === epoch.current && my === playedSeq.current) { setError(sayClub(e)); setFails((n) => n + 1); }
       return null;
     }
     if (!t || ep !== epoch.current || my !== playedSeq.current) return null;
@@ -141,10 +152,12 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
       setPlayed(r.list);
       setApi('on');
       setError('');
+      setFails(0);
+      autoTries.current = 0;
       return r.list;
     }
     if (r.kind === 'missing') missing();
-    else setError(sayClub(r.error));
+    else { setError(sayClub(r.error)); setFails((n) => n + 1); }
     return null;
   }, [enabled, missing]);
 
@@ -202,6 +215,8 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
       setApi('unknown');
       setPlayed(null);
       setError('');
+      setFails(0);
+      autoTries.current = 0;
       setPast(null);
       setPastTotal(null);
       setHasMorePast(false);
@@ -241,6 +256,15 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     evs.forEach((n) => addEventListener(n, retry));
     return () => evs.forEach((n) => removeEventListener(n, retry));
   }, [enabled, api, error, reloadPlayed]);
+
+  /* 포커스·온라인을 기다리지 않고 30초·2분 뒤에도 몇 번 더(최대 3번). 꺼지면(로그아웃) enabled 가 바뀌어 타이머가 정리된다 */
+  useEffect(() => {
+    if (!enabled || api !== 'unknown' || fails === 0) return;
+    const wait = nextRetryDelay(autoTries.current);
+    if (wait === null) return;
+    const t = setTimeout(() => { autoTries.current++; void reloadPlayed(); }, wait);
+    return () => clearTimeout(t);
+  }, [enabled, api, fails, reloadPlayed]);
 
   /* 화면에 들어올 때마다 해 본 테마를 새로 받고(밤사이 자동 기록), 지난 일정은 처음 한 번 */
   useEffect(() => {
@@ -349,7 +373,7 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     /* 지우려고 미뤄 둔 그 기록이 돌아왔으면 — 지우기를 거두고 다시 보인다(새로 기록한 것과 같다) */
     const revived = undo(row.id);
     await reloadPlayed(); // 기록 날짜가 없는 행이 어디에 끼는지는 서버 순서를 따른다
-    return { existed: !revived && !!known?.some((p) => p.id === row.id) };
+    return { existed: wasRecorded(known, row.id, revived) };
   }, [enabled, reloadPlayed, undo]);
 
   return {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Me, Plan } from './cloud';
 import { showToast } from './toast';
 
@@ -23,9 +23,12 @@ export function usePlans(me: Me | null, onDone?: (steps: { name: string }[], dat
 
   useEffect(() => { reload(); }, [reload]);
 
+  /* 보내는 중인 id — 단추가 꺼지기 전에 빠르게 또 눌러도 같은 요청을 다시 보내지 않는다 */
+  const flying = useRef(new Set<string>());
   const flip = useCallback(async (id: string) => {
     const p = plans.find(x => x.id === id);
-    if (!p) return;
+    if (!p || flying.current.has(id)) return;
+    flying.current.add(id);
     const next = p.status === 'wish' ? 'done' : 'wish';
     setBusyIds(s => new Set(s).add(id));
     try {
@@ -36,6 +39,7 @@ export function usePlans(me: Me | null, onDone?: (steps: { name: string }[], dat
     } catch (e) {
       console.warn(e);
     } finally {
+      flying.current.delete(id);
       setBusyIds(s => { const n = new Set(s); n.delete(id); return n; });
     }
   }, [plans, onDone]);

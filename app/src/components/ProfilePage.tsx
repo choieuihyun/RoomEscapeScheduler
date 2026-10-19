@@ -233,7 +233,10 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
     if (profile.undo(p.id)) requestAnimationFrame(() => focusIn(`[data-pid="${p.id}"]`)?.focus());
   };
 
+  const picking = useRef(false); // 단추가 꺼지기 전에 빠르게 또 눌러도 한 번만 보낸다
   const pick = async (ref: ThemeRef) => {
+    if (picking.current) return;
+    picking.current = true;
     setAddingKey(ref.themeKey);
     try {
       const r = await profile.add({ themeKey: ref.themeKey, themeName: ref.themeName, branchName: ref.branchName });
@@ -241,6 +244,7 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
     } catch (e) {
       showToast((e as Error).message);
     } finally {
+      picking.current = false;
       setAddingKey(null);
     }
   };
@@ -258,6 +262,8 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
     if (!isPlayableName(name)) { setMErr('테마 이름을 글자로 적어 주세요.'); return; }
     if (cpLen(name) > NAME_MAX) { setMErr(`테마 이름은 ${NAME_MAX}자까지예요.`); return; }
     if (cpLen(branch) > NAME_MAX) { setMErr(`매장·지점은 ${NAME_MAX}자까지예요.`); return; }
+    if (picking.current) return;
+    picking.current = true;
     setMBusy(true);
     setMErr('');
     try {
@@ -269,6 +275,7 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
     } catch (err) {
       setMErr((err as Error).message);
     } finally {
+      picking.current = false;
       setMBusy(false);
     }
   };

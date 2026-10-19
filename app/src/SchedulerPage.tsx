@@ -70,6 +70,22 @@ function openEventHash(id: number) {
   else location.hash = `e=${id}`;
 }
 
+/* 앱 안 알림 띠의 "열기" — 띠가 사라지며 포커스가 body 로 떨어진다. 일정 패널이 이미 열려 있으면 새로 그려지지 않아
+   패널 쪽 포커스 이동이 일어나지 않으니, 곧 패널의 닫기(×)로 옮긴다(다른 곳에 포커스가 생겼으면 건드리지 않는다). */
+function openFromBanner(id: number) {
+  openEventHash(id);
+  let n = 0;
+  const tick = () => {
+    const a = document.activeElement;
+    if (!a || a === document.body) {
+      const x = document.querySelector<HTMLElement>('.evp .btn-x');
+      if (x) { x.focus(); return; }
+    } else return;
+    if (++n < 30) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 export function SchedulerPage() {
   const s = useScheduler();
   const theme = useTheme();
@@ -426,7 +442,7 @@ export function SchedulerPage() {
       {clubOn && formMounted && <LazyBoundary><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} /></LazyBoundary>}
       {auth.cloudOn && watchMounted && <LazyBoundary><WatchListModal w={watches} /></LazyBoundary>}
       {clubOn && guideMounted && <LazyBoundary><PushGuide push={push} /></LazyBoundary>}
-      <PushBanner onOpen={openEventHash} />
+      <PushBanner onOpen={openFromBanner} />
       <Toaster />
     </div>
   );
