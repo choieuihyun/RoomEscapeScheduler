@@ -209,7 +209,7 @@ export function EventTalkDone({ ev, club, onCalcWindow, onPicked }: {
     <div className="evt-done">
       {hereRow && here && onCalcWindow && (
         <div className="evt-calc-w">
-          <h3 className="evt-sub-h">정해진 날 다 같이 되는 시간</h3>
+          <h3 className="evt-sub-h">정해진 날 {windowLead(ev, hereRow)}</h3>
           <div className="evt-calc">
             <span>
               <b>{windowLabel(here)}</b>

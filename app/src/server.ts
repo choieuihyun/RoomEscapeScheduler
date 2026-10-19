@@ -298,18 +298,30 @@ export interface ClubMemberDto {
 
 const EVENTS = '/api/club/events';
 
+/* 서버가 2단계 모양(candidates·playedBy 없음)으로 답해도(배포 경주 등) 화면이 안 깨지게 경계에서 기본값을 채운다.
+   타입은 필수 필드 그대로 두고, 이 함수가 실행 시점에 보장한다. */
+export function normEvent(ev: EventDto): EventDto {
+  return {
+    ...ev,
+    candidates: ev.candidates ?? [],
+    segments: (ev.segments ?? []).map((s) => ({ ...s, playedBy: s.playedBy ?? [] })),
+  };
+}
+const evOne = async (p: Promise<EventDto>): Promise<EventDto> => normEvent(await p);
+const evMany = async (p: Promise<EventDto[]>): Promise<EventDto[]> => (await p).map(normEvent);
+
 export const listEvents = (from: string, to: string, token: string): Promise<EventDto[]> =>
-  authed(`${EVENTS}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, token, 'GET');
+  evMany(authed(`${EVENTS}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, token, 'GET'));
 
 export const getEvent = (id: number, token: string): Promise<EventDto> =>
-  authed(`${EVENTS}/${id}`, token, 'GET');
+  evOne(authed(`${EVENTS}/${id}`, token, 'GET'));
 
 export const createEvent = (input: EventInput, token: string): Promise<EventDto> =>
-  authed(EVENTS, token, 'POST', input);
+  evOne(authed(EVENTS, token, 'POST', input));
 
 /* version 은 화면이 받아 둔 값. 다르면 서버가 409 EVENT_CONFLICT 로 거절한다. */
 export const updateEvent = (id: number, input: EventInput, version: number, token: string): Promise<EventDto> =>
-  authed(`${EVENTS}/${id}`, token, 'POST', { ...input, version });
+  evOne(authed(`${EVENTS}/${id}`, token, 'POST', { ...input, version }));
 
 /* 이미 지워졌으면(404) 목적은 이뤄진 것이라 성공으로 끝낸다. 그 밖의 오류는 그대로 던진다. */
 export async function deleteEvent(id: number, token: string): Promise<void> {
@@ -322,19 +334,19 @@ export async function deleteEvent(id: number, token: string): Promise<void> {
 }
 
 export const joinEvent = (id: number, token: string): Promise<EventDto> =>
-  authed(`${EVENTS}/${id}/join`, token, 'POST');
+  evOne(authed(`${EVENTS}/${id}/join`, token, 'POST'));
 
 export const leaveEvent = (id: number, token: string): Promise<EventDto> =>
-  authed(`${EVENTS}/${id}/leave`, token, 'POST');
+  evOne(authed(`${EVENTS}/${id}/leave`, token, 'POST'));
 
 export const addParticipant = (id: number, uid: string, token: string): Promise<EventDto> =>
-  authed(`${EVENTS}/${id}/participants`, token, 'POST', { uid });
+  evOne(authed(`${EVENTS}/${id}/participants`, token, 'POST', { uid }));
 
 export const removeParticipant = (id: number, uid: string, token: string): Promise<EventDto> =>
-  authed(`${EVENTS}/${id}/participants/${encodeURIComponent(uid)}`, token, 'DELETE');
+  evOne(authed(`${EVENTS}/${id}/participants/${encodeURIComponent(uid)}`, token, 'DELETE'));
 
 export const setBooked = (id: number, booked: boolean, token: string): Promise<EventDto> =>
-  authed(`${EVENTS}/${id}/booking`, token, 'POST', { booked });
+  evOne(authed(`${EVENTS}/${id}/booking`, token, 'POST', { booked }));
 
 export interface AvailabilityInput {
   date: string;
@@ -345,11 +357,11 @@ export interface AvailabilityInput {
 
 /* 되는 시간 고르기(§4.8). 같은 날짜면 덮어쓴다, version 은 안 오른다. */
 export const setAvailability = (id: number, input: AvailabilityInput, token: string): Promise<EventDto> =>
-  authed(`${EVENTS}/${id}/availability`, token, 'POST', input);
+  evOne(authed(`${EVENTS}/${id}/availability`, token, 'POST', input));
 
 /* 응답 지우기 = "응답 안 함" */
 export const clearAvailability = (id: number, date: string, token: string): Promise<EventDto> =>
-  authed(`${EVENTS}/${id}/availability/${encodeURIComponent(date)}`, token, 'DELETE');
+  evOne(authed(`${EVENTS}/${id}/availability/${encodeURIComponent(date)}`, token, 'DELETE'));
 
 /* ── 해 본 테마 (작업명세서 §4.9) ── */
 export interface PlayedDto {
@@ -407,7 +419,7 @@ export const memberPlayed = (uid: string, token: string): Promise<PlayedDto[]> =
 export const listThemes = (): Promise<ThemeRef[]> => get('/api/themes');
 
 export const myPastEvents = (before: string | null, limit: number, token: string): Promise<EventDto[]> =>
-  authed(`/api/me/events?${before ? `before=${encodeURIComponent(before)}&` : ''}limit=${limit}`, token, 'GET');
+  evMany(authed(`/api/me/events?${before ? `before=${encodeURIComponent(before)}&` : ''}limit=${limit}`, token, 'GET'));
 
 export const freshThemes = (eventId: number, date: string | null, token: string): Promise<FreshDto> =>
   authed(`${EVENTS}/${eventId}/fresh-themes${date ? `?date=${encodeURIComponent(date)}` : ''}`, token, 'GET');
@@ -418,7 +430,7 @@ export const listClubMembers = (token: string): Promise<ClubMemberDto[]> =>
 /* 수정 충돌(409 EVENT_CONFLICT)이면 서버가 실어 보낸 최신 일정을, 아니면 null. */
 export function conflictOf(err: unknown): EventDto | null {
   const e = err as WatchApiError | null | undefined;
-  return e?.status === 409 && e.body?.error === 'EVENT_CONFLICT' ? e.body.event ?? null : null;
+  return e?.status === 409 && e.body?.error === 'EVENT_CONFLICT' && e.body.event ? normEvent(e.body.event) : null;
 }
 
 export function errorCode(err: unknown): string | null {

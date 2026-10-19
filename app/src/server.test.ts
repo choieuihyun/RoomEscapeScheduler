@@ -184,6 +184,26 @@ describe('동호회 일정 API 호출 (§4.7)', () => {
     expect(errorCode(full)).toBe('EVENT_FULL');
   });
 
+  it('2단계 모양 응답(candidates·playedBy 없음)에도 기본값을 채운다', async () => {
+    const old = { id: 1, segments: [{ themeName: 'A' }, { themeName: 'B', playedBy: ['u1'] }] };
+    stubFetch(200, old);
+    const one = await getEvent(1, 'T');
+    expect(one.candidates).toEqual([]);
+    expect(one.segments.map((x) => x.playedBy)).toEqual([[], ['u1']]);
+    stubFetch(200, [{ id: 2 }]);
+    const [two] = await listEvents('2026-10-19', '2026-12-19', 'T');
+    expect(two.candidates).toEqual([]);
+    expect(two.segments).toEqual([]);
+  });
+
+  it('충돌 본문의 일정도 기본값을 채운다', async () => {
+    stubFetch(409, { error: 'EVENT_CONFLICT', message: 'x', event: { id: 3, version: 5, segments: [{ themeName: 'A' }] } });
+    const err = await updateEvent(3, input, 4, 'T').catch(e => e);
+    const ev = conflictOf(err);
+    expect(ev?.candidates).toEqual([]);
+    expect(ev?.segments[0].playedBy).toEqual([]);
+  });
+
   it('충돌 아닌 값·일반 오류는 null', () => {
     expect(conflictOf(new Error('x'))).toBeNull();
     expect(conflictOf(null)).toBeNull();
