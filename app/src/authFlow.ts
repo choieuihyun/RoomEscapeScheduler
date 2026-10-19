@@ -22,8 +22,11 @@ export interface KakaoReturnDeps {
   signInWithCustom: (token: string) => Promise<unknown>
   idToken: () => Promise<string | null>
   redirectUri: string
+  /** Firebase 설정이 있는가. 없으면 주소만 정리하고 교환은 시도하지 않는다 */
+  cloudOn: boolean
 }
 
+const NOT_SET = '로그인이 아직 설정되지 않았어요.'
 const EXPIRED = '카카오 로그인이 만료됐어요. 다시 눌러 주세요.'
 
 /** 맡겨 둔 해시는 공유 링크 모양(#s=·#z=)일 때만 되살린다. 그 밖의 값은 버린다. */
@@ -51,6 +54,7 @@ export async function handleKakaoReturn(d: KakaoReturnDeps): Promise<KakaoReturn
   if (trip) clean.hash = safeHash(trip.hash)
   d.replaceUrl(clean.toString())
   if (!trip) return { kind: 'error', message: EXPIRED }
+  if (!d.cloudOn) return { kind: 'error', message: NOT_SET }
 
   try {
     if (trip.mode === 'login') {

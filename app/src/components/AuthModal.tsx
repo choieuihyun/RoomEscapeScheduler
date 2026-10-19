@@ -45,7 +45,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
           </button>
           <button className="btn" type="button" onClick={auth.closeAuth}>닫기</button>
         </div>
-        <p className="mnote"><b>비밀번호를 잊어버리면 찾을 방법이 없어요.</b></p>
+        <p className="mnote"><b>비밀번호를 잊어버리면 찾을 방법이 없어요.</b> 다른 곳에서 쓰는 비밀번호는 쓰지 마세요.</p>
       </div>
     </div>
   );

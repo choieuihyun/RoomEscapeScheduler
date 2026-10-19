@@ -144,6 +144,12 @@ export async function signOut() {
    (작업명세서 §4.5). 로그인 안 돼 있으면 null. */
 export async function idToken(): Promise<string | null> {
   await boot();
+  /* 새로고침·카카오 왕복 직후엔 저장된 로그인이 복원되기 전이라 currentUser 가 잠깐 null 이다 —
+     복원이 끝날 때까지 기다린 뒤 읽는다 */
+  if (auth) {
+    if (typeof auth.authStateReady === 'function') await auth.authStateReady();
+    else await new Promise<void>(res => { const off = A.onAuthStateChanged(auth, () => { off(); res(); }); });
+  }
   const u = auth?.currentUser;
   return u ? u.getIdToken() : null;
 }

@@ -29,7 +29,8 @@ export function useAuth() {
   const cloudOn = useRef(cloudConfigured()).current;
   const wasSeen = useRef(cloudOn && !!localStorage.getItem(SEEN_KEY)).current;
   /* 카카오에서 막 돌아온 주소면 토큰으로 로그인하는 동안도 "복원 중"이다 */
-  const kakaoBack = useRef(cloudOn && (readKakaoReturn(location.search) !== null || new URLSearchParams(location.search).has('code'))).current;
+  /* cloudOn 과 무관 — Firebase 설정이 없어도 돌아온 code·state 는 주소에서 지운다 */
+  const kakaoBack = useRef((readKakaoReturn(location.search) !== null || new URLSearchParams(location.search).has('code'))).current;
   const inKakaoApp = useRef(isKakaoInApp(navigator.userAgent)).current;
   const [me, setMe] = useState<Me | null>(null);
   /* 동호회 멤버 상태 — 서버가 이 기능을 모르면(404) 계속 null 이고 화면은 동호회를 숨긴다 */
@@ -73,8 +74,8 @@ export function useAuth() {
     if (!kakaoBack || kakaoHandled.current) return;
     kakaoHandled.current = true;
     (async () => {
-      const C = await cloud().catch(() => null);
-      if (!C) { setErr('로그인을 준비하지 못했어요. 인터넷 연결을 확인해 주세요.'); setOpen(true); setAuthLoading(false); return; }
+      /* handleKakaoReturn 을 먼저(동기로) 부른다 — 주소 정리가 SDK 로드·실패와 상관없이 끝나게.
+         Firebase 가 필요한 의존성은 지연해서 넘긴다. */
       const r = await handleKakaoReturn({
         search: location.search,
         href: location.href,
@@ -82,14 +83,15 @@ export function useAuth() {
         endTrip: endKakaoTrip,
         kakaoLogin,
         kakaoLink,
-        signInWithCustom: async t => { const m = await C.signInWithCustom(t); setMe(m); return m; },
-        idToken: C.idToken,
+        signInWithCustom: t => cloud().then(C => C.signInWithCustom(t)).then(m => { setMe(m); return m; }),
+        idToken: () => cloud().then(C => C.idToken()),
         redirectUri: appRedirectUri(location),
+        cloudOn,
       });
       if (r.kind === 'signedIn') {
         localStorage.setItem(SEEN_KEY, '1');
         /* 이후 다른 탭의 로그아웃 등도 따라가도록 상태 구독을 건다 */
-        C.watch(u => setMe(u)).catch(() => { /* noop */ });
+        cloud().then(C => C.watch(u => setMe(u))).catch(() => { /* noop */ });
       } else if (r.kind === 'linked') {
         setMember(await loadMember());
       } else if (r.kind === 'error') {
@@ -97,7 +99,7 @@ export function useAuth() {
       }
       setAuthLoading(false);
     })();
-  }, [kakaoBack, loadMember]);
+  }, [kakaoBack, cloudOn, loadMember]);
 
   const uid = me?.uid ?? '';
   useEffect(() => {
@@ -151,19 +153,21 @@ export function useAuth() {
   }, [id, pw]);
 
   const loginKakao = useCallback(() => {
+    if (!cloudOn) { setErr('로그인이 아직 설정되지 않았어요.'); return; }
     const clientId = window.KAKAO_CLIENT_ID;
     if (!clientId) { setErr('카카오 로그인이 아직 설정되지 않았어요.'); return; }
     const state = beginKakaoTrip('login', location.hash);
     location.assign(kakaoAuthUrl(clientId, appRedirectUri(location), state));
-  }, []);
+  }, [cloudOn]);
 
   /* 로그인한 계정에 카카오를 붙인다 — 갔다 오면 위의 돌아오기 처리가 link 로 마무리한다 */
   const linkKakao = useCallback(() => {
+    if (!cloudOn) { setErr('로그인이 아직 설정되지 않았어요.'); return; }
     const clientId = window.KAKAO_CLIENT_ID;
     if (!clientId) { setErr('카카오 로그인이 아직 설정되지 않았어요.'); return; }
     const state = beginKakaoTrip('link', location.hash);
     location.assign(kakaoAuthUrl(clientId, appRedirectUri(location), state));
-  }, []);
+  }, [cloudOn]);
 
   const loginGoogle = useCallback(async () => {
     const C = await cloud().catch(() => null);
