@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { dayLabel, parseKakaoTitle, todayKst } from '../clubEvents';
 import { monthGrid } from '../core';
 import { applyPaste, emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, shouldApplyOnBlur, toggleCandidate, toInput, type FormSeg, type FormState } from '../eventForm';
@@ -57,10 +57,15 @@ function Body({ m, create, update, adopt }: Props) {
   const canPickMode = !hasSegs || candMode || editing?.date === null;
   const setMode = (mode: FormState['dateMode']) => setF((cur) => (
     mode === cur.dateMode ? cur : { ...cur, dateMode: mode, date: cur.date || todayKst(), dateMoved: false }));
+  /* 후보 목록의 최신 값 — 빠르게 연달아 눌러도 앞의 선택 위에 쌓이게 한다 */
+  const candRef = useRef(f.candidates);
+  const [capHit, setCapHit] = useState(false);
   const toggleCand = (iso: string) => {
-    const r = toggleCandidate(f.candidates, iso);
-    setErr(r.error);
-    if (r.list !== f.candidates) setF((cur) => ({ ...cur, candidatesTouched: true, candidates: r.list }));
+    const r = toggleCandidate(candRef.current, iso);
+    setCapHit(r.error !== '');
+    if (r.list === candRef.current) return;
+    candRef.current = r.list;
+    setF((cur) => ({ ...cur, candidatesTouched: true, candidates: r.list }));
   };
 
   async function submit() {
@@ -83,7 +88,10 @@ function Body({ m, create, update, adopt }: Props) {
 
   function showLatest() {
     if (!conflict) return;
-    setF(formFromEvent(conflict));
+    const latest = formFromEvent(conflict);
+    candRef.current = latest.candidates;
+    setCapHit(false);
+    setF(latest);
     setVersion(conflict.version);
     setConflict(null);
     setNote('');
@@ -128,7 +136,7 @@ function Body({ m, create, update, adopt }: Props) {
             </div>
           )}
           {candMode ? (
-            <CandidatePicker picked={f.candidates} full={f.candidates.length >= MAX_CANDIDATES} onToggle={toggleCand} today={today} />
+            <CandidatePicker picked={f.candidates} full={f.candidates.length >= MAX_CANDIDATES} capHit={capHit} onToggle={toggleCand} today={today} />
           ) : (
             <input id="evf-date" type="date" value={f.date} onChange={(e) => set({ date: e.target.value, dateMoved: false })} />
           )}
@@ -228,7 +236,7 @@ const iso = (d: Date): string => `${d.getFullYear()}-${String(d.getMonth() + 1).
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
 /* 후보 날짜 고르기 — 미니 달력에서 여러 날을 찍고, 고른 날은 칩(× 로 빼기)으로 보인다. 지난 날은 흐리지만 고를 수 있다. */
-function CandidatePicker({ picked, full, onToggle, today }: { picked: string[]; full: boolean; onToggle: (iso: string) => void; today: string }) {
+function CandidatePicker({ picked, full, capHit, onToggle, today }: { picked: string[]; full: boolean; capHit: boolean; onToggle: (iso: string) => void; today: string }) {
   const [y0, m0] = (picked[0] ?? today).split('-').map(Number);
   const [ym, setYm] = useState({ y: y0, m: m0 - 1 });
   const go = (n: number) => setYm((c) => { const d = new Date(c.y, c.m + n, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
@@ -262,8 +270,8 @@ function CandidatePicker({ picked, full, onToggle, today }: { picked: string[]; 
           ))}
         </div>
       )}
-      <span className="evf-cand-count" aria-live="polite">
-        후보 {picked.length}개 · 최대 {MAX_CANDIDATES}개. 참여한 사람들이 날짜마다 되는 시간을 고르면 다 같이 되는 날이 보여요.
+      <span className={'evf-cand-count' + (capHit && full ? ' hit' : '')} aria-live="polite">
+        {capHit && full ? `후보 날짜는 ${MAX_CANDIDATES}개까지예요. 하나를 빼고 골라 주세요.` : <>후보 {picked.length}개 · 최대 {MAX_CANDIDATES}개. 참여한 사람들이 날짜마다 되는 시간을 고르면 다 같이 되는 날이 보여요.</>}
       </span>
     </div>
   );
