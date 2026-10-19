@@ -26,7 +26,6 @@ export function eventTitle(ev: Pick<EventDto, 'title' | 'segments'>): string {
 /* ── 날짜·시각 (2026-10-19 다듬기, 작업명세서 §4.7 "시각") ──
    입력은 평범한 24시간제(00:00~23:59). 저장 값은 자정부터 분이라 다음날이면 1440 이상(최대 2879). */
 
-const MAX_MIN = 2879;
 const DAY_MIN = 1440;
 
 /* 동호회 쪽 시각 칸 해석: `13:40`, `9:05`, 앞뒤 공백 허용. 24시 이상은 못 읽은 것(null).
@@ -38,23 +37,39 @@ export function parseClock24(s: string): number | null {
   return h > 23 || mi > 59 ? null : h * 60 + mi;
 }
 
+export type TimeRow = { start: number; end: number | null };
+/* 넘기지 못한 곳: 몇 번째 행의 시작(앞 행보다 이름)인지 끝(그 행 시작보다 이름)인지 */
+export type RollResult = { rows: TimeRow[] } | { bad: 'start' | 'end'; index: number };
+
+/* 자정을 건너는 것으로 보는 경우: 앞 시각이 18:00 이후이고 뒤 시각이 06:00 전. */
+const crossesMidnight = (prev: number, next: number): boolean => prev >= 18 * 60 && next < 6 * 60;
+
 /* 자정 넘김을 채운다. 시각은 0~1439 로 받는다.
-   - 다음 행 시작이 앞 행 시작보다 이르면 그 행부터 다음날(+1440).
-   - 행 끝이 그 행 시작보다 이르면 끝을 다음날로. 같으면 그대로 둔다(부르는 쪽이 오류로 본다).
-   2879 를 넘으면(이틀 넘김) null. */
-export function rollDays(rows: { start: number; end: number | null }[]): { start: number; end: number | null }[] | null {
-  const out: { start: number; end: number | null }[] = [];
+   - 다음 행 시작이 앞 행 시작보다 이르면, 자정을 건너는 경우(위 18시·6시 규칙)만 그 행부터 다음날(+1440).
+   - 행 끝이 그 행 시작보다 이르거나 같으면, 자정을 건너는 경우만 끝을 다음날로.
+   - 다음날로는 한 번만 넘긴다. 첫 시작에서 24시간 이상 떨어진 시각도 받지 않는다(`23:00`/`00:30`/`23:50` 같은 순서 실수).
+   그 밖에 순서가 뒤집혔으면 어디가 틀렸는지 돌려준다 — 오타가 조용히 하루 뒤로 저장되지 않게. */
+export function rollDays(rows: TimeRow[]): RollResult {
+  const out: TimeRow[] = [];
   let off = 0;
-  for (const r of rows) {
-    let start = r.start + off;
-    const prev = out[out.length - 1];
-    if (prev && start < prev.start) { off += DAY_MIN; start += DAY_MIN; }
+  for (const [i, r] of rows.entries()) {
+    const prev = rows[i - 1];
+    if (prev && r.start < prev.start) {
+      if (off || !crossesMidnight(prev.start, r.start)) return { bad: 'start', index: i };
+      off = DAY_MIN;
+    }
+    const start = r.start + off;
     let end = r.end === null ? null : r.end + off;
-    if (end !== null && end < start) end += DAY_MIN;
-    if (start > MAX_MIN || (end !== null && end > MAX_MIN)) return null;
+    if (r.end !== null && end !== null && r.end <= r.start) {
+      if (off || !crossesMidnight(r.start, r.end)) return { bad: 'end', index: i };
+      end += DAY_MIN;
+    }
+    const first = out[0]?.start ?? start;
+    if (start >= first + DAY_MIN) return { bad: 'start', index: i };
+    if (end !== null && end >= first + DAY_MIN) return { bad: 'end', index: i };
     out.push({ start, end });
   }
-  return out;
+  return { rows: out };
 }
 
 /* 화면에 보이는 시각: 1440 이상이면 `다음날 00:30`. 카톡 글·자동 제목은 그냥 fmt 를 쓴다. */
@@ -98,7 +113,7 @@ export interface KakaoSeg { themeName: string; startMin: number; endMin?: number
 
 /* 카톡 제목 해석. 알아본 것만 채운다 — 조각 하나라도 시각이 없거나 테마명이 비면 구간은 비운다
    (틀리게 채우는 것보다 안 채우는 게 낫다). `13:40~14:50` 같은 시간 범위는 시작·끝을 다 채우고,
-   앞 시각보다 이르면 다음날로 본다. */
+   자정을 건너면(rollDays) 다음날로 본다. 그 밖에 순서가 뒤집혔으면 안 채운다. */
 export function parseKakaoTitle(s: string): {
   booked: boolean | null;
   segments: KakaoSeg[];
@@ -114,7 +129,7 @@ export function parseKakaoTitle(s: string): {
     rest = rest.slice(lead[0].length);
   }
   const names: string[] = [];
-  const rows: { start: number; end: number | null }[] = [];
+  const rows: TimeRow[] = [];
   for (const piece of rest.split('+')) {
     const m = piece.trim().match(PIECE);
     if (!m) return { booked, segments: [] };
@@ -127,8 +142,8 @@ export function parseKakaoTitle(s: string): {
     rows.push({ start, end });
   }
   const rolled = rollDays(rows);
-  if (!rolled || rolled.some((r) => r.end !== null && r.end <= r.start)) return { booked, segments: [] };
-  const segments = rolled.map((r, i): KakaoSeg =>
+  if (!('rows' in rolled)) return { booked, segments: [] };
+  const segments = rolled.rows.map((r, i): KakaoSeg =>
     r.end === null ? { themeName: names[i], startMin: r.start } : { themeName: names[i], startMin: r.start, endMin: r.end });
   return { booked, segments };
 }

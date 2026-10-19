@@ -32,15 +32,15 @@ describe('eventForm', () => {
     expect(note).toBe('');
   });
 
-  it('테마 행에서 EventInput 으로 (24시간제 — 24:30 대신 00:30 이 다음날로)', () => {
+  it('테마 행에서 EventInput 으로 (24시간제 — 24:30 대신 00:30, 19시 뒤라 다음날로)', () => {
     const f = base({
       booked: true,
-      segs: [{ themeName: ' 비밀의 화원 ', branchName: '강남점', themeKey: null, start: '13:40', end: '14:50' },
+      segs: [{ themeName: ' 비밀의 화원 ', branchName: '강남점', themeKey: null, start: '19:00', end: '20:10' },
              { themeName: '셜록', branchName: '', themeKey: 'k', start: '00:30', end: '' }],
     });
     const r = toInput(f);
     if ('error' in r) throw new Error(r.error);
-    expect(r.input.segments[0]).toEqual({ themeName: '비밀의 화원', branchName: '강남점', themeKey: null, startMin: 820, endMin: 890 });
+    expect(r.input.segments[0]).toEqual({ themeName: '비밀의 화원', branchName: '강남점', themeKey: null, startMin: 1140, endMin: 1210 });
     expect(r.input.segments[1]).toEqual({ themeName: '셜록', branchName: null, themeKey: 'k', startMin: 1470, endMin: null });
     expect(r.input.startMin).toBeNull();
     expect(r.input.endMin).toBeNull();
@@ -61,11 +61,13 @@ describe('eventForm', () => {
     expect(err(base())).toBe('제목이나 테마 중 하나는 적어 주세요.');
   });
 
-  it('끝이 시작보다 이르면 다음날, 같으면 오류 (2026-10-19 다듬기 — 전에는 이르면 오류)', () => {
+  it('끝이 시작보다 이르면 자정을 건널 때만 다음날, 아니면 오류 (2026-10-19 다듬기)', () => {
     const r = toInput(base({ title: 'a', allDay: false, start: '22:00', end: '01:00' }));
     if ('error' in r) throw new Error(r.error);
     expect([r.input.startMin, r.input.endMin]).toEqual([1320, 1500]);
-    expect(err(base({ title: 'a', allDay: false, start: '14:00', end: '14:00' }))).toBe('끝 시각이 시작과 같아요.');
+    expect(err(base({ title: 'a', allDay: false, start: '14:00', end: '14:00' }))).toBe('끝 시각이 시작보다 늦어야 해요.');
+    expect(err(base({ title: 'a', allDay: false, start: '14:00', end: '13:00' }))).toBe('끝 시각이 시작보다 늦어야 해요.');
+    expect(err(base({ title: 'a', allDay: false, start: '17:30', end: '05:30' }))).toBe('끝 시각이 시작보다 늦어야 해요.');
     expect(err(base({ title: 'a', allDay: false, start: '1pm', end: '13:00' }))).toBe('시작 시각은 13:40 처럼 24시간제로 적어 주세요.');
   });
 
@@ -89,9 +91,38 @@ describe('eventForm', () => {
     const t = toInput(base({ segs: [s('23:00', '00:10'), s('00:30', '01:40')] }));
     if ('error' in t) throw new Error(t.error);
     expect(t.input.segments.map((g) => [g.startMin, g.endMin])).toEqual([[1380, 1450], [1470, 1540]]);
-    expect(err(base({ segs: [s('23:00'), s('01:00'), s('00:30')] }))).toBe('테마 시각은 다음날까지만 이어질 수 있어요.');
-    expect(segTimeText([s('23:30'), s('00:40', '01:50')])).toBe('23:30–다음날 01:50 (테마에서)');
-    expect(segTimeText([s('13:40'), s('abc')])).toBe('13:40 (테마에서)');
+    const u = toInput(base({ segs: [s('23:00'), s('00:30')] }));
+    if ('error' in u) throw new Error(u.error);
+    expect(u.input.segments.map((g) => g.startMin)).toEqual([1380, 1470]);
+  });
+
+  it('자정을 건너지 않는 역순은 오류 — 오타가 하루 뒤로 저장되지 않게', () => {
+    const s = (start: string, end = '') => ({ themeName: 'A', branchName: '', themeKey: null, start, end });
+    const order = '2번째 테마 시작이 앞 테마보다 이르네요. 순서를 확인해 주세요.';
+    expect(err(base({ segs: [s('13:40', '14:50'), s('13:30')] }))).toBe(order);
+    expect(err(base({ segs: [s('13:00'), s('12:00')] }))).toBe(order);
+    expect(err(base({ segs: [s('17:30'), s('05:30')] }))).toBe(order);
+    expect(err(base({ segs: [s('23:00'), s('00:30'), s('23:50')] }))).toBe('3번째 테마 시작이 앞 테마보다 이르네요. 순서를 확인해 주세요.');
+    expect(err(base({ segs: [s('13:00', '12:00')] }))).toBe('1번째 테마의 끝 시각이 시작보다 늦어야 해요.');
+    expect(err(base({ segs: [s('13:00', '13:00')] }))).toBe('1번째 테마의 끝 시각이 시작보다 늦어야 해요.');
+  });
+
+  it('읽기 전용 시간 — 첫 시작부터 마지막 시각(끝, 없으면 시작)까지', () => {
+    const s = (start: string, end = '') => ({ themeName: 'A', branchName: '', themeKey: null, start, end });
+    expect(segTimeText([s('23:00'), s('00:40', '01:50')])).toBe('23:00–다음날 01:50 (테마에서)');
+    expect(segTimeText([s('13:40', '14:50'), s('15:20')])).toBe('13:40–15:20 (테마에서)');
+    expect(segTimeText([s('23:00'), s('00:30')])).toBe('23:00–다음날 00:30 (테마에서)');
+    expect(segTimeText([s('13:40')])).toBe('13:40 (테마에서)');
+    expect(segTimeText([s('13:40', '14:50')])).toBe('13:40–14:50 (테마에서)');
+    /* 못 읽거나 순서가 틀리면 적힌 그대로 */
+    expect(segTimeText([s('13:40'), s('abc')])).toBe('13:40–abc (테마에서)');
+    expect(segTimeText([s('13:40', '14:50'), s('13:30')])).toBe('13:40–13:30 (테마에서)');
+  });
+
+  it('붙여넣기는 날짜 옮김 안내를 끈다(날짜는 그대로)', () => {
+    const f = { ...base({ date: '2026-10-25' }), dateMoved: true };
+    const { form } = applyPaste(f, 'A 13:40 + B 15:20');
+    expect([form.date, form.dateMoved]).toEqual(['2026-10-25', false]);
   });
 
   it('불러온 일정은 24시간제로 보이고 다시 저장하면 같은 분으로 (왕복)', () => {
@@ -124,13 +155,13 @@ describe('eventForm', () => {
   it('formFromSteps 는 계산 결과 단계를 구간으로 (1440 이상은 24시간제로 접고 저장 때 다음날로)', () => {
     const step = (name: string, place: string, start: number, end: number) =>
       ({ i: 0, name, place, dur: end - start, start, end, soldout: false, move: 0 }) as PathStep;
-    const f = formFromSteps('2026-10-25', [step('A', '강남점', 820, 890), step('B', '홍대점', 1470, 1530)]);
+    const f = formFromSteps('2026-10-25', [step('A', '강남점', 1140, 1210), step('B', '홍대점', 1470, 1530)]);
     expect(f.date).toBe('2026-10-25');
-    expect(f.segs[0]).toMatchObject({ themeName: 'A', branchName: '강남점', start: '13:40', end: '14:50' });
+    expect(f.segs[0]).toMatchObject({ themeName: 'A', branchName: '강남점', start: '19:00', end: '20:10' });
     expect(f.segs[1].start).toBe('00:30');
     const r = toInput(f);
     if ('error' in r) throw new Error(r.error);
-    expect(r.input.segments.map((g) => [g.startMin, g.endMin])).toEqual([[820, 890], [1470, 1530]]);
+    expect(r.input.segments.map((g) => [g.startMin, g.endMin])).toEqual([[1140, 1210], [1470, 1530]]);
   });
 
   it('첫 시각이 자정 뒤(1440 이상)면 날짜를 다음날로 옮기고 안내 표시', () => {

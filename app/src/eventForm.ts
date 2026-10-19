@@ -1,7 +1,7 @@
 /* 일정 만들기·수정 창의 폼 상태 ↔ EventInput 변환과 검사 — React 밖의 순수 함수 (계획 Task E5).
    시각은 입력 칸 문자열("13:40", 24시간제), 서버로 보낼 때만 분으로 바꾸며 자정 넘김(다음날)을 채운다. */
 import { fmt, type PathStep } from './core';
-import { addDays, clockLabel, cpLen, parseClock24, parseKakaoTitle, rangeLabel, rollDays } from './clubEvents';
+import { addDays, clockLabel, cpLen, parseClock24, parseKakaoTitle, rangeLabel, rollDays, type TimeRow } from './clubEvents';
 import type { EventDto, EventInput, SegmentInput } from './server';
 
 export interface FormSeg {
@@ -92,7 +92,7 @@ export function applyPaste(f: FormState, title: string): { form: FormState; note
   if (p.booked !== null) bits.push(p.booked ? '예약 완료' : '예약 전');
   bits.push(`테마 ${segs.length}개`);
   return {
-    form: { ...f, title: '', segs, booked: p.booked ?? f.booked },
+    form: { ...f, title: '', segs, booked: p.booked ?? f.booked, dateMoved: false }, // 붙여넣은 시각은 옮긴 날짜와 무관 — 안내를 끈다
     note: (p.booked !== null ? '카톡 제목에서 ' : '') + bits.join(' · ') + '를 채웠어요.',
   };
 }
@@ -103,17 +103,25 @@ export function applyPaste(f: FormState, title: string): { form: FormState; note
 const hasKakaoMarker = (t: string): boolean => /^\s*\[\s*예약/.test(t) || t.includes('+');
 export const shouldApplyOnBlur = (f: FormState): boolean => f.segs.length === 0 && hasKakaoMarker(f.title);
 
-/* 창의 읽기 전용 시간(구간이 있을 때): `13:40–다음날 00:40 (테마에서)`. 못 읽는 칸이 있으면 적힌 그대로. */
+/* 창의 읽기 전용 시간(구간이 있을 때): 첫 시작부터 마지막 시각(마지막 구간 끝, 없으면 마지막 구간 시작)까지.
+   예: `23:00–다음날 01:50 (테마에서)`. 못 읽는 칸이 있거나 순서가 틀렸으면 적힌 그대로. */
 export function segTimeText(segs: FormSeg[]): string {
   if (segs.length === 0) return '';
   const first = segs[0], last = segs[segs.length - 1];
-  const raw = (first.start || '--:--') + (last.end ? '–' + last.end : '');
-  const rows = segs.map((g) => ({ start: parseClock24(g.start), end: g.end.trim() ? parseClock24(g.end) : null }));
-  const ok = rows.every((r, i) => r.start !== null && (r.end !== null || !segs[i].end.trim()));
-  const rolled = ok ? rollDays(rows as { start: number; end: number | null }[]) : null;
-  if (!rolled) return raw + ' (테마에서)';
-  const a = rolled[0], z = rolled[rolled.length - 1];
-  return (z.end === null ? clockLabel(a.start) : rangeLabel(a.start, z.end)) + ' (테마에서)';
+  const lastRaw = last.end.trim() || last.start;
+  const raw = (first.start || '--:--') + (segs.length > 1 || last.end.trim() ? '–' + (lastRaw || '--:--') : '');
+  const rows: TimeRow[] = [];
+  for (const g of segs) {
+    const start = parseClock24(g.start);
+    const end = g.end.trim() ? parseClock24(g.end) : null;
+    if (start === null || (g.end.trim() && end === null)) return raw + ' (테마에서)';
+    rows.push({ start, end });
+  }
+  const rolled = rollDays(rows);
+  if (!('rows' in rolled)) return raw + ' (테마에서)';
+  const a = rolled.rows[0], z = rolled.rows[rolled.rows.length - 1];
+  const lastMin = z.end ?? z.start;
+  return (lastMin === a.start ? clockLabel(a.start) : rangeLabel(a.start, lastMin)) + ' (테마에서)';
 }
 
 const TIME_HINT = '13:40 처럼 24시간제로 적어 주세요.';
@@ -145,15 +153,19 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
     if (g.end.trim()) {
       end = parseClock24(g.end);
       if (end === null) return { error: `${label}의 끝 시각은 ${TIME_HINT}` };
-      if (end === start) return { error: `${label}의 끝 시각이 시작과 같아요.` };
     }
     times.push({ start, end });
     segments.push({ themeName, branchName: branchName || null, themeKey: g.themeKey, startMin: start, endMin: end });
   }
-  /* 앞 시각보다 이르면 다음날로 본다 */
+  /* 자정을 건너면 다음날로 본다. 그 밖에 순서가 뒤집혔으면 오류 — 오타가 하루 뒤로 저장되지 않게 */
   const rolled = rollDays(times);
-  if (!rolled) return { error: '테마 시각은 다음날까지만 이어질 수 있어요.' };
-  rolled.forEach((r, i) => { segments[i].startMin = r.start; segments[i].endMin = r.end; });
+  if (!('rows' in rolled)) {
+    const n = rolled.index + 1;
+    return { error: rolled.bad === 'start'
+      ? `${n}번째 테마 시작이 앞 테마보다 이르네요. 순서를 확인해 주세요.`
+      : `${n}번째 테마의 끝 시각이 시작보다 늦어야 해요.` };
+  }
+  rolled.rows.forEach((r, i) => { segments[i].startMin = r.start; segments[i].endMin = r.end; });
   if (!title && segments.length === 0) return { error: '제목이나 테마 중 하나는 적어 주세요.' };
 
   /* 구간이 있으면 일정 시각은 구간에서 읽으므로 보내지 않는다. 끝은 비워도 된다(시작만 있는 일정). */
@@ -165,8 +177,9 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
     if (f.end.trim()) {
       const end = parseClock24(f.end);
       if (end === null) return { error: `끝 시각은 ${TIME_HINT}` };
-      if (end === startMin) return { error: '끝 시각이 시작과 같아요.' };
-      endMin = rollDays([{ start: startMin, end }])![0].end; // 시작보다 이르면 다음날
+      const rolled = rollDays([{ start: startMin, end }]); // 자정을 건너면 다음날
+      if (!('rows' in rolled)) return { error: '끝 시각이 시작보다 늦어야 해요.' };
+      endMin = rolled.rows[0].end;
     }
   }
   if (f.capacity !== null && !(Number.isInteger(f.capacity) && f.capacity >= 2 && f.capacity <= 8)) {

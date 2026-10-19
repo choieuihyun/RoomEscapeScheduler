@@ -107,6 +107,10 @@ describe('clubEvents', () => {
     expect(parseKakaoTitle('A 13:40 14:50').segments).toEqual([]);
     expect(parseKakaoTitle('A 13:40~13:40').segments).toEqual([]);
     expect(parseKakaoTitle('A 13:40~14:50 + B').segments).toEqual([]);
+    /* 자정을 건너지 않는 역순은 오타로 보고 안 채운다 */
+    expect(parseKakaoTitle('A 13:00 + B 12:00').segments).toEqual([]);
+    expect(parseKakaoTitle('A 13:40~14:50 + B 13:30').segments).toEqual([]);
+    expect(parseKakaoTitle('A 23:30 + B 00:40').segments.map((x) => x.startMin)).toEqual([1410, 1480]);
   });
 
   it('parseClock24 는 00:00~23:59 만', () => {
@@ -118,15 +122,25 @@ describe('clubEvents', () => {
     expect(parseClock24('abc')).toBeNull();
   });
 
-  it('자정 넘김 자동 (rollDays)', () => {
-    expect(rollDays([{ start: 1410, end: null }, { start: 40, end: null }])).toEqual([
-      { start: 1410, end: null }, { start: 1480, end: null }]);
-    expect(rollDays([{ start: 1320, end: 60 }])).toEqual([{ start: 1320, end: 1500 }]);
+  it('자정 넘김 자동 (rollDays) — 18시 이후 → 6시 전일 때만, 한 번만', () => {
+    const r = (...xs: [number, number | null][]) => rollDays(xs.map(([start, end]) => ({ start, end })));
+    expect(r([1380, null], [30, null])).toEqual({ rows: [{ start: 1380, end: null }, { start: 1470, end: null }] });
+    expect(r([1410, null], [40, null])).toEqual({ rows: [{ start: 1410, end: null }, { start: 1480, end: null }] });
+    expect(r([1320, 60])).toEqual({ rows: [{ start: 1320, end: 1500 }] });
     /* 한 번 넘기면 뒤 구간도 다음날 */
-    expect(rollDays([{ start: 1380, end: 1440 - 10 }, { start: 30, end: 90 }, { start: 100, end: null }])!.map((r) => r.start))
-      .toEqual([1380, 1470, 1540]);
-    /* 이틀 넘김은 범위(≤2879) 밖 */
-    expect(rollDays([{ start: 1380, end: null }, { start: 60, end: null }, { start: 30, end: null }])).toBeNull();
+    expect(r([1380, 1430], [30, 90], [100, null])).toEqual({ rows: [
+      { start: 1380, end: 1430 }, { start: 1470, end: 1530 }, { start: 1540, end: null }] });
+    /* 자정을 건너지 않는 역순은 넘기지 않는다(오타) */
+    expect(r([820, 890], [810, null])).toEqual({ bad: 'start', index: 1 });   // 13:40–14:50 뒤 13:30
+    expect(r([780, null], [720, null])).toEqual({ bad: 'start', index: 1 });  // 13:00 뒤 12:00
+    expect(r([1050, null], [330, null])).toEqual({ bad: 'start', index: 1 }); // 17:30 뒤 05:30 — 18시 전
+    expect(r([1380, null], [400, null])).toEqual({ bad: 'start', index: 1 }); // 23:00 뒤 06:40 — 6시 이후
+    expect(r([840, 780])).toEqual({ bad: 'end', index: 0 });                  // 14:00~13:00
+    expect(r([840, 840])).toEqual({ bad: 'end', index: 0 });                  // 같은 시각
+    /* 두 번 넘기지 않는다, 첫 시작에서 24시간 넘게 떨어진 시각도 안 받는다 */
+    expect(r([1380, null], [60, null], [30, null])).toEqual({ bad: 'start', index: 2 });
+    expect(r([1380, null], [30, 20])).toEqual({ bad: 'end', index: 1 });
+    expect(r([1380, null], [30, null], [1430, null])).toEqual({ bad: 'start', index: 2 }); // 23:00/00:30/23:50
   });
 
   it('모르는 맨 앞 대괄호는 걷어 내고 예약 여부는 null', () => {
