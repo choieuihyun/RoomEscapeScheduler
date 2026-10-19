@@ -65,6 +65,9 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     }
   }, [enabled, rangeList]);
 
+  const reloadRef = useRef(reload);
+  useEffect(() => { reloadRef.current = reload; }, [reload]);
+
   /* 꺼지면 목록을 비우고 진행 중이던 응답은 버린다. */
   useEffect(() => {
     if (!enabled) return;
@@ -104,9 +107,8 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   /* 동작·한 건 새로 받기가 목록을 바꾼 뒤 부른다. 그 전에 떠 있던 reload 는 낡은 참여 상태를 들고 올 수 있어
      (참여·취소는 version 을 올리지 않는다) 버리고, 목록을 다시 받는다. */
   const invalidateReload = useCallback(() => {
-    seq.current++;
-    void reload();
-  }, [reload]);
+    void reloadRef.current(); // reload 가 seq 를 올려 먼저 떠 있던 응답을 버린다. 늘 가장 최신 범위로 부른다.
+  }, []);
 
   /* 한 일정만 다시 받는다. 지워졌으면(404 NO_SUCH_EVENT) 목록에서 빼고 null. */
   const refreshOne = useCallback(async (id: number): Promise<EventDto | null> => {
@@ -145,15 +147,16 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     const ep = epoch.current;
     const live = () => alive.current && epoch.current === ep;
     if (id !== null) setBusy(id, true);
+    let noToken = false;
     try {
       const t = enabled ? await token() : null;
-      if (!t) throw new Error('로그인해 주세요.');
+      if (!t) { noToken = true; throw new Error('로그인해 주세요.'); }
       const out = await call(t, (ev) => { if (live()) setEvents((cur) => upsert(cur, ev)); return ev; }, live);
       if (live()) invalidateReload();
       return out;
     } catch (e) {
       const code = errorCode(e);
-      if (!(quietConflict && code === 'EVENT_CONFLICT')) showToast(sayClub(e));
+      if (!(quietConflict && code === 'EVENT_CONFLICT')) showToast(noToken ? '로그인해 주세요.' : sayClub(e));
       if (id !== null) {
         const fix = afterActionError(e);
         if (fix === 'refresh') await refreshOne(id);
