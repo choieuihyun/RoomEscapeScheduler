@@ -9,7 +9,7 @@ import {
 } from './clubEvents';
 
 const seg = (themeName: string, startMin: number, endMin: number | null = null) =>
-  ({ themeName, branchName: null, themeKey: null, startMin, endMin });
+  ({ themeName, branchName: null, themeKey: null, startMin, endMin, playedBy: [] as string[] });
 
 const ev = (o: Partial<EventDto> = {}): EventDto => ({
   id: 1, title: '', date: '2026-10-20', candidates: [], startMin: null, endMin: null, location: null,

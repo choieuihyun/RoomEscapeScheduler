@@ -151,7 +151,7 @@ describe('eventForm', () => {
   });
 
   it('불러온 일정은 24시간제로 보이고 다시 저장하면 같은 분으로 (왕복)', () => {
-    const seg = (startMin: number, endMin: number | null) => ({ themeName: 'A', branchName: null, themeKey: null, startMin, endMin });
+    const seg = (startMin: number, endMin: number | null) => ({ themeName: 'A', branchName: null, themeKey: null, startMin, endMin, playedBy: [] as string[] });
     const f = formFromEvent(ev({ segments: [seg(1380, 1450), seg(1470, null)] }));
     expect(f.segs.map((g) => [g.start, g.end])).toEqual([['23:00', '00:10'], ['00:30', '']]);
     const r = toInput(f);
@@ -197,7 +197,7 @@ describe('eventForm', () => {
     const r = toInput(f);
     if ('error' in r) throw new Error(r.error);
     expect([r.input.date, r.input.segments[0].startMin, r.input.segments[0].endMin]).toEqual(['2026-10-25', 30, 100]);
-    const seg = (startMin: number) => ({ themeName: 'A', branchName: null, themeKey: null, startMin, endMin: null });
+    const seg = (startMin: number) => ({ themeName: 'A', branchName: null, themeKey: null, startMin, endMin: null, playedBy: [] as string[] });
     const e = formFromEvent(ev({ date: '2026-10-24', segments: [seg(1470)] }));
     expect([e.date, e.segs[0].start, e.dateMoved]).toEqual(['2026-10-25', '00:30', true]);
     const t = formFromEvent(ev({ date: '2026-10-24', title: '번개', startMin: 1500, endMin: 1560 }));
@@ -209,7 +209,7 @@ describe('eventForm', () => {
       ({ i: 0, name: 'A', place: '', dur: end - start, start, end, soldout: false, move: 0 }) as PathStep;
     const f = formFromSteps('2026-10-24', [step(1439, 1500), step(1520, 1580)]);
     expect([f.date, f.dateMoved]).toEqual(['2026-10-24', false]);
-    const e = formFromEvent(ev({ date: '2026-10-24', segments: [{ themeName: 'A', branchName: null, themeKey: null, startMin: 1380, endMin: null }, { themeName: 'B', branchName: null, themeKey: null, startMin: 1470, endMin: null }] }));
+    const e = formFromEvent(ev({ date: '2026-10-24', segments: [{ themeName: 'A', branchName: null, themeKey: null, startMin: 1380, endMin: null, playedBy: [] }, { themeName: 'B', branchName: null, themeKey: null, startMin: 1470, endMin: null, playedBy: [] }] }));
     expect([e.date, e.dateMoved]).toEqual(['2026-10-24', false]);
   });
 

@@ -236,7 +236,10 @@ export interface SegmentInput {
   startMin: number;
   endMin: number | null;
 }
-export type SegmentDto = SegmentInput;
+/* 서버가 읽을 때마다 계산해 붙인다(§4.9) — 그 일정 참여자 중 이 테마를 해 본 사람 */
+export interface SegmentDto extends SegmentInput {
+  playedBy: string[];
+}
 
 export interface EventInput {
   title: string;
@@ -347,6 +350,67 @@ export const setAvailability = (id: number, input: AvailabilityInput, token: str
 /* 응답 지우기 = "응답 안 함" */
 export const clearAvailability = (id: number, date: string, token: string): Promise<EventDto> =>
   authed(`${EVENTS}/${id}/availability/${encodeURIComponent(date)}`, token, 'DELETE');
+
+/* ── 해 본 테마 (작업명세서 §4.9) ── */
+export interface PlayedDto {
+  id: number;
+  themeKey: string | null;
+  themeName: string;
+  branchName: string | null;
+  playedOn: string | null;
+  /* 멱등 POST 는 이미 있던 행을 그대로 주므로, 보낸 source 와 다를 수 있다 */
+  source: 'MANUAL' | 'EVENT' | 'PLAN';
+  eventId: number | null;
+  createdAt: string;
+}
+export interface ThemeRef {
+  themeKey: string;
+  themeName: string;
+  branchName: string;
+  storeName: string;
+}
+export interface PlayedInput {
+  themeKey?: string | null;
+  themeName: string;
+  branchName?: string | null;
+  playedOn?: string | null;
+  source?: 'MANUAL' | 'PLAN';
+}
+export interface FreshTheme extends ServerTheme {
+  themeKey: string;
+  storeName: string;
+  branchName: string;
+  playedBy: string[];
+}
+export interface FreshDto {
+  date: string;
+  collected: boolean; // false 면 themes 가 비어도 "열린 테마 없음"이 아니다
+  checkedAt: string | null;
+  missing: { store: string; branch: string }[];
+  noRecord: string[];
+  themes: FreshTheme[];
+}
+
+export const listPlayed = (token: string): Promise<PlayedDto[]> => authed('/api/me/played', token, 'GET');
+
+export const addPlayed = (body: PlayedInput, token: string): Promise<PlayedDto> =>
+  authed('/api/me/played', token, 'POST', body);
+
+/* 404 를 성공으로 치지 않는다 — 그대로 던진다 */
+export const deletePlayed = (id: number, token: string): Promise<{ id: number; deleted: boolean }> =>
+  authed(`/api/me/played/${id}`, token, 'DELETE');
+
+export const memberPlayed = (uid: string, token: string): Promise<PlayedDto[]> =>
+  authed(`/api/club/members/${encodeURIComponent(uid)}/played`, token, 'GET');
+
+/* 로그인 없이 — 은퇴한 테마도 들어 있고 매장·지점·이름 순 */
+export const listThemes = (): Promise<ThemeRef[]> => get('/api/themes');
+
+export const myPastEvents = (before: string | null, limit: number, token: string): Promise<EventDto[]> =>
+  authed(`/api/me/events?${before ? `before=${encodeURIComponent(before)}&` : ''}limit=${limit}`, token, 'GET');
+
+export const freshThemes = (eventId: number, date: string | null, token: string): Promise<FreshDto> =>
+  authed(`${EVENTS}/${eventId}/fresh-themes${date ? `?date=${encodeURIComponent(date)}` : ''}`, token, 'GET');
 
 export const listClubMembers = (token: string): Promise<ClubMemberDto[]> =>
   authed('/api/club/members', token, 'GET');

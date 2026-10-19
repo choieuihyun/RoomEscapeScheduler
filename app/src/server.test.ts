@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   addParticipant, conflictOf, createEvent, deleteEvent, errorCode, getEvent, isMissingApi, joinClub, kakaoLogin,
   leaveEvent, listClubMembers, listEvents, listMembers, memberAction, removeParticipant, sayClub, setBooked,
-  setMemberRole, updateEvent, joinEvent, setAvailability, clearAvailability,
+  setMemberRole, updateEvent, listPlayed, addPlayed, deletePlayed, memberPlayed, listThemes, myPastEvents, freshThemes, joinEvent, setAvailability, clearAvailability,
 } from './server';
 import type { EventInput } from './server';
 
@@ -214,5 +214,49 @@ describe('시간 협의 API (§4.8)', () => {
     const fn = stubFetch(200, {});
     await clearAvailability(3, '2026-10-31', 'T');
     expect([call(fn).url.split('/api')[1], call(fn).init.method]).toEqual(['/club/events/3/availability/2026-10-31', 'DELETE']);
+  });
+});
+
+describe('해 본 테마 API 호출', () => {
+  it('listPlayed·addPlayed·deletePlayed·memberPlayed 경로와 본문', async () => {
+    let fn = stubFetch(200, []);
+    await listPlayed('T');
+    expect(call(fn).url).toContain('/api/me/played');
+    expect(call(fn).init.method).toBe('GET');
+    fn = stubFetch(200, {});
+    await addPlayed({ themeName: '화원', playedOn: '2026-10-01', source: 'PLAN' }, 'T');
+    expect(call(fn).init.method).toBe('POST');
+    expect(JSON.parse(call(fn).init.body as string)).toEqual({ themeName: '화원', playedOn: '2026-10-01', source: 'PLAN' });
+    fn = stubFetch(200, { id: 5, deleted: true });
+    await deletePlayed(5, 'T');
+    expect(call(fn).url).toContain('/api/me/played/5');
+    expect(call(fn).init.method).toBe('DELETE');
+    fn = stubFetch(200, []);
+    await memberPlayed('kakao:1', 'T');
+    expect(call(fn).url).toContain('/api/club/members/kakao%3A1/played');
+  });
+  it('deletePlayed 는 404 를 성공으로 치지 않고 던진다', async () => {
+    stubFetch(404, { error: 'NO_SUCH_PLAYED', message: 'x' });
+    await expect(deletePlayed(9, 'T')).rejects.toBeTruthy();
+  });
+  it('listThemes 는 토큰 없이', async () => {
+    const fn = stubFetch(200, []);
+    await listThemes();
+    expect(call(fn).url).toContain('/api/themes');
+    expect(call(fn).headers?.Authorization).toBeUndefined();
+  });
+  it('myPastEvents·freshThemes 경로', async () => {
+    let fn = stubFetch(200, []);
+    await myPastEvents('2026-10-19', 20, 'T');
+    expect(call(fn).url).toContain('/api/me/events?before=2026-10-19&limit=20');
+    fn = stubFetch(200, []);
+    await myPastEvents(null, 20, 'T');
+    expect(call(fn).url).toMatch(/\/api\/me\/events\?limit=20$/);
+    fn = stubFetch(200, {});
+    await freshThemes(7, '2026-11-01', 'T');
+    expect(call(fn).url).toContain('/api/club/events/7/fresh-themes?date=2026-11-01');
+    fn = stubFetch(200, {});
+    await freshThemes(7, null, 'T');
+    expect(call(fn).url).toMatch(/fresh-themes$/);
   });
 });
