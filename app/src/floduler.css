@@ -879,6 +879,118 @@ button:active{transform:scale(.97)}
   border-radius:var(--r-sm);padding:8px 10px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;
   -webkit-user-select:all;user-select:all}
 
+/* ── 홈(계획 Task E7) — 다우오피스 홈 배치: 세 칸 카드, 칸 사이 24, 카드는 바탕+1px 선+모서리 12(그림자 없음),
+   카드 제목 20/500. 1100 아래 두 칸, 600 아래 한 줄(내 정보 → 내 다음 일정 → 다가오는 → 캘린더 → 바로가기). ── */
+.view.home-view{max-width:1200px}
+.home-view .page-head h1{font-size:20px;font-weight:500;line-height:32px;letter-spacing:-.02em;margin:0}
+.home-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:start;padding-bottom:48px}
+.home-col{display:flex;flex-direction:column;gap:24px;min-width:0}
+.home-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;color:var(--ink);min-width:0}
+.home-h{margin:0 0 14px;font-size:20px;font-weight:500;letter-spacing:-.02em;color:var(--ink)}
+
+.home-me{padding:36px 32px 24px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.home-avatar{width:72px;height:72px;border-radius:999px;background:var(--blue-soft);color:var(--blue-text);
+  display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700}
+.home-name{margin-top:10px;font-size:20px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-role{font-size:13px;color:var(--ink2)}
+.home-big{margin-top:14px;font-size:26px;font-weight:600;color:var(--blue-text);font-variant-numeric:tabular-nums}
+.home-big-l{font-size:13.5px}
+.home-me-rows{align-self:stretch;margin-top:18px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.home-me-row{display:flex;align-items:center;width:100%;height:32px;padding:0 4px;border:none;background:none;
+  font-family:inherit;font-size:13px;color:var(--ink2);text-align:left;border-radius:var(--r-xs);cursor:pointer}
+.home-me-row:hover{background:var(--btn-bg-hover);color:var(--ink)}
+.home-me-row:active{transform:none}
+.home-me-row span{margin-left:auto;color:var(--blue-text);font-weight:600;font-variant-numeric:tabular-nums}
+
+.home-cal-head{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px}
+.home-cal-head b{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.home-cal-nav{width:24px;height:24px;padding:0;border:1px solid var(--line2);border-radius:999px;background:var(--surface);
+  color:var(--ink3);font-size:13px;line-height:1;cursor:pointer}
+.home-cal-nav:hover{color:var(--ink);border-color:var(--btn-line-hover)}
+.home-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:4px;text-align:center}
+.home-cal-wd{font-size:13px;color:var(--ink2);padding:2px 0 4px}
+.home-cal-wd.sun{color:var(--sun)} .home-cal-wd.sat{color:var(--sat)}
+.home-cal-d{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:44px;padding:2px 0;border:none;
+  background:none;font-family:inherit;color:var(--ink);border-radius:var(--r-sm);cursor:pointer}
+.home-cal-d:hover{background:var(--btn-bg-hover)}
+.home-cal-d:active{transform:none}
+.home-cal-d.sun{color:var(--sun)} .home-cal-d.sat{color:var(--sat)}
+.home-cal-d.out{color:var(--placeholder)}
+.home-cal-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:var(--r-sm);
+  font-size:13px;font-variant-numeric:tabular-nums}
+.home-cal-d.today .home-cal-num{background:var(--ink);color:var(--surface);font-weight:700}
+.home-cal-n{min-width:18px;height:14px;padding:0 4px;box-sizing:border-box;border-radius:999px;font-size:10px;line-height:14px;
+  font-weight:600;color:#fff;background:var(--blue);font-variant-numeric:tabular-nums}
+.home-cal-n.past{color:var(--ink2);background:var(--chip-bg)}
+
+.home-up{padding:20px 20px 12px}
+.home-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:2px;overflow-x:auto}
+.home-tab{flex:none;height:38px;padding:0 14px;border:none;border-bottom:2px solid transparent;background:none;
+  font-family:inherit;font-size:14px;color:var(--ink2);cursor:pointer;margin-bottom:-1px}
+.home-tab:hover{color:var(--ink)}
+.home-tab:active{transform:none}
+.home-tab.on{border-bottom-color:var(--ink);color:var(--ink);font-weight:600}
+.home-list{list-style:none;margin:0;padding:0}
+.home-row{display:flex;align-items:center;gap:10px;padding:12px 6px;margin:0 -6px;border-bottom:1px solid var(--line);
+  border-radius:var(--r-xs);cursor:pointer}
+.home-row:last-child{border-bottom:0}
+.home-row:hover{background:var(--btn-bg-hover)}
+.home-row:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+.home-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.home-row-t{display:flex;align-items:center;gap:6px;min-width:0}
+.home-row-t b{min-width:0;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-row-m{font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-row-m .sun{color:var(--sun)} .home-row-m .sat{color:var(--sat)}
+.home-row-a{flex:none;padding:0 6px;font-size:12.5px;color:var(--ink3);white-space:nowrap}
+.home-row-a.on{color:var(--blue-text);font-weight:600}
+.home-join{flex:none;height:30px;padding:0 12px;border:1px solid var(--blue-line);border-radius:var(--r-sm);background:var(--blue-soft);
+  color:var(--blue-text);font-family:inherit;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
+.home-join:hover{border-color:var(--blue-text)}
+.home-join:disabled{opacity:.5;cursor:default}
+.home-empty{padding:28px 4px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.home-empty p,.home-empty-p{margin:0;font-size:13.5px;color:var(--ink3);line-height:1.6}
+.home-pager{display:flex;align-items:center;justify-content:center;gap:16px;padding-top:10px;font-size:12px;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+.home-pager button{width:28px;height:28px;padding:0;border:none;background:none;font-size:17px;line-height:1;color:var(--ink);
+  border-radius:var(--r-xs);cursor:pointer}
+.home-pager button:hover:not(:disabled){background:var(--btn-bg-hover)}
+.home-pager button:disabled{color:var(--line2);cursor:default}
+
+.home-next-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.home-next-head .home-h{margin:0}
+.home-next-head .st-badge{margin-left:auto}
+.home-next-date{font-size:13.5px;color:var(--ink2);margin-bottom:10px;font-variant-numeric:tabular-nums}
+.home-next-title{font-size:14px;font-weight:600;margin-bottom:8px;overflow-wrap:anywhere}
+.home-next-box{background:var(--surface2);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.home-next-seg{display:flex;align-items:baseline;gap:10px;min-width:0}
+.home-next-seg b{flex:none;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.home-next-n{min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-next-b{margin-left:auto;flex:none;font-size:12px;color:var(--ink3)}
+.home-next-ppl{margin-top:12px;font-size:13px;color:var(--ink2);line-height:1.5;font-variant-numeric:tabular-nums;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.home-next-go{margin-top:14px;width:100%;height:44px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);
+  color:var(--ink);font-family:inherit;font-size:14px;cursor:pointer}
+.home-next-go:hover{background:var(--btn-bg-hover);border-color:var(--btn-line-hover)}
+
+.home-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.home-tile{height:84px;border:none;border-radius:16px;background:var(--surface2);color:var(--ink);font-family:inherit;font-size:12.5px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;padding:0 4px}
+.home-tile:hover{box-shadow:inset 0 0 0 1px var(--line2)}
+
+/* 두 칸 — 칸 묶음을 풀어 카드마다 자리를 준다: 내 정보|내 다음 일정 / 다가오는 일정(두 칸 폭) / 캘린더|바로가기 */
+@media(max-width:1100px){
+  .home-grid{grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-areas:"me next" "up up" "cal quick"}
+  .home-col{display:contents}
+  .home-me{grid-area:me;align-self:stretch} .home-next{grid-area:next;align-self:stretch}
+  .home-up{grid-area:up} .home-cal{grid-area:cal} .home-quick{grid-area:quick}
+}
+@media(max-width:600px){
+  .home-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"me" "next" "up" "cal" "quick";gap:16px}
+  .home-card{padding:16px}
+  .home-me{padding:24px 20px 16px}
+}
+
 /* "+n" 작은 창 */
 .cal-pop{position:absolute;z-index:45;width:260px;max-height:240px;overflow:auto;padding:10px 12px 12px;
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-up)}

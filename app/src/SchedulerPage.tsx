@@ -14,8 +14,9 @@ import { addDays } from './clubEvents';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
 import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
-import { isClubAdmin, useMembers } from './useMembers';
+import { isClubAdmin, memberName, useMembers } from './useMembers';
 import { MembersPage } from './components/MembersPage';
+import { HomePage } from './components/HomePage';
 import { ThemeList } from './components/ThemeList';
 import { ConditionsPanel } from './components/ConditionsPanel';
 import { ResultsPanel } from './components/ResultsPanel';
@@ -59,10 +60,20 @@ export function SchedulerPage() {
   /* 캘린더 범위 — 월 보기는 보이는 달 칸(최대 42일), 주·일 보기는 고른 날이 든 달 칸. 홈 범위와 겹쳐도 병합이 중복을 없앤다. */
   const calMonth = cal.mode === 'month' ? cal.cursor : { y: +cal.selected.slice(0, 4), m: +cal.selected.slice(5, 7) - 1 };
   const calGrid = monthGrid(calMonth.y, calMonth.m);
+  /* 홈 미니 달력이 보이는 달 — 그 달 칸도 범위에 넣어 다른 달로 넘겨도 일정 수가 보이게 한다(캘린더 범위와 같으면 뺀다) */
+  const [homeMonth, setHomeMonth] = useState(() => ({ y: new Date().getFullYear(), m: new Date().getMonth() }));
+  const homeGrid = monthGrid(homeMonth.y, homeMonth.m);
+  const calRange = { from: toISO(calGrid[0]), to: toISO(calGrid[calGrid.length - 1]) };
+  const homeCalRange = { from: toISO(homeGrid[0]), to: toISO(homeGrid[homeGrid.length - 1]) };
   const club = useClubEvents(clubOn, [
     { from: today, to: addDays(today, 61) },
-    { from: toISO(calGrid[0]), to: toISO(calGrid[calGrid.length - 1]) },
+    calRange,
+    ...(homeCalRange.from === calRange.from ? [] : [homeCalRange]),
   ]);
+  const stepHomeMonth = (dir: 1 | -1) => setHomeMonth(c => {
+    const d = new Date(c.y, c.m + dir, 1);
+    return { y: d.getFullYear(), m: d.getMonth() };
+  });
   /* 새 API 가 아직 없는 서버(404)면 홈 메뉴·홈 화면을 숨기고 나머지는 그대로 돈다 */
   const homeOn = clubOn && club.api === 'on';
   /* 일정 만들기·수정 창 — 캘린더(E6)·홈(E7)·결과 카드(E8)가 이 하나를 연다 */
@@ -96,6 +107,15 @@ export function SchedulerPage() {
     calSelect(ev.date);
     setOpenEvent(ev.id);
   }, [dropLink, calSelect, setOpenEvent]);
+  /* 홈에서 줄·"일정 자세히 보기"를 누르면 캘린더 화면으로 넘어가 그 일정 상세를 연다 */
+  const openFromHome = (ev: EventDto) => { nav.go('calendar'); openEvent(ev); };
+  /* 홈 미니 달력의 날짜 → 캘린더 화면에서 그날을 고른다. 열려 있던 일정 상세는 닫는다(캘린더의 날짜 고르기와 같게) */
+  const pickFromHome = (iso: string) => {
+    nav.go('calendar');
+    calSelect(iso);
+    if (cal.openEvent !== null) closeEvent();
+  };
+  const pendingCount = members.list?.filter(m => m.status === 'PENDING').length ?? 0;
   /* 연 일정이 목록에서 사라지면(지움·로그아웃) 패널도 닫는다 */
   const openGone = cal.openEvent !== null && !club.events.some(e => e.id === cal.openEvent);
   useEffect(() => { if (openGone) closeEvent(); }, [openGone, closeEvent]);
@@ -188,7 +208,7 @@ export function SchedulerPage() {
         view={nav.view} onView={nav.go} auth={auth} homeOn={homeOn}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
-        isAdmin={isAdmin} pendingCount={members.list?.filter(m => m.status === 'PENDING').length ?? 0}
+        isAdmin={isAdmin} pendingCount={pendingCount}
       >
         {nav.view === 'calendar' && <CalendarSide ctl={cal} clubOn={homeOn} />}
       </SideNav>
@@ -208,10 +228,18 @@ export function SchedulerPage() {
         </div>
 
         {homeOn && (
-          <div className={'view' + (nav.view === 'home' ? '' : ' off')}>
+          <div className={'view home-view' + (nav.view === 'home' ? '' : ' off')}>
             <header className="page-head">
               <h1>홈</h1>
             </header>
+            <HomePage
+              club={club} today={today} nickname={auth.member ? memberName(auth.member) : ''} isAdmin={isAdmin}
+              watchCount={watches.watches.length} watchLimit={watches.limit} pendingCount={pendingCount}
+              month={homeMonth} onMonth={stepHomeMonth}
+              onWatches={watches.openModal} onMembers={() => nav.go('members')}
+              onNewEvent={() => eventForm.openNew()} onCalc={() => nav.go('calc')}
+              onOpenEvent={openFromHome} onPickDay={pickFromHome}
+            />
           </div>
         )}
 
