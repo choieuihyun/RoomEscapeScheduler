@@ -450,8 +450,16 @@ export async function myPastEvents(
   return { events: r.events.map(normEvent), total: r.total };
 }
 
-export const freshThemes = (eventId: number, date: string | null, token: string): Promise<FreshDto> =>
-  authed(`${EVENTS}/${eventId}/fresh-themes${date ? `?date=${encodeURIComponent(date)}` : ''}`, token, 'GET');
+/* 배열 필드가 빠져 와도(배포 경주) 화면이 안 깨지게 — normEvent 와 같은 까닭 */
+const normFresh = (d: FreshDto): FreshDto => ({
+  ...d,
+  missing: d.missing ?? [],
+  noRecord: d.noRecord ?? [],
+  themes: (d.themes ?? []).map((t) => ({ ...t, sessions: t.sessions ?? [], playedBy: t.playedBy ?? [] })),
+});
+
+export const freshThemes = async (eventId: number, date: string | null, token: string): Promise<FreshDto> =>
+  normFresh(await authed<FreshDto>(`${EVENTS}/${eventId}/fresh-themes${date ? `?date=${encodeURIComponent(date)}` : ''}`, token, 'GET'));
 
 export const listClubMembers = (token: string): Promise<ClubMemberDto[]> =>
   authed('/api/club/members', token, 'GET');

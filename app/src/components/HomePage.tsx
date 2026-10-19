@@ -3,6 +3,7 @@ import { monthGrid, toISO, WEEKDAYS } from '../core';
 import {
   addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, nextMine, relDay, sortKeyDate, STATUS_LABEL, timeLabel, upcoming, weekday,
 } from '../clubEvents';
+import { playedCount } from '../played';
 import type { EventDto } from '../server';
 import type { UseClubEventsReturn } from '../useClubEvents';
 
@@ -150,11 +151,13 @@ export function HomePage({
               {shown.map((ev) => {
                 const st = eventStatus(ev);
                 const busy = club.busyIds.has(ev.id);
+                const played = playedCount(ev);
                 return (
                   <li key={ev.id} className="home-row">
                     <div className="home-row-main">
                       <div className="home-row-t">
                         <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
+                        {played > 0 && <span className="chip-info warn">해 봄 {played}</span>}
                         {/* 제목 단추의 ::after 가 줄 전체를 덮어 줄 어디를 눌러도 연다. 참여 단추는 그 위에 따로 있다 */}
                         <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
                       </div>

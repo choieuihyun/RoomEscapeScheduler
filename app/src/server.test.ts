@@ -296,5 +296,9 @@ describe('해 본 테마 API 호출', () => {
     fn = stubFetch(200, {});
     await freshThemes(7, null, 'T');
     expect(call(fn).url).toMatch(/fresh-themes$/);
+    /* 배열 필드가 빠져 와도 빈 배열로 채운다 */
+    stubFetch(200, { date: '2026-11-01', collected: true, checkedAt: null, themes: [{ id: 'a', name: 'x' }] });
+    const f = await freshThemes(7, '2026-11-01', 'T');
+    expect([f.missing, f.noRecord, f.themes[0].playedBy, f.themes[0].sessions]).toEqual([[], [], [], []]);
   });
 });

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useScheduler } from './scheduler/useScheduler';
 import { useTheme } from './useTheme';
 import { useTour } from './useTour';
-import { useLoadModal } from './useLoadModal';
+import { useLoadModal, type AddedTheme } from './useLoadModal';
 import { useAuth } from './useAuth';
 import { usePlans } from './usePlans';
 import { useSaveModal } from './useSaveModal';
@@ -138,6 +138,12 @@ export function SchedulerPage() {
     s.setOption('oEnd', o.oEnd);
     goView('calc');
     showToast(`시간대(${windowLabel(w)})를 조건에 넣었어요. 테마를 불러와 계산해 보세요.`);
+  };
+  /* 상세의 협의 도우미 "고른 테마 n개로 조합 계산" — 회차 불러오기처럼 카드로 넣고 계산 화면으로 */
+  const calcThemes = (items: AddedTheme[]) => {
+    s.addServerThemes(items);
+    goView('calc');
+    showToast(`테마 ${items.length}개를 넣었어요.`);
   };
   const pendingCount = members.list?.filter(m => m.status === 'PENDING').length ?? 0;
   /* 연 일정이 목록에서 사라지면(지움·로그아웃) 패널도 닫는다 */
@@ -291,7 +297,7 @@ export function SchedulerPage() {
               onLoaded={() => { goView('calc'); showToast('일정을 불러왔어요.'); }}
               club={club} clubOn={homeOn}
               onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent} onOpenEvent={openEvent}
-              onCalcWindow={calcWindow}
+              onCalcWindow={calcWindow} onCalcThemes={calcThemes}
             />
           </div>
         )}

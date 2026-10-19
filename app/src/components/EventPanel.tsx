@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { eventStatus, eventTitle, isUndecided, kakaoPost, longDayLabel, rangeLabel, STATUS_LABEL, timeLabel } from '../clubEvents';
 import { eventLink } from '../eventLink';
+import { playedCount, playedNames, playedPerPerson } from '../played';
 import { listClubMembers, sayClub, type ClubMemberDto, type EventDto } from '../server';
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
+import type { AddedTheme } from '../useLoadModal';
+import { EventHelper } from './EventHelper';
 import { EventTalk, EventTalkDone } from './EventTalk';
 
 /* 캘린더 오른쪽 패널의 동호회 일정 상세 (계획 Task E6, 목업 "캘린더 + 일정 상세").
@@ -17,12 +20,21 @@ async function loadMembers(): Promise<ClubMemberDto[]> {
   return listClubMembers(t);
 }
 
-export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onPicked }: {
+/* 경고 세모 — 해 본 테마 줄 */
+const WarnIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+  </svg>
+);
+
+export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onPicked, onCalcThemes }: {
   ev: EventDto; club: UseClubEventsReturn; meUid: string; onClose: () => void; onEdit: (ev: EventDto) => void;
   /* 정해진 날짜에 다 같이 되는 시간으로 조합 계산 조건을 채우고 계산 화면으로 */
   onCalcWindow?: (w: { start: number; end: number }) => void;
   /* 정하기·다시 미정으로 뒤 캘린더에서 그 날짜를 고른다 */
   onPicked?: (date: string) => void;
+  /* 협의 도우미에서 고른 테마를 계산 화면에 넣고 그리로 */
+  onCalcThemes?: (items: AddedTheme[]) => void;
 }) {
   const st = eventStatus(ev);
   const busy = club.busyIds.has(ev.id);
@@ -37,6 +49,10 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
   /* 날짜 미정이면 한 날짜를 정해진 것처럼 보이지 않게 후보 수만 */
   const when = undecided ? `날짜 미정 · 후보 ${ev.candidates.length}개` : longDayLabel(ev.date as string);
   const left = ev.capacity === null ? '' : full ? '마감' : `${ev.capacity - ev.count}자리 남음`;
+  const played = playedCount(ev);
+  const perPerson = playedPerPerson(ev);
+  /* 협의 도우미 — 참여자만. 날짜 미정이면 "언제 될까요?" 바로 아래, 정해진 날이면 후보 기록 아래 */
+  const helper = ev.joined && onCalcThemes ? <EventHelper ev={ev} onCalcThemes={onCalcThemes} /> : null;
 
   /* 내 응답 시간 칸에 적는 중에 패널의 다른 단추(정하기·참여 취소·예약 등)를 누르면, 칸의 blur 커밋이 먼저 요청을 보내
      단추가 busy 로 잠기고 누른 동작이 사라진다. 그때만 누르는 순간 포커스를 옮기지 않는다(터치도 pointerdown 으로).
@@ -70,6 +86,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
     <div className="evp" aria-label="일정 상세" onPointerDown={keepTimeFocus} onMouseDown={keepTimeFocus}>
       <div className="evp-head">
         <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
+        {played > 0 && <span className="chip-info warn">해 봄 {played}</span>}
         <span className="evp-tools">
           {ev.canManage && (
             <>
@@ -92,6 +109,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
       </div>
 
       {undecided && <EventTalk ev={ev} club={club} meUid={meUid} onPicked={onPicked} />}
+      {undecided && helper}
 
       {ev.segments.length > 0 && (
         <div className="evp-segs">
@@ -99,14 +117,26 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
             const prev = i > 0 ? ev.segments[i - 1] : null;
             /* 사이 이동 시간 = 다음 시작 − 이전 끝. 이전 끝을 모르면 적지 않는다 */
             const move = prev && prev.endMin !== null ? g.startMin - prev.endMin : null;
+            const by = playedNames(g, ev);
+            const card = (
+              <div className="evp-seg">
+                <b>{rangeLabel(g.startMin, g.endMin)}</b>
+                <span className="evp-seg-n">{g.themeName}</span>
+                {g.branchName && <span className="evp-seg-b">{g.branchName}</span>}
+              </div>
+            );
             return (
               <div key={i} className="evp-segwrap">
                 {move !== null && move >= 0 && <div className="evp-move">이동 {move}분</div>}
-                <div className="evp-seg">
-                  <b>{rangeLabel(g.startMin, g.endMin)}</b>
-                  <span className="evp-seg-n">{g.themeName}</span>
-                  {g.branchName && <span className="evp-seg-b">{g.branchName}</span>}
-                </div>
+                {by.length === 0 ? card : (
+                  <div className="evp-seg-played">
+                    {card}
+                    <p className="evp-seg-warn">
+                      <WarnIcon />
+                      <span>이 테마는 {by.map((n, j) => <span key={j}>{j > 0 && ', '}<b>{n}</b></span>)} 님이 이미 해 봤어요</span>
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -120,9 +150,10 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
         </div>
         <div className="evp-chips">
           {ev.participants.map((p) => (
-            <span key={p.uid} className="evp-chip">
+            <span key={p.uid} className={'evp-chip' + (perPerson.has(p.uid) ? ' played' : '')}>
               {p.nickname}
               {p.uid === ev.createdBy.uid && <i>만든 사람</i>}
+              {perPerson.has(p.uid) && <em>해 봄 {perPerson.get(p.uid)}</em>}
               {ev.canManage && (
                 <button
                   type="button" aria-label={`${p.nickname} 빼기`} disabled={busy}
@@ -174,6 +205,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
       )}
 
       {!undecided && ev.candidates.length > 0 && <EventTalkDone ev={ev} club={club} onCalcWindow={onCalcWindow} onPicked={onPicked} />}
+      {!undecided && helper}
 
       {ev.location && (
         <div className="evp-text">

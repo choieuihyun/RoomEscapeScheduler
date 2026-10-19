@@ -12,6 +12,8 @@ import { DayBranches } from './DayBranches';
 import { EventPanel } from './EventPanel';
 import { eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel, todayKst } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
+import type { AddedTheme } from '../useLoadModal';
+import { playedCount } from '../played';
 
 /* 캘린더 화면(§4.49) — 모달이던 것(§4.38·§4.40)을 왼쪽 메뉴의 한 화면으로 옮겼다.
    그룹웨어 월간 보기처럼 날짜 칸 안에 일정·감시 회차를 줄로 보여주고, 고른 날짜의
@@ -65,6 +67,8 @@ function chipText(ev: EventDto): string {
   return start === null ? label : `${label} ${fmt(start)}`;
 }
 const peopleText = (ev: EventDto) => (ev.capacity === null ? `${ev.count}` : `${ev.count}/${ev.capacity}`);
+/* 이 일정 테마를 이미 해 본 참여자 수 — 0 이면 아무것도 안 붙인다 */
+const playedText = (ev: EventDto) => { const n = playedCount(ev); return n > 0 ? `해 봄 ${n}` : ''; };
 
 /* 날짜 미정 일정은 후보 날짜마다 흐린 칩(cand)으로 — 누르면 그 후보 날짜를 고른 채 상세를 연다 */
 function ClubChip({ ev, iso, on, past, onOpen }: {
@@ -73,17 +77,28 @@ function ClubChip({ ev, iso, on, past, onOpen }: {
   const st = eventStatus(ev);
   const time = timeLabel(ev);
   const cand = isUndecided(ev);
+  const pl = playedText(ev);
   return (
     <button
       type="button" className={'cal-ev club ' + st + (cand ? ' cand' : '') + (on ? ' on' : '') + (past ? ' past' : '')}
-      title={`${STATUS_LABEL[st]}${cand ? ` · 후보 날짜(${ev.candidates.length}개 중)` : ''} · ${eventTitle(ev)}${time ? ' · ' + time : ''} · 참여 ${peopleText(ev)}`}
+      title={`${STATUS_LABEL[st]}${cand ? ` · 후보 날짜(${ev.candidates.length}개 중)` : ''} · ${eventTitle(ev)}${time ? ' · ' + time : ''} · 참여 ${peopleText(ev)}${pl ? ' · ' + pl : ''}`}
       aria-pressed={on}
       /* 칸(role=button)의 클릭·Enter·Space 처리로 번지지 않게 — 칸은 그 키에 preventDefault 를 건다.
          다른 키(←/→ 달 이동 등)는 그대로 둔다 */
       onClick={e => { e.stopPropagation(); onOpen(ev, iso); }}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
     >
-      <i className="cal-dot" /><span className="cal-ev-t">{chipText(ev)}</span><span className="cal-ev-n">{peopleText(ev)}</span>
+      <i className="cal-dot" /><span className="cal-ev-t">{chipText(ev)}</span>
+      {/* 좁은 달 칸에선 세모만 보이고 글자는 읽어 주기만 한다(floduler.css 의 @container) */}
+      {pl && (
+        <span className="cal-ev-p">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
+            <path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+          </svg>
+          <span className="cal-ev-pt">{pl}</span>
+        </span>
+      )}
+      <span className="cal-ev-n">{peopleText(ev)}</span>
     </button>
   );
 }
@@ -96,6 +111,7 @@ function ClubRow({ ev, iso, onOpen }: { ev: EventDto; iso: string; onOpen: (ev: 
   return (
     <button type="button" className="cal-club-row" onClick={() => onOpen(ev, iso)}>
       <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
+      {playedText(ev) && <span className="chip-info warn">{playedText(ev)}</span>}
       <span className="ccr-t">{eventTitle(ev)}</span>
       <span className="ccr-m">{when} · 참여 {peopleText(ev)}</span>
     </button>
@@ -208,7 +224,7 @@ function DayTimeline({ evs }: { evs: Ev[] }) {
 }
 
 export function CalendarPage({
-  ctl, active, plans, watches, auth, s, onLoaded, club, clubOn, onNewEvent, onEditEvent, onCloseEvent, onOpenEvent, onCalcWindow,
+  ctl, active, plans, watches, auth, s, onLoaded, club, clubOn, onNewEvent, onEditEvent, onCloseEvent, onOpenEvent, onCalcWindow, onCalcThemes,
 }: {
   ctl: UseCalendarReturn; active: boolean; plans: UsePlansReturn; watches: UseWatchesReturn;
   auth: UseAuthReturn; s: Scheduler; onLoaded: () => void;
@@ -218,6 +234,7 @@ export function CalendarPage({
   /* 일정을 패널에 연다(그 날짜도 고른다 — 날짜 미정 일정은 누른 후보 날짜). 링크(#e=) 일정이 아니면 주소의 #e= 를 지운다 */
   onOpenEvent: (ev: EventDto, date?: string) => void;
   onCalcWindow: (w: { start: number; end: number }) => void;
+  onCalcThemes: (items: AddedTheme[]) => void;
 }) {
   const grid = useMemo(() => monthGrid(ctl.cursor.y, ctl.cursor.m), [ctl.cursor.y, ctl.cursor.m]);
   const today = useMemo(() => toISO(new Date()), []);
@@ -425,7 +442,7 @@ export function CalendarPage({
           {openEv ? (
             <EventPanel
               key={openEv.id} ev={openEv} club={club} meUid={auth.member?.uid ?? auth.me?.uid ?? ''}
-              onClose={onCloseEvent} onEdit={onEditEvent} onCalcWindow={onCalcWindow} onPicked={ctl.select}
+              onClose={onCloseEvent} onEdit={onEditEvent} onCalcWindow={onCalcWindow} onPicked={ctl.select} onCalcThemes={onCalcThemes}
             />
           ) : (
           <>
