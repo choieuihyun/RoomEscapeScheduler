@@ -164,7 +164,7 @@ function Body({ m, create, update, adopt }: Props) {
         <label>인원</label>
         <div className="evf-chips" role="group" aria-label="인원">
           {[null, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-            <button key={n ?? 'none'} type="button" className={'evf-chip' + (f.capacity === n ? ' on' : '')}
+            <button key={n ?? 'none'} type="button" className={'chip-pick' + (f.capacity === n ? ' on' : '')}
               aria-pressed={f.capacity === n} onClick={() => set({ capacity: n })}>
               {n === null ? '제한 없음' : `${n}명`}
             </button>
@@ -176,8 +176,8 @@ function Body({ m, create, update, adopt }: Props) {
         <div className="mrow">
           <label>예약</label>
           <div className="mseg">
-            <button type="button" className={f.booked ? '' : 'on'} aria-pressed={!f.booked} onClick={() => set({ booked: false })}>예약 전</button>
-            <button type="button" className={f.booked ? 'on' : ''} aria-pressed={f.booked} onClick={() => set({ booked: true })}>예약 완료</button>
+            <button type="button" className={'chip-pick' + (f.booked ? '' : ' on')} aria-pressed={!f.booked} onClick={() => set({ booked: false })}>예약 전</button>
+            <button type="button" className={'chip-pick' + (f.booked ? ' on' : '')} aria-pressed={f.booked} onClick={() => set({ booked: true })}>예약 완료</button>
           </div>
         </div>
       )}

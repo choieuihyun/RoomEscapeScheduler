@@ -87,7 +87,7 @@ export function DayBranches({
         <p className="cal-side-h">그날 열려 있는 회차</p>
         <button type="button" className={'btn db-toggle' + (open ? ' on' : '')} aria-expanded={open}
           onClick={() => setOpen(!open)}>
-          지점 선택{picked.length > 0 && <b>{picked.length}</b>}
+          지점 선택{picked.length > 0 && <b className="badge-n">{picked.length}</b>}
         </button>
       </div>
       {day.listErr && <p className="mnote">{day.listErr}</p>}

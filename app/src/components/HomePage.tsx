@@ -118,7 +118,7 @@ export function HomePage({
                   aria-label={`${d.getMonth() + 1}월 ${d.getDate()}일${n ? `, 동호회 일정 ${n}개` : ''}`}
                 >
                   <span className="home-cal-num">{d.getDate()}</span>
-                  {n > 0 && <span className={'home-cal-n' + (iso < today ? ' past' : '')}>{n}</span>}
+                  {n > 0 && <span className={'badge-n sm' + (iso < today ? ' past' : '')}>{n}</span>}
                 </button>
               );
             })}
@@ -133,7 +133,7 @@ export function HomePage({
             {TABS.map((t) => (
               <button
                 key={t.id} type="button" role="tab" aria-selected={tab === t.id}
-                className={'home-tab' + (tab === t.id ? ' on' : '')}
+                className={'chip-pick' + (tab === t.id ? ' on' : '')}
                 onClick={() => { setTab(t.id); setPage(0); }}
               >{t.label}</button>
             ))}
@@ -152,7 +152,7 @@ export function HomePage({
                   <li key={ev.id} className="home-row">
                     <div className="home-row-main">
                       <div className="home-row-t">
-                        <span className={'st-badge ' + st}>{STATUS_LABEL[st]}</span>
+                        <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
                         {/* 제목 단추의 ::after 가 줄 전체를 덮어 줄 어디를 눌러도 연다. 참여 단추는 그 위에 따로 있다 */}
                         <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
                       </div>
@@ -190,7 +190,7 @@ export function HomePage({
         <section className="home-card home-next" aria-label="내 다음 일정">
           <div className="home-next-head">
             <h2 className="home-h">내 다음 일정</h2>
-            {next && <span className={'st-badge ' + eventStatus(next)}>{STATUS_LABEL[eventStatus(next)]}</span>}
+            {next && <span className={'chip-st ' + eventStatus(next)}>{STATUS_LABEL[eventStatus(next)]}</span>}
           </div>
           {next ? (
             <>

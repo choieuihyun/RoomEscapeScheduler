@@ -90,7 +90,7 @@ function ClubRow({ ev, onOpen }: { ev: EventDto; onOpen: (ev: EventDto) => void 
   const time = timeLabel(ev);
   return (
     <button type="button" className="cal-club-row" onClick={() => onOpen(ev)}>
-      <span className={'st-badge ' + st}>{STATUS_LABEL[st]}</span>
+      <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
       <span className="ccr-t">{eventTitle(ev)}</span>
       <span className="ccr-m">{time || '하루 종일'} · 참여 {peopleText(ev)}</span>
     </button>
@@ -295,7 +295,7 @@ export function CalendarPage({
 
   const kindBtn = (k: CalKind, label: string) => (
     <button
-      type="button" className={'cal-legend-item' + (ctl.filter[k] ? '' : ' off')}
+      type="button" className={'chip-pick cal-legend-item' + (ctl.filter[k] ? '' : ' off')}
       aria-pressed={ctl.filter[k]} onClick={() => ctl.toggleKind(k)}
     ><i className={'cal-key ' + k} />{label}</button>
   );
@@ -310,7 +310,7 @@ export function CalendarPage({
         <div className="cal-modes" role="group" aria-label="보기">
           {(['month', 'week', 'day'] as const).map(m => (
             <button
-              key={m} type="button" className={'cal-mode' + (ctl.mode === m ? ' on' : '')}
+              key={m} type="button" className={'chip-pick' + (ctl.mode === m ? ' on' : '')}
               aria-pressed={ctl.mode === m} onClick={() => ctl.setMode(m)}
             >{m === 'month' ? '월' : m === 'week' ? '주' : '일'}</button>
           ))}

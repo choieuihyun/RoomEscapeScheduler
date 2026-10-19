@@ -19,8 +19,8 @@ export function SaveModal({ m }: { m: UseSaveModalReturn }) {
         <div className="mrow">
           <label>구분</label>
           <div className="mseg">
-            <button type="button" className={m.status === 'wish' ? 'on' : ''} onClick={() => m.setStatus('wish')}>하고 싶은 일정</button>
-            <button type="button" className={m.status === 'done' ? 'on' : ''} onClick={() => m.setStatus('done')}>다녀온 일정</button>
+            <button type="button" className={'chip-pick' + (m.status === 'wish' ? ' on' : '')} onClick={() => m.setStatus('wish')}>하고 싶은 일정</button>
+            <button type="button" className={'chip-pick' + (m.status === 'done' ? ' on' : '')} onClick={() => m.setStatus('done')}>다녀온 일정</button>
           </div>
         </div>
         <div className="mrow">

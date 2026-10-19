@@ -34,8 +34,8 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
   const nickname = m?.nickname ?? null;
   const name = nickname || auth.me.id || '가입 전';
   const role = m?.role ?? null;
-  const chip = m?.status === 'PENDING' ? { cls: 'wait', text: '승인 대기' }
-    : m?.status === 'APPROVED' && role === 'ADMIN' ? { cls: 'admin', text: '운영진' }
+  const chip = m?.status === 'PENDING' ? { cls: 'warn', text: '승인 대기' }
+    : m?.status === 'APPROVED' && role === 'ADMIN' ? { cls: 'role', text: '운영진' }
     : null;
   const needJoin = m?.status === 'NONE' || m?.status === 'REJECTED';
 
@@ -51,7 +51,7 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
         <span className="acct-ava" aria-hidden="true">{[...name][0]}</span>
         <div className="acct-who">
           <b title={name}>{name}{nickname || auth.me.id ? ' 님' : ''}</b>
-          {chip && <span className={'acct-chip ' + chip.cls}>{chip.text}</span>}
+          {chip && <span className={'chip-info ' + chip.cls}>{chip.text}</span>}
           {nickname && auth.me.id && <span className="acct-sub">아이디: {auth.me.id}</span>}
         </div>
       </div>

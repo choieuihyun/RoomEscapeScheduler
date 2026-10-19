@@ -35,9 +35,13 @@
   --red:#FF502A;   --red-text:#C92208;  --red-soft:#FFE4DC;  --red-line:#FFBCAF;
   --amber:#E47B37; --amber-text:#99562C; --amber-soft:#FFEDDC; --amber-line:#FFD9B0;
   /* 동호회 일정 상태 색 — 협의 중 · 예약 전 · 예약 완료 (글자/바탕) */
-  --st-talk-fg:#5B3CC4;   --st-talk-bg:#EEE9FD;   /* 협의 중 — 회색이면 흰 바탕에 묻혀 보라로 (2026-10-19) */
-  --st-before-fg:#99562C; --st-before-bg:#FFEDDC;
-  --st-done-fg:#0D7738;   --st-done-bg:#E3F4E8;
+  --st-talk-fg:#5B3CC4;   /* 협의 중 — 회색이면 흰 바탕에 묻혀 보라로 (2026-10-19) */
+  --st-before-fg:#99562C;
+  --st-done-fg:#0D7738;
+  /* 칩(다우오피스 계열, 2026-10-19) — 바탕은 --surface, 색은 테두리(-line)와 글자(-fg). 마감은 회색 */
+  --st-talk-line:#8B6CF2; --st-before-line:#E47B37; --st-done-line:#00AF52; --st-closed-line:#C4C5C6;
+  --st-closed-fg:#6B6C6E;  /* surface 대비 5.2:1 */
+  --badge-bg:#117182; --badge-past-bg:#757678;  /* 숫자 동그라미 — 흰 글자 대비 4.5:1 이상 */
 
   /* 테마별 컬러 코딩 — ThemeCard 왼쪽 띠, 결과 타임라인 블록에 순환 적용
      (캘린더별 색). 참고 시스템의 사용자 지정 태그 색에서 서로 잘 갈리는 6개를 골랐다.
@@ -89,9 +93,12 @@
     --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
     --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
     --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
-    --st-talk-fg:#CDB8FF;   --st-talk-bg:#33285A;
-    --st-before-fg:#FFA45E; --st-before-bg:#64371A;
-    --st-done-fg:#6ED688;   --st-done-bg:#194C28;
+    --st-talk-fg:#CDB8FF;
+    --st-before-fg:#FFA45E;
+    --st-done-fg:#6ED688;
+    --st-talk-line:#8B6CF2; --st-before-line:#E47B37; --st-done-line:#00AF52; --st-closed-line:#666768;
+    --st-closed-fg:#B4B5B7;
+    --badge-bg:#117182; --badge-past-bg:#666768;
 
     --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
     --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
@@ -124,9 +131,12 @@
   --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
   --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
   --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
-  --st-talk-fg:#CDB8FF;   --st-talk-bg:#33285A;
-  --st-before-fg:#FFA45E; --st-before-bg:#64371A;
-  --st-done-fg:#6ED688;   --st-done-bg:#194C28;
+  --st-talk-fg:#CDB8FF;
+  --st-before-fg:#FFA45E;
+  --st-done-fg:#6ED688;
+  --st-talk-line:#8B6CF2; --st-before-line:#E47B37; --st-done-line:#00AF52; --st-closed-line:#666768;
+  --st-closed-fg:#B4B5B7;
+  --badge-bg:#117182; --badge-past-bg:#666768;
 
   --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
   --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
@@ -480,13 +490,8 @@ button:active{transform:scale(.97)}
 .mrow label{font-size:14px;color:var(--ink);font-weight:500}
 .mrow label .dim{color:var(--ink3);font-weight:400}
 .mrow input,.mrow textarea,.mrow select{width:100%;box-sizing:border-box;font-size:14px}
-.mseg{display:flex;gap:4px;border:none;border-radius:var(--r-sm);
-  background:var(--surface2);padding:4px}
-.mseg button{flex:1;background:transparent;border:none;color:var(--ink3);
-  padding:9px 0;font-size:13.5px;font-family:inherit;cursor:pointer;
-  border-radius:var(--r-xs);font-weight:500}
-.mseg button.on{background:var(--surface);color:var(--ink);font-weight:700;
-  box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.mseg{display:flex;gap:6px}
+.mseg .chip-pick{flex:1;height:36px;font-size:13.5px}
 .merr{font-size:13px;color:var(--red-text);min-height:18px;line-height:1.45;font-weight:500}
 .mbtns{display:flex;gap:8px;margin-top:8px}
 .mbtns .btn-go{flex:1;height:40px;padding:0;font-size:14px;font-weight:500}
@@ -623,7 +628,6 @@ button:active{transform:scale(.97)}
 .lnb-ic{flex:none;color:var(--ink3)}
 .lnb-item.on .lnb-ic{color:var(--blue-text)}
 .lnb-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.lnb-count{font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
 .lnb-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px;padding-top:12px;border-top:1px solid var(--line)}
 .lnb-tool{color:var(--ink2)}
 .lnb-acct{justify-content:flex-start;padding:10px 10px 0;min-height:0;gap:8px}
@@ -724,15 +728,10 @@ button:active{transform:scale(.97)}
   text-align:center;font-variant-numeric:tabular-nums}
 .cal-today{margin-left:6px;height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs)}
 .cal-modes{margin-left:auto;display:inline-flex;gap:4px}
-.cal-mode{height:28px;min-width:40px;padding:0 10px;font-size:13px;background:var(--btn-bg);color:var(--tab-text);
-  border:1px solid var(--tab-line);border-radius:14px}
-.cal-mode:hover{background:var(--btn-bg-hover);border-color:var(--tab-line-hover)}
-.cal-mode.on{background:var(--tab-on-bg);border-color:var(--tab-on-bg);color:#fff;font-weight:500}
 /* 종류별 보이기 — 넓은 화면에선 왼쪽 메뉴의 "내 캘린더" 가 하므로 좁은 화면에서만 보인다 */
 .cal-legend{display:none;gap:6px;flex-wrap:wrap;margin:0 0 12px}
-.cal-legend-item{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;font-size:12.5px;
-  color:var(--ink2);background:var(--btn-bg);border:1px solid var(--btn-line);border-radius:14px}
-.cal-legend-item.off{opacity:.45}
+.cal-legend-item{height:28px;padding:0 10px;font-size:12.5px}
+.cal-legend-item.off{opacity:.55}
 .cal-legend-item.off .cal-key{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ev)}
 @media(max-width:900px){.cal-legend{display:flex}}
 .cal-key{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--ev)}
@@ -796,15 +795,16 @@ button:active{transform:scale(.97)}
 
 /* ── 동호회 일정(계획 Task E6) — 칩·상태 배지·상세 패널. 상태 색은 --st-* 토큰 세 쌍 ── */
 .cal-key.club{--ev:var(--blue-text)}
-:is(.st-badge,.cal-ev.club,.cal-dot,.evp-toggle button).talk{--st-fg:var(--st-talk-fg);--st-bg:var(--st-talk-bg)}
-:is(.st-badge,.cal-ev.club,.cal-dot,.evp-toggle button).before{--st-fg:var(--st-before-fg);--st-bg:var(--st-before-bg)}
-:is(.st-badge,.cal-ev.club,.cal-dot,.evp-toggle button).done{--st-fg:var(--st-done-fg);--st-bg:var(--st-done-bg)}
+:is(.chip-st,.chip-info,.cal-ev.club,.cal-dot).talk{--st-fg:var(--st-talk-fg);--st-line:var(--st-talk-line)}
+:is(.chip-st,.chip-info,.cal-ev.club,.cal-dot).before{--st-fg:var(--st-before-fg);--st-line:var(--st-before-line)}
+:is(.chip-st,.chip-info,.cal-ev.club,.cal-dot).done{--st-fg:var(--st-done-fg);--st-line:var(--st-done-line)}
+:is(.chip-st,.chip-info,.cal-ev.club,.cal-dot).closed{--st-fg:var(--st-closed-fg);--st-line:var(--st-closed-line)}
 .cal-dot{flex:none;display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--st-fg)}
 .cal-ev.club{--ev:var(--st-fg);display:flex;align-items:center;gap:5px;width:100%;flex:none;font-family:inherit;
-  text-align:left;cursor:pointer;border:none;border-left:0;background:var(--st-bg);color:var(--ink)}
+  text-align:left;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0 5px}
 .cal-ev.club:active{transform:none}
-.cal-ev.club:hover{box-shadow:inset 0 0 0 1px var(--st-fg)}
-.cal-ev.club.on{box-shadow:inset 0 0 0 1.5px var(--blue-text)}
+.cal-ev.club:hover{border-color:var(--st-line)}
+.cal-ev.club.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .cal-ev.club.past{opacity:.55}
 .cal-ev.club:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
 .cal-ev-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -814,8 +814,29 @@ button:active{transform:scale(.97)}
 .cal-stlegend span{display:inline-flex;align-items:center;gap:5px}
 .cal-day-club{padding:10px 12px 2px;gap:4px}
 .cal-day-club .cal-ev.club{height:26px;font-size:13px}
-.st-badge{flex:none;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:var(--pill);
-  color:var(--st-fg);background:var(--st-bg);white-space:nowrap}
+.chip-st,.chip-info{flex:none;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;box-sizing:border-box;
+  border:1px solid var(--st-line,var(--line2));border-radius:var(--pill);background:var(--surface);
+  color:var(--st-fg,var(--ink2));font-size:11.5px;font-weight:600;white-space:nowrap}
+.chip-info.warn{--st-fg:var(--st-before-fg);--st-line:var(--st-before-line)}
+.chip-info.ok{--st-fg:var(--st-done-fg);--st-line:var(--st-done-line)}
+.chip-info.muted{--st-fg:var(--st-closed-fg);--st-line:var(--st-closed-line)}
+.chip-info.role{--st-fg:var(--blue-text);--st-line:var(--blue-text)}
+.chip-info.danger{--st-fg:var(--red-text);--st-line:var(--red-line)}
+/* 고르는 칩 — 선택은 진한 테두리 + 굵은 글자, 아니면 옅은 테두리 */
+.chip-pick{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 13px;
+  box-sizing:border-box;border:1px solid var(--line2);border-radius:var(--pill);background:var(--surface);color:var(--ink2);
+  font-family:inherit;font-size:13px;font-weight:400;white-space:nowrap;cursor:pointer}
+.chip-pick:hover{border-color:var(--tab-line-hover);color:var(--ink)}
+.chip-pick:active{transform:none}
+.chip-pick.on,.chip-pick[aria-pressed="true"],.chip-pick[aria-selected="true"]{border-color:var(--ink);color:var(--ink);font-weight:600}
+.chip-pick:focus-visible{outline:none;box-shadow:var(--ring)}
+.chip-pick:disabled{opacity:.5;cursor:default}
+/* 숫자 — 채운 동그라미, 지난 것은 회색 */
+.badge-n{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;
+  border-radius:var(--pill);background:var(--badge-bg);color:#fff;font-size:11px;font-weight:600;line-height:1;
+  font-variant-numeric:tabular-nums}
+.badge-n.sm{min-width:16px;height:13px;padding:0 4px;font-size:10px}
+.badge-n.past,.badge-n.muted{background:var(--badge-past-bg)}
 .cal-club-row{width:100%;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0 0 6px;padding:10px 12px;
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);text-align:left;color:var(--ink);
   font-family:inherit;cursor:pointer}
@@ -862,12 +883,7 @@ button:active{transform:scale(.97)}
 .evp-book{display:flex;flex-direction:column;gap:6px;padding-top:14px;border-top:1px solid var(--line)}
 .evp-row{display:flex;align-items:center;gap:10px}
 .evp-lbl{font-size:14px;font-weight:600;color:var(--ink)}
-.evp-toggle{margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
-.evp-toggle button{height:32px;padding:0 12px;border:none;background:var(--surface);font-family:inherit;font-size:13px;
-  color:var(--ink2);cursor:pointer}
-.evp-toggle button+button{border-left:1px solid var(--line)}
-.evp-toggle button:active{transform:none}
-.evp-toggle button.on{background:var(--st-bg);color:var(--st-fg);font-weight:600}
+.evp-toggle{margin-left:auto;display:inline-flex;gap:6px}
 .evp-hint{margin:0;font-size:12px;color:var(--ink3)}
 .evp-text{display:flex;flex-direction:column;gap:6px}
 .evp-text p{margin:0;font-size:13.5px;color:var(--ink2);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -919,17 +935,9 @@ button:active{transform:scale(.97)}
 .home-cal-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:var(--r-sm);
   font-size:13px;font-variant-numeric:tabular-nums}
 .home-cal-d.today .home-cal-num{background:var(--ink);color:var(--surface);font-weight:700}
-.home-cal-n{min-width:18px;height:14px;padding:0 4px;box-sizing:border-box;border-radius:999px;font-size:10px;line-height:14px;
-  font-weight:600;color:#fff;background:var(--blue);font-variant-numeric:tabular-nums}
-.home-cal-n.past{color:var(--ink2);background:var(--chip-bg)}
 
 .home-up{padding:20px 20px 12px}
-.home-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:2px;overflow-x:auto}
-.home-tab{flex:none;height:38px;padding:0 14px;border:none;border-bottom:2px solid transparent;background:none;
-  font-family:inherit;font-size:14px;color:var(--ink2);cursor:pointer;margin-bottom:-1px}
-.home-tab:hover{color:var(--ink)}
-.home-tab:active{transform:none}
-.home-tab.on{border-bottom-color:var(--ink);color:var(--ink);font-weight:600}
+.home-tabs{display:flex;gap:6px;margin-bottom:8px;padding:2px;overflow-x:auto}
 .home-list{list-style:none;margin:0;padding:0}
 /* 줄 = 보통 li. 제목이 실제 단추이고 그 ::after 가 줄 전체를 덮는다(줄 어디를 눌러도 상세). 참여 단추는 z-index 로 그 위 */
 .home-row{position:relative;display:flex;align-items:center;gap:10px;padding:12px 6px;margin:0 -6px;border-bottom:1px solid var(--line);
@@ -963,7 +971,7 @@ button:active{transform:scale(.97)}
 
 .home-next-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
 .home-next-head .home-h{margin:0}
-.home-next-head .st-badge{margin-left:auto}
+.home-next-head .chip-st{margin-left:auto}
 .home-next-date{font-size:13.5px;color:var(--ink2);margin-bottom:10px;font-variant-numeric:tabular-nums}
 .home-next-title{font-size:14px;font-weight:600;margin-bottom:8px;overflow-wrap:anywhere}
 .home-next-box{background:var(--surface2);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
@@ -1016,8 +1024,6 @@ button:active{transform:scale(.97)}
 .db-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .db-head .cal-side-h{margin:0}
 .db-toggle{height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs);gap:6px}
-.db-toggle b{font-size:11.5px;font-weight:600;color:#fff;background:var(--blue);border-radius:999px;
-  min-width:18px;height:18px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center}
 .db-toggle.on{border-color:var(--field-focus)}
 .db-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
 .db-chip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 4px 0 10px;font-size:12.5px;
@@ -1083,7 +1089,7 @@ button:active{transform:scale(.97)}
   /* 동호회 일정 칩도 월 보기에선 상태 색 점으로. 주 보기·일 보기는 글자를 그대로 */
   .cal-ev.club{width:6px;height:6px;padding:0;gap:0;background:var(--st-fg);flex:none}
   .cal-ev.club>*{display:none}
-  .cal-weekview .cal-ev.club,.cal-day-club .cal-ev.club{width:auto;height:18px;padding:0 3px;background:var(--st-bg);
+  .cal-weekview .cal-ev.club,.cal-day-club .cal-ev.club{width:auto;height:18px;padding:0 3px;background:var(--surface);
     border-left:2px solid var(--st-fg);font-size:10.5px}
   .cal-weekview .cal-ev.club>.cal-ev-t,.cal-day-club .cal-ev.club>*{display:inline}
   .cal-day-club .cal-ev.club{height:26px;padding:0 8px;font-size:13px;gap:5px;border-left:0}
@@ -1177,9 +1183,6 @@ button:active{transform:scale(.97)}
 .acct-who{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0}
 .acct-who b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .acct-sub{flex-basis:100%;font-size:12px;color:var(--ink3)}
-.acct-chip{font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
-.acct-chip.admin{color:var(--blue-text);background:var(--blue-soft)}
-.acct-chip.wait{color:var(--amber-text);background:var(--amber-soft)}
 .acct-join{align-self:flex-start;height:32px;padding:0 12px}
 .acct-out{align-self:flex-start;height:32px;padding:0 12px}
 .acct-linkbtn{display:none}
@@ -1189,7 +1192,7 @@ button:active{transform:scale(.97)}
 .acct-link>span{font-size:12.5px;line-height:1.6;color:var(--ink2)}
 .acct-link .merr{margin:0;min-height:0;font-size:12.5px}
 .acct-link .merr:empty{display:none}
-.lnb-tag{margin-left:auto;font-size:11.5px;color:var(--ink3);white-space:nowrap}
+.lnb-tag{margin-left:auto}
 
 /* 접은 메뉴 — 머리글자만, 연결 상자는 눌러야 옆에 뜬다 */
 .lnb.folded .acct-wrap{align-items:center;gap:6px}
@@ -1223,8 +1226,6 @@ button:active{transform:scale(.97)}
 }
 
 /* ── 멤버 관리(운영진, §4.54) ── */
-.lnb-badge{min-width:18px;height:18px;padding:0 6px;border-radius:var(--pill);background:var(--blue);color:#fff;
-  font-size:11.5px;font-weight:600;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}
 .lnb.folded .lnb-badge{display:none}
 .mem{display:flex;flex-direction:column;gap:22px;padding-bottom:48px}
 .mem-sec{display:flex;flex-direction:column;gap:10px}
@@ -1251,15 +1252,12 @@ button:active{transform:scale(.97)}
 .mem-table th:first-child,.mem-table td:first-child{padding-left:18px}
 .mem-table th:last-child,.mem-table td:last-child{padding-right:18px}
 .mem-table tr:last-child td{border-bottom:none}
-.mem-role{font-size:11.5px;font-weight:600;color:var(--blue-text);background:var(--blue-soft);border-radius:var(--pill);padding:2px 9px}
 .mem-yes{color:var(--green-text)}
 .mem-no{color:var(--amber-text)}
 .mem-act{text-align:right;white-space:nowrap}
 .mem-act .btn{height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs);margin-left:6px}
 .mem-danger{color:var(--red-text);border-color:var(--red-line)}
 .mem-danger:hover{color:var(--red-text);background:var(--red-soft)}
-.mem-state{font-size:11.5px;font-weight:600;border-radius:var(--pill);padding:2px 9px;color:var(--ink2);background:var(--chip-bg)}
-.mem-state.REMOVED{color:var(--red-text);background:var(--red-soft)}
 .mem-note,.mem-empty{margin:0;font-size:12.5px;color:var(--ink2)}
 .mem-err{margin:0;padding:10px 14px;font-size:13.5px;color:var(--red-text);background:var(--red-soft);
   border:1px solid var(--red-line);border-radius:var(--r-sm)}
@@ -1291,9 +1289,6 @@ button:active{transform:scale(.97)}
 .evf-s-del{flex:0 0 36px;height:36px;padding:0}
 .evf-add{align-self:flex-start;height:34px;padding:0 12px;font-size:13px}
 .evf-chips{display:flex;flex-wrap:wrap;gap:6px}
-.evf-chip{height:32px;padding:0 12px;border-radius:var(--pill);font:inherit;font-size:13px;font-weight:500;
-  cursor:pointer;color:var(--ink2);background:var(--chip-bg);border:1px solid var(--chip-line)}
-.evf-chip.on{color:var(--ink);font-weight:700;border-color:var(--ink)}
 @media(max-width:560px){
   .evf-modal{padding:0}
   .evf-modal .mbox{max-width:none;height:100%;max-height:none;border-radius:0;border:none}

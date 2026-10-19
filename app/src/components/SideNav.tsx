@@ -69,20 +69,20 @@ export function SideNav({
           <button className={item('calendar')} type="button" onClick={() => onView('calendar')} title="캘린더"
             aria-current={view === 'calendar' ? 'page' : undefined}>
             <IcCal /><span className="lnb-txt">캘린더</span>
-            {gated && <span className="lnb-tag">승인 후</span>}
+            {gated && <span className="chip-info muted lnb-tag">승인 후</span>}
           </button>
         )}
         {auth.cloudOn && (
           <button className="lnb-item" type="button" onClick={onWatches} title="빈자리 알림">
             <IcBell /><span className="lnb-txt">빈자리 알림</span>
-            {gated ? <span className="lnb-tag">승인 후</span> : <span className="lnb-count">{watchCount}/{watchLimit}</span>}
+            {gated ? <span className="chip-info muted lnb-tag">승인 후</span> : <span className="badge-n muted lnb-count">{watchCount}/{watchLimit}</span>}
           </button>
         )}
         {isAdmin && (
           <button className={item('members')} type="button" onClick={() => onView('members')} title="멤버 관리"
             aria-current={view === 'members' ? 'page' : undefined}>
             <IcPeople /><span className="lnb-txt">멤버 관리</span>
-            {pendingCount > 0 && <span className="lnb-badge" aria-label={`승인 대기 ${pendingCount}명`}>{pendingCount}</span>}
+            {pendingCount > 0 && <span className="badge-n lnb-badge" aria-label={`승인 대기 ${pendingCount}명`}>{pendingCount}</span>}
           </button>
         )}
       </nav>

@@ -57,7 +57,7 @@ export function MembersPage({ ctl, meUid }: { ctl: UseMembersReturn; meUid: stri
                     return (
                       <tr key={m.uid}>
                         <td><b>{memberName(m)}</b></td>
-                        <td>{admin ? <span className="mem-role">운영진</span> : '멤버'}</td>
+                        <td>{admin ? <span className="chip-info role">운영진</span> : '멤버'}</td>
                         <td className={m.hasDevice ? 'mem-yes' : 'mem-no'}>{m.hasDevice ? '있음' : '없음'}</td>
                         <td className="mem-sub">{formatKst(m.decidedAt).split(' ').slice(0, 2).join(' ') || '—'}</td>
                         <td className="mem-act">
@@ -88,7 +88,7 @@ export function MembersPage({ ctl, meUid }: { ctl: UseMembersReturn; meUid: stri
               {parts.past.map(m => (
                 <div className="mem-row" key={m.uid}>
                   <b>{memberName(m)}</b>
-                  <span className={'mem-state ' + m.status}>{m.status === 'REJECTED' ? '거절함' : '내보냄'}</span>
+                  <span className={'chip-info ' + (m.status === 'REMOVED' ? 'danger' : 'muted')}>{m.status === 'REJECTED' ? '거절함' : '내보냄'}</span>
                   <span className="mem-sub">{formatKst(m.decidedAt) || formatKst(m.createdAt)}</span>
                   <span className="mem-btns">
                     {m.status === 'REJECTED'

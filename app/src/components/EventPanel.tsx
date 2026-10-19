@@ -53,7 +53,7 @@ export function EventPanel({ ev, club, onClose, onEdit }: {
   return (
     <div className="evp" aria-label="일정 상세">
       <div className="evp-head">
-        <span className={'st-badge ' + st}>{STATUS_LABEL[st]}</span>
+        <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
         <span className="evp-tools">
           {ev.canManage && (
             <>
@@ -145,9 +145,9 @@ export function EventPanel({ ev, club, onClose, onEdit }: {
           <div className="evp-row">
             <span className="evp-lbl">예약</span>
             <span className="evp-toggle" role="group" aria-label="예약 상태">
-              <button type="button" className={ev.booked ? '' : 'on before'} aria-pressed={!ev.booked} disabled={busy}
+              <button type="button" className={'chip-pick' + (ev.booked ? '' : ' on')} aria-pressed={!ev.booked} disabled={busy}
                 onClick={() => { if (ev.booked) void club.setBooked(ev.id, false); }}>예약 전</button>
-              <button type="button" className={ev.booked ? 'on done' : ''} aria-pressed={ev.booked} disabled={busy}
+              <button type="button" className={'chip-pick' + (ev.booked ? ' on' : '')} aria-pressed={ev.booked} disabled={busy}
                 onClick={() => { if (!ev.booked) void club.setBooked(ev.id, true); }}>예약 완료</button>
             </span>
           </div>
