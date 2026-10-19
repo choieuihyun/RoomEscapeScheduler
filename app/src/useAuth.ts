@@ -102,7 +102,9 @@ export function useAuth() {
         setMember(await loadMember());
         cloud().then(C => C.providers()).then(setProviderIds).catch(() => { /* noop */ });
       } else if (r.kind === 'error') {
-        setErr(r.message); setOpen(true);
+        /* 연결 실패, 또는 이미 로그인한 사람의 실패는 로그인 창이 아니라 계정 자리 연결 상자에 보인다 */
+        if (r.mode === 'link' || (!r.mode && !!localStorage.getItem(SEEN_KEY))) setLinkErr(r.message);
+        else { setErr(r.message); setOpen(true); }
       }
       setAuthLoading(false);
     })();
@@ -145,7 +147,8 @@ export function useAuth() {
   const openAuth = useCallback(() => {
     setErr(''); setOpen(true);
   }, []);
-  const closeAuth = useCallback(() => { setOpen(false); setPw(''); }, []);
+  /* 닫으면 "로그인 직후 이어 열기"도 취소한다 — 안 그러면 member 가 늦게 와서 다시 튀어나온다 */
+  const closeAuth = useCallback(() => { afterLogin.current = false; setOpen(false); setPw(''); }, []);
 
   const submit = useCallback(async () => {
     const cleanId = id.trim().toLowerCase();

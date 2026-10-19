@@ -6,6 +6,9 @@ import { GoogleMark, KakaoMark } from './SsoMarks';
    접힌 메뉴·좁은 화면에선 이름 대신 동그란 머리글자만 두고, 연결 상자는 눌러야 뜨는 작은 창이 된다. */
 export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
   const [linkOpen, setLinkOpen] = useState(false);
+  /* 연결 실패 문구가 오면 팝업(접힌 메뉴·좁은 화면)을 저절로 펴서 보이게 한다. 사용자가 닫은 문구는 다시 안 편다 */
+  const [closedErr, setClosedErr] = useState('');
+  const popOpen = linkOpen || (!!auth.linkErr && closedErr !== auth.linkErr);
 
   if (!auth.cloudOn) {
     return (
@@ -43,7 +46,7 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
   const showLink = isPassword && !(googleLinked && kakaoDone);
 
   return (
-    <div className={'acct-wrap' + (linkOpen ? ' open' : '')}>
+    <div className={'acct-wrap' + (popOpen ? ' open' : '')}>
       <div className="acct-id">
         <span className="acct-ava" aria-hidden="true">{[...name][0]}</span>
         <div className="acct-who">
@@ -57,8 +60,8 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
       )}
       {showLink && (
         <>
-          <button className="btn acct-linkbtn" type="button" aria-expanded={linkOpen}
-            onClick={() => setLinkOpen(o => !o)}>연결</button>
+          <button className="btn acct-linkbtn" type="button" aria-expanded={popOpen}
+            onClick={() => { if (popOpen) { setLinkOpen(false); setClosedErr(auth.linkErr); } else setLinkOpen(true); }}>연결</button>
           <div className="acct-link">
             <b>카카오·구글을 연결해 두세요</b>
             <span>연결하면 다음부터 버튼 한 번으로 들어와요. 지금 일정과 빈자리 알림은 그대로 이어져요.</span>

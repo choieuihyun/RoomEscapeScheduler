@@ -10,7 +10,8 @@ export type KakaoReturnResult =
   | { kind: 'none' }
   | { kind: 'signedIn' }
   | { kind: 'linked' }
-  | { kind: 'error'; message: string }
+  /* mode: 왕복을 연 뒤의 오류면 그 왕복의 종류. 만료·취소처럼 왕복을 못 연 경우는 없다 */
+  | { kind: 'error'; message: string; mode?: KakaoMode }
 
 export interface KakaoReturnDeps {
   search: string
@@ -55,7 +56,7 @@ export async function handleKakaoReturn(d: KakaoReturnDeps): Promise<KakaoReturn
   d.replaceUrl(clean.toString())
   // 이 확인이 link-CSRF 의 유일한 방어다(서버는 state 를 모른다). 맡긴 왕복이 없거나 state 가 다르면 어떤 교환도 하지 않는다.
   if (!trip) return { kind: 'error', message: EXPIRED }
-  if (!d.cloudOn) return { kind: 'error', message: NOT_SET }
+  if (!d.cloudOn) return { kind: 'error', message: NOT_SET, mode: trip.mode }
 
   try {
     if (trip.mode === 'login') {
@@ -64,10 +65,10 @@ export async function handleKakaoReturn(d: KakaoReturnDeps): Promise<KakaoReturn
       return { kind: 'signedIn' }
     }
     const token = await d.idToken()
-    if (!token) return { kind: 'error', message: '로그인해 주세요.' }
+    if (!token) return { kind: 'error', message: '로그인해 주세요.', mode: trip.mode }
     await d.kakaoLink(r.code, d.redirectUri, token)
     return { kind: 'linked' }
   } catch (e) {
-    return { kind: 'error', message: sayClub(e) }
+    return { kind: 'error', message: sayClub(e), mode: trip.mode }
   }
 }

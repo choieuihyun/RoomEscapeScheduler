@@ -17,7 +17,8 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   const status = auth.member?.status;
   let body;
   if (auth.me && auth.memberLoading) {
-    body = <><h3>확인하는 중…</h3><p className="msub">동호회 가입 상태를 불러오고 있어요.</p></>;
+    body = <><h3>확인하는 중…</h3><p className="msub">동호회 가입 상태를 불러오고 있어요.</p>
+      <div className="mbtns"><button className="btn" type="button" onClick={auth.closeAuth}>닫기</button></div></>;
   } else if (auth.me && (status === 'NONE' || status === 'REJECTED')) {
     body = <JoinPanel key={status} auth={auth} />;
   } else if (auth.me && status === 'PENDING') {
