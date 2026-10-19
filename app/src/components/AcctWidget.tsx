@@ -32,7 +32,7 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
 
   const m = auth.member;
   const nickname = m?.nickname ?? null;
-  const name = nickname || auth.me.id || '로그인됨';
+  const name = nickname || auth.me.id || '가입 전';
   const role = m?.role ?? null;
   const chip = m?.status === 'PENDING' ? { cls: 'wait', text: '승인 대기' }
     : m?.status === 'APPROVED' && role === 'ADMIN' ? { cls: 'admin', text: '운영진' }
@@ -50,7 +50,7 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
       <div className="acct-id">
         <span className="acct-ava" aria-hidden="true">{[...name][0]}</span>
         <div className="acct-who">
-          <b title={name}>{name} 님</b>
+          <b title={name}>{name}{nickname || auth.me.id ? ' 님' : ''}</b>
           {chip && <span className={'acct-chip ' + chip.cls}>{chip.text}</span>}
           {nickname && auth.me.id && <span className="acct-sub">아이디: {auth.me.id}</span>}
         </div>

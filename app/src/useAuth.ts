@@ -70,7 +70,8 @@ export function useAuth() {
     try {
       const token = await (await cloud()).idToken();
       return token ? await getMe(token) : null;
-    } catch {
+    } catch (e) {
+      console.warn('동호회 상태 불러오기 실패:', e);
       return null;
     }
   }, []);
@@ -138,11 +139,38 @@ export function useAuth() {
     return () => { live = false; };
   }, [uid, loadMember]);
 
+  /* 로그인 창이 열리면 Firebase SDK 를 미리 깨운다 — 구글 팝업이 클릭 직후 열려야 막히지 않는다 */
+  useEffect(() => {
+    if (!open || !cloudOn) return;
+    void cloud().then(C => C.warm()).catch(() => { /* 준비 실패는 클릭할 때 다시 안내한다 */ });
+  }, [open, cloudOn]);
+
   const refreshMember = useCallback(async () => {
     setMemberLoading(true);
     setMember(await loadMember());
     setMemberLoading(false);
   }, [loadMember]);
+
+  /* 승인 대기 중에는 창으로 돌아올 때마다 다시 묻는다 — 운영진이 승인해도 새로 고치기 전엔 몰랐다 */
+  const pending = member?.status === 'PENDING';
+  useEffect(() => {
+    if (!pending) return;
+    /* 보이게 되면서 포커스도 오니 두 이벤트가 겹쳐도 한 번만 묻는다 */
+    let inflight = false;
+    const check = () => {
+      if (inflight) return;
+      inflight = true;
+      void refreshMember().finally(() => { inflight = false; });
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    const onFocus = check;
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [pending, refreshMember]);
 
   const openAuth = useCallback(() => {
     setErr(''); setOpen(true);
@@ -191,7 +219,8 @@ export function useAuth() {
   }, [cloudOn]);
 
   const loginGoogle = useCallback(async () => {
-    const C = await cloud().catch(() => null);
+    /* 이미 받아 둔 모듈이면 await 없이 바로 가서 클릭의 사용자 활성화가 살아 있게 한다 */
+    const C = cloudMod ?? await cloud().catch(() => null);
     if (!C) { setErr('로그인을 준비하지 못했어요. 인터넷 연결을 확인해 주세요.'); return; }
     setBusy(true); setErr('');
     try {

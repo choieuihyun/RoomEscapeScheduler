@@ -108,8 +108,13 @@ export async function signIn(id: string, pw: string): Promise<Me> {
 
 /* ── 소셜 로그인 ── 구글은 서버를 거치지 않고 Firebase 가 처리한다(작업명세서 §4.6). */
 
+/* 로그인 창이 열릴 때 SDK 를 미리 받아 둔다 — 클릭 뒤에 받기 시작하면 사용자 활성화가 끝나
+   Safari 등에서 팝업이 막힐 수 있다. */
+export const warm = (): Promise<void> => boot().then(() => {});
+
 export async function signInWithGoogle(): Promise<Me> {
-  await boot();
+  /* 이미 준비됐으면 await 없이 바로 팝업을 연다(클릭의 사용자 활성화 안에서 부르려고) */
+  if (!auth) await boot();
   const c = await A.signInWithPopup(auth, new A.GoogleAuthProvider());
   return { uid: c.user.uid, id: toId(c.user.email) };
 }
