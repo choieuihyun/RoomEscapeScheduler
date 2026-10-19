@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { recordPlanPlayed } from './played';
 import { useScheduler } from './scheduler/useScheduler';
 import { useTheme } from './useTheme';
@@ -20,26 +20,35 @@ import { listenForegroundPush, PUSH_READY_EVT } from './notify';
 import { usePushDevice } from './usePushDevice';
 import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
 import { isClubAdmin, memberName, useMembers } from './useMembers';
-import { MembersPage } from './components/MembersPage';
-import { HomePage } from './components/HomePage';
-import { ProfilePage } from './components/ProfilePage';
 import { ThemeList } from './components/ThemeList';
 import { ConditionsPanel } from './components/ConditionsPanel';
 import { ResultsPanel } from './components/ResultsPanel';
-import { LoadModal } from './components/LoadModal';
-import { AuthModal } from './components/AuthModal';
-import { SaveModal } from './components/SaveModal';
-import { EventForm } from './components/EventForm';
 import { useEventFormModal } from './useEventFormModal';
 import { PlanSection } from './components/PlanSection';
-import { WatchListModal } from './components/WatchListModal';
-import { CalendarPage } from './components/CalendarPage';
 import { SideNav } from './components/SideNav';
 import { CalendarSide } from './components/CalendarSide';
 import { Toaster } from './components/Toaster';
-import { PushGuide } from './components/PushGuide';
 import { PushBanner } from './components/PushBanner';
 import { showPushBanner, showToast } from './toast';
+
+/* 동호회·캘린더·내 정보 화면은 처음 쓸 때 받는다 — 로그인 전 첫 화면(조합 계산)이 이 코드를 받지 않게 한다 */
+const MembersPage = lazy(() => import('./components/MembersPage').then(m => ({ default: m.MembersPage })));
+const HomePage = lazy(() => import('./components/HomePage').then(m => ({ default: m.HomePage })));
+const ProfilePage = lazy(() => import('./components/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const EventForm = lazy(() => import('./components/EventForm').then(m => ({ default: m.EventForm })));
+const CalendarPage = lazy(() => import('./components/CalendarPage').then(m => ({ default: m.CalendarPage })));
+const LoadModal = lazy(() => import('./components/LoadModal').then(m => ({ default: m.LoadModal })));
+const AuthModal = lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
+const SaveModal = lazy(() => import('./components/SaveModal').then(m => ({ default: m.SaveModal })));
+const WatchListModal = lazy(() => import('./components/WatchListModal').then(m => ({ default: m.WatchListModal })));
+const PushGuide = lazy(() => import('./components/PushGuide').then(m => ({ default: m.PushGuide })));
+
+/* 한 번이라도 참이었으면 계속 참 — 화면을 처음 열 때 코드를 받고, 이후엔 지우지 않고 숨기기만 해 안의 상태를 지킨다 */
+function useEver(on: boolean): boolean {
+  const [ever, setEver] = useState(on);
+  if (on && !ever) setEver(true);
+  return ever || on;
+}
 
 /* 일정 링크 `#e=<id>` 로 연다 — 아래 hashchange 경로가 받는다. 이미 같은 해시면 바꿔도 이벤트가 없어 직접 알린다.
    알림을 눌렀는데 서비스 워커가 창을 못 옮긴 경우와 앱 안 알림 띠의 "열기"가 쓴다. */
@@ -290,6 +299,16 @@ export function SchedulerPage() {
   };
 
   const onCalc = nav.view === 'calc';
+  /* 큰 화면은 처음 들어갈 때 받는다(홈은 승인 멤버 첫 화면이라 homeOn 이면 바로) */
+  const calMounted = useEver(nav.view === 'calendar');
+  const profileMounted = useEver(nav.view === 'profile');
+  const membersMounted = useEver(nav.view === 'members');
+  const formMounted = useEver(eventForm.open);
+  const authMounted = useEver(auth.open);
+  const loadMounted = useEver(loadModal.open);
+  const saveMounted = useEver(saveModal.open);
+  const watchMounted = useEver(watches.open);
+  const guideMounted = useEver(push.guide !== null);
   const [retrying, setRetrying] = useState(false);
   /* 첫 목록을 못 받아 빈 채로 열린 승인 멤버 — 계산·캘린더 위에 띠로 알린다(성공하면 error 가 비어 사라진다) */
   const listFailed = clubOn && club.error !== '' && club.events.length === 0;
@@ -333,63 +352,63 @@ export function SchedulerPage() {
             <header className="page-head">
               <h1>홈</h1>
             </header>
-            <HomePage
+            <Suspense fallback={null}><HomePage
               club={club} today={today} nickname={auth.member ? memberName(auth.member) : ''} isAdmin={isAdmin}
               watchCount={watches.watches.length} watchLimit={watches.limit} pendingCount={pendingCount}
               month={homeMonth} onMonth={stepHomeMonth}
               onWatches={watches.openModal} onMembers={() => goView('members')}
               onNewEvent={() => eventForm.openNew()} onCalc={() => goView('calc')}
               onOpenEvent={openFromHome} onPickDay={pickFromHome}
-            />
+            /></Suspense>
           </div>
         )}
 
-        {auth.cloudOn && (
+        {auth.cloudOn && calMounted && (
           <div className={'view' + (nav.view === 'calendar' ? '' : ' off')}>
             {failStrip}
             <header className="page-head">
               <h1>캘린더</h1>
               <p>{homeOn ? '동호회 일정과 저장한 일정, 빈자리 알림을' : '저장한 일정과 빈자리 알림을'} 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
             </header>
-            <CalendarPage
+            <Suspense fallback={null}><CalendarPage
               ctl={cal} active={nav.view === 'calendar'} plans={plans} watches={watches} auth={auth} s={s}
               onLoaded={() => { goView('calc'); showToast('일정을 불러왔어요.'); }}
               club={club} clubOn={homeOn}
               onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent} onOpenEvent={openEvent}
               onCalcWindow={calcWindow} onCalcThemes={calcThemes}
-            />
+            /></Suspense>
           </div>
         )}
 
-        {profileOn && (
+        {profileOn && profileMounted && (
           <div className={'view home-view' + (nav.view === 'profile' ? '' : ' off')}>
             <header className="page-head">
               <h1>내 정보</h1>
             </header>
-            <ProfilePage
+            <Suspense fallback={null}><ProfilePage
               profile={profile} member={auth.member} providerIds={auth.providerIds} isAdmin={isAdmin}
               onOpenEvent={openFromProfile} push={push}
-            />
+            /></Suspense>
           </div>
         )}
 
-        {isAdmin && (
+        {isAdmin && membersMounted && (
           <div className={'view' + (nav.view === 'members' ? '' : ' off')}>
             <header className="page-head">
               <h1>멤버 관리</h1>
               <p>가입 신청을 오픈채팅 닉네임과 맞춰 보고 승인해 주세요. 한 사람이 계정을 여러 개 만들었으면 하나만 승인하면 돼요.</p>
             </header>
-            <MembersPage ctl={members} meUid={auth.member?.uid ?? ''} />
+            <Suspense fallback={null}><MembersPage ctl={members} meUid={auth.member?.uid ?? ''} /></Suspense>
           </div>
         )}
       </main>
 
-      <AuthModal auth={auth} />
-      <LoadModal m={loadModal} />
-      <SaveModal m={saveModal} />
-      {clubOn && <EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} />}
-      {auth.cloudOn && <WatchListModal w={watches} />}
-      {clubOn && <PushGuide push={push} />}
+      {authMounted && <Suspense fallback={null}><AuthModal auth={auth} /></Suspense>}
+      {loadMounted && <Suspense fallback={null}><LoadModal m={loadModal} /></Suspense>}
+      {saveMounted && <Suspense fallback={null}><SaveModal m={saveModal} /></Suspense>}
+      {clubOn && formMounted && <Suspense fallback={null}><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} /></Suspense>}
+      {auth.cloudOn && watchMounted && <Suspense fallback={null}><WatchListModal w={watches} /></Suspense>}
+      {clubOn && guideMounted && <Suspense fallback={null}><PushGuide push={push} /></Suspense>}
       <PushBanner onOpen={openEventHash} />
       <Toaster />
     </div>

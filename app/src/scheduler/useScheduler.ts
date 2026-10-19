@@ -8,7 +8,7 @@ import {
   type AppState, type OptionsState, type TeamState,
 } from '../serialize';
 import { blankTheme, type Theme } from './types';
-import { OcrError, recognizeSessions } from '../ocr';
+import type { OcrError } from '../ocr';
 
 export const SHOW = 12;
 const AUTOSAVE_KEY = 'resched.laststate';
@@ -190,6 +190,8 @@ export function useScheduler() {
     setThemes(ts => ts.map(t => (t.id === id ? { ...t, err: '', busy: '사진 읽을 준비 중…' } : t)));
     const t0 = performance.now();
     try {
+      /* 사진 읽기 코드는 사진을 넣을 때 받는다(첫 로딩에서 뺀다) */
+      const { recognizeSessions } = await import('../ocr');
       const sessions = await recognizeSessions(file, s => {
         setThemes(ts => ts.map(t => (t.id === id ? { ...t, busy: s } : t)));
       });
