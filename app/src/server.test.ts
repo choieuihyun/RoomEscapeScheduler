@@ -255,9 +255,12 @@ describe('해 본 테마 API 호출', () => {
     await memberPlayed('kakao:1', 'T');
     expect(call(fn).url).toContain('/api/club/members/kakao%3A1/played');
   });
-  it('deletePlayed 는 keepalive, 받은 기록의 storeName 이 없으면 null', async () => {
+  it('deletePlayed 는 평소엔 keepalive 없이, 옵션을 줄 때만 keepalive. 받은 기록의 storeName 이 없으면 null', async () => {
     let fn = stubFetch(200, { id: 5, deleted: true });
     await deletePlayed(5, 'T');
+    expect(call(fn).init.keepalive).toBeUndefined();
+    fn = stubFetch(200, { id: 5, deleted: true });
+    await deletePlayed(5, 'T', { keepalive: true });
     expect(call(fn).init.keepalive).toBe(true);
     fn = stubFetch(200, [{ id: 1, themeName: 'x' }]);
     expect((await listPlayed('T'))[0].storeName).toBeNull();

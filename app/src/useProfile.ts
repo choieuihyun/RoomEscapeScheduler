@@ -14,6 +14,8 @@ export type ProfileApi = 'unknown' | 'on' | 'missing';
 export const PAST_PAGE = 10;
 /* 지운 줄이 "지웠어요 · 되돌리기"로 남아 있는 시간. 마우스·포커스가 그 줄에 있는 동안은 멈춘다 */
 export const UNDO_MS = 6000;
+/* 붙잡아 둔 시간과 상관없이 지운 뒤 이만큼 지나면 확정한다 — 받아 둔 ID 토큰(1시간)이 낡기 전에, 오래 열어 둔 화면에서도 */
+export const UNDO_MAX_MS = 120_000;
 
 /* 다음 쪽 커서 — 받은 쪽 마지막 일정의 (date, id) 그대로(서버가 (date, id) < (before, beforeId) 로 거른다).
    처음은 오늘 이전. */
@@ -59,6 +61,7 @@ export function pageRows<T extends { id: number }>(
 type Pending = {
   token: string;        // 지울 때 받아 둔 토큰 — 가려지거나 닫힐 때 기다리지 않고 보낸다
   timer: number | undefined;
+  cap: number | undefined;  // UNDO_MAX_MS 상한 — 멈춤과 상관없이 간다
   left: number;
   start: number;
   holds: Set<string>;   // 'hover' · 'focus' — 하나라도 있으면 멈춤
@@ -134,6 +137,7 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     const gone = new Set<number>();
     for (const [id, p] of pendingRef.current) {
       clearTimeout(p.timer);
+      clearTimeout(p.cap);
       if (!p.sending) deletePlayedNow(id, p.token);
       gone.add(id);
     }
@@ -236,16 +240,20 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     const p = pendingRef.current.get(id);
     if (!p || p.sending) return false;
     clearTimeout(p.timer);
+    clearTimeout(p.cap);
     pendingRef.current.delete(id);
     syncPending();
     return true;
   }, [syncPending]);
 
-  /* 시간이 다 됨 — 그때 DELETE. 이미 없으면(NO_SUCH_PLAYED) 목적은 이뤘다. 그 밖의 실패는 알리고 줄이 다시 보인다. */
+  /* 시간이 다 됨(6초 또는 2분 상한) — 그때 DELETE. 화면에 있으니 보통 fetch(keepalive 없음)로, 토큰은 새로 받아서.
+     이미 없으면(NO_SUCH_PLAYED) 목적은 이뤘다. 그 밖의 실패는 알리고 줄이 다시 보인다. */
   const expire = useCallback(async (id: number, ep: number) => {
     const p = pendingRef.current.get(id);
     if (ep !== epoch.current || !p || p.sending) return;
     p.sending = true;
+    clearTimeout(p.timer);
+    clearTimeout(p.cap);
     try {
       await deletePlayed(id, (await token()) ?? p.token);
       if (ep === epoch.current) dropRows(new Set([id]));
@@ -287,11 +295,12 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     const ep = epoch.current;
     const t = await token();
     if (!t || ep !== epoch.current || pendingRef.current.has(row.id)) return;
-    const p: Pending = { token: t, timer: undefined, left: UNDO_MS, start: 0, holds: new Set(), sending: false, onGone };
+    const p: Pending = { token: t, timer: undefined, cap: undefined, left: UNDO_MS, start: 0, holds: new Set(), sending: false, onGone };
     pendingRef.current.set(row.id, p);
     arm(row.id, p, ep);
+    p.cap = window.setTimeout(() => void expire(row.id, ep), UNDO_MAX_MS);
     syncPending();
-  }, [arm, syncPending]);
+  }, [arm, expire, syncPending]);
 
   /* 기록 하나 더하기. 같은 테마가 이미 있으면 서버가 있던 행을 그대로 준다(멱등) — 보내기 전 목록에 그 id 가 있었으면 existed.
      목록을 아직 못 받았으면 먼저 받고 나서 판정한다. 실패하면 서버 문구를 던진다(부르는 쪽이 칸 아래나 토스트로 보인다). */

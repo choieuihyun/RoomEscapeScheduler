@@ -416,14 +416,16 @@ export const listPlayed = async (token: string): Promise<PlayedDto[]> =>
 export const addPlayed = async (body: PlayedInput, token: string): Promise<PlayedDto> =>
   normPlayed(await authed<PlayedDto>('/api/me/played', token, 'POST', body));
 
-/* 404 를 성공으로 치지 않는다 — 그대로 던진다. 미뤄 뒀다 보내는 지우기라 keepalive(탭이 닫혀도 간다) */
-export const deletePlayed = (id: number, token: string): Promise<{ id: number; deleted: boolean }> =>
-  send(`/api/me/played/${id}`, token, 'DELETE', undefined, true);
+/* 404 를 성공으로 치지 않는다 — 그대로 던진다.
+   keepalive 는 탭이 가려지거나 닫힐 때만 쓴다 — 배포는 교차 출처(github.io → duckdns)라 Authorization 때문에 사전 요청이 붙고,
+   브라우저가 keepalive 와 사전 요청을 함께 거절할 수 있다. 화면에 있을 때의 평소 지우기는 보통 fetch 로. */
+export const deletePlayed = (id: number, token: string, opts?: { keepalive?: boolean }): Promise<{ id: number; deleted: boolean }> =>
+  send(`/api/me/played/${id}`, token, 'DELETE', undefined, opts?.keepalive ?? false);
 
-/* 창이 가려지거나 로그아웃할 때 미뤄 둔 지우기를 바로 보낸다 — 결과는 기다리지 않는다(받을 화면이 없을 수 있다).
-   토큰은 부르는 쪽이 미리 받아 둔 것. */
+/* 창이 가려지거나 로그아웃할 때 미뤄 둔 지우기를 바로 보낸다 — keepalive, 결과는 기다리지 않는다(받을 화면이 없을 수 있다).
+   교차 출처 사전 요청 때문에 브라우저가 거절할 수 있는, 실패해도 어쩔 수 없는 마지막 시도다. 토큰은 부르는 쪽이 미리 받아 둔 것. */
 export function deletePlayedNow(id: number, token: string): void {
-  deletePlayed(id, token).catch(() => { /* 닫히는 중 — 알릴 곳이 없다 */ });
+  deletePlayed(id, token, { keepalive: true }).catch(() => { /* 닫히는 중 — 알릴 곳이 없다 */ });
 }
 
 export const memberPlayed = async (uid: string, token: string): Promise<PlayedDto[]> =>
