@@ -53,6 +53,7 @@ export async function handleKakaoReturn(d: KakaoReturnDeps): Promise<KakaoReturn
   const clean = new URL(stripKakaoParams(d.href))
   if (trip) clean.hash = safeHash(trip.hash)
   d.replaceUrl(clean.toString())
+  // 이 확인이 link-CSRF 의 유일한 방어다(서버는 state 를 모른다). 맡긴 왕복이 없거나 state 가 다르면 어떤 교환도 하지 않는다.
   if (!trip) return { kind: 'error', message: EXPIRED }
   if (!d.cloudOn) return { kind: 'error', message: NOT_SET }
 

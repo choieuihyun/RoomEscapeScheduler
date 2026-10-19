@@ -43,6 +43,8 @@ describe('handleKakaoReturn', () => {
     const d = deps({ endTrip: vi.fn(() => null) })
     expect(await handleKakaoReturn(d)).toEqual({ kind: 'error', message: '카카오 로그인이 만료됐어요. 다시 눌러 주세요.' })
     expect(d.kakaoLogin).not.toHaveBeenCalled()
+    expect(d.kakaoLink).not.toHaveBeenCalled()
+    expect(d.signInWithCustom).not.toHaveBeenCalled()
     expect(d.replaceUrl).toHaveBeenCalledWith(R + '?view=calendar')
   })
 
@@ -109,5 +111,15 @@ describe('handleKakaoReturn', () => {
     expect(d.kakaoLogin).not.toHaveBeenCalled()
     expect(d.signInWithCustom).not.toHaveBeenCalled()
     expect(d.replaceUrl).toHaveBeenCalledWith(R + '?view=calendar#s=AAA')
+  })
+
+  it('맡긴 왕복이 없거나 state 가 다르면 어떤 교환도 하지 않는다(link-CSRF)', async () => {
+    const d = deps({ endTrip: vi.fn(() => null) }) // 로그인된 상태: idToken 은 토큰을 돌려준다
+    expect(await handleKakaoReturn(d)).toEqual({ kind: 'error', message: '카카오 로그인이 만료됐어요. 다시 눌러 주세요.' })
+    expect(d.kakaoLogin).not.toHaveBeenCalled()
+    expect(d.kakaoLink).not.toHaveBeenCalled()
+    expect(d.signInWithCustom).not.toHaveBeenCalled()
+    expect(d.idToken).not.toHaveBeenCalled()
+    expect(d.replaceUrl).toHaveBeenCalled()
   })
 })
