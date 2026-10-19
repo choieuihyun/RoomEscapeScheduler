@@ -158,7 +158,7 @@ export function EventPanel({ ev, club, onClose, onEdit }: {
                 onClick={() => { if (!ev.booked) void club.setBooked(ev.id, true); }}>예약 완료</button>
             </span>
           </div>
-          <p className="evp-hint">참여한 사람 누구나 바꿀 수 있어요.</p>
+          <p className="evp-hint">참여한 사람, 만든 사람, 운영진이 바꿀 수 있어요.</p>
         </div>
       )}
 

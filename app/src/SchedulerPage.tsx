@@ -13,7 +13,7 @@ import { useClubEvents } from './useClubEvents';
 import { addDays } from './clubEvents';
 import { monthGrid, toISO } from './core';
 import { readEventHash } from './eventLink';
-import { errorCode, getEvent, isMissingApi, sayClub } from './server';
+import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
 import { isClubAdmin, useMembers } from './useMembers';
 import { MembersPage } from './components/MembersPage';
 import { ThemeList } from './components/ThemeList';
@@ -78,11 +78,18 @@ export function SchedulerPage() {
 
   /* ── 일정 상세 패널과 `#e=<id>` 링크 (계획 Task E6) ── */
   const { setOpenEvent, select: calSelect } = cal;
-  /* 패널을 닫는다. 주소의 #e= 만 지우고(경로·?view= 는 그대로) 다른 해시는 건드리지 않는다. */
-  const closeEvent = useCallback(() => {
-    setOpenEvent(null);
+  /* 주소의 #e= 만 지운다(경로·?view= 는 그대로, 다른 해시는 건드리지 않는다). 패널이 링크 일정을 떠나면 부른다 —
+     남겨 두면 새로고침했을 때 처음 링크 일정이 다시 열린다. */
+  const dropLink = useCallback(() => {
     if (readEventHash(location.hash) !== null) history.replaceState(history.state, '', location.pathname + location.search);
-  }, [setOpenEvent]);
+  }, []);
+  const closeEvent = useCallback(() => { setOpenEvent(null); dropLink(); }, [setOpenEvent, dropLink]);
+  /* 칩·줄을 눌러 일정을 연다. 링크로 연 일정과 다른 일정이면 #e= 를 지운다 */
+  const openEvent = useCallback((ev: EventDto) => {
+    if (readEventHash(location.hash) !== ev.id) dropLink();
+    calSelect(ev.date);
+    setOpenEvent(ev.id);
+  }, [dropLink, calSelect, setOpenEvent]);
   /* 연 일정이 목록에서 사라지면(지움·로그아웃) 패널도 닫는다 */
   const openGone = cal.openEvent !== null && !club.events.some(e => e.id === cal.openEvent);
   useEffect(() => { if (openGone) closeEvent(); }, [openGone, closeEvent]);
@@ -212,7 +219,7 @@ export function SchedulerPage() {
               ctl={cal} active={nav.view === 'calendar'} plans={plans} watches={watches} auth={auth} s={s}
               onLoaded={() => { nav.go('calc'); showToast('일정을 불러왔어요.'); }}
               club={club} clubOn={homeOn}
-              onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent}
+              onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent} onOpenEvent={openEvent}
             />
           </div>
         )}

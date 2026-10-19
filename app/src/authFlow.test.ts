@@ -39,6 +39,18 @@ describe('handleKakaoReturn', () => {
     expect(d.replaceUrl).toHaveBeenCalledWith(R + '?view=calendar#s=AAA')
   })
 
+  it('#e= 해시도 되살린다', async () => {
+    const d = deps({ endTrip: vi.fn(() => ({ mode: 'login' as const, hash: '#e=12' })) })
+    await handleKakaoReturn(d)
+    expect(d.replaceUrl).toHaveBeenCalledWith(R + '?view=calendar#e=12')
+  })
+
+  it('#e= 뒤가 숫자가 아니면 버린다', async () => {
+    const d = deps({ endTrip: vi.fn(() => ({ mode: 'login' as const, hash: '#e=<x>' })) })
+    await handleKakaoReturn(d)
+    expect(d.replaceUrl).toHaveBeenCalledWith(R + '?view=calendar')
+  })
+
   it('같은 코드로 두 번 오면 한 번만 에러, 주소는 정리', async () => {
     const d = deps({ endTrip: vi.fn(() => null) })
     expect(await handleKakaoReturn(d)).toEqual({ kind: 'error', message: '카카오 로그인이 만료됐어요. 다시 눌러 주세요.' })

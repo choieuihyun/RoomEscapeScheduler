@@ -1,6 +1,7 @@
 import { readKakaoReturn, stripKakaoParams } from './kakao'
 import type { KakaoMode } from './kakaoTrip'
 import { sayClub } from './server'
+import { readEventHash } from './eventLink'
 
 /**
  * 카카오에서 돌아온 주소 처리 — React 밖의 순수 흐름이라 의존성을 전부 받는다(테스트하려고 분리).
@@ -30,9 +31,10 @@ export interface KakaoReturnDeps {
 const NOT_SET = '로그인이 아직 설정되지 않았어요.'
 const EXPIRED = '카카오 로그인이 만료됐어요. 다시 눌러 주세요.'
 
-/** 맡겨 둔 해시는 공유 링크 모양(#s=·#z=)일 때만 되살린다. 그 밖의 값은 버린다. */
+/** 맡겨 둔 해시는 공유 링크 모양(#s=·#z=)이나 일정 링크(#e=<id>)일 때만 되살린다. 그 밖의 값은 버린다.
+ *  일정 링크는 로그아웃 상태로 들어와 카카오로 로그인하는 흐름에서 가장 많이 쓰인다. */
 function safeHash(h: string): string {
-  return h === '' || h.startsWith('#s=') || h.startsWith('#z=') ? h : ''
+  return h === '' || h.startsWith('#s=') || h.startsWith('#z=') || readEventHash(h) !== null ? h : ''
 }
 
 export async function handleKakaoReturn(d: KakaoReturnDeps): Promise<KakaoReturnResult> {

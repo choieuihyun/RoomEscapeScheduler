@@ -74,9 +74,10 @@ function ClubChip({ ev, on, past, onOpen }: { ev: EventDto; on: boolean; past: b
       type="button" className={'cal-ev club ' + st + (on ? ' on' : '') + (past ? ' past' : '')}
       title={`${STATUS_LABEL[st]} · ${eventTitle(ev)}${time ? ' · ' + time : ''} · 참여 ${peopleText(ev)}`}
       aria-pressed={on}
-      /* 칸(role=button)의 클릭·Enter 처리로 번지지 않게 — 칸은 Enter 에 preventDefault 를 건다 */
+      /* 칸(role=button)의 클릭·Enter·Space 처리로 번지지 않게 — 칸은 그 키에 preventDefault 를 건다.
+         다른 키(←/→ 달 이동 등)는 그대로 둔다 */
       onClick={e => { e.stopPropagation(); onOpen(ev); }}
-      onKeyDown={e => e.stopPropagation()}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
     >
       <i className="cal-dot" /><span className="cal-ev-t">{chipText(ev)}</span><span className="cal-ev-n">{peopleText(ev)}</span>
     </button>
@@ -202,13 +203,15 @@ function DayTimeline({ evs }: { evs: Ev[] }) {
 }
 
 export function CalendarPage({
-  ctl, active, plans, watches, auth, s, onLoaded, club, clubOn, onNewEvent, onEditEvent, onCloseEvent,
+  ctl, active, plans, watches, auth, s, onLoaded, club, clubOn, onNewEvent, onEditEvent, onCloseEvent, onOpenEvent,
 }: {
   ctl: UseCalendarReturn; active: boolean; plans: UsePlansReturn; watches: UseWatchesReturn;
   auth: UseAuthReturn; s: Scheduler; onLoaded: () => void;
   /* 동호회 일정 — clubOn 은 승인 멤버이고 일정 API 가 있을 때(SchedulerPage 의 homeOn) */
   club: UseClubEventsReturn; clubOn: boolean;
   onNewEvent: (date: string) => void; onEditEvent: (ev: EventDto) => void; onCloseEvent: () => void;
+  /* 일정을 패널에 연다(그 날짜도 고른다). 링크(#e=) 일정이 아니면 주소의 #e= 를 지운다 */
+  onOpenEvent: (ev: EventDto) => void;
 }) {
   const grid = useMemo(() => monthGrid(ctl.cursor.y, ctl.cursor.m), [ctl.cursor.y, ctl.cursor.m]);
   const today = useMemo(() => toISO(new Date()), []);
@@ -232,7 +235,7 @@ export function CalendarPage({
   }, [club.events]);
   const clubOf = (iso: string) => (showClub ? clubByDate.get(iso) ?? [] : []);
   const openEv = ctl.openEvent === null ? null : club.events.find(e => e.id === ctl.openEvent) ?? null;
-  const openClub = (ev: EventDto) => { ctl.select(ev.date); ctl.setOpenEvent(ev.id); };
+  const openClub = onOpenEvent;
   /* 날짜를 고르면 그날 상세로 돌아간다 */
   const pick = (iso: string) => { ctl.select(iso); if (ctl.openEvent !== null) onCloseEvent(); };
   /* 칸·창·주 보기가 같이 쓰는 줄 목록: 동호회 일정 먼저, 그다음 내 일정·빈자리 알림 */
