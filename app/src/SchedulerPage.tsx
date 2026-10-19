@@ -20,6 +20,8 @@ import { ResultsPanel } from './components/ResultsPanel';
 import { LoadModal } from './components/LoadModal';
 import { AuthModal } from './components/AuthModal';
 import { SaveModal } from './components/SaveModal';
+import { EventForm } from './components/EventForm';
+import { useEventFormModal } from './useEventFormModal';
 import { PlanSection } from './components/PlanSection';
 import { WatchListModal } from './components/WatchListModal';
 import { CalendarPage } from './components/CalendarPage';
@@ -55,6 +57,8 @@ export function SchedulerPage() {
   const club = useClubEvents(clubOn, [{ from: today, to: addDays(today, 61) }]);
   /* 새 API 가 아직 없는 서버(404)면 홈 메뉴·홈 화면을 숨기고 나머지는 그대로 돈다 */
   const homeOn = clubOn && club.api === 'on';
+  /* 일정 만들기·수정 창 — 캘린더(E6)·홈(E7)·결과 카드(E8)가 이 하나를 연다 */
+  const eventForm = useEventFormModal();
   /* 첫 화면은 로그인 복원·승인 확인·일정 API 확인이 끝나야 정한다 — 그 전엔 화면을 비워 두어
      calc → 홈(또는 홈 → calc)으로 손 밑에서 바뀌지 않게 한다. */
   const decided = decideFirstScreen({
@@ -70,12 +74,13 @@ export function SchedulerPage() {
       if (loadModal.open) loadModal.close();
       if (auth.open) auth.closeAuth();
       if (saveModal.open) saveModal.close();
+      if (eventForm.open) eventForm.close();
       if (watches.open) watches.close();
       tour.end();
     }
     document.addEventListener('keydown', onKeydown);
     return () => document.removeEventListener('keydown', onKeydown);
-  }, [loadModal, auth, saveModal, watches, tour]);
+  }, [loadModal, auth, saveModal, eventForm, watches, tour]);
 
   /* 화면을 바꾸면 새 화면의 맨 위부터 보여준다. */
   useEffect(() => { window.scrollTo({ top: 0 }); }, [nav.view]);
@@ -148,6 +153,7 @@ export function SchedulerPage() {
       <AuthModal auth={auth} />
       <LoadModal m={loadModal} />
       <SaveModal m={saveModal} />
+      {clubOn && <EventForm m={eventForm} create={club.create} update={club.update} />}
       {auth.cloudOn && <WatchListModal w={watches} />}
       <Toaster />
     </div>

@@ -34,6 +34,10 @@
   --green:#00AF52; --green-text:#0D7738; --green-soft:#E0F4E2;
   --red:#FF502A;   --red-text:#C92208;  --red-soft:#FFE4DC;  --red-line:#FFBCAF;
   --amber:#E47B37; --amber-text:#99562C; --amber-soft:#FFEDDC; --amber-line:#FFD9B0;
+  /* 동호회 일정 상태 색 — 협의 중 · 예약 전 · 예약 완료 (글자/바탕) */
+  --st-talk-fg:#525253;   --st-talk-bg:#EEEFEF;
+  --st-before-fg:#99562C; --st-before-bg:#FFEDDC;
+  --st-done-fg:#0D7738;   --st-done-bg:#E3F4E8;
 
   /* 테마별 컬러 코딩 — ThemeCard 왼쪽 띠, 결과 타임라인 블록에 순환 적용
      (캘린더별 색). 참고 시스템의 사용자 지정 태그 색에서 서로 잘 갈리는 6개를 골랐다.
@@ -85,6 +89,9 @@
     --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
     --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
     --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
+    --st-talk-fg:#C0C1C2;   --st-talk-bg:#424343;
+    --st-before-fg:#FFA45E; --st-before-bg:#64371A;
+    --st-done-fg:#6ED688;   --st-done-bg:#194C28;
 
     --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
     --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
@@ -117,6 +124,9 @@
   --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
   --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
   --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
+  --st-talk-fg:#C0C1C2;   --st-talk-bg:#424343;
+  --st-before-fg:#FFA45E; --st-before-bg:#64371A;
+  --st-done-fg:#6ED688;   --st-done-bg:#194C28;
 
   --accent-0:#84C3FF; --accent-1:#6ED688; --accent-2:#FF8271;
   --accent-3:#F0BC00; --accent-4:#D8ACFF; --accent-5:#3CBED7;
@@ -1047,4 +1057,37 @@ button:active{transform:scale(.97)}
   .mem-row{padding:12px 14px}
   .mem-btns{margin-left:0;width:100%}
   .mem-btns .btn{flex:1}
+}
+
+/* ── 일정 만들기·수정 창 (E5) ─────────────────────────── */
+.evf-modal .mbox{max-width:600px}
+.evf .mrow input[type=checkbox]{width:auto}
+.evf-note{margin:0;font-size:12.5px;color:var(--green-text);background:var(--green-soft);
+  border-radius:var(--r-xs);padding:6px 10px;line-height:1.5}
+.evf-conflict{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  margin:0 0 14px;padding:10px 12px;border-radius:var(--r-sm);font-size:13.5px;font-weight:600;
+  color:var(--amber-text);background:var(--amber-soft);border:1px solid var(--amber-line)}
+.evf-conflict .btn{height:32px;padding:0 12px;font-size:13px}
+.evf-time{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:38px}
+.evf-time input:not([type=checkbox]){width:78px;text-align:center}
+.evf-check{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--ink)}
+.evf-time-ro{min-height:38px;display:flex;align-items:center;font-size:14px;color:var(--ink2)}
+.evf-seg{display:flex;gap:6px;align-items:center}
+.evf-seg input{min-width:0}
+.evf-s-time{flex:0 0 72px;width:72px!important;text-align:center}
+.evf-s-name{flex:1 1 0}
+.evf-s-branch{flex:0 1 110px}
+.evf-s-del{flex:0 0 36px;height:36px;padding:0}
+.evf-add{align-self:flex-start;height:34px;padding:0 12px;font-size:13px}
+.evf-chips{display:flex;flex-wrap:wrap;gap:6px}
+.evf-chip{height:32px;padding:0 12px;border-radius:var(--pill);font:inherit;font-size:13px;font-weight:500;
+  cursor:pointer;color:var(--ink2);background:var(--chip-bg);border:1px solid var(--chip-line)}
+.evf-chip.on{color:var(--ink);font-weight:700;border-color:var(--ink)}
+@media(max-width:560px){
+  .evf-modal{padding:0}
+  .evf-modal .mbox{max-width:none;height:100%;max-height:none;border-radius:0;border:none}
+  .mrow2{flex-direction:column;gap:0}
+  .evf-seg{flex-wrap:wrap}
+  .evf-s-name{flex:1 1 calc(100% - 80px)}
+  .evf-s-branch{flex:1 1 0}
 }
