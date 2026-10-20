@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UseAuthReturn } from '../useAuth';
 import { GoogleMark, KakaoMark } from './SsoMarks';
 import { JoinPanel, PendingPanel, RemovedPanel } from './JoinPanel';
@@ -12,8 +12,13 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   const { open, closeAuth } = auth;
   /* 가입 신청 칸에 적은 게 있나 — 있으면 ×·Esc·"나중에 할게요" 로 닫을 때 묻는다(프로필 창과 같게) */
   const joinDirty = useRef(false);
+  /* 창은 닫혀도 그려 둔 채라 가입 칸도 남는다 — '예'로 닫으면 이 번호를 올려 칸을 새로 그린다(문구대로 지운다) */
+  const [joinGen, setJoinGen] = useState(0);
   const close = useCallback(() => {
-    if (joinDirty.current && !confirm('적은 내용이 사라져요. 닫을까요?')) return;
+    if (joinDirty.current) {
+      if (!confirm('적은 내용이 사라져요. 닫을까요?')) return;
+      setJoinGen((n) => n + 1);
+    }
     closeAuth();
   }, [closeAuth]);
 
@@ -37,7 +42,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
     body = <><h3>확인하는 중…</h3><p className="msub">가입 상태를 불러오고 있어요.</p>
       <div className="mbtns"><button className="btn" type="button" onClick={auth.closeAuth}>닫기</button></div></>;
   } else if (auth.me && (status === 'NONE' || status === 'REJECTED')) {
-    body = <JoinPanel key={status} auth={auth} dirtyRef={joinDirty} onClose={close} />;
+    body = <JoinPanel key={status + joinGen} auth={auth} dirtyRef={joinDirty} onClose={close} />;
   } else if (auth.me && status === 'PENDING') {
     body = <PendingPanel auth={auth} />;
   } else if (auth.me && status === 'REMOVED') {
