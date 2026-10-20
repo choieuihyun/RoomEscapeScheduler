@@ -75,3 +75,6 @@ export function pageOf<T>(list: readonly T[], page: number, size = PAGE_SIZE): {
 /* 쪽 번호는 그 번호를 고른 목록(날짜·참여자·지역)에 묶는다 — 목록이 바뀌면 1쪽부터 */
 export type PageAt = { at: string; page: number };
 export const pageFor = (s: PageAt, at: string): number => (s.at === at ? s.page : 0);
+/* 목록 키가 바뀌면 그 키의 1쪽으로 갈아 끼운다(같으면 그대로 — 같은 객체). 옛 키로 돌아와도(강남 3쪽 → 홍대 → 강남)
+   옛 쪽을 되살리지 않는다 */
+export const pageAt = (s: PageAt, at: string): PageAt => (s.at === at ? s : { at, page: 0 });

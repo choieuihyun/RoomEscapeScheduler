@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { clockLabel, dayLabel, todayKst } from '../clubEvents';
 import { freshMessage, freshStale, helperDates, noRecordNames, noRecordText } from '../played';
 import { playedDots } from '../playedWho';
-import { REGIONS, inRegion, pageFor, pageOf, regionCounts, type PageAt, type RegionPick } from '../regions';
+import { REGIONS, inRegion, pageAt, pageFor, pageOf, regionCounts, type PageAt, type RegionPick } from '../regions';
 import { ago, freshThemes, isMissingApi, sayClub, toSessions, type EventDto, type FreshDto, type FreshTheme } from '../server';
 import type { AddedTheme } from '../useLoadModal';
 import { PlayedDots } from './PlayedDots';
@@ -67,13 +67,16 @@ export function EventHelper({ ev, onCalcThemes }: {
   const date = !plan ? null : picked && plan.dates.includes(picked) ? picked : plan.first;
   const who = ev.participants.map((p) => p.uid).sort().join(',');
   const key = date ? `${date}|${who}` : '';
-  /* 날짜가 바뀌면(직접 고르든 기준 날짜가 옮겨 가든) 고른 테마를 비운다 — 렌더 중에 앞 값과 견줘 맞춘다.
-     쪽은 pageFor 가 목록 키로 1쪽에 돌려놓는다 */
+  /* 날짜가 바뀌면(직접 고르든 기준 날짜가 옮겨 가든) 고른 테마를 비운다 — 렌더 중에 앞 값과 견줘 맞춘다 */
   const [shownDate, setShownDate] = useState(date);
   if (date !== shownDate) {
     setShownDate(date);
     setIds(new Set());
   }
+  /* 쪽도 같은 식으로 — 목록 키(날짜·참여자·지역)가 바뀌면 늘 1쪽. 옛 키로 돌아와도 옛 쪽을 되살리지 않는다 */
+  const listAt = `${key}|${region}`;
+  const nextPg = pageAt(pg, listAt);
+  if (nextPg !== pg) setPg(nextPg);
 
   const fetchKey = useCallback((d: string, k: string) => {
     const n = ++seq.current;
@@ -95,7 +98,7 @@ export function EventHelper({ ev, onCalcThemes }: {
     fetchKey(date, key);
   }, [open, hidden, date, key, have, fetchKey]);
 
-  const page = pageFor(pg, `${key}|${region}`);
+  const page = pageFor(pg, listAt);
   useEffect(() => {
     if (!jump.current) return;
     jump.current = false;
@@ -129,7 +132,6 @@ export function EventHelper({ ev, onCalcThemes }: {
   const shownRegion: RegionPick = regions.some((r) => r.region === region) ? region : '전체';
   const inR = inRegion(themes, shownRegion);
   const view = pageOf(inR, page);
-  const listAt = `${key}|${region}`;
   function pickRegion(r: RegionPick) {
     setRegion(r);
     saveRegion(r);

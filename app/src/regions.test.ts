@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PAGE_SIZE, REGIONS, inRegion, pageFor, pageOf, regionCounts, regionOf } from './regions';
+import { PAGE_SIZE, REGIONS, inRegion, pageAt, pageFor, pageOf, regionCounts, regionOf } from './regions';
 
 describe('regionOf — 지역 표', () => {
   it.each([
@@ -99,5 +99,17 @@ describe('pageOf · pageFor — 20개씩 쪽 나누기', () => {
     expect(pageFor(s, '2026-10-25|u1,u2|홍대')).toBe(0);
     expect(pageFor(s, '2026-10-26|u1,u2|강남')).toBe(0);
     expect(pageFor({ at: '', page: 0 }, 'x')).toBe(0);
+  });
+
+  it('pageAt — 지역 A 3쪽 → B → A 로 돌아와도 1쪽(옛 쪽을 되살리지 않는다), 같은 키면 그대로', () => {
+    const A = '2026-10-25|u1,u2|강남', B = '2026-10-25|u1,u2|홍대';
+    let s = pageAt({ at: '', page: 0 }, A);
+    s = { at: A, page: 2 };                       // 3쪽으로 넘김
+    expect(pageAt(s, A)).toBe(s);
+    s = pageAt(s, B);
+    expect([s.at, pageFor(s, B)]).toEqual([B, 0]);
+    s = pageAt(s, A);
+    expect([s.at, pageFor(s, A)]).toEqual([A, 0]);
+    expect(pageFor(pageAt({ at: A, page: 4 }, '2026-10-26|u1,u2|강남'), '2026-10-26|u1,u2|강남')).toBe(0); // 날짜가 바뀌어도
   });
 });
