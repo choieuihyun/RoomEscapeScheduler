@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { dayLabel } from '../clubEvents';
 import { fmt } from '../core';
-import { MAX_SEGS, type FormSeg } from '../eventForm';
-import { branchLabel, filterBranches, overlaps, playedByMe, segRanges, toPick, type PickedSession } from '../eventPick';
+import type { TimeRow } from '../clubEvents';
+import { MAX_SEGS } from '../eventForm';
+import { branchLabel, filterBranches, overlaps, playedByMe, toPick, type PickedSession } from '../eventPick';
 import {
   ago, branches as fetchBranches, freshThemes, say, schedule as fetchSchedule,
   type Branch, type PlayedDto, type ServerSession, type ServerTheme,
@@ -17,11 +18,12 @@ interface Props {
   date: string;              // 처음 볼 날짜
   formDate: string | null;   // 날짜 정하기면 일정 날짜(다른 날을 보면 알린다), 후보 여러 개면 null
   candidates: string[];      // 후보 날짜 — 바로 고르는 칩
-  segs: FormSeg[];           // 이미 넣은 구간 — 겹침·남은 자리
+  placedOn: (date: string) => TimeRow[];  // 이미 넣은 구간을 그 날짜 기준 분으로 — 겹침 표시
   room: number;              // 더 넣을 수 있는 수
   eventId: number | null;    // 고치는 일정이면 참여자 해 본 테마를 fresh-themes 로
   mine: PlayedDto[] | null;  // 새 일정이면 내 해 본 테마
-  onAdd: (picks: PickedSession[], date: string) => void;
+  /* 넣지 못하면(같은 날 밤을 넘는 등) 그 까닭을 돌려준다 — 창은 열어 둔다 */
+  onAdd: (picks: PickedSession[], date: string) => string;
   onClose: () => void;
 }
 
@@ -40,7 +42,7 @@ async function loadPlayedBy(eventId: number, date: string): Promise<Map<string, 
 
 const md = (iso: string) => `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}`;
 
-export function ThemeFinder({ date: date0, formDate, candidates, segs, room, eventId, mine, onAdd, onClose }: Props) {
+export function ThemeFinder({ date: date0, formDate, candidates, placedOn, room, eventId, mine, onAdd, onClose }: Props) {
   const [date, setDate] = useState(date0);
   const [list, setList] = useState<Branch[] | null>(cachedBranches);
   const [listErr, setListErr] = useState('');
@@ -49,22 +51,41 @@ export function ThemeFinder({ date: date0, formDate, candidates, segs, room, eve
   const [slots, setSlots] = useState<Map<string, Slot>>(new Map());
   const [picks, setPicks] = useState<Map<string, PickedSession>>(new Map());
   const [note, setNote] = useState('');
+  const [noteWarn, setNoteWarn] = useState(false);
   const [played, setPlayed] = useState<Map<string, Map<string, number> | null>>(new Map());
   const asked = useRef(new Set<string>());
   const boxRef = useRef<HTMLDivElement>(null);
 
-  /* Esc 는 이 창만 닫는다 — 일정 창(SchedulerPage 의 Esc)까지 닫혀 입력이 사라지지 않게 먼저 받아 멈춘다 */
+  /* Esc 는 이 창만 닫는다 — 일정 창(SchedulerPage 의 Esc)까지 닫혀 입력이 사라지지 않게 먼저 받아 멈춘다.
+     Tab·Shift+Tab 은 창 안에서만 돈다(PushGuide·BulkModal 과 같게) — 꺼진 단추와 좁은 화면에서 숨긴 칸은 건너뛴다 */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      e.stopPropagation();
-      e.preventDefault();
-      onClose();
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const box = boxRef.current;
+      if (!box) return;
+      const els = [...box.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)')].filter((el) => el.offsetParent !== null);
+      const a = document.activeElement;
+      const first = els[0], last = els[els.length - 1];
+      if (!first) { e.preventDefault(); box.focus({ preventScroll: true }); }
+      else if (!box.contains(a) || a === box) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+      else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
-  useEffect(() => { boxRef.current?.focus(); }, []);
+  /* 열리면 창으로, 닫히면 연 단추로 포커스를 돌려준다 */
+  useEffect(() => {
+    const back = document.activeElement as HTMLElement | null;
+    boxRef.current?.focus({ preventScroll: true });
+    return () => { if (back?.isConnected) back.focus({ preventScroll: true }); };
+  }, []);
 
   useEffect(() => {
     if (list) return;
@@ -108,6 +129,7 @@ export function ThemeFinder({ date: date0, formDate, candidates, segs, room, eve
   function changeDate(d: string) {
     if (!d || d === date) return;
     setDate(d);
+    setNoteWarn(false);
     if (picks.size > 0) { setPicks(new Map()); setNote('날짜를 바꿔서 고른 회차를 비웠어요.'); }
   }
 
@@ -116,6 +138,7 @@ export function ThemeFinder({ date: date0, formDate, candidates, segs, room, eve
     if (!branch) return;
     const p = toPick(branch, date, th, s);
     setNote('');
+    setNoteWarn(false);
     setPicks((m) => {
       const n = new Map(m);
       if (n.has(p.key)) n.delete(p.key);
@@ -125,8 +148,7 @@ export function ThemeFinder({ date: date0, formDate, candidates, segs, room, eve
   }
 
   /* 겹침 — 같은 날을 보고 있을 때 이미 넣은 구간, 그리고 지금 고른 회차들 */
-  const sameDay = formDate === null || formDate === date;
-  const placed = sameDay ? segRanges(segs.filter((g) => g.start.trim())) ?? [] : [];
+  const placed = placedOn(date);
   const pickedRows = [...picks.values()].map((p) => ({ key: p.key, row: { start: p.t, end: p.dur ? p.t + p.dur : null } }));
   const clash = (k: string, start: number, dur: number | null) => {
     const row = { start, end: dur ? start + dur : null };
@@ -155,7 +177,7 @@ export function ThemeFinder({ date: date0, formDate, candidates, segs, room, eve
           )}
         </div>
         {formDate && formDate !== date && (
-          <p className="tf-datehint">일정 날짜({md(formDate)})와 다른 날이에요. 넣으면 일정 날짜를 {md(date)} 로 바꿔요.</p>
+          <p className="tf-datehint">일정 날짜({md(formDate)})와 다른 날이에요. 넣으면 일정 날짜가 바뀔 수 있어요 — 바뀌면 넣은 뒤 알려 드려요.</p>
         )}
 
         <div className={'tf-body' + (branch ? ' has-br' : '')}>
@@ -252,13 +274,13 @@ export function ThemeFinder({ date: date0, formDate, candidates, segs, room, eve
               ))}
             </div>
           )}
-          <p className={'tf-room' + (full ? ' full' : '')} aria-live="polite">
+          <p className={'tf-room' + (full || noteWarn ? ' full' : '')} aria-live="polite">
             {note || (full
               ? `테마는 ${MAX_SEGS}개까지예요. 더 고르려면 고른 회차나 넣어 둔 테마를 빼 주세요.`
               : picks.size > 0 ? `${picks.size}개 골랐어요 · ${room - picks.size}개 더 고를 수 있어요. 지점을 바꿔도 그대로 남아요.` : `${room}개까지 고를 수 있어요.`)}
           </p>
           <div className="mbtns">
-            <button type="button" className="btn-go tf-go" disabled={picks.size === 0} onClick={() => onAdd(pickedList, date)}>
+            <button type="button" className="btn-go tf-go" disabled={picks.size === 0} onClick={() => { const err = onAdd(pickedList, date); if (err) { setNote(err); setNoteWarn(true); } }}>
               {picks.size > 0 ? `${picks.size}개 넣기` : '넣기'}
             </button>
             <button type="button" className="btn" onClick={onClose}>닫기</button>

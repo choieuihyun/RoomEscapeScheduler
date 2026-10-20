@@ -86,32 +86,94 @@ export function segMeta(segs: FormSeg[]): { dur: number | null; next: boolean }[
 export const roomLeft = (segs: FormSeg[]): number => MAX_SEGS - segs.filter((g) => !isBlank(g)).length;
 
 const mdLabel = (iso: string) => `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}`;
+const DAY = 1440;
+const dayNum = (iso: string) => Math.round(Date.parse(`${iso}T00:00:00Z`) / 86_400_000);
+const isoOf = (n: number) => new Date(n * 86_400_000).toISOString().slice(0, 10);
 
-/* 고른 회차를 구간에 합친다.
-   - 완전히 빈 카드는 치우고, 시작 시각 순으로 세운다(이미 있는 구간은 자정 넘김을 채운 분, 회차는 t). 이미 있는 구간을 못 읽으면 뒤에 붙인다.
-   - 날짜 정하기: 찾은 날짜가 일정 날짜와 다르면 일정 날짜를 그 날로 바꾸고 알린다.
-   - 구간이 회차뿐이고 첫 회차가 다음날(1440 이상)이면 날짜를 하루 뒤로 — 결과 카드에서 일정으로 만들 때(formFromSteps)와 같은 규칙.
-   - 후보 여러 개: 후보·날짜 칸은 그대로 두고, 다음날 회차만 있을 때 같은 표시(dateMoved)만 한다. */
-export function mergePicks(f: FormState, picks: PickedSession[], date: string): { form: FormState; note: string } {
+export const SAME_NIGHT = '같은 날 밤까지의 회차만 넣을 수 있어요.';
+const EVENING = '자정을 넘기는 일정은 저녁 6시 이후에 시작할 때만 이어서 넣을 수 있어요.';
+const UNREAD = (n: number) => `${n}번째 테마의 시각을 먼저 확인해 주세요.`;
+
+interface Item { g: FormSeg; start: number; end: number | null; late: boolean }
+
+/* 이미 넣은 구간을 절대 분으로 — toInput 과 같은 해석.
+   날짜 정하기: 일정 날짜(1970-01-01 부터 일수 × 1440) + 자정 넘김을 채운 분.
+   후보 여러 개: 날짜가 없으니 "후보 날" 기준. 옮겨 둔 표시(dateMoved)가 있고 첫 시각이 06시 전이면 +1440(toInput 의 보정).
+   late = 전날 밤 회차로 들어온 첫 구간(옮겨 둔 표시가 가리키는 것). 시각을 못 읽거나 순서가 틀렸으면 그 번호(1부터) */
+function placedAbs(f: FormState, fallbackDate: string): Item[] | number {
   const kept = f.segs.filter((g) => !isBlank(g));
-  const add = [...picks].sort((a, b) => a.t - b.t).slice(0, Math.max(0, MAX_SEGS - kept.length));
+  const rows: TimeRow[] = [];
+  for (const [i, g] of kept.entries()) {
+    const start = parseClock24(g.start);
+    const end = g.end.trim() ? parseClock24(g.end) : null;
+    if (start === null || (g.end.trim() && end === null)) return i + 1;
+    rows.push({ start, end });
+  }
+  if (rows.length === 0) return [];
+  const r = rollDays(rows);
+  if (!('rows' in r)) return r.index + 1;
+  const late = f.dateMoved && r.rows[0].start < 6 * 60;
+  const off = f.dateMode === 'candidates' ? (late ? DAY : 0) : dayNum(f.date || fallbackDate) * DAY;
+  return kept.map((g, i) => ({
+    g, start: r.rows[i].start + off, end: r.rows[i].end === null ? null : (r.rows[i].end as number) + off, late: i === 0 && late,
+  }));
+}
+
+/* 찾기 창의 겹침 표시용 — 이미 넣은 구간을 보고 있는 날짜(date) 기준 분으로. 후보 여러 개는 후보 날 기준 그대로 */
+export function placedOn(f: FormState, date: string): TimeRow[] {
+  const items = placedAbs(f, date);
+  if (typeof items === 'number') return [];
+  const off = f.dateMode === 'candidates' ? 0 : dayNum(date) * DAY;
+  return items.map((x) => ({ start: x.start - off, end: x.end === null ? null : x.end - off }));
+}
+
+/* 고른 회차를 구간에 합친다 — 이미 있는 구간과 회차를 모두 절대 시각으로 바꿔 합치고 시작 순으로 세운 뒤,
+   가장 이른 구간의 날짜를 일정 날짜로 다시 정하고 칸 글자를 새로 만든다(같은 순간이 그대로 저장된다).
+   - 완전히 빈 카드는 치운다. 이미 있는 구간의 시각을 못 읽으면 넣지 않고 그 번호를 알린다.
+   - 첫 구간이 전날 밤 회차(다음날 00:30 처럼 1440 이상으로 온 것)면 결과 카드에서 올릴 때(formFromSteps)처럼 그 날짜에 두고 "옮김" 표시 —
+     날짜 정하기는 날짜 칸이 그 날, 후보 여러 개는 toInput 이 1440 을 더해 보낸다.
+   - 첫 구간에서 24시간 안(§4.7 범위)이 아니거나, 18시 전에 시작해 자정을 넘으면 넣지 않는다.
+   - 날짜 정하기에서 일정 날짜가 바뀌면 실제 날짜로 한 번 알린다(옮김 안내는 이 안내가 대신한다). */
+export function mergePicks(f: FormState, picks: PickedSession[], date: string): { form: FormState; note: string; error?: string } {
+  const placed = placedAbs(f, date);
+  if (typeof placed === 'number') return { form: f, note: '', error: UNREAD(placed) };
+  const add = [...picks].sort((a, b) => a.t - b.t).slice(0, Math.max(0, MAX_SEGS - placed.length));
   if (add.length === 0) return { form: f, note: '' };
-  const ranges = kept.length > 0 ? segRanges(kept) : [];
-  const segs = ranges
-    ? [...kept.map((g, i) => ({ g, at: ranges[i].start })), ...add.map((p) => ({ g: segFromPick(p), at: p.t }))]
-      .sort((a, b) => a.at - b.at).map((x) => x.g)
-    : [...kept, ...add.map(segFromPick)];
-  const onlyPicks = kept.length === 0;
-  const nextDay = onlyPicks && add[0].t >= 1440;
+  const cand = f.dateMode === 'candidates';
+  const base = cand ? 0 : dayNum(date) * DAY;
+  const all: Item[] = [
+    ...placed,
+    ...add.map((p) => ({ g: segFromPick(p), start: base + p.t, end: p.dur ? base + p.t + p.dur : null, late: p.t >= DAY })),
+  ].sort((a, b) => a.start - b.start);
+
+  const day0 = Math.floor(all[0].start / DAY);
+  const shift = day0 * DAY;
+  const first = all[0].start - shift;
+  /* 후보 여러 개는 "후보 날 / 그 다음날 06시 전" 두 가지만 나타낼 수 있다(toInput 보정) */
+  if (cand && (day0 < 0 || day0 > 1 || (day0 === 1 && first >= 6 * 60))) return { form: f, note: '', error: SAME_NIGHT };
+  if (all.some((x) => x.start - shift >= first + DAY || (x.end !== null && x.end - shift >= first + DAY))) return { form: f, note: '', error: SAME_NIGHT };
+
+  const segs = all.map((x) => ({ ...x.g, start: fmt(x.start - shift), end: x.end === null ? '' : fmt(x.end - shift) }));
+  /* 칸 글자를 toInput 처럼 다시 읽어 같은 분이 나오는지 — 18시 전에 시작해 자정을 넘으면 여기서 걸린다 */
+  const back = rollDays(segs.map((g) => ({ start: parseClock24(g.start) as number, end: g.end ? parseClock24(g.end) : null })));
+  if (!('rows' in back)) return { form: f, note: '', error: EVENING };
+  if (back.rows.some((r, i) => r.start !== all[i].start - shift || r.end !== (all[i].end === null ? null : (all[i].end as number) - shift))) {
+    return { form: f, note: '', error: SAME_NIGHT };
+  }
+
+  const moved = all[0].late && first < 6 * 60;
   const form: FormState = { ...f, segs, allDay: false };
   let note = '';
-  if (f.dateMode === 'fixed') {
-    if (date !== f.date) note = `일정 날짜를 ${mdLabel(date)} 로 맞췄어요.`;
-    if (date !== f.date || onlyPicks) Object.assign(form, { date, dateMoved: false, origDate: undefined });
-  } else if (onlyPicks) {
-    Object.assign(form, { dateMoved: false, origDate: undefined });
+  if (!cand) {
+    const d = isoOf(day0);
+    Object.assign(form, { date: d, dateMoved: moved, origDate: moved ? isoOf(day0 - 1) : undefined });
+    if (d !== f.date) note = moved ? `자정이 지난 회차라 일정 날짜를 ${mdLabel(d)} 로 맞췄어요.` : `일정 날짜를 ${mdLabel(d)} 로 맞췄어요.`;
+  } else if (moved) {
+    /* 날짜 칸(후보 모드에선 안 보임)은 날짜 정하기로 돌아갈 때 쓴다 — 옮긴 날로 */
+    Object.assign(form, f.dateMoved ? {} : { date: addDays(date, 1), dateMoved: true, origDate: date });
+  } else {
+    Object.assign(form, { date: f.dateMoved && f.origDate ? f.origDate : f.date, dateMoved: false, origDate: undefined });
   }
-  if (nextDay) Object.assign(form, { date: addDays(date, 1), dateMoved: true, origDate: date });
   return { form, note };
 }
 

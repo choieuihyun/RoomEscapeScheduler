@@ -3,7 +3,7 @@ import { dayLabel, todayKst } from '../clubEvents';
 import { applyPaste, parseKakaoTitle, shouldApplyOnBlur } from '../kakaoTitle';
 import { monthGrid } from '../core';
 import { emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, switchDateMode, toggleCandidate, toInput, type FormSeg, type FormState } from '../eventForm';
-import { mergePicks, roomLeft, segMeta, type PickedSession } from '../eventPick';
+import { mergePicks, placedOn, roomLeft, segMeta, type PickedSession } from '../eventPick';
 import { conflictOf, sayClub, type EventDto, type EventInput, type PlayedDto } from '../server';
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
@@ -84,12 +84,14 @@ function Body({ m, create, update, adopt, played }: Props) {
   };
 
   /* 찾아서 고른 회차를 구간으로 — 날짜를 바꿨으면 날짜 칸 안내(가장 이른 후보로 채움)는 끈다 */
-  function addFound(picks: PickedSession[], date: string) {
+  function addFound(picks: PickedSession[], date: string): string {
     const r = mergePicks(f, picks, date);
+    if (r.error) return r.error;
     if (r.form.date !== f.date) setDateEdited(true);
     setF(r.form);
     setThemeNote(r.note);
     setFinding(false);
+    return '';
   }
   const closeFinder = useCallback(() => setFinding(false), []);
   const removeSeg = (i: number) => setF((cur) => ({ ...cur, segs: cur.segs.filter((_, j) => j !== i) }));
@@ -181,7 +183,7 @@ function Body({ m, create, update, adopt, played }: Props) {
           {!candMode && !dateEdited && fillEarliest && !f.dateMoved && f.candidates.length > 0 && f.date === f.candidates[0] && (
             <p className="evf-past">가장 이른 후보 {+f.date.slice(5, 7)}/{+f.date.slice(8, 10)} 로 채웠어요.</p>
           )}
-          {!candMode && f.dateMoved && <p className="evf-past">자정이 지난 시각이라 날짜를 다음날로 옮겼어요.</p>}
+          {!candMode && f.dateMoved && !themeNote && <p className="evf-past">자정이 지난 시각이라 날짜를 다음날로 옮겼어요.</p>}
           {past && <p className="evf-past">지난 날짜예요. 기록으로 남기려면 그대로 만들어도 돼요.</p>}
         </div>
         <div className="mrow">
@@ -302,7 +304,7 @@ function Body({ m, create, update, adopt, played }: Props) {
           date={candMode ? f.candidates[0] ?? f.date ?? today : f.date || today}
           formDate={candMode ? null : f.date || null}
           candidates={candMode ? f.candidates : []}
-          segs={f.segs} room={room} eventId={editing?.id ?? null} mine={played ?? null}
+          placedOn={(d) => placedOn(f, d)} room={room} eventId={editing?.id ?? null} mine={played ?? null}
           onAdd={addFound} onClose={closeFinder}
         />
       )}
