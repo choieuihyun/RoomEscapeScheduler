@@ -75,6 +75,10 @@ describe('planInsert — 계산 결과를 그 일정의 구간으로(일정 수�
   it('미정 일정을 후보에 없는 날짜로 정하려면 묻는다(후보 날이면 묻지 않는다)', () => {
     expect(plan(ev(), '2026-10-27').confirm).toBe(`후보에 없는 날짜예요. ${dayLabel('2026-10-27')}로 정할까요?`);
     expect(plan(ev(), '2026-10-26').confirm).toBe('');
+    /* 후보 날(10/25) 밤 24:30 회차 — 날짜는 10/26 으로 옮겨 저장하지만 후보 밤이라 묻지 않는다 */
+    const late = plan(ev({ candidates: [{ date: '2026-10-25', responses: [] }, { date: '2026-10-27', responses: [] }] }), '2026-10-25',
+      [step('심야 병동', '키이스케이프 홍대점', 1470, 1550)], ['key-hd:1']);
+    expect([late.confirm, late.input.date, late.input.segments[0].startMin]).toEqual(['', '2026-10-26', 30]);
   });
 
   it('구간 없이 일정 시각만 있던 정해진 일정은 그 시각이 바뀐다고 묻는다', () => {

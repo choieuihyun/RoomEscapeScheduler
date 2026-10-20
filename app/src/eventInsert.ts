@@ -32,8 +32,10 @@ export function planInsert(ev: EventDto, steps: PathStep[], keys: (string | null
   if ('error' in r) return r;
   const n = ev.segments.length;
   const lines: string[] = [];
-  /* 미정 일정인데 결과 날짜가 후보에 없으면 — 아무도 되는지 답하지 않은 날로 정해진다 */
-  if (isUndecided(ev) && !ev.candidates.some((c) => c.date === s.date)) lines.push(`후보에 없는 날짜예요. ${dayLabel(s.date)}로 정할까요?`);
+  /* 미정 일정인데 결과 날짜가 후보에 없으면 — 아무도 되는지 답하지 않은 날로 정해진다.
+     자정 뒤 첫 회차로 날짜를 하루 옮겼으면 옮기기 전 날(그 밤)로 본다 — 후보 날 밤의 24:30 은 후보 안이다 */
+  const night = s.origDate ?? s.date;
+  if (isUndecided(ev) && !ev.candidates.some((c) => c.date === night)) lines.push(`후보에 없는 날짜예요. ${dayLabel(night)}로 정할까요?`);
   if (n > 0) lines.push(`지금 테마 ${n}개를 이 결과로 바꿔요.`);
   /* 구간 없이 일정 시각만 있던 일정 — 시각은 이제 테마에서 읽는다(일정 시각은 비워 보낸다) */
   if (n === 0 && ev.startMin !== null) lines.push(`일정 시각(${rangeLabel(ev.startMin, ev.endMin)})은 테마 시각으로 바뀌어요.`);
