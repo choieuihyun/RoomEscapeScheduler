@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { SORTS } from '../core';
 import type { Scheduler } from '../scheduler/useScheduler';
 import type { WatchControl } from '../useWatches';
@@ -69,8 +69,6 @@ type Row = Scheduler['found'][number];
 export function ResultsPanel({ s, onSave, onClubPost, onInsert, watchCtl }: {
   s: Scheduler; onSave?: (r: Row) => void; onClubPost?: (r: Row) => void; onInsert?: ((r: Row) => void) | null; watchCtl?: WatchControl;
 }) {
-  const resRef = useRef<HTMLDivElement>(null);
-
   const pool = s.currentList;
   const list = useMemo(
     () => [...pool].sort(SORTS.find(d => d.k === s.sortKey)!.f).slice(0, s.showCount),
@@ -80,57 +78,8 @@ export function ResultsPanel({ s, onSave, onClubPost, onInsert, watchCtl }: {
   const hi = list.length ? Math.max(...list.map(r => r.end)) : 0;
   const span = Math.max(hi - lo, 60);
 
-  /* 이름이 넘치는 블록에만 타임라인을 넓히거나 훑기를 건다 — index.html의
-     renderResults() 후반부(appendChild 뒤 DOM 측정)를 그대로 옮긴 것. */
-  useLayoutEffect(() => {
-    const root = resRef.current;
-    if (!root) return;
-    /* React는 텍스트가 "이전에 렌더한 값과 같으면" DOM을 안 건드린다 — 그런데 아래
-       단계들이 textContent를 직접 잘라내므로, React의 "안 바뀜" 판단과 실제 DOM이
-       어긋난다. 매 패스마다 data-full로 되돌려 원본처럼 "항상 새로 그리고 필요할
-       때만 자른다"를 유지한다. */
-    root.querySelectorAll<HTMLElement>('.blk .rng').forEach(el => {
-      el.textContent = el.dataset.full || '';
-    });
-    /* 좁은 화면에서는 넓히지 않는다 — 4배까지 넓히면 화면엔 블록 하나만 보이고
-       나머지는 옆으로 스와이프해야 하는데, 작은 박스 안에 스크롤이 숨어 있다는 걸
-       알아채기 어렵다(실사용자 실측 — "테마 이름이 안 보인다"). 대신 안 맞는
-       이름은 훑기(.roll) 애니메이션에 맡겨서, 전체 조합이 항상 한 화면에 다
-       보이는 쪽을 우선한다. 560px는 이 파일의 다른 모바일 분기와 같은 기준. */
-    const maxFactor = window.innerWidth < 560 ? 1 : 4;
-    root.querySelectorAll<HTMLElement>('.tlinner').forEach(inner => {
-      let factor = 1;
-      inner.querySelectorAll<HTMLElement>('.blk').forEach(b => {
-        const nm = b.querySelector<HTMLElement>('.nm i'), rng = b.querySelector<HTMLElement>('.rng');
-        const cs = getComputedStyle(b);
-        const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 2;
-        const need = Math.max(nm?.scrollWidth || 0, rng?.scrollWidth || 0) + pad;
-        const cur = b.clientWidth;
-        if (cur > 0 && need > cur) factor = Math.max(factor, need / cur);
-      });
-      factor = Math.min(factor, maxFactor);
-      inner.style.width = factor > 1.01 ? (factor * 100) + '%' : '';
-    });
-    // React가 이미 "시작 – 종료" 전체 텍스트를 렌더해 뒀다 — 원본처럼 처음부터 채워 두고
-    // 여기서는 넘칠 때만 자르는 판정만 한다 (원본 renderResults() 2단계).
-    root.querySelectorAll<HTMLElement>('.blk .rng').forEach(el => {
-      if (el.scrollWidth > el.clientWidth + 1) {
-        el.textContent = el.dataset.s || '';
-        if (el.scrollWidth > el.clientWidth + 1) el.textContent = '';
-      }
-    });
-    root.querySelectorAll<HTMLElement>('.blk .nm').forEach(el => {
-      const inner = el.firstElementChild as HTMLElement | null;
-      if (!inner) return;
-      const over = inner.scrollWidth - el.clientWidth;
-      if (over > 1) {
-        el.classList.add('roll');
-        el.style.setProperty('--shift', (-over - 2) + 'px');
-      } else {
-        el.classList.remove('roll');
-      }
-    });
-  }, [list]);
+  /* 막대 폭·첫 테마로 넘기기는 카드마다(ResultCard) — 이름이 다 들어가게 넓히고 옆으로 넘긴다(2026-10-20 사용자 요청,
+     좁은 화면도 넓힌다. 전에 좁은 화면에서 이름을 훑기 애니메이션으로 돌리던 것은 걷었다) */
 
   if (!s.found.length) {
     const teamStuck = s.options.oTeam && s.teams.length;
@@ -175,7 +124,7 @@ export function ResultsPanel({ s, onSave, onClubPost, onInsert, watchCtl }: {
       <SortBar s={s} />
       {/* 못 고치는 일정 문맥 — 카드마다 되풀이하지 않고 목록 위에 한 번 */}
       {onInsert === null && <p className="res-note">만든 사람이나 운영진만 이 일정의 테마를 바꿀 수 있어요. 결과는 새 일정으로 등록할 수 있어요.</p>}
-      <div id="results" ref={resRef}>
+      <div id="results">
         {list.map((r, ri) => (
           <ResultCard
             key={ri} r={r} rank={ri} lo={lo} hi={hi} span={span}

@@ -1,5 +1,6 @@
-import type { CSSProperties } from 'react';
+import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import { fmt, type SearchResultRow } from '../core';
+import { barWidth, blockNeed, firstScroll } from '../timeline';
 import type { WatchControl } from '../useWatches';
 import { WatchBell } from './WatchBell';
 
@@ -45,9 +46,50 @@ export interface ResultCardProps {
   simple?: boolean;
 }
 
+/* 오른쪽에 더 넘길 게 있으면 옅게 사라지는 끝(.tl-more) */
+const fade = (w: HTMLElement) => w.classList.toggle('tl-more', w.scrollLeft + w.clientWidth < w.scrollWidth - 1);
+
 export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave, onClubPost, onInsert, watchCtl, simple }: ResultCardProps) {
   const pct = (m: number) => ((m - lo) / span) * 100;
   const tight = r.minWait < 10;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  /* 손으로 넘긴 결과 — 그 결과인 동안은 다시 끌어오지 않는다. 정렬·더 보기로 이 자리 카드의 결과가 바뀌면 다시 맞춘다 */
+  const touched = useRef<SearchResultRow | null>(null);
+  const touchAt = useRef(0);
+  const mark = () => { touched.current = r; };
+
+  /* 테마 이름·시각이 다 들어가게 막대를 넓히고(시간 비율 그대로, timeline.ts) 첫 테마 시작으로 넘긴다.
+     이름은 한 줄 폭으로 재므로 두 줄 표시(.two)를 먼저 걷는다. 글꼴이 아직 오는 중이면 온 뒤 한 번 더 잰다 */
+  useLayoutEffect(() => {
+    const w = wrapRef.current;
+    if (!w) return;
+    let live = true;
+    const fit = () => {
+      if (!live) return;
+      const inner = w.firstElementChild as HTMLElement;
+      const blks = [...inner.querySelectorAll<HTMLElement>('.blk')];
+      /* 폭은 비우지 않고 잰다(이름·시각 폭은 막대 폭과 상관없다) — 비우면 스크롤이 0 으로 밀려 손으로 넘긴 자리를 잃는다 */
+      blks.forEach((b) => b.classList.remove('two'));
+      const cs = blks[0] && getComputedStyle(blks[0]);
+      const pad = cs ? parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + 2 : 0;
+      const needs = blks.map((b, i) => ({
+        dur: r.steps[i].end - r.steps[i].start,
+        ...blockNeed((b.querySelector('.nm i') as HTMLElement).offsetWidth, (b.querySelector('.rng') as HTMLElement).scrollWidth,
+          pad + (b.querySelector('.blk-watch') ? 18 : 0)), // 매진 벨 자리
+      }));
+      const cw = w.clientWidth;
+      const width = barWidth(needs, span, cw);
+      inner.style.width = width > cw ? width + 'px' : '';
+      blks.forEach((b, i) => b.classList.toggle('two', needs[i].two));
+      if (touched.current !== r) {
+        w.scrollTo({ left: firstScroll(r.start, lo, span, width, cw), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      }
+      fade(w);
+    };
+    fit();
+    if (document.fonts?.status === 'loading') void document.fonts.ready.then(fit);
+    return () => { live = false; };
+  }, [r, lo, span]);
 
   return (
     <div
@@ -91,7 +133,16 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
           </div>
         ) : (
           <>
-            <div className="tlwrap"><div className="tlinner">
+            {/* 막대만 옆으로 넘긴다(시간 눈금 줄도 같이). 손으로 넘겼는지는 가로 휠·키·마우스·손가락으로 실제 움직인 것만 센다 —
+                세로로 화면을 넘기다 스친 것은 아니다 */}
+            <div
+              className="tlwrap" ref={wrapRef} tabIndex={0} role="region" aria-label="타임라인, 옆으로 넘겨 보기"
+              onScroll={(e) => fade(e.currentTarget)} onKeyDown={mark}
+              onWheel={(e) => { if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) mark(); }}
+              onPointerDown={(e) => { if (e.pointerType === 'mouse') mark(); }}
+              onTouchStart={(e) => { touchAt.current = e.currentTarget.scrollLeft; }}
+              onTouchEnd={(e) => { if (Math.abs(e.currentTarget.scrollLeft - touchAt.current) > 2) mark(); }}
+            ><div className="tlinner">
               <div className="tl">
                 {r.steps.map((s, i) => {
                   const l = pct(s.start), w = pct(s.end) - pct(s.start);
@@ -100,7 +151,7 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
                       style={{ left: l + '%', width: w + '%', '--accent': `var(--accent-${s.i % 6})` } as CSSProperties}
                       title={`${s.name} ${fmt(s.start)}→${fmt(s.end)} (${s.dur}분)`}>
                       <span className="nm"><i>{s.name}</i></span>
-                      <span className="rng" data-s={fmt(s.start)} data-full={`${fmt(s.start)} – ${fmt(s.end)}`}>{fmt(s.start)} – {fmt(s.end)}</span>
+                      <span className="rng">{fmt(s.start)} – {fmt(s.end)}</span>
                       {s.soldout && s.sessionId != null && watchCtl && <WatchBell slotId={s.sessionId} ctl={watchCtl} block />}
                     </div>
                   );
