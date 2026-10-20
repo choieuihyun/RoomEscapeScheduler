@@ -9,10 +9,10 @@ const ids = (t: ReturnType<typeof bottomTabs>) => t.map(x => x.id);
 const onId = (t: ReturnType<typeof bottomTabs>) => t.filter(x => x.on).map(x => x.id);
 
 describe('bottomTabs', () => {
-  it('승인 멤버는 다섯 칸 — 홈·계산·캘린더·빈자리·더보기, 지금 화면만 강조', () => {
+  it('승인 멤버는 다섯 칸 — 홈·시간표·캘린더·빈자리·더보기, 지금 화면만 강조', () => {
     const t = bottomTabs(member);
     expect(ids(t)).toEqual(['home', 'calc', 'calendar', 'watches', 'more']);
-    expect(t.map(x => x.label)).toEqual(['홈', '계산', '캘린더', '빈자리', '더보기']);
+    expect(t.map(x => x.label)).toEqual(['홈', '시간표', '캘린더', '빈자리', '더보기']);
     expect(onId(t)).toEqual(['home']);
     expect(t.find(x => x.id === 'watches')?.count).toBe(2);
     expect(t.at(-1)?.pending).toBeUndefined();

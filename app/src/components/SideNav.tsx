@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { bottomTabs, type BottomTabId } from '../bottomTabs';
 import type { UseAuthReturn } from '../useAuth';
 import type { View } from '../useView';
@@ -47,10 +47,18 @@ export function SideNav({
   children?: ReactNode;
 }) {
   const [folded, setFolded] = useState(readFold);
-  const toggleFold = () => setFolded(f => {
-    try { localStorage.setItem(FOLD_KEY, f ? '0' : '1'); } catch { /* 기억 못 해도 접기는 된다 */ }
-    return !f;
-  });
+  /* 접기·펴기를 누른 직후 잠깐만 .anim — 전환은 이 클래스가 있을 때만 돈다(첫 화면의 접힘 복원·화면 이동엔 안 돈다) */
+  const [anim, setAnim] = useState(false);
+  const animT = useRef(0);
+  const toggleFold = () => {
+    setAnim(true);
+    clearTimeout(animT.current);
+    animT.current = window.setTimeout(() => setAnim(false), 500);
+    setFolded(f => {
+      try { localStorage.setItem(FOLD_KEY, f ? '0' : '1'); } catch { /* 기억 못 해도 접기는 된다 */ }
+      return !f;
+    });
+  };
   /* 로그인했지만 아직 승인 전이면 동호회 메뉴에 "승인 후" 꼬리표를 단다 */
   const gated = !!auth.me && auth.member !== null && auth.member.status !== 'APPROVED';
   const item = (v: View) => 'lnb-item' + (view === v ? ' on' : '');
@@ -76,9 +84,12 @@ export function SideNav({
       </button>
     );
   return (<>
-    <aside className={'lnb' + (folded ? ' folded' : '') + (tabs.length ? ' has-bnav' : '')}>
+    <aside className={'lnb' + (folded ? ' folded' : '') + (anim ? ' anim' : '') + (tabs.length ? ' has-bnav' : '')}>
       <div className="lnb-top">
-        <div className="lnb-logo">{folded ? <span className="dim">F</span> : <>Flo<span className="dim">duler</span></>}</div>
+        {/* 로고 = 홈으로(홈을 못 쓰면 시간표 계산) — 겉모양은 글자 그대로, 포커스 고리만 */}
+        <button type="button" className="lnb-logo" aria-label="홈으로" onClick={() => onView(homeOn ? 'home' : 'calc')}>
+          {folded ? <span className="dim">F</span> : <>Flo<span className="dim">duler</span></>}
+        </button>
         <button className="lnb-fold" type="button" onClick={toggleFold}
           aria-label={folded ? '메뉴 펼치기' : '메뉴 접기'} title={folded ? '메뉴 펼치기' : '메뉴 접기'}>
           <IcFold open={!folded} />
@@ -92,9 +103,9 @@ export function SideNav({
             <IcHome /><span className="lnb-txt">홈</span>
           </button>
         )}
-        <button className={item('calc')} type="button" onClick={() => onView('calc')} title="조합 계산"
+        <button className={item('calc')} type="button" onClick={() => onView('calc')} title="시간표 계산"
           aria-current={view === 'calc' ? 'page' : undefined}>
-          <IcCalc /><span className="lnb-txt">조합 계산</span>
+          <IcCalc /><span className="lnb-txt">시간표 계산</span>
         </button>
         {auth.cloudOn && (
           <button className={item('calendar')} type="button" onClick={() => onView('calendar')} title="캘린더"

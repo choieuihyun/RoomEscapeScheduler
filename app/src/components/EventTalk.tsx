@@ -215,7 +215,7 @@ export function EventTalkDone({ ev, club, onCalcWindow, onPicked }: {
               <b>{windowLabel(here)}</b>
               {!hereRow.all && ` · ${hereRow.total}명 중 ${hereRow.yes}명 기준`}
             </span>
-            <button type="button" className="btn evt-calc-btn" onClick={() => onCalcWindow(here)}>이 시간대로 조합 계산</button>
+            <button type="button" className="btn evt-calc-btn" onClick={() => onCalcWindow(here)}>이 시간대로 시간표 계산</button>
           </div>
         </div>
       )}

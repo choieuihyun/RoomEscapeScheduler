@@ -404,7 +404,7 @@ export function SchedulerPage() {
         <div className={'view' + (onCalc ? '' : ' off')}>
           {failStrip}
           <header className="page-head">
-            <h1>조합 계산</h1>
+            <h1>시간표 계산</h1>
             <p>테마별 예약 시간을 넣으면 겹치지 않게 이어서 갈 수 있는 조합을 다 찾아 드려요. 중간에 비는 시간도 같이 보여요.</p>
           </header>
           <ThemeList s={s} onOpenLoad={loadModal.openModal} watchCtl={watchCtl} />

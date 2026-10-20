@@ -25,7 +25,7 @@ export function bottomTabs(o: {
   const tabs: BottomTab[] = [];
   const pending = o.isAdmin && o.pendingCount > 0 ? o.pendingCount : undefined;
   if (o.homeOn) tabs.push({ id: 'home', label: '홈', on: o.view === 'home' });
-  tabs.push({ id: 'calc', label: '계산', on: o.view === 'calc' });
+  tabs.push({ id: 'calc', label: '시간표', on: o.view === 'calc' });
   if (o.cloudOn) {
     tabs.push({ id: 'calendar', label: '캘린더', on: o.view === 'calendar', gated: o.gated });
     tabs.push({ id: 'watches', label: '빈자리', on: false, count: o.watchCount, gated: o.gated });

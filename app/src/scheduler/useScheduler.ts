@@ -77,7 +77,7 @@ export function useScheduler() {
       hydrate(snapshot);
       setFound([]); setThemesReady([]); lastSnapshot.current = null;
       setTabCount(null); setTabSet(null); setShowCount(SHOW);
-      setRunNote(`${date} 일정을 불러왔어요. 조합 계산을 누르면 다시 짤 수 있어요.`);
+      setRunNote(`${date} 일정을 불러왔어요. 시간표 계산을 누르면 다시 짤 수 있어요.`);
       return true;
     } catch {
       setRunNote('이 일정은 불러올 수 없어요.');

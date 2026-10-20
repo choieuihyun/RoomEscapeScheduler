@@ -86,11 +86,11 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
       <TeamPanel s={s} />
       {mismatchDates.length > 1 && (
         <p className="datewarn">
-          ⚠ 테마마다 날짜가 달라요 ({mismatchDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날 회차로 맞춰야 조합이 제대로 나와요.
+          테마마다 날짜가 달라요 ({mismatchDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날 회차로 맞춰야 조합이 제대로 나와요.
         </p>
       )}
       <div className="run">
-        <button className="btn-go" id="go" type="button" onClick={() => s.runSearch()}>조합 계산</button>
+        <button className="btn-go" id="go" type="button" onClick={() => s.runSearch()}>시간표 계산</button>
         <button className="btn" id="shareBtn" type="button" onClick={s.copyShareLink}>링크 복사</button>
         <span className="note">{s.runNote}</span>
       </div>

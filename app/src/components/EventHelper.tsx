@@ -176,7 +176,7 @@ export function EventHelper({ ev, onCalcThemes }: {
           <button
             type="button" className="btn-go evh-go" disabled={pickedThemes.length === 0}
             onClick={() => dto && onCalcThemes(pickedThemes.map((t) => toAdded(t, dto)))}
-          >고른 테마 {pickedThemes.length}개로 조합 계산</button>
+          >고른 테마 {pickedThemes.length}개로 시간표 계산</button>
         )}
       </div>
     </details>

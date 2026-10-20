@@ -653,7 +653,11 @@ button:active{transform:scale(.97)}
 .lnb{position:sticky;top:0;height:100vh;width:232px;flex:none;display:flex;flex-direction:column;
   background:var(--surface);border-right:1px solid var(--line);padding:20px 12px 16px;overflow-y:auto;z-index:40}
 .lnb-top{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:2px 0 20px 10px}
-.lnb-logo{font-size:22px;font-weight:700;letter-spacing:-.035em;color:var(--ink);white-space:nowrap}
+/* 로고는 홈으로 가는 단추(§ 2026-10-20) — 단추 기본 모양을 걷고 글자 그대로. 줄 높이 36 은 아래 접기 계산(32px)의 기준 */
+.lnb-logo{flex:none;padding:0;border:0;background:none;font-family:inherit;font-size:22px;font-weight:700;line-height:36px;
+  letter-spacing:-.035em;color:var(--ink);white-space:nowrap;cursor:pointer;border-radius:var(--r-xs)}
+.lnb-logo:active{transform:none}
+.lnb-logo:focus-visible{outline:none;box-shadow:var(--ring)}
 .lnb-fold{flex:none;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;padding:0;
   background:none;border:none;color:var(--ink3);border-radius:var(--r-xs)}
 .lnb-fold:hover{background:var(--btn-bg-hover);color:var(--ink)}
@@ -674,10 +678,25 @@ button:active{transform:scale(.97)}
 .lnb-tool{color:var(--ink2)}
 .lnb-acct{justify-content:flex-start;padding:10px 10px 0;min-height:0;gap:8px}
 
-/* 접은 메뉴 — 아이콘만. 글자는 숨기고 마우스를 올리면 title 로 이름이 뜬다. */
+/* 접은 메뉴 — 아이콘만. 글자는 숨기고 마우스를 올리면 title 로 이름이 뜬다.
+   아이콘은 가운데 맞춤 대신 왼쪽 17px — 72px 막대에서 가운데와 같은 자리라, 접고 펼 때 아이콘이 옆으로 튀지 않는다.
+   로고 줄은 접으면 세로(F 위, 단추 아래)라 32px 높아진다 — 그만큼 로고 줄 아래를 당기고 메뉴 위를 띄워 두면
+   접기 전환 때 메뉴가 덜컹 내려가지 않고 margin 전환으로 미끄러진다. */
 .lnb.folded{width:72px;padding-left:10px;padding-right:10px}
-.lnb.folded .lnb-top{flex-direction:column;padding:2px 0 16px;gap:8px}
-.lnb.folded .lnb-item{justify-content:center;padding:0}
+.lnb.folded .lnb-top{flex-direction:column;padding:2px 0 16px;gap:8px;margin-bottom:-32px}
+.lnb.folded .lnb-menu{margin-top:32px}
+.lnb.folded .lnb-item{padding:0 0 0 17px}
+/* 접기·펴기 전환(누른 직후의 .anim 동안만) — 폭 232 ↔ 72 를 220ms. 접을 땐 글자가 먼저 사라지고(display:none),
+   펼 땐 폭이 다 열린 뒤 글자·미니 달력·계정이 나타난다. 접을 때 새 자리에 뜨는 F·접기 단추도 끝나고 나타나야
+   미끄러져 내려오는 메뉴와 겹치지 않는다. 움직임 줄이기면 전역 규칙이 전환을 끄고, 나타나기는 아래 미디어 쿼리 밖이라 안 돈다. */
+.lnb.anim{overflow:hidden;transition:width .22s ease,padding .22s ease}
+.lnb.anim .lnb-item{transition:padding .22s ease,background .13s}
+.lnb.anim .lnb-menu{transition:margin-top .22s ease}
+@media(prefers-reduced-motion:no-preference){
+  .lnb.anim:not(.folded) :is(.lnb-txt,.lnb-count,.lnb-badge,.lnb-tag,.lnb-logo,.lnb-acct,.lnb-cal),
+  .lnb.anim.folded :is(.lnb-logo,.lnb-fold){animation:lnbIn .14s ease .2s both}
+}
+@keyframes lnbIn{from{opacity:0}to{opacity:1}}
 .lnb.folded .lnb-txt,.lnb.folded .lnb-count,.lnb.folded .lnb-acct>span{display:none}
 .lnb.folded .lnb-acct{padding:10px 0 0;justify-content:center}
 .lnb.folded .lnb-acct .btn{height:28px;padding:0 6px;font-size:12px}
@@ -732,6 +751,9 @@ button:active{transform:scale(.97)}
   .lnb-logo{font-size:18px}
   .lnb-fold,.lnb-cal{display:none}
   .lnb.folded{width:auto;padding:8px 12px 6px}
+  .lnb.folded .lnb-top{margin-bottom:0}
+  .lnb.folded .lnb-menu{margin-top:0}
+  .lnb-logo{line-height:inherit}
   .lnb.folded .lnb-menu .lnb-txt,.lnb.folded .lnb-count{display:inline}
   .lnb.folded .lnb-item{padding:0 10px}
   .lnb-menu{order:3;flex-basis:100%;flex-direction:row;gap:2px;overflow-x:auto}
