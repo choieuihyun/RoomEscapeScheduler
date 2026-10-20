@@ -6,8 +6,8 @@ import {
   type EventDto, type SettlementDto, type SettlementItemInput, type TransferDto,
 } from '../server';
 import {
-  canMark, commas, draftFrom, draftInput, draftIssue, draftShares, gapText, headCount, itemLine, LABEL_MAX, LABELS, MAX_ITEMS,
-  orderTransfers, parseWon, payInfoMissing, progress, settlePeople, settleText, withItem, won, type ItemDraft,
+  canMark, commas, draftFrom, editBody, isAdjusted, draftInput, draftIssue, draftShares, gapText, headCount, itemLine, LABEL_MAX, LABELS, MAX_ITEMS,
+  orderTransfers, parseWon, payInfoMissing, progress, settlePeople, settleText, won, type ItemDraft,
 } from '../settle';
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
@@ -22,7 +22,8 @@ async function token(): Promise<string> {
   return t;
 }
 
-const CONFLICT = '다른 사람이 먼저 고쳤어요. 최신 내용으로 바꿨어요.';
+/* 409 때 서버 문구 뒤에 붙인다 — 창의 입력은 버리고 최신으로 다시 그렸다 */
+const REDO = ' 입력한 내용은 저장되지 않았어요. 최신 내용을 보고 다시 고쳐 주세요.';
 const keyOf = (d: SettlementDto) => String(d.items.length ? d.total : null);
 
 export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEventsReturn; meUid: string }) {
@@ -35,7 +36,9 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
   const [hidden, setHidden] = useState(false);
   const [err, setErr] = useState('');
   const [notice, setNotice] = useState('');
-  const [edit, setEdit] = useState<{ at: number | null } | null>(null);
+  /* 고치기 창 — 열 때의 정산(version·항목)을 붙잡는다. 창이 열린 사이 정산을 새로 받아도 창은 이 스냅샷을 고치고
+     이 version 으로 저장한다(그사이 바뀌었으면 서버가 409) */
+  const [edit, setEdit] = useState<{ at: number | null; base: SettlementDto } | null>(null);
   const [marking, setMarking] = useState('');
   const [payOpen, setPayOpen] = useState(false);
   const [text, setText] = useState('');
@@ -66,8 +69,9 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
     }
   }, [ev.id, apply]);
 
-  /* 정산이 있으면 열 때 받는다(보냈어요 체크가 바뀌었을 수 있다). 합계가 바뀌면 다시 */
-  const want = s.settleApi === 'on' && has && (member || !hidden);
+  /* 정산이 있으면 열 때 받는다(보냈어요 체크가 바뀌었을 수 있다). 합계가 바뀌면 다시.
+     참여자·운영진·만든 사람이 아니면 받지 않는다(합계 한 줄만) */
+  const want = s.settleApi === 'on' && has && member && !hidden;
   useEffect(() => {
     if (!want) return;
     const k = String(ev.settlementTotal);
@@ -77,6 +81,14 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
   }, [want, ev.settlementTotal, load]);
 
   if (s.settleApi !== 'on' || hidden || (!member && !has)) return null;
+  if (!member) {
+    return (
+      <section className="stl stl-none" aria-label="정산">
+        <div className="stl-h"><h3>정산</h3><span className="stl-only">모두 {won(ev.settlementTotal as number)}</span></div>
+        <p className="evp-hint">참여한 사람만 자세히 볼 수 있어요.</p>
+      </section>
+    );
+  }
 
   const items = dto?.items ?? [];
   const start = async () => {
@@ -84,21 +96,20 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
     setStarting(true);
     const d = dto ?? await load();
     setStarting(false);
-    if (d) setEdit({ at: null });
+    if (d) setEdit({ at: null, base: d });
   };
 
   /* 항목 하나를 바꾼 목록을 통째로 — 실패 문구를 돌려준다(창에 보인다). 충돌이면 최신으로 바꾸고 창을 닫는다 */
-  const save = async (at: number | null, item: SettlementItemInput | null): Promise<string> => {
-    const base = dto;
-    if (!base) return '정산을 아직 못 불러왔어요. 잠시 뒤 다시 해 주세요.';
+  const save = async (base: SettlementDto, at: number | null, item: SettlementItemInput | null): Promise<string> => {
+    const body = editBody(base, at, item);
     try {
-      apply(await putSettlement(ev.id, base.version, withItem(base.items, at, item), await token()));
+      apply(await putSettlement(ev.id, body.version, body.items, await token()));
       setEdit(null);
       setNotice('');
       return '';
     } catch (e) {
       const latest = settleConflictOf(e);
-      if (latest) { apply(latest); setEdit(null); setNotice(CONFLICT); return ''; }
+      if (latest) { apply(latest); setEdit(null); setNotice(sayClub(e) + REDO); return ''; }
       if (isMissingApi(e)) { settleMissing(); return ''; }
       return sayClub(e);
     }
@@ -148,13 +159,15 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
   if (items.length === 0) {
     return (
       <section className="stl stl-none" aria-label="정산">
-        {head(<button type="button" className="btn evp-sm stl-start" disabled={starting || (has && !dto && !err)} onClick={() => void start()}>
-          {has && !dto && !err ? '불러오는 중…' : '정산하기'}
-        </button>)}
+        {/* 받다가 403 밖의 오류가 났으면 "정산하기" 대신 "다시 시도" */}
+        {err ? head(<button type="button" className="btn evp-sm stl-start" onClick={() => void load()}>다시 시도</button>)
+          : head(<button type="button" className="btn evp-sm stl-start" disabled={starting || (has && !dto)} onClick={() => void start()}>
+            {has && !dto ? '불러오는 중…' : '정산하기'}
+          </button>)}
         {!has && !dto && <p className="evp-hint">방탈출·저녁·카페처럼 항목마다 낸 사람이 달라도 나눠 드려요.</p>}
         {err && <p className="merr">{err}</p>}
         {notice && <p className="stl-notice" role="alert">{notice}</p>}
-        {edit && dto && <ItemEditor ev={ev} dto={dto} at={edit.at} meUid={meUid} onSave={save} onClose={() => setEdit(null)} />}
+        {edit && <ItemEditor ev={ev} dto={edit.base} at={edit.at} meUid={meUid} onSave={(at, item) => save(edit.base, at, item)} onClose={() => setEdit(null)} />}
       </section>
     );
   }
@@ -191,14 +204,14 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
       <ul className="stl-items">
         {items.map((it, i) => (
           <li key={it.id}>
-            <button type="button" className="stl-item" onClick={() => setEdit({ at: i })} aria-label={`${it.label} ${won(it.amount)} 고치기`}>
+            <button type="button" className="stl-item" onClick={() => setEdit({ at: i, base: d })} aria-label={`${it.label} ${won(it.amount)} 고치기`}>
               <span className="stl-item-top"><b className="stl-label">{it.label}</b><b className="stl-amt">{won(it.amount)}</b></span>
               <span className="stl-item-sub">{itemLine(it)}</span>
             </button>
           </li>
         ))}
       </ul>
-      {items.length < MAX_ITEMS && <button type="button" className="stl-add" onClick={() => setEdit({ at: null })}>＋ 항목 더하기</button>}
+      {items.length < MAX_ITEMS && <button type="button" className="stl-add" onClick={() => setEdit({ at: null, base: d })}>＋ 항목 더하기</button>}
 
       {d.transfers.length > 0 && (
         <div className="stl-trs">
@@ -237,7 +250,7 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
           )}
         </div>
       )}
-      {edit && <ItemEditor ev={ev} dto={d} at={edit.at} meUid={meUid} onSave={save} onClose={() => setEdit(null)} />}
+      {edit && <ItemEditor ev={ev} dto={edit.base} at={edit.at} meUid={meUid} onSave={(at, item) => save(edit.base, at, item)} onClose={() => setEdit(null)} />}
       {payOpen && (
         <Sheet label="송금 정보" onClose={() => setPayOpen(false)}>
           <h3>송금 정보</h3>
@@ -296,7 +309,11 @@ function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
   const close = useCallback(() => { if (!busy) onClose(); }, [busy, onClose]);
 
   /* 금액·사람·결제한 사람을 바꾸면 고친 금액은 버리고 다시 똑같이 나눈다(합이 어긋난 채 남지 않게) */
+  /* 금액·같이 낸 사람을 바꾸면 다시 똑같이 나눈다. 이름만 고치면 저장된 몫 그대로(남는 돈이 옮겨 가 "보냈어요"가 풀리지 않게) */
   const patch = (p: Partial<ItemDraft>) => { setD((c) => ({ ...c, ...p, custom: null })); setErr(''); };
+  /* 결제한 사람 — 고친 몫이면 그대로 두고, 똑같이 나눈 것이면 남는 돈이 새 결제자에게 가게 다시 나눈다 */
+  const setPayer = (uid: string) => { setD((c) => ({ ...c, payerUid: uid, custom: isAdjusted(c) ? c.custom : null })); setErr(''); };
+  const adjusted = isAdjusted(d);
   const setAmount = (t: string) => { const n = parseWon(t); setAmtText(n === null ? '' : commas(n)); patch({ amount: n }); };
   const toggleSharer = (uid: string) => {
     const on = d.sharers.includes(uid);
@@ -322,7 +339,9 @@ function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
     setBusy(false);
     if (e) setErr(e);
   };
-  const allOn = people.every((p) => d.sharers.includes(p.uid));
+  /* "모두"는 지금 참여자 기준 — 참여를 뺀 사람은 고른 그대로 둔다 */
+  const now = people.filter((p) => !p.gone);
+  const allOn = now.every((p) => d.sharers.includes(p.uid));
 
   return (
     <Sheet label={at === null ? '정산 항목 더하기' : '정산 항목 고치기'} onClose={close} wide>
@@ -353,7 +372,7 @@ function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
         <div className="stl-chips" role="radiogroup" aria-labelledby="stl-payer">
           {people.map((p) => (
             <button key={p.uid} type="button" role="radio" aria-checked={d.payerUid === p.uid}
-              className={'chip-pick sm' + (d.payerUid === p.uid ? ' on' : '') + (p.gone ? ' gone' : '')} title={p.gone ? '지금은 참여하지 않아요' : undefined} onClick={() => patch({ payerUid: p.uid })}>
+              className={'chip-pick sm' + (d.payerUid === p.uid ? ' on' : '') + (p.gone ? ' gone' : '')} title={p.gone ? '지금은 참여하지 않아요' : undefined} onClick={() => setPayer(p.uid)}>
               {p.nickname}{p.uid === meUid && ' (나)'}
             </button>
           ))}
@@ -363,7 +382,7 @@ function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
       <div className="mrow">
         <div className="stl-lbl-row">
           <span className="stl-lbl" id="stl-sharers">같이 낸 사람 <em>{d.sharers.length}명</em></span>
-          <button type="button" className="stl-link" onClick={() => patch({ sharers: allOn ? [] : people.filter((p) => !p.gone || d.sharers.includes(p.uid)).map((p) => p.uid) })}>
+          <button type="button" className="stl-link" onClick={() => patch({ sharers: people.filter((p) => (p.gone ? d.sharers.includes(p.uid) : !allOn)).map((p) => p.uid) })}>
             {allOn ? '모두 빼기' : '모두 고르기'}
           </button>
         </div>
@@ -381,7 +400,7 @@ function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
         <div className="stl-split">
           <div className="stl-split-h">
             <span className="stl-lbl">사람별 금액</span>
-            {d.custom ? (<>
+            {adjusted ? (<>
               <span className="chip-info">조정됨</span>
               <button type="button" className="stl-link" onClick={() => setD((c) => ({ ...c, custom: null }))}>다시 똑같이</button>
             </>) : <span className="stl-split-even">{d.amount ? '똑같이 나눴어요' : '금액을 적으면 나눠요'}</span>}
@@ -399,7 +418,7 @@ function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
             ))}
           </ul>
           {gap && <p className="stl-gap" role="status">{gap}</p>}
-          {d.custom && !gap && <p className="evp-hint">금액이나 사람을 바꾸면 다시 똑같이 나눠요.</p>}
+          {adjusted && !gap && <p className="evp-hint">금액이나 같이 낸 사람을 바꾸면 다시 똑같이 나눠요.</p>}
         </div>
       )}
 

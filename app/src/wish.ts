@@ -51,16 +51,21 @@ export function wanterChips(g: WishGroupDto, meUid: string): { uid: string; name
   return [...me, ...g.wanters.filter((w) => w.uid !== meUid).map((w) => ({ uid: w.uid, name: w.nickname, me: false }))];
 }
 
-/* 일정에 이 테마가 들었나 — 구간이 있으면 구간(키, 없으면 이름), 구간이 없는 협의 중 일정은 제목에 테마 이름이 들어 있으면
-   (정리한 이름으로 — "월야애담 같이 가요"처럼 같이 가요에서 만든 일정) */
-export function eventHas(ev: Pick<EventDto, 'segments' | 'title'>, g: WishRef): boolean {
+type Placed = WishRef & { storeName?: string | null };
+/* 같이 가요가 채우는 제목·메모 — wishForm 과 eventHas 가 같이 쓴다 */
+const wishTitle = (g: Placed) => `${g.themeName.trim()} 같이 가요`;
+const wishMemo = (g: Placed) => { const place = placeLabel(g); return `같이 가요: ${g.themeName.trim()}${place ? ` · ${place}` : ''}`; };
+
+/* 일정에 이 테마가 들었나 — 구간이 있으면 구간(키, 없으면 이름). 구간이 없는 협의 중 일정은 같이 가요가 채운 그대로일 때만:
+   메모가 "같이 가요: {이름} · {지점}" 이거나 제목이 "{이름} 같이 가요"(정리한 이름으로 같음). 부분 포함은 보지 않는다("몽" ≠ "몽환 정모") */
+export function eventHas(ev: Pick<EventDto, 'segments' | 'title' | 'memo'>, g: Placed): boolean {
   if (ev.segments.length > 0) return ev.segments.some((s) => sameTheme(s, g));
-  const name = normalizeName(g.themeName);
-  return name.length > 0 && normalizeName(ev.title).includes(name);
+  if (!normalizeName(g.themeName)) return false;
+  return normalizeName(ev.memo ?? '') === normalizeName(wishMemo(g)) || normalizeName(ev.title) === normalizeName(wishTitle(g));
 }
 
 /* 이 테마가 든 다가오는 일정 — 앱이 받아 둔 목록에서. 날짜(미정이면 오늘 이후 가장 이른 후보)가 오늘 이후인 것 중 가장 이른 것 */
-export function upcomingWith(g: WishRef, events: EventDto[], today: string): { ev: EventDto; date: string } | null {
+export function upcomingWith(g: Placed, events: EventDto[], today: string): { ev: EventDto; date: string } | null {
   let best: { ev: EventDto; date: string } | null = null;
   for (const ev of events) {
     if (!eventHas(ev, g)) continue;
@@ -75,13 +80,6 @@ const clip = (s: string, n: number) => (cpLen(s) <= n ? s : [...s].slice(0, n).j
 
 /* "이 사람들과 일정 만들기" — 구간 없는 협의 중 일정으로 연다(테마 구간은 시각이 있어야 저장되는데 이때는 보통 모른다, §4.7).
    제목 "{테마} 같이 가요", 메모 "같이 가요: {테마} · {매장 지점}", 후보 날짜 모드. 참여자는 넣지 않는다(각자 참여) */
-export function wishForm(g: WishRef & { storeName?: string | null }, today: string): FormState {
-  const name = g.themeName.trim();
-  const place = placeLabel(g);
-  return {
-    ...emptyForm(today),
-    title: clip(`${name} 같이 가요`, 60),
-    memo: clip(`같이 가요: ${name}${place ? ` · ${place}` : ''}`, 500),
-    dateMode: 'candidates',
-  };
+export function wishForm(g: Placed, today: string): FormState {
+  return { ...emptyForm(today), title: clip(wishTitle(g), 60), memo: clip(wishMemo(g), 500), dateMode: 'candidates' };
 }

@@ -2304,6 +2304,7 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
 .stl-h h3{margin:0;font-size:14px;font-weight:700;color:var(--ink)}
 .stl-h .btn{margin-left:auto}
 .stl-none .evp-hint{margin-top:-6px}
+.stl-only{margin-left:auto;font-size:13.5px;font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
 .stl-sum{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:var(--r-sm);background:var(--surface2)}
 .stl-total{margin:0;font-size:14px;color:var(--ink2);font-variant-numeric:tabular-nums}
 .stl-total b{font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}

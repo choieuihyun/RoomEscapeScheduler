@@ -143,17 +143,20 @@ export interface ItemDraft {
   payerUid: string;
   /* 같이 낸 사람(고를 수 있는 사람 순서) */
   sharers: string[];
-  /* 사람별로 고친 금액 — null 이면 똑같이 나눈다 */
+  /* 사람별 금액을 그대로 둘 때(있는 항목을 열 때·칸을 고쳤을 때) — null 이면 똑같이 나눈다.
+     있는 항목은 이름만 고쳐도 저장된 몫이 그대로 가게 늘 채운다(남는 돈이 옮겨 가 "보냈어요"가 풀리지 않게) */
   custom: Record<string, number> | null;
 }
+
+/* "조정됨" — 지금 몫이 똑같이 나눈 그대로가 아닐 때 */
+export const isAdjusted = (d: ItemDraft): boolean => d.custom !== null && !isEven(d.amount ?? 0, draftShares(d), d.payerUid);
 
 export function draftFrom(it: SettlementItemDto | null, people: (Who & { gone?: boolean })[], meUid: string, firstItem: boolean): ItemDraft {
   if (it) {
     const order = people.map((p) => p.uid).filter((u) => it.shares.some((s) => s.uid === u));
-    const even = isEven(it.amount, it.shares, it.payer.uid);
     return {
       label: it.label, amount: it.amount, payerUid: it.payer.uid, sharers: order,
-      custom: even ? null : Object.fromEntries(it.shares.map((s) => [s.uid, s.amount])),
+      custom: Object.fromEntries(it.shares.map((s) => [s.uid, s.amount])),
     };
   }
   const now = people.filter((p) => !p.gone);
@@ -185,6 +188,11 @@ export function draftIssue(d: ItemDraft): string {
 
 export const draftInput = (d: ItemDraft): SettlementItemInput =>
   ({ label: d.label.trim(), amount: d.amount ?? 0, payerUid: d.payerUid, shares: draftShares(d) });
+
+/* 저장 본문 — 고치기 창을 열 때 붙잡은 정산(스냅샷)에 편집을 적용하고 그 version 으로 보낸다.
+   창이 열린 사이 다른 사람이 고쳤으면 version 이 낡아 서버가 409 로 막는다(배열 위치가 엉뚱한 항목을 덮지 않게) */
+export const editBody = (base: Pick<SettlementDto, 'version' | 'items'>, at: number | null, item: SettlementItemInput | null): { version: number; items: SettlementItemInput[] } =>
+  ({ version: base.version, items: withItem(base.items, at, item) });
 
 /* 항목 하나를 바꾼(at = null 이면 끝에 더한, item = null 이면 지운) 전체 목록 */
 export function withItem(items: SettlementItemDto[], at: number | null, item: SettlementItemInput | null): SettlementItemInput[] {

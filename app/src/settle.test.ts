@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EventDto, SettlementDto, SettlementItemDto, TransferDto } from './server';
 import {
-  canMark, commas, draftFrom, draftInput, draftIssue, draftShares, gapText, headCount, isEven, itemLine, myDue, orderTransfers,
+  canMark, commas, draftFrom, draftInput, editBody, isAdjusted, draftIssue, draftShares, gapText, headCount, isEven, itemLine, myDue, orderTransfers,
   parseWon, payInfoMissing, payIssue, progress, settlePeople, settleText, splitEven, toInputs, withItem, won,
 } from './settle';
 
@@ -96,17 +96,34 @@ describe('항목 고치기 창', () => {
     expect(draftShares({ ...d, custom: { a: 7000, b: 3000 } })).toEqual([{ uid: 'a', amount: 7000 }, { uid: 'b', amount: 3000 }]);
     expect(draftInput({ ...d, label: ' 저녁 ' })).toEqual({ label: '저녁', amount: 10000, payerUid: 'a', shares: [{ uid: 'a', amount: 5000 }, { uid: 'b', amount: 5000 }] });
   });
-  it('있는 항목 — 조정된 것이면 custom 으로 그대로 연다', () => {
+  it('있는 항목 — 저장된 몫 그대로 연다(조정됨은 몫으로 판정)', () => {
     const it2 = item({ amount: 10000, payer: W('b', '열쇠'), shares: [{ ...W('a'), amount: 7000 }, { ...W('b'), amount: 3000 }] });
-    expect(draftFrom(it2, people, 'a', false)).toMatchObject({ label: '방탈출', amount: 10000, payerUid: 'b', sharers: ['a', 'b'], custom: { a: 7000, b: 3000 } });
+    const d2 = draftFrom(it2, people, 'a', false);
+    expect(d2).toMatchObject({ label: '방탈출', amount: 10000, payerUid: 'b', sharers: ['a', 'b'], custom: { a: 7000, b: 3000 } });
+    expect(isAdjusted(d2)).toBe(true);
     const even = item({ amount: 10000, payer: W('a'), shares: [{ ...W('b'), amount: 5000 }, { ...W('a'), amount: 5000 }] });
-    expect(draftFrom(even, people, 'a', false).custom).toBeNull();
+    expect(isAdjusted(draftFrom(even, people, 'a', false))).toBe(false);
+  });
+  it('이름만 고치면 저장된 몫 그대로 — 남는 돈이 결제자가 아닌 사람에게 가 있던 것도 옮기지 않는다', () => {
+    // 결제자(b)가 같이 내지 않아 남는 10원이 a 에게 간 항목. 똑같이 나눈 것으로 판정되지만 다시 나누면 안 된다
+    const odd = item({ amount: 10010, payer: W('x', '나간사람'), shares: [{ ...W('a'), amount: 5010 }, { ...W('b'), amount: 5000 }] });
+    const d = draftFrom(odd, people, 'a', false);
+    expect(draftInput({ ...d, label: '저녁' }).shares).toEqual([{ uid: 'a', amount: 5010 }, { uid: 'b', amount: 5000 }]);
   });
   it('고를 사람 — 참여자 + 저장된 항목에만 있는 사람(참여를 뺀 사람)', () => {
     const d = dto({ items: [item({ amount: 9000, payer: W('x', '나간사람'), shares: [{ ...W('a', '방탈출러버'), amount: 4500 }, { ...W('x', '나간사람'), amount: 4500 }] })] });
     expect(settlePeople(ev(), d)).toEqual([
       { uid: 'a', nickname: '방탈출러버', gone: false }, { uid: 'b', nickname: '열쇠', gone: false }, { uid: 'x', nickname: '나간사람', gone: true }]);
     expect(draftFrom(null, settlePeople(ev(), d), 'a', false).sharers).toEqual(['a', 'b']); // 새 항목 기본은 지금 참여자만
+  });
+  it('저장 본문은 창을 열 때의 스냅샷에 적용하고 그 version 으로 — 그사이 정산이 바뀌어도 엉뚱한 항목을 덮지 않는다', () => {
+    const snap = { version: 3, items: [item({ id: 1, label: '방탈출', amount: 1000, shares: [{ ...W('a'), amount: 1000 }] }),
+      item({ id: 2, label: '저녁', amount: 2000, shares: [{ ...W('a'), amount: 2000 }] }), item({ id: 3, label: '카페', amount: 300, shares: [{ ...W('a'), amount: 300 }] })] };
+    const edited = { label: '저녁', amount: 2500, payerUid: 'a', shares: [{ uid: 'a', amount: 2500 }] };
+    const body = editBody(snap, 1, edited);
+    expect(body.version).toBe(3); // 최신이 v4(누가 방탈출을 지움)여도 v3 로 보내 서버가 409 로 막는다
+    expect(body.items.map((i) => `${i.label}:${i.amount}`)).toEqual(['방탈출:1000', '저녁:2500', '카페:300']);
+    expect(editBody(snap, 2, null).items.map((i) => i.label)).toEqual(['방탈출', '저녁']);
   });
   it('항목 하나 바꾼 전체 목록(PUT 본문) — 더하기·바꾸기·지우기, 정수 그대로', () => {
     const items = [item({ id: 7, amount: 1000, shares: [{ ...W('a'), amount: 1000 }] }), item({ id: 8, label: '저녁', amount: 2000, shares: [{ ...W('b'), amount: 2000 }] })];

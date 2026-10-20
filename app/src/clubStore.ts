@@ -74,7 +74,7 @@ export async function reloadWishes(): Promise<void> {
 /* 승인 멤버이고 일정 API 가 켜지면 SchedulerPage 가 부른다. 사람이 바뀌면 처음부터, 같은 사람이면 조용히 새로 받는다 */
 export function startClub(uid: string, flags: (f: number) => void): void {
   onFlags = flags;
-  if (st.uid !== uid) st = blank(uid);
+  if (st.uid !== uid) { st = blank(uid); dueAt = 0; }
   flags(flagsOf(st));
   if (st.wishApi !== 'missing') void reloadWishes();
   if (st.settleApi !== 'missing') void reloadPay();
@@ -112,26 +112,25 @@ export function keepSettle(dto: SettlementDto) {
 }
 
 /* 홈 "보낼 돈" — 정산이 있는 내 일정(받아 둔 목록 + 지난 일정 첫 쪽 — 정산은 보통 일정이 끝난 뒤에 한다)에서 최근 것
-   몇 개만 정산을 받는다. 합계가 그대로인 일정은 다시 받지 않는다(force 면 다시 — 창이 다시 보일 때, 1분에 한 번) */
+   몇 개만 정산을 받는다. 홈이 보일 때만 부르고, 5분에 한 번까지(목록 폴링마다 나가지 않게). 내가 정산 칸에서 고치거나
+   체크한 것은 keepSettle 로 바로 반영된다 */
 const DUE_EVENTS = 6;
-let pastAt = 0;
-let past: EventDto[] = [];
+export const DUE_EVERY_MS = 5 * 60_000;
+let dueAt = 0;
 let dueBusy = false;
-export async function refreshDues(listed: EventDto[], force = false): Promise<void> {
-  if (st.settleApi !== 'on' || dueBusy) return;
+export async function refreshDues(listed: EventDto[]): Promise<void> {
+  if (st.settleApi !== 'on' || dueBusy || Date.now() - dueAt < DUE_EVERY_MS) return;
   const uid = st.uid;
   dueBusy = true;
+  dueAt = Date.now();
   try {
     const t = await token();
-    if (force || Date.now() - pastAt > 60_000) {
-      try { past = (await myPastEvents(null, 10, t)).events; pastAt = Date.now(); } catch { /* 지난 일정을 못 받으면 받아 둔 목록만 */ }
-    }
+    let past: EventDto[] = [];
+    try { past = (await myPastEvents(null, 10, t)).events; } catch { /* 지난 일정을 못 받으면 받아 둔 목록만 */ }
     const byId = new Map<number, EventDto>();
     for (const e of [...listed.filter((x) => x.joined), ...past]) if (e.settlementTotal !== null && !byId.has(e.id)) byId.set(e.id, e);
     const evs = [...byId.values()].sort((a, b) => ((b.date ?? '') < (a.date ?? '') ? -1 : (b.date ?? '') > (a.date ?? '') ? 1 : b.id - a.id)).slice(0, DUE_EVENTS);
     for (const e of evs) {
-      const had = st.settles.get(e.id);
-      if (!force && had && had.key === String(e.settlementTotal)) continue;
       try {
         const dto = await getSettlement(e.id, t);
         if (!same(uid)) return;

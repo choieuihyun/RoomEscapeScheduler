@@ -494,7 +494,7 @@ export function SchedulerPage() {
               <h1>홈</h1>
             </header>
             <LazyBoundary><HomePage
-              club={club} today={today} nickname={auth.member ? memberName(auth.member) : ''} photo={auth.me?.photo} isAdmin={isAdmin}
+              active={nav.view === 'home'} club={club} today={today} nickname={auth.member ? memberName(auth.member) : ''} photo={auth.me?.photo} isAdmin={isAdmin}
               watchCount={watches.watches.length} watchLimit={watches.limit} pendingCount={pendingCount}
               month={homeMonth} onMonth={stepHomeMonth}
               onWatches={watches.openModal} onMembers={() => goView('members')}

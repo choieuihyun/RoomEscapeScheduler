@@ -87,10 +87,16 @@ describe('그 테마가 든 다가오는 일정', () => {
     expect(upcomingWith(g, evs, '2026-10-20')).toMatchObject({ date: '2026-10-23', ev: { id: 5 } });
     expect(upcomingWith(g, evs, '2026-10-24')).toBeNull();
   });
-  it('구간 없는 협의 중 일정은 제목에 테마 이름이 들어 있으면(정리한 이름)', () => {
+  it('구간 없는 협의 중 일정은 같이 가요가 채운 그대로일 때만 — 제목 "{이름} 같이 가요" 또는 메모 "같이 가요: {이름} · {지점}"', () => {
+    const gp = { themeKey: 'b1', themeName: '월야애담', branchName: '홍대던전점', storeName: '비트포비아' };
     const evs = [ev({ id: 6, date: '2026-10-26', title: '월야 애담 같이 가요!', segments: [] }), ev({ id: 7, date: '2026-10-21', title: '이번 주 번개', segments: [] })];
-    expect(upcomingWith(g, evs, '2026-10-20')).toMatchObject({ ev: { id: 6 } });
-    expect(eventHas(ev({ title: '월야애담', segments: [seg('셜록')] }), g)).toBe(false); // 구간이 있으면 구간으로만
+    expect(upcomingWith(gp, evs, '2026-10-20')).toMatchObject({ ev: { id: 6 } });
+    expect(eventHas(ev({ title: '토요 정모', memo: '같이 가요: 월야애담 · 비트포비아 홍대던전점', segments: [] }), gp)).toBe(true);
+    expect(eventHas(ev({ title: '토요 정모', memo: '같이 가요: 월야애담 · 다른 지점', segments: [] }), gp)).toBe(false);
+    expect(eventHas(ev({ title: '월야애담 정모', segments: [] }), gp)).toBe(false); // 부분 포함은 아니다
+    expect(eventHas(ev({ title: '몽환 정모', segments: [] }), { themeKey: null, themeName: '몽' })).toBe(false);
+    expect(eventHas(ev({ title: '몽 같이 가요', segments: [] }), { themeKey: null, themeName: '몽' })).toBe(true);
+    expect(eventHas(ev({ title: '월야애담 같이 가요', segments: [seg('셜록')] }), gp)).toBe(false); // 구간이 있으면 구간으로만
   });
   it('없으면 null', () => {
     expect(upcomingWith(g, [ev({ segments: [seg('고백')] })], '2026-10-20')).toBeNull();

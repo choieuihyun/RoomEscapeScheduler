@@ -41,9 +41,11 @@ const people = (ev: EventDto) => (ev.capacity === null ? `${ev.count}명` : `${e
 const dowClass = (dow: number) => (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
 
 export function HomePage({
-  club, today, nickname, photo, isAdmin, watchCount, watchLimit, pendingCount, month,
+  active, club, today, nickname, photo, isAdmin, watchCount, watchLimit, pendingCount, month,
   onMonth, onWatches, onMembers, onNewEvent, onOpenEvent, onPickDay, profile, peopleOn, rankOn, onView,
 }: {
+  /* 홈이 지금 보이는지(숨겨 둔 채 남아 있을 때는 정산을 받지 않는다) */
+  active: boolean;
   club: UseClubEventsReturn;
   today: string;
   nickname: string;
@@ -129,16 +131,17 @@ export function HomePage({
 
   /* 보낼 돈 띠(§4.13) — 정산이 있는 내 일정(받아 둔 목록 + 지난 일정 첫 쪽)에서 최근 것 몇 개만 정산을 받는다.
      합계가 그대로면 다시 받지 않고, 창이 다시 보이면 새로 받는다(보냈어요 체크는 합계를 바꾸지 않는다) */
+  /* 홈이 실제로 보일 때만 — refreshDues 가 5분에 한 번으로 줄인다(목록 폴링·포커스마다 나가지 않게) */
   const settleOn = club7.settleApi === 'on';
   const evRef = useRef(events);
   useEffect(() => { evRef.current = events; }, [events]);
-  useEffect(() => { if (settleOn) void refreshDues(events); }, [settleOn, events]);
+  useEffect(() => { if (settleOn && active) void refreshDues(events); }, [settleOn, active, events]);
   useEffect(() => {
-    if (!settleOn) return;
-    const on = () => { if (document.visibilityState === 'visible') void refreshDues(evRef.current, true); };
+    if (!settleOn || !active) return;
+    const on = () => { if (document.visibilityState === 'visible') void refreshDues(evRef.current); };
     document.addEventListener('visibilitychange', on);
     return () => document.removeEventListener('visibilitychange', on);
-  }, [settleOn]);
+  }, [settleOn, active]);
   const dues = settleOn && !club.error ? duesOf(club7) : [];
   const due = dues[0];
   /* 지난 일정은 받아 둔 목록 밖일 수 있어 먼저 넣는다(없으면 '연 일정이 목록에서 사라짐' 처리가 패널을 바로 닫는다) */
