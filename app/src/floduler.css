@@ -835,6 +835,16 @@ button:active{transform:scale(.97)}
 @container (max-width:160px){
   .cal-ev-pt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 }
+/* 좁은 달 칸(사이드바·상세 패널이 같이 있는 1280px 에서 약 90px)에선 인원 수를 숨겨 제목에 자리를 준다.
+   화면 읽기용으로만 남기고(칩 title 에도 있다) 점·여백도 조금 줄인다. 휴대폰 폭은 점이라 해당 없음 */
+@media(min-width:641px){
+  .cal-cell .cal-evs{container:calevs/inline-size}
+}
+@container calevs (max-width:120px){
+  .cal-ev.club{gap:4px;padding:0 4px}
+  .cal-ev.club .cal-dot{width:6px;height:6px}
+  .cal-ev.club .cal-ev-n{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+}
 .cal-new{height:32px;padding:0 14px;font-size:13px;font-weight:600;border-radius:var(--pill);margin-left:4px}
 .cal-stlegend{display:flex;gap:14px;flex-wrap:wrap;margin:-4px 0 12px;font-size:12px;color:var(--ink2)}
 .cal-stlegend span{display:inline-flex;align-items:center;gap:5px}
@@ -870,6 +880,7 @@ button:active{transform:scale(.97)}
 .ccr-t{flex:1 1 0;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ccr-m{width:100%;font-size:12.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
 
+.evp:focus{outline:none}
 .evp{display:flex;flex-direction:column;gap:16px;color:var(--ink)}
 .evp-head{display:flex;align-items:center;gap:8px}
 .evp-tools{margin-left:auto;display:flex;align-items:center;gap:4px}
@@ -1553,6 +1564,7 @@ input.pf-q:not([type=checkbox]):not([type=radio]):not([type=file]){padding-left:
 }
 
 /* 알림 켜기 안내(목업 ④ 오른쪽) */
+.pg-box:focus{outline:none}
 .pg-box{max-width:390px;border-radius:20px;padding:28px 20px 24px}
 .pg-sub{margin-bottom:16px}
 .pg-steps{margin:0 0 16px;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}

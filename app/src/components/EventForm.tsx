@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { dayLabel, parseKakaoTitle, todayKst } from '../clubEvents';
+import { dayLabel, todayKst } from '../clubEvents';
+import { applyPaste, parseKakaoTitle, shouldApplyOnBlur } from '../kakaoTitle';
 import { monthGrid } from '../core';
-import { applyPaste, emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, shouldApplyOnBlur, switchDateMode, toggleCandidate, toInput, type FormSeg, type FormState } from '../eventForm';
+import { emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, switchDateMode, toggleCandidate, toInput, type FormSeg, type FormState } from '../eventForm';
 import { conflictOf, sayClub, type EventDto, type EventInput } from '../server';
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
@@ -44,6 +45,7 @@ function Body({ m, create, update, adopt }: Props) {
   const fill = (title: string): boolean => {
     if (parseKakaoTitle(title).segments.length === 0) return false;
     const r = applyPaste(f, title);
+    candRef.current = r.form.candidates;
     setF(r.form);
     setNote(r.note);
     return true;
@@ -57,7 +59,11 @@ function Body({ m, create, update, adopt }: Props) {
   const past = candMode ? f.candidates.some((d) => d < today) : !!f.date && f.date < today;
   /* 테마(구간)가 있으면 날짜 하나만 — 이미 후보 모드인 일정은 되돌릴 수 있게 고르는 칩을 남긴다 */
   const canPickMode = !hasSegs || candMode || editing?.date === null;
-  const setMode = (mode: FormState['dateMode']) => setF((cur) => switchDateMode(cur, mode, todayKst()));
+  const fillEarliest = !editing || editing.date === null;
+  const setMode = (mode: FormState['dateMode']) => {
+    if (mode === 'fixed') setDateEdited(false);
+    setF((cur) => switchDateMode(cur, mode, todayKst(), fillEarliest));
+  };
   /* 후보 목록의 최신 값 — 빠르게 연달아 눌러도 앞의 선택 위에 쌓이게 한다 */
   const candRef = useRef(f.candidates);
   const [capHit, setCapHit] = useState(false);
@@ -141,7 +147,7 @@ function Body({ m, create, update, adopt }: Props) {
           ) : (
             <input id="evf-date" type="date" value={f.date} onChange={(e) => { setDateEdited(true); set({ date: e.target.value, dateMoved: false }); }} />
           )}
-          {!candMode && !dateEdited && editing?.date === null && !f.dateMoved && f.candidates.length > 0 && f.date === f.candidates[0] && (
+          {!candMode && !dateEdited && fillEarliest && !f.dateMoved && f.candidates.length > 0 && f.date === f.candidates[0] && (
             <p className="evf-past">가장 이른 후보 {+f.date.slice(5, 7)}/{+f.date.slice(8, 10)} 로 채웠어요.</p>
           )}
           {!candMode && f.dateMoved && <p className="evf-past">자정이 지난 시각이라 날짜를 다음날로 옮겼어요.</p>}

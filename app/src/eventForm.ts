@@ -1,7 +1,7 @@
 /* 일정 만들기·수정 창의 폼 상태 ↔ EventInput 변환과 검사 — React 밖의 순수 함수 (계획 Task E5).
    시각은 입력 칸 문자열("13:40", 24시간제), 서버로 보낼 때만 분으로 바꾸며 자정 넘김(다음날)을 채운다. */
 import { fmt, type PathStep } from './core';
-import { addDays, sortKeyDate, clockLabel, cpLen, parseClock24, parseKakaoTitle, rangeLabel, rollDays, type TimeRow } from './clubEvents';
+import { addDays, sortKeyDate, clockLabel, cpLen, parseClock24, rangeLabel, rollDays, type TimeRow } from './clubEvents';
 import type { EventDto, EventInput, SegmentInput } from './server';
 
 const DAY_MIN = 1440;
@@ -49,8 +49,11 @@ export function toggleCandidate(list: string[], iso: string): { list: string[]; 
 /* 날짜 칸 모드 바꾸기 — 하루 옮긴 표시(dateMoved)는 모드를 몇 번 바꿔도 그대로 둔다.
    toInput 이 후보 모드로 보낼 때 원래 날짜 기준 시각(1470)으로 되돌리는 데 쓰고, 날짜 정하기에서는 옮긴 날짜 안내가 된다.
    날짜를 직접 고치거나 붙여넣기로 시각이 바뀔 때만 꺼진다. */
-export function switchDateMode(cur: FormState, mode: FormState['dateMode'], today: string): FormState {
-  return mode === cur.dateMode ? cur : { ...cur, dateMode: mode, date: cur.date || today };
+export function switchDateMode(cur: FormState, mode: FormState['dateMode'], today: string, fillEarliest = false): FormState {
+  if (mode === cur.dateMode) return cur;
+  /* 새로 만들거나 미정 일정을 고치는 중에 날짜 정하기로 돌아오면, 후보가 있으면 가장 이른 후보로 채운다 */
+  if (mode === 'fixed' && fillEarliest && !cur.dateMoved && cur.candidates.length > 0) return { ...cur, dateMode: mode, date: cur.candidates[0] };
+  return { ...cur, dateMode: mode, date: cur.date || today };
 }
 
 export const MAX_SEGS = 6;
@@ -113,33 +116,6 @@ export function formFromSteps(date: string, steps: PathStep[]): FormState {
     })),
   };
 }
-
-/* 카톡 제목을 붙여넣었을 때. 구간을 알아보면 구간·예약을 채우고 제목은 비운다(제목은 구간으로 만들어진다).
-   못 알아보면 제목만 바꾼다. 원래 폼 객체는 건드리지 않는다. */
-export function applyPaste(f: FormState, title: string): { form: FormState; note: string } {
-  const p = parseKakaoTitle(title);
-  if (p.segments.length === 0) return { form: { ...f, title }, note: '' };
-  const segs = p.segments.slice(0, MAX_SEGS).map((s) => ({
-    ...emptySeg(), themeName: s.themeName, start: fmt(s.startMin), end: s.endMin === undefined ? '' : fmt(s.endMin),
-  }));
-  const bits: string[] = [];
-  if (p.booked !== null) bits.push(p.booked ? '예약 완료' : '예약 전');
-  bits.push(`테마 ${segs.length}개`);
-  return {
-    /* 붙여넣은 첫 시각이 06시 전이면 자정 뒤 시각이라 옮긴 날짜가 맞다 — 그대로 두고 안내도 유지.
-       아니면 옮긴 날짜와 무관하니 날짜를 원래대로 되돌리고 안내를 끈다 */
-    form: p.segments[0].startMin < 6 * 60
-      ? { ...f, title: '', segs, booked: p.booked ?? f.booked }
-      : { ...f, title: '', segs, booked: p.booked ?? f.booked, date: f.dateMoved && f.origDate ? f.origDate : f.date, dateMoved: false, origDate: undefined },
-    note: (p.booked !== null ? '카톡 제목에서 ' : '') + bits.join(' · ') + '를 채웠어요.',
-  };
-}
-
-/* 제목 칸을 벗어날 때는 구간이 비어 있고 제목에 카톡 표시(맨 앞 `[예약…]` 대괄호나 조각 사이 `+`)가 있을 때만
-   카톡 제목으로 채운다 — 이미 있는 구간(지점·끝 시각)이나 "정모 19:00" 같은 평범한 제목(협의 중 일정)이
-   구간으로 바뀌지 못하게. 붙여넣기는 바로 적용한다. */
-const hasKakaoMarker = (t: string): boolean => /^\s*\[\s*예약/.test(t) || t.includes('+');
-export const shouldApplyOnBlur = (f: FormState): boolean => f.segs.length === 0 && hasKakaoMarker(f.title);
 
 /* 창의 읽기 전용 시간(구간이 있을 때): 첫 시작부터 마지막 시각(마지막 구간 끝, 없으면 마지막 구간 시작)까지.
    예: `23:00–다음날 01:50 (테마에서)`. 못 읽는 칸이 있거나 순서가 틀렸으면 적힌 그대로. */

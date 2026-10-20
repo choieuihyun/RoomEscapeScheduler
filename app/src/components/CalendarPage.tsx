@@ -10,7 +10,7 @@ import { useDaySchedule } from '../useDaySchedule';
 import type { Scheduler } from '../scheduler/useScheduler';
 import { DayBranches } from './DayBranches';
 import { EventPanel } from './EventPanel';
-import { eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel, todayKst } from '../clubEvents';
+import { eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
 import type { AddedTheme } from '../useLoadModal';
 import { playedCount } from '../played';
@@ -224,12 +224,14 @@ function DayTimeline({ evs }: { evs: Ev[] }) {
 }
 
 export function CalendarPage({
-  ctl, active, plans, watches, auth, s, onLoaded, club, clubOn, onNewEvent, onEditEvent, onCloseEvent, onOpenEvent, onCalcWindow, onCalcThemes,
+  ctl, active, plans, watches, auth, s, onLoaded, club, clubOn, clubToday, onNewEvent, onEditEvent, onCloseEvent, onOpenEvent, onCalcWindow, onCalcThemes,
 }: {
   ctl: UseCalendarReturn; active: boolean; plans: UsePlansReturn; watches: UseWatchesReturn;
   auth: UseAuthReturn; s: Scheduler; onLoaded: () => void;
   /* 동호회 일정 — clubOn 은 승인 멤버이고 일정 API 가 있을 때(SchedulerPage 의 homeOn) */
   club: UseClubEventsReturn; clubOn: boolean;
+  /* 한국 날짜 '오늘' — 지난 일정 흐림 기준. 자정에 SchedulerPage 가 새로 센다 */
+  clubToday: string;
   onNewEvent: (date: string) => void; onEditEvent: (ev: EventDto) => void; onCloseEvent: () => void;
   /* 일정을 패널에 연다(그 날짜도 고른다 — 날짜 미정 일정은 누른 후보 날짜). 링크(#e=) 일정이 아니면 주소의 #e= 를 지운다 */
   onOpenEvent: (ev: EventDto, date?: string) => void;
@@ -239,7 +241,6 @@ export function CalendarPage({
   const grid = useMemo(() => monthGrid(ctl.cursor.y, ctl.cursor.m), [ctl.cursor.y, ctl.cursor.m]);
   const today = useMemo(() => toISO(new Date()), []);
   /* 동호회 일정의 '지난 날짜'는 한국 날짜로 본다. 칸의 오늘 표시(today)는 기존 캘린더처럼 기기 날짜 그대로 */
-  const clubToday = useMemo(() => todayKst(), []);
   const day = useDaySchedule(active);
   useEffect(() => {
     if (active) day.load(ctl.selected, ctl.branches);

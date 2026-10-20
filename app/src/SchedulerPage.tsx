@@ -12,6 +12,7 @@ import { useCalendar } from './useCalendar';
 import { useView, decideFirstScreen, type View } from './useView';
 import { useClubEvents } from './useClubEvents';
 import { useProfile } from './useProfile';
+import { useTodayKst } from './useToday';
 import { addDays, sortKeyDate, todayKst, windowLabel, windowToCalc } from './clubEvents';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
@@ -113,7 +114,7 @@ export function SchedulerPage() {
   /* 동호회 일정 목록은 여기서 한 번만 만든다 — 홈(E7)과 캘린더(E6)가 같이 쓴다. 승인 멤버만 부른다. */
   const clubOn = auth.cloudOn && auth.member?.status === 'APPROVED';
   /* 동호회 쪽 '오늘'은 한국 날짜(§4.7) — 홈 범위·홈 화면이 이 값을 쓴다 */
-  const today = todayKst();
+  const today = useTodayKst();
   /* 캘린더 범위 — 월 보기는 보이는 달 칸(최대 42일), 주·일 보기는 고른 날이 든 달 칸. 홈 범위와 겹쳐도 병합이 중복을 없앤다. */
   const calMonth = cal.mode === 'month' ? cal.cursor : { y: +cal.selected.slice(0, 4), m: +cal.selected.slice(5, 7) - 1 };
   const calGrid = monthGrid(calMonth.y, calMonth.m);
@@ -406,7 +407,7 @@ export function SchedulerPage() {
             <LazyBoundary><CalendarPage
               ctl={cal} active={nav.view === 'calendar'} plans={plans} watches={watches} auth={auth} s={s}
               onLoaded={() => { goView('calc'); showToast('일정을 불러왔어요.'); }}
-              club={club} clubOn={homeOn}
+              club={club} clubOn={homeOn} clubToday={today}
               onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent} onOpenEvent={openEvent}
               onCalcWindow={calcWindow} onCalcThemes={calcThemes}
             /></LazyBoundary>

@@ -85,19 +85,19 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
     }
   }
 
-  const closeRef = useRef<HTMLButtonElement>(null);
-  /* 포커스가 어디에도 없을 때(앱 안 알림 띠의 "열기"가 사라지며 body 로 떨어진 뒤 등) 일정이 열리면 닫기 단추로 옮긴다 —
+  const panelRef = useRef<HTMLDivElement>(null);
+  /* 포커스가 어디에도 없을 때(앱 안 알림 띠의 "열기"가 사라지며 body 로 떨어진 뒤 등) 일정이 열리면 패널 자체(tabIndex=-1, 제목을 읽어 줌)로 옮긴다 — 사파리에서 스크롤이 튀지 않게 preventScroll —
      클릭한 칸 등 포커스가 이미 있으면 건드리지 않는다 */
   useEffect(() => {
     const a = document.activeElement;
-    if (!a || a === document.body) closeRef.current?.focus();
+    if (!a || a === document.body) panelRef.current?.focus({ preventScroll: true });
   }, [ev.id]);
 
   const inIds = new Set(ev.participants.map((p) => p.uid));
   const candidates = (members ?? []).filter((m) => !inIds.has(m.uid));
 
   return (
-    <div className="evp" aria-label="일정 상세" onPointerDown={keepTimeFocus} onMouseDown={keepTimeFocus}>
+    <div className="evp" ref={panelRef} tabIndex={-1} aria-labelledby="evp-title" onPointerDown={keepTimeFocus} onMouseDown={keepTimeFocus}>
       <div className="evp-head">
         <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
         {played > 0 && <span className="chip-info warn">해 봄 {played}</span>}
@@ -111,12 +111,12 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
               >삭제</button>
             </>
           )}
-          <button type="button" className="btn-x" aria-label="닫기" ref={closeRef} onClick={() => { flushTime(); onClose(); }}>×</button>
+          <button type="button" className="btn-x" aria-label="닫기" onClick={() => { flushTime(); onClose(); }}>×</button>
         </span>
       </div>
 
       <div>
-        <h2 className="evp-title">{eventTitle(ev)}</h2>
+        <h2 className="evp-title" id="evp-title">{eventTitle(ev)}</h2>
         <p className="evp-sub">
           {when}{time && (undecided ? ` · ${time}` : ` ${time}`)} · 만든 사람 {ev.createdBy.nickname}
         </p>

@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import type { EventDto } from './server';
 import {
-  eventStatus, eventTitle, timeLabel, parseKakaoTitle, kakaoPost,
+  eventStatus, eventTitle, timeLabel, kakaoPost,
   sortEvents, addDays, cpLen, STATUS_LABEL,
   mergeRange, upsert, isUndecided, sortKeyDate, candidateSummary, dropEvent, afterActionError,
   parseClock24, rollDays, todayKst, daysBetween, dayLabel, longDayLabel, clockLabel, rangeLabel,
-  parseAvailText, availText, windowLabel, windowToCalc,
+  parseAvailText, availText, windowLabel, windowToCalc, msUntilKstMidnight,
 } from './clubEvents';
+import { parseKakaoTitle } from './kakaoTitle';
 import { nextMine, relDay, todayStrip, upcoming } from './homeStrip';
 
 const seg = (themeName: string, startMin: number, endMin: number | null = null) =>
@@ -20,6 +21,16 @@ const ev = (o: Partial<EventDto> = {}): EventDto => ({
 });
 
 const two = [seg('비밀의 화원', 820), seg('셜록의 서재', 920)];
+
+describe('제목 앞뒤 날짜 읽기', () => {
+  it('테마 이름에서 날짜를 떼어 낸다', () => {
+    expect(parseKakaoTitle('[예약O] 10/31 비밀의 방 19:00')).toEqual({ booked: true, segments: [{ themeName: '비밀의 방', startMin: 1140 }], md: [10, 31] });
+    expect(parseKakaoTitle('10/31(토) 비밀의 방 19:00').segments[0].themeName).toBe('비밀의 방');
+    expect(parseKakaoTitle('비밀의 방 (10/31) 19:00').segments[0].themeName).toBe('비밀의 방');
+    expect(parseKakaoTitle('비밀의 방 19:00 (10/31)').md).toEqual([10, 31]);
+    expect(parseKakaoTitle('13/45 방 19:00').segments[0].themeName).toBe('13/45 방');
+  });
+});
 
 describe('clubEvents', () => {
   it('구간 없으면 협의 중, 있으면 booked 로', () => {
@@ -477,5 +488,12 @@ describe('홈 오늘·내일 띠 (§4.10)', () => {
     const now = new Date('2026-10-19T15:30:00Z');
     expect(todayStrip([ev({ date: '2026-10-21', joined: true })], now)?.when).toBe('내일 하루 종일');
     expect(todayStrip([ev({ date: T, joined: true })], now)).toBeNull();
+  });
+});
+
+describe('msUntilKstMidnight', () => {
+  it('다음 한국 자정까지(1초 여유)', () => {
+    expect(msUntilKstMidnight(new Date('2026-10-20T14:59:00Z'))).toBe(61_000); // KST 23:59:00
+    expect(msUntilKstMidnight(new Date('2026-10-20T15:00:00Z'))).toBe(86_401_000); // KST 00:00:00
   });
 });

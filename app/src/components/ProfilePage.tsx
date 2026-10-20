@@ -139,7 +139,11 @@ function PushCard({ push }: { push: UsePushDeviceReturn }) {
   const sendTest = async () => { if (await push.test()) { startCool(); setUntil(coolUntil()); setNow(Date.now()); } };
   useEffect(() => {
     if (coolLeft(until, Date.now()) === 0) return;
-    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    /* 남은 시간이 0 이 되면 스스로 멈춘다 — 안 그러면 쉬는 시간이 끝난 뒤에도 1초마다 다시 그린다 */
+    const t = window.setInterval(() => {
+      setNow(Date.now());
+      if (coolLeft(until, Date.now()) === 0) clearInterval(t);
+    }, 1000);
     return () => clearInterval(t);
   }, [until]);
   const left = coolLeft(until, now);
@@ -307,7 +311,7 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
                 <span className="pf-res-n">{ref.themeName}</span>
                 <span className="pf-res-b">{ref.storeName} · {ref.branchName}</span>
                 {recorded ? <span className="pf-res-a">기록됨</span> : (
-                  <button type="button" className="pf-res-btn" disabled={addingKey !== null}
+                  <button type="button" className="pf-res-btn" disabled={addingKey !== null || mBusy}
                     onClick={() => void pick(ref)}>{addingKey === ref.themeKey ? '기록 중…' : '해 봤어요'}</button>
                 )}
               </div>
@@ -331,7 +335,7 @@ function PlayedCard({ profile }: { profile: UseProfileReturn }) {
             {mErr && <p className="merr" role="alert">{mErr}</p>}
             <div className="pf-manual-btns">
               <button type="button" className="btn" onClick={() => { setManualOpen(false); setMErr(''); }}>닫기</button>
-              <button type="submit" className="btn pf-save" disabled={mBusy}>{mBusy ? '기록 중…' : '기록하기'}</button>
+              <button type="submit" className="btn pf-save" disabled={mBusy || addingKey !== null}>{mBusy ? '기록 중…' : '기록하기'}</button>
             </div>
           </form>
         )}

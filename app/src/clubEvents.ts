@@ -96,59 +96,6 @@ export function timeLabel(
   return rangeLabel(start, end);
 }
 
-/* 시각 한 개: `13:40`, `13시40분`, `13시`. 24시간제라 시는 23 까지(아래에서 거른다). */
-const TIME = String.raw`(?<!\d)(\d{1,2})(?::(\d{2})|시(?:\s*(\d{1,2})\s*분?)?)`;
-/* 조각 = 테마명 + 시각, 또는 테마명 + 시각 ~ 시각(구분자 `~`·`-`·`–`) */
-const PIECE = new RegExp(String.raw`^(.*?)\s*${TIME}(?:\s*[~\-–]\s*${TIME})?$`);
-
-/* 이름 끝에 시각이나 `~`·`-`·`–` 가 남아 있으면 못 읽은 것이다(`A 13:40 14:50` 처럼) */
-const RANGE_TAIL = /(?:\d:\d{2}|\d\s*시|\d\s*분)\s*$|[~\-–]\s*$/;
-
-const toMin = (h: string, mm: string | undefined, mm2: string | undefined): number | null => {
-  const hh = +h;
-  const mi = mm !== undefined ? +mm : mm2 !== undefined ? +mm2 : 0;
-  return hh > 23 || mi > 59 ? null : hh * 60 + mi;
-};
-
-export interface KakaoSeg { themeName: string; startMin: number; endMin?: number }
-
-/* 카톡 제목 해석. 알아본 것만 채운다 — 조각 하나라도 시각이 없거나 테마명이 비면 구간은 비운다
-   (틀리게 채우는 것보다 안 채우는 게 낫다). `13:40~14:50` 같은 시간 범위는 시작·끝을 다 채우고,
-   자정을 건너면(rollDays) 다음날로 본다. 그 밖에 순서가 뒤집혔으면 안 채운다. */
-export function parseKakaoTitle(s: string): {
-  booked: boolean | null;
-  segments: KakaoSeg[];
-} {
-  let rest = s.trim();
-  let booked: boolean | null = null;
-  /* 맨 앞 대괄호는 늘 하나 걷어 낸다 — 예약 O/X 표시면 예약 여부를 읽고, `[공지]` 같은 모르는 말이면 버린다
-     (테마명 안에 남으면 틀리게 채우게 된다). */
-  const lead = rest.match(/^\[([^\]]*)\]\s*/);
-  if (lead) {
-    const mark = lead[1].match(/^\s*예약\s*([oOxX0])\s*$/);
-    if (mark) booked = mark[1] === 'x' || mark[1] === 'X' ? false : true;
-    rest = rest.slice(lead[0].length);
-  }
-  const names: string[] = [];
-  const rows: TimeRow[] = [];
-  for (const piece of rest.split('+')) {
-    const m = piece.trim().match(PIECE);
-    if (!m) return { booked, segments: [] };
-    const themeName = m[1].trim();
-    if (!themeName || RANGE_TAIL.test(themeName)) return { booked, segments: [] };
-    const start = toMin(m[2], m[3], m[4]);
-    const end = m[5] === undefined ? null : toMin(m[5], m[6], m[7]);
-    if (start === null || (m[5] !== undefined && end === null)) return { booked, segments: [] };
-    names.push(themeName);
-    rows.push({ start, end });
-  }
-  const rolled = rollDays(rows);
-  if (!('rows' in rolled)) return { booked, segments: [] };
-  const segments = rolled.rows.map((r, i): KakaoSeg =>
-    r.end === null ? { themeName: names[i], startMin: r.start } : { themeName: names[i], startMin: r.start, endMin: r.end });
-  return { booked, segments };
-}
-
 /* 카톡에 올릴 글. 구간이 있으면 `[예약O] 테마 시각 + … · 3/4명`, 없으면 `제목 · 2명`. */
 export function kakaoPost(ev: EventDto, link: string): string {
   const people = ev.capacity === null ? `${ev.count}명` : `${ev.count}/${ev.capacity}명`;
@@ -271,6 +218,11 @@ export function kst(now: Date): { iso: string; min: number } {
 
 /* 한국 날짜 "YYYY-MM-DD" */
 export const todayKst = (now: Date = new Date()): string => kst(now).iso;
+
+/* 다음 한국 자정까지 남은 밀리초(1초는 넘게) — 자정에 '오늘'을 다시 셀 때 쓴다 */
+export function msUntilKstMidnight(now: Date = new Date()): number {
+  return (1440 - kst(now).min) * 60_000 - now.getSeconds() * 1000 - now.getMilliseconds() + 1000;
+}
 
 const utcDay = (iso: string): number => {
   const [y, m, d] = iso.split('-').map(Number);

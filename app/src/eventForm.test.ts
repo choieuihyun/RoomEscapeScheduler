@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { EventDto } from './server';
 import type { PathStep } from './core';
-import { applyPaste, shouldApplyOnBlur, emptyForm, formFromEvent, formFromSteps, segTimeText, switchDateMode, toggleCandidate, toInput, type FormState } from './eventForm';
+import { applyPaste, shouldApplyOnBlur } from './kakaoTitle';
+import { emptyForm, formFromEvent, formFromSteps, segTimeText, switchDateMode, toggleCandidate, toInput, type FormState } from './eventForm';
 
 const ev = (o: Partial<EventDto> = {}): EventDto => ({
   id: 1, title: '', date: '2026-10-20', candidates: [], startMin: null, endMin: null, location: null,
@@ -336,5 +337,37 @@ describe('eventForm', () => {
     const t = toInput(g);
     if ('error' in t) throw new Error(t.error);
     expect([t.input.date, t.input.segments[0].startMin]).toEqual(['2026-11-01', 30]);
+  });
+
+  it('새 일정에서 후보를 고른 뒤 날짜 정하기로 바꾸면 가장 이른 후보로 채운다', () => {
+    const f = base({ dateMode: 'candidates', candidates: ['2026-10-28', '2026-10-21'].sort() });
+    expect(switchDateMode(f, 'fixed', '2026-10-20', true).date).toBe('2026-10-21');
+    expect(switchDateMode(base({ dateMode: 'candidates' }), 'fixed', '2026-10-20', true).date).toBe('2026-10-20');
+    expect(switchDateMode(f, 'fixed', '2026-10-20').date).toBe('2026-10-20'); // 정한 일정을 고칠 때는 그대로
+  });
+
+  describe('붙여넣은 제목 앞의 날짜', () => {
+    const T = '2026-10-20';
+    it('날짜 정하기: 이름에서 떼고 날짜 칸을 채운다', () => {
+      const { form, note } = applyPaste(base(), '[예약O] 10/31 비밀의 방 19:00', T);
+      expect([form.segs[0].themeName, form.date]).toEqual(['비밀의 방', '2026-10-31']);
+      expect(note).toContain('10/31');
+      expect(applyPaste(base(), '[예약O] 10/31(토) 비밀의 방 19:00', T).form.segs[0].themeName).toBe('비밀의 방');
+      expect(applyPaste(base(), '비밀의 방 19:00 (10/31)', T).form.date).toBe('2026-10-31');
+    });
+    it('후보 모드: 후보에 더하고 14개면 안내한다', () => {
+      const c = base({ dateMode: 'candidates', candidates: ['2026-10-25'] });
+      const r = applyPaste(c, '10/31 비밀의 방 19:00', T);
+      expect(r.form.candidates).toEqual(['2026-10-25', '2026-10-31']);
+      expect(r.form.candidatesTouched).toBe(true);
+      const full = base({ dateMode: 'candidates', candidates: Array.from({ length: 14 }, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`) });
+      const g = applyPaste(full, '10/31 비밀의 방 19:00', T);
+      expect(g.form.candidates).toHaveLength(14);
+      expect(g.note).toContain('더하지 못했어요');
+    });
+    it('연도는 오늘 기준 가장 가까운 앞날', () => {
+      expect(applyPaste(base(), '1/5 방 19:00', T).form.date).toBe('2027-01-05');
+      expect(applyPaste(base(), '10/20 방 19:00', T).form.date).toBe('2026-10-20');
+    });
   });
 });

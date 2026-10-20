@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent as KbEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { UsePushDeviceReturn } from '../usePushDevice';
 
 /* 일정 알림 켜기 안내 (작업명세서 §4.10, 목업 ④ 오른쪽). 승인된 멤버에게 이 기기에서 한 번 저절로 뜨고,
@@ -28,16 +28,34 @@ export function PushGuide({ push }: { push: UsePushDeviceReturn }) {
     return () => { back?.focus?.(); };
   }, [v]);
 
-  /* Tab·Shift+Tab 이 창 안에서만 돈다 — 끝에서 더 가면 반대쪽 끝으로. 꺼진 단추는 건너뛴다. Esc 는 SchedulerPage 가 받는다 */
-  const trap = (e: KbEvent) => {
-    if (e.key !== 'Tab') return;
-    const bs = [...(boxRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])];
-    if (bs.length === 0) return;
-    const first = bs[0], last = bs[bs.length - 1];
-    if (!boxRef.current?.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
-    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  };
+  /* 창이 열려 있는 동안 Tab·Shift+Tab 이 창 안에서만 돈다 — 끝에서 더 가면 반대쪽 끝으로, 꺼진 단추는 건너뛴다.
+     덮개가 아니라 document 에서 받는다: "켜는 중…"으로 단추가 꺼지면 포커스가 body 로 떨어져 덮개엔 키가 오지 않는다.
+     Esc 는 SchedulerPage 가 받는다 */
+  useEffect(() => {
+    if (v === null) return;
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const box = boxRef.current;
+      if (!box) return;
+      const bs = [...box.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+      const a = document.activeElement;
+      const first = bs[0], last = bs[bs.length - 1];
+      if (!first) { e.preventDefault(); box.focus({ preventScroll: true }); }
+      else if (!box.contains(a) || a === box) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+      else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', trap);
+    return () => document.removeEventListener('keydown', trap);
+  }, [v]);
+
+  /* 단추가 꺼지면(켜는 중…) 포커스가 body 로 빠지거나 꺼진 단추에 남는다 — 창 자체로 옮겨 창 안에 둔다 */
+  useEffect(() => {
+    if (v === null) return;
+    const box = boxRef.current;
+    const a = document.activeElement;
+    if (box && (!box.contains(a) || (a instanceof HTMLButtonElement && a.disabled))) box.focus({ preventScroll: true });
+  }, [v, push.busy]);
 
   /* 닫혀 있을 땐 그리지 않는다 — 다른 창처럼 .modal 을 숨겨 두었다가 .on 으로 바꾸면, 숨김이 풀리는 중이라
      첫 단추에 포커스가 들어가지 않을 때가 있었다(헤드리스 실측, 들쭉날쭉) */
@@ -65,9 +83,8 @@ export function PushGuide({ push }: { push: UsePushDeviceReturn }) {
     <div
       className="modal on"
       onClick={(e) => { if (e.target === e.currentTarget) push.closeGuide(); }}
-      onKeyDown={trap}
     >
-      <div className="mbox pg-box" ref={boxRef} role="dialog" aria-modal="true" aria-labelledby="pg-h">
+      <div className="mbox pg-box" ref={boxRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="pg-h">
         <h3 id="pg-h">일정 알림 켜기</h3>
         <p className="msub pg-sub">{sub}</p>
         {steps.length > 0 && (
