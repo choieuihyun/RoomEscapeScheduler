@@ -173,6 +173,8 @@ export function ResultsPanel({ s, onSave, onClubPost, onInsert, watchCtl }: {
       <div className="sec-head"><h2>결과</h2><span id="resCount">{countText}</span></div>
       <div id="tabs"><ResultTabs s={s} /></div>
       <SortBar s={s} />
+      {/* 못 고치는 일정 문맥 — 카드마다 되풀이하지 않고 목록 위에 한 번 */}
+      {onInsert === null && <p className="res-note">만든 사람이나 운영진만 이 일정의 테마를 바꿀 수 있어요. 결과는 새 일정으로 등록할 수 있어요.</p>}
       <div id="results" ref={resRef}>
         {list.map((r, ri) => (
           <ResultCard

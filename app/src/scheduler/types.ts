@@ -22,6 +22,9 @@ export interface Theme {
   /* 서버 테마 키(/api/schedule 의 테마 id — 매장·지점이 들어 있다). 서버에서 불러온 카드만 있다.
      같은 날짜·같은 키 카드를 또 넣으면 새로 더하지 않고 그 카드를 바꾼다(eventFlow.mergeServerThemes) */
   themeKey?: string;
+  /* 어느 일정 문맥(일정 id)에서 넣은 카드인가 — 협의 도우미로 넣은 카드만. 다른 일정 문맥으로 들어오면 이 카드는 뺀다
+     (날짜가 섞이지 않게). 화면 상태로만 들고 자동 저장·링크에는 싣지 않는다 */
+  ctx?: number;
 }
 
 export function blankTheme(id: number, name = ''): Theme {

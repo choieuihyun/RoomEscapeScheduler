@@ -8,17 +8,23 @@ import type { AddedTheme } from './useLoadModal';
    date: 도우미가 보던 날짜(정해진 일정이면 그 날짜) — 손으로 넣은 카드뿐이라 결과 날짜를 모를 때 쓴다 */
 export interface EventCtx { id: number; title: string; date: string | null }
 
+/* 다른 일정 문맥에서 넣은 카드 — 손으로 넣은 카드·문맥 없이 넣은 카드(ctx 없음)는 남긴다 */
+const otherCtx = (t: Theme, id: number) => t.ctx !== undefined && t.ctx !== id;
+export const dropOtherCtx = (ts: Theme[], id: number): Theme[] => ts.filter((t) => !otherCtx(t, id));
+export const countOtherCtx = (ts: Theme[], id: number): number => ts.filter((t) => otherCtx(t, id)).length;
+
 /* 같은 테마 판정 — 회차 날짜 + 서버 테마 키(지점이 들어 있다). 키 없는(손으로 넣은·사진) 카드는 null */
 const ident = (t: { themeKey?: string; date?: string }): string | null => (t.themeKey ? `${t.date ?? ''}|${t.themeKey}` : null);
 
-/* 서버 테마 카드 넣기 — 같은 키 카드가 있으면 그 자리에서 값만 바꾸고(id·이어 붙이기 설정은 그대로, 팀 확정이 id 를 가리킨다),
+/* 서버 테마 카드 넣기(ctx: 일정 문맥에서 넣을 때 그 일정 id — 카드에 단다) — 같은 키 카드가 있으면 그 자리에서 값만 바꾸고(id·이어 붙이기 설정은 그대로, 팀 확정이 id 를 가리킨다),
    없으면 뒤에 더한다. 손으로 넣은 카드는 건드리지 않는다. 한 번에 같은 키가 둘 와도 하나만 남는다. */
-export function mergeServerThemes(ts: Theme[], items: AddedTheme[], newId: () => number): Theme[] {
+export function mergeServerThemes(ts: Theme[], items: AddedTheme[], newId: () => number, ctx?: number): Theme[] {
   const out = [...ts];
   for (const it of items) {
     const card = {
       name: it.name, place: it.place, dur: it.dur || 70, sessions: it.sessions, raw: sessionsToText(it.sessions),
       source: 'server', fresh: it.fresh, date: it.date, themeKey: it.themeKey, err: '', busy: '',
+      ...(ctx === undefined ? {} : { ctx }),
     };
     const k = ident(it);
     const i = k ? out.findIndex((t) => ident(t) === k) : -1;

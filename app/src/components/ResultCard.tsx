@@ -79,7 +79,6 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
         {onInsert && <button className="btn-copy btn-ins" type="button" onClick={() => onInsert(r)}>이 일정에 넣기</button>}
         {onClubPost && <button className="btn-copy btn-save" type="button" onClick={() => onClubPost(r)}>{onInsert === undefined ? '일정 등록' : '새 일정으로 등록'}</button>}
         {teamModeOn && <button className="btn-copy btn-team" type="button" onClick={() => onConfirmTeam(r)}>팀 확정</button>}
-        {onInsert === null && <span className="res-note">만든 사람이나 운영진만 테마를 바꿀 수 있어요</span>}
       </div>
       <div className="res-body">
         {simple ? (

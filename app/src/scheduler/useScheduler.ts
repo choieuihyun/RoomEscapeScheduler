@@ -8,7 +8,7 @@ import {
   type AppState, type OptionsState, type TeamState,
 } from '../serialize';
 import { blankTheme, type Theme } from './types';
-import { mergeServerThemes } from '../eventFlow';
+import { dropOtherCtx, mergeServerThemes } from '../eventFlow';
 import type { AddedTheme } from '../useLoadModal';
 import type { OcrError } from '../ocr';
 
@@ -153,8 +153,9 @@ export function useScheduler() {
      fresh는 항목마다 다르다 — 매장 A·B·C에서 하나씩 골랐다면 지점마다 서버가
      확인한 시각이 다르므로, 공통 값 하나로 뭉뚱그리지 않는다.
      같은 날짜·같은 서버 테마 키의 카드가 이미 있으면 더하지 않고 그 카드를 바꾼다(회차 갱신, mergeServerThemes). */
-  const addServerThemes = useCallback((items: AddedTheme[]) => {
-    setThemes(ts => mergeServerThemes(ts, items, () => nextId.current++));
+  /* ctx: 일정 문맥(일정 id)에서 넣는다 — 다른 일정 문맥에서 넣은 카드는 먼저 뺀다(eventFlow.dropOtherCtx) */
+  const addServerThemes = useCallback((items: AddedTheme[], ctx?: number) => {
+    setThemes(ts => mergeServerThemes(ctx === undefined ? ts : dropOtherCtx(ts, ctx), items, () => nextId.current++, ctx));
   }, []);
 
   const updateTheme = useCallback((id: number, patch: Partial<Theme>) => {

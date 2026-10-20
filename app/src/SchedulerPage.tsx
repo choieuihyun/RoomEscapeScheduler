@@ -14,7 +14,7 @@ import { useClubEvents } from './useClubEvents';
 import { useProfile } from './useProfile';
 import { useTodayKst } from './useToday';
 import { addDays, eventTitle, sortKeyDate, todayKst, windowLabel, windowToCalc } from './clubEvents';
-import { countSame, stepCards, type EventCtx } from './eventFlow';
+import { countOtherCtx, countSame, dropOtherCtx, stepCards, type EventCtx } from './eventFlow';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
 import { bannerOf, swOpenId } from './swLink';
@@ -245,22 +245,30 @@ export function SchedulerPage() {
     if (cal.openEvent !== null) closeEvent();
   };
   /* 상세의 "이 시간대로 조합 계산" — 다 같이 되는 시간을 계산 조건(가장 이른 시작·가장 늦은 종료)에 넣고 계산 화면으로 */
+  /* 다른 일정 문맥으로 들어오면 앞 일정 문맥에서 넣은 카드는 뺀다(손으로·문맥 없이 넣은 카드는 그대로) — 토스트에 덧붙일 말 */
+  const dropOthers = (id: number) => {
+    const n = countOtherCtx(s.themes, id);
+    return n ? ` 앞 일정의 테마 ${n}개는 뺐어요.` : '';
+  };
   const calcWindow = (w: { start: number; end: number }, ev: EventDto) => {
+    const gone = dropOthers(ev.id);
+    if (gone) s.addServerThemes([], ev.id);
     setEvCtx({ id: ev.id, title: eventTitle(ev), date: ev.date });
     const o = windowToCalc(w);
     s.setOption('oStart', o.oStart);
     s.setOption('oEnd', o.oEnd);
     goView('calc');
-    showToast(`시간대(${windowLabel(w)})를 조건에 넣었어요. 테마를 불러와 계산해 보세요.`);
+    showToast(`시간대(${windowLabel(w)})를 조건에 넣었어요. 테마를 불러와 계산해 보세요.${gone}`);
   };
   /* 상세의 협의 도우미 "고른 테마 n개로 조합 계산" — 회차 불러오기처럼 카드로 넣고 계산 화면으로 */
   /* 같은 날짜·같은 서버 테마는 더하지 않고 카드를 바꾼다(여러 번 보내도 카드 수가 늘지 않는다) */
   const calcThemes = (items: AddedTheme[], ev: EventDto) => {
-    const same = countSame(s.themes, items);
-    s.addServerThemes(items);
+    const gone = dropOthers(ev.id);
+    const same = countSame(dropOtherCtx(s.themes, ev.id), items);
+    s.addServerThemes(items, ev.id);
     setEvCtx({ id: ev.id, title: eventTitle(ev), date: items[0]?.date ?? ev.date });
     goView('calc');
-    showToast(`테마 ${items.length}개를 넣었어요${same ? `(${same}개는 이미 있어서 바꿨어요)` : ''}.`);
+    showToast(`테마 ${items.length}개를 넣었어요${same ? `(${same}개는 이미 있어서 바꿨어요)` : ''}.${gone}`);
   };
   if (evCtx && !homeOn) setEvCtx(null);
   const ctxEv = evCtx ? club.events.find((e) => e.id === evCtx.id) : undefined;

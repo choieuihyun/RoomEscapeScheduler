@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PathStep } from './core';
-import { countSame, mergeServerThemes, stepCards } from './eventFlow';
+import { countOtherCtx, countSame, dropOtherCtx, mergeServerThemes, stepCards } from './eventFlow';
 import { blankTheme, type Theme } from './scheduler/types';
 import type { AddedTheme } from './useLoadModal';
 
@@ -77,3 +77,26 @@ describe('stepCards — 결과 단계의 카드에서 날짜·테마 키', () =>
     expect(stepCards([{ i: 1 }] as PathStep[], ready, ts)).toEqual({ date: undefined, keys: [null] });
   });
 });
+
+describe('일정 문맥이 바뀌면 앞 일정 테마 카드 정리 (§5)', () => {
+  it('문맥에서 넣은 카드엔 그 일정 id 를 단다 — 문맥 없이 넣으면 달지 않는다', () => {
+    let n = 1;
+    const a = mergeServerThemes([manual(9)], [added('zero-gn:1', 600)], () => n++, 30);
+    expect(a.map((t) => t.ctx)).toEqual([undefined, 30]);
+    expect(mergeServerThemes([], [added('zero-gn:1', 600)], () => n++)[0].ctx).toBeUndefined();
+  });
+
+  it('다른 일정 문맥으로 오면 앞 문맥 카드만 뺀다 — 손으로·문맥 없이 넣은 카드, 같은 문맥 카드는 그대로', () => {
+    let n = 1;
+    const ts = [
+      manual(9),
+      ...mergeServerThemes([], [added('zero-gn:1', 600), added('key-hd:1', 1200)], () => n++, 30),
+      ...mergeServerThemes([], [added('zero-gn:2', 700)], () => 50),
+    ];
+    expect(countOtherCtx(ts, 31)).toBe(2);
+    expect(dropOtherCtx(ts, 31).map((t) => t.id)).toEqual([9, 50]);
+    expect(countOtherCtx(ts, 30)).toBe(0);
+    expect(dropOtherCtx(ts, 30)).toEqual(ts);
+  });
+});
+
