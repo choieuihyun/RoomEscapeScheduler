@@ -369,5 +369,15 @@ describe('eventForm', () => {
       expect(applyPaste(base(), '1/5 방 19:00', T).form.date).toBe('2027-01-05');
       expect(applyPaste(base(), '10/20 방 19:00', T).form.date).toBe('2026-10-20');
     });
+    it('다음 해로 넘어가면 안내에 연도를 붙이고, 같은 해면 붙이지 않는다', () => {
+      const r = applyPaste(base(), '10/19 방 19:00', T);
+      expect(r.form.date).toBe('2027-10-19');
+      expect(r.note).toContain('날짜는 2027년 10/19 로 맞췄어요.');
+      expect(applyPaste(base(), '10/31 방 19:00', T).note).toContain('날짜는 10/31 로 맞췄어요.');
+      const c = applyPaste(base({ dateMode: 'candidates' }), '10/19 방 19:00', T);
+      expect(c.note).toContain('후보에 2027년 10/19 을 더했어요.');
+      const dup = applyPaste(base({ dateMode: 'candidates', candidates: ['2027-10-19'] }), '10/19 방 19:00', T);
+      expect(dup.note).toContain('후보에 2027년 10/19 이 이미 있어요.');
+    });
   });
 });

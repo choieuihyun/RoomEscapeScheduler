@@ -239,8 +239,8 @@ export function CalendarPage({
   onCalcThemes: (items: AddedTheme[]) => void;
 }) {
   const grid = useMemo(() => monthGrid(ctl.cursor.y, ctl.cursor.m), [ctl.cursor.y, ctl.cursor.m]);
-  const today = useMemo(() => toISO(new Date()), []);
-  /* 동호회 일정의 '지난 날짜'는 한국 날짜로 본다. 칸의 오늘 표시(today)는 기존 캘린더처럼 기기 날짜 그대로 */
+  /* 칸의 오늘 표시와 동호회 일정의 '지난 날짜'는 모두 한국 날짜(clubToday, 자정에 갱신)로 본다 */
+  const today = clubToday;
   const day = useDaySchedule(active);
   useEffect(() => {
     if (active) day.load(ctl.selected, ctl.branches);

@@ -104,7 +104,8 @@ export function applyPaste(f: FormState, title: string, today: string = todayKst
   if (!p.md) return { form, note };
   /* 제목에 날짜가 있으면: 날짜 정하기는 날짜 칸, 후보 모드는 후보에 더한다 */
   const iso = nearestDate(p.md[0], p.md[1], today);
-  const label = `${p.md[0]}/${p.md[1]}`;
+  /* 올해(한국)가 아니라 다음 해 이후로 넘어갔으면 연도를 붙여 1년 뒤로 들어간 걸 알린다 */
+  const label = (iso.slice(0, 4) === today.slice(0, 4) ? '' : `${iso.slice(0, 4)}년 `) + `${p.md[0]}/${p.md[1]}`;
   if (form.dateMode === 'fixed') {
     note += ` 날짜는 ${label} 로 맞췄어요.`;
     return { form: { ...form, date: iso, dateMoved: false, origDate: undefined }, note };
