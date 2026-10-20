@@ -154,9 +154,14 @@ export function mergePicks(f: FormState, picks: PickedSession[], date: string): 
   if (all.some((x) => x.start - shift >= first + DAY || (x.end !== null && x.end - shift >= first + DAY))) return { form: f, note: '', error: SAME_NIGHT };
 
   const segs = all.map((x) => ({ ...x.g, start: fmt(x.start - shift), end: x.end === null ? '' : fmt(x.end - shift) }));
-  /* 칸 글자를 toInput 처럼 다시 읽어 같은 분이 나오는지 — 18시 전에 시작해 자정을 넘으면 여기서 걸린다 */
+  /* 칸 글자를 toInput 처럼 다시 읽어 같은 분이 나오는지. 걸리는 경우는 둘이다 —
+     모두 다음날 06시 전 안이면 18시 전에 시작해 자정을 넘긴 것(저녁 6시 안내),
+     아니면 22:00 구간 뒤 다음날 13:00 처럼 같은 밤을 벗어난 것(같은 날 밤 안내) */
   const back = rollDays(segs.map((g) => ({ start: parseClock24(g.start) as number, end: g.end ? parseClock24(g.end) : null })));
-  if (!('rows' in back)) return { form: f, note: '', error: EVENING };
+  if (!('rows' in back)) {
+    const night = all.every((x) => x.start - shift < DAY + 6 * 60 && (x.end === null || x.end - shift <= DAY + 6 * 60));
+    return { form: f, note: '', error: night ? EVENING : SAME_NIGHT };
+  }
   if (back.rows.some((r, i) => r.start !== all[i].start - shift || r.end !== (all[i].end === null ? null : (all[i].end as number) - shift))) {
     return { form: f, note: '', error: SAME_NIGHT };
   }

@@ -73,17 +73,17 @@ export function emptyForm(date: string): FormState {
 /* 첫 시각(첫 구간 시작, 없으면 일정 시작)이 1440 이상이면 날짜를 하루 뒤로 옮긴다. 칸은 fmt 로 24 에 접혀
    그대로 맞고, 저장할 때 toInput 이 옮긴 날짜 기준으로 다시 다음날을 채운다 — 같은 순간이 그대로 저장된다. */
 function nextDayDate(date: string, first: number | null): { date: string; dateMoved: boolean; origDate?: string } {
-  return first !== null && first >= 1440 ? { date: addDays(date, 1), dateMoved: true, origDate: date } : { date, dateMoved: false };
+  return first !== null && first >= 1440 && date ? { date: addDays(date, 1), dateMoved: true, origDate: date } : { date, dateMoved: false };
 }
 
 export function formFromEvent(ev: EventDto): FormState {
   const undecided = ev.date === null;
   return {
     title: ev.title,
-    /* 미정 일정은 후보 모드로 연다 — 날짜 칸은 가장 이른 후보로 채워 두지만 모드가 candidates 라 보내지 않는다 */
-    ...(undecided
-      ? { date: sortKeyDate(ev), dateMoved: false }
-      : nextDayDate(ev.date as string, ev.segments[0]?.startMin ?? ev.startMin)),
+    /* 미정 일정은 후보 모드로 연다 — 날짜 칸은 가장 이른 후보로 채워 두지만 모드가 candidates 라 보내지 않는다.
+       첫 시각이 자정 뒤(1470)면 정해진 일정처럼 옮김 표시를 단다 — 칸은 00:30 으로 접히고, 저장할 때 toInput 이
+       후보 모드 보정으로 1470 을 되돌린다(안 달면 [30,100] 으로 하루 앞당겨진다) */
+    ...nextDayDate(undecided ? sortKeyDate(ev) : ev.date as string, ev.segments[0]?.startMin ?? ev.startMin),
     dateMode: undecided ? 'candidates' : 'fixed',
     candidates: ev.candidates.map((c) => c.date).sort(),
     candidatesTouched: false,

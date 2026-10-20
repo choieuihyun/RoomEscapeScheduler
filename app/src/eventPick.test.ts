@@ -103,6 +103,25 @@ describe('eventPick — 합치기', () => {
     expect([r.error, r.form]).toEqual(['자정을 넘기는 일정은 저녁 6시 이후에 시작할 때만 이어서 넣을 수 있어요.', f]);
   });
 
+  it('같은 밤을 벗어난 회차(22:00 뒤 다음날 13:00, 전날 22:00 앞의 13:00)는 같은 날 밤 안내', () => {
+    const late = base({ segs: [seg('22:00', '23:10')] });
+    expect(mergePicks(late, [pick(780, { date: '2026-10-23' })], '2026-10-23').error).toBe('같은 날 밤까지의 회차만 넣을 수 있어요.');
+    const day = base({ segs: [seg('13:00', '14:10')] });
+    expect(mergePicks(day, [pick(1320, { date: '2026-10-21' })], '2026-10-21').error).toBe('같은 날 밤까지의 회차만 넣을 수 있어요.');
+  });
+
+  it('미정 일정 고치기 — 자정 뒤 구간(1470)에 그 후보 날 22:00 을 더하면 [1320,1390],[1470,1540]', () => {
+    const e = {
+      id: 1, title: 't', date: null, candidates: [{ date: '2026-10-24', responses: [] }, { date: '2026-10-25', responses: [] }],
+      startMin: null, endMin: null, location: null, capacity: null, booked: false, memo: null, version: 1,
+      segments: [{ themeName: 'X', branchName: null, themeKey: null, startMin: 1470, endMin: 1540, playedBy: [] }],
+    } as unknown as EventDto;
+    const f = formFromEvent(e);
+    const r = mergePicks(f, [pick(1320, { date: '2026-10-24' })], '2026-10-24');
+    expect(r.error).toBeUndefined();
+    expect(sent(r.form)).toMatchObject({ date: null, segments: [{ startMin: 1320, endMin: 1390 }, { startMin: 1470, endMin: 1540 }] });
+  });
+
   it('찾은 날짜가 일정 날짜와 다르면 일정 날짜를 그 날로 바꾸고 알린다', () => {
     const { form, note } = mergePicks(base({ date: '2026-10-22' }), [pick(820)], '2026-10-24');
     expect(form.date).toBe('2026-10-24');

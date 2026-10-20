@@ -312,6 +312,23 @@ describe('eventForm', () => {
       expect([j.date, j.segments[0].startMin]).toEqual(['2026-11-01', 30]);
     });
 
+    it('미정 일정을 고칠 때 첫 구간이 자정 뒤(1470)여도 그대로 저장하면 하루 앞당겨지지 않는다', () => {
+      const e = ev({
+        title: 'a', date: null, segments: [{ themeName: '심야', branchName: null, themeKey: null, startMin: 1470, endMin: 1540, playedBy: [] }],
+        candidates: [{ date: '2026-10-24', responses: [] }, { date: '2026-10-25', responses: [] }],
+      });
+      const f = formFromEvent(e);
+      expect([f.dateMode, f.date, f.dateMoved, f.origDate, f.segs[0].start]).toEqual(['candidates', '2026-10-25', true, '2026-10-24', '00:30']);
+      const i = input(f);
+      expect([i.date, i.segments[0].startMin, i.segments[0].endMin]).toEqual([null, 1470, 1540]);
+      /* 날짜 정하기로 돌리면 옮긴 날(가장 이른 후보 다음날) 00:30 — 같은 순간 */
+      const j = input(switchDateMode(f, 'fixed', '2026-10-20', true));
+      expect([j.date, j.segments[0].startMin]).toEqual(['2026-10-25', 30]);
+      /* 낮 시각이면 옮기지 않는다 */
+      const g = formFromEvent({ ...e, segments: [{ ...e.segments[0], startMin: 780, endMin: 850 }] });
+      expect([g.date, g.dateMoved]).toEqual(['2026-10-24', false]);
+    });
+
     it('첫 시각이 정각 24:00(1440)인 일정도 1440 으로 돌아간다', () => {
       const e = ev({ date: '2026-10-31', segments: [{ themeName: '심야', branchName: null, themeKey: null, startMin: 1440, endMin: null, playedBy: [] }] });
       const i = input({ ...formFromEvent(e), dateMode: 'candidates', candidates: ['2026-10-31'] });
