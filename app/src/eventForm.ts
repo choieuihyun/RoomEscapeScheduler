@@ -104,6 +104,14 @@ export function formFromEvent(ev: EventDto): FormState {
   };
 }
 
+/* "이 날짜로 정하기" — 미정 일정을 후보 date 로 정하는 폼. 첫 시각이 자정 뒤(1470)라 formFromEvent 가 옮김 표시를 달았으면
+   칸의 00:30 은 "그 후보 날 밤 = 다음날 00:30" 이라 날짜도 하루 더한다 — 안 그러면 후보 날 00:30 으로 하루 앞당겨진다.
+   "이 일정에 넣기"(formFromSteps)가 같은 회차를 저장하는 값과 같다 */
+export function decideForm(ev: EventDto, date: string): FormState {
+  const f = formFromEvent(ev);
+  return { ...f, dateMode: 'fixed', date: f.dateMoved ? addDays(date, 1) : date, origDate: f.dateMoved ? date : undefined };
+}
+
 const keyOk = (k: string | null | undefined): string | null => (k && cpLen(k) <= 80 ? k : null);
 
 /* 계산 결과 단계 → 구간 (결과 카드에서 일정으로 만들 때, E8). 예약은 아직 안 한 것으로 시작한다.

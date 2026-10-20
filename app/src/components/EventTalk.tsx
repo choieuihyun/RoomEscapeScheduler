@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import {
   availText, candidateSummary, dayLabel, parseAvailText, sortKeyDate, todayKst, windowLabel, type AvailTime, type CandidateRow,
 } from '../clubEvents';
-import { formFromEvent, toInput, type FormState } from '../eventForm';
+import { decideForm, formFromEvent, toInput, type FormState } from '../eventForm';
 import { errorCode, sayClub, type EventDto } from '../server';
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
@@ -19,8 +19,8 @@ type OnPicked = (date: string) => void;
    candidatesTouched 는 false 그대로라 정하기는 candidates 를 보내지 않고(서버가 후보·응답을 그대로 둔다),
    다시 미정으로(후보 모드)는 있던 목록을 그대로 보낸다(서버가 같은 날짜의 응답을 지킨다).
    성공하면 캘린더가 정한 날짜(다시 미정이면 오늘 이후 첫 후보)를 고르게 onPicked 를 부른다. */
-async function save(ev: EventDto, club: UseClubEventsReturn, patch: Partial<FormState>, done: string, onPicked?: OnPicked) {
-  const r = toInput({ ...formFromEvent(ev), ...patch });
+async function save(ev: EventDto, club: UseClubEventsReturn, form: FormState, done: string, onPicked?: OnPicked) {
+  const r = toInput(form);
   if ('error' in r) { showToast(r.error); return; }
   try {
     const next = await club.update(ev.id, r.input, ev.version);
@@ -147,7 +147,8 @@ export function EventTalk({ ev, club, meUid, onPicked }: {
   const best = rows.find((r) => r.date >= today && r.yes > 0)?.date ?? null;
   const decide = (date: string) => {
     if (!confirm(`${dayLabel(date)}에 하기로 정할까요? 참여한 사람들 화면에서도 날짜가 정해져요.`)) return;
-    void save(ev, club, { dateMode: 'fixed', date }, `${dayLabel(date)}에 하기로 정했어요.`, onPicked);
+    /* 자정 뒤 회차(1470)면 저장 날짜는 다음날 00:30 이다(decideForm) — 묻고 알리는 날은 고른 후보 날(그 밤) */
+    void save(ev, club, decideForm(ev, date), `${dayLabel(date)}에 하기로 정했어요.`, onPicked);
   };
   return (
     <>
@@ -203,7 +204,7 @@ export function EventTalkDone({ ev, club, onCalcWindow, onPicked }: {
   const here = hereRow?.window ?? null;
   const reopen = () => {
     if (!confirm('다시 날짜 미정으로 돌릴까요? 후보 날짜와 응답은 그대로 남아요.')) return;
-    void save(ev, club, { dateMode: 'candidates' }, '다시 날짜 미정으로 돌렸어요.', onPicked);
+    void save(ev, club, { ...formFromEvent(ev), dateMode: 'candidates' }, '다시 날짜 미정으로 돌렸어요.', onPicked);
   };
   return (
     <div className="evt-done">

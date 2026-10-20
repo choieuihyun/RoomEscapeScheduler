@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dayLabel } from './clubEvents';
 import type { PathStep } from './core';
+import { decideForm, toInput } from './eventForm';
 import { ctxAfter, planInsert } from './eventInsert';
 import type { EventDto, SegmentDto } from './server';
 
@@ -90,6 +91,28 @@ describe('planInsert — 계산 결과를 그 일정의 구간으로(일정 수�
 
   it('제목이 없는 일정도 구간이 있으니 저장된다', () => {
     expect(plan(ev({ title: '', date: '2026-10-25', segments: [seg('A', 600)] })).input.title).toBe('');
+  });
+});
+
+describe("decideForm — '이 날짜로 정하기'(미정 일정 → 후보 날짜)", () => {
+  const save = (e: EventDto, d: string) => { const r = toInput(decideForm(e, d)); if ('error' in r) throw new Error(r.error); return r.input; };
+  const late = ev({ candidates: [{ date: '2026-10-25', responses: [] }, { date: '2026-10-27', responses: [] }], segments: [{ ...seg('심야 병동', 1470), endMin: 1540 }] });
+
+  it('자정 뒤 구간(1470)은 후보 날 밤 = 다음날 00:30 으로 — "이 일정에 넣기"와 같은 값', () => {
+    const i = save(late, '2026-10-25');
+    expect([i.date, i.segments.map((g) => [g.startMin, g.endMin])]).toEqual(['2026-10-26', [[30, 100]]]);
+    const p = plan(late, '2026-10-25', [step('심야 병동', '키이스케이프 강남점', 1470, 1540)], [null]);
+    expect([i.date, i.segments[0].startMin, i.segments[0].endMin]).toEqual([p.input.date, p.input.segments[0].startMin, p.input.segments[0].endMin]);
+    /* 두 번째 후보로 정해도 그 후보 기준 */
+    expect(save(late, '2026-10-27').date).toBe('2026-10-28');
+    expect('candidates' in i).toBe(false);
+  });
+
+  it('구간 없이 자정 뒤 시각(24:30)만 있는 일정도 다음날 00:30, 낮 시각이면 고른 날 그대로', () => {
+    const timed = save(ev({ startMin: 1470, endMin: 1530 }), '2026-10-25');
+    expect([timed.date, timed.startMin, timed.endMin]).toEqual(['2026-10-26', 30, 90]);
+    const day = save(ev({ segments: [{ ...seg('비밀의 화원', 820), endMin: 890 }] }), '2026-10-26');
+    expect([day.date, day.segments[0].startMin]).toEqual(['2026-10-26', 820]);
   });
 });
 
