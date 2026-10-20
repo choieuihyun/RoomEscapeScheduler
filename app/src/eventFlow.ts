@@ -6,7 +6,24 @@ import type { AddedTheme } from './useLoadModal';
 
 /* 계산 화면이 기억하는 "어느 일정에서 왔나". 상태로만 들고 새로 고치면 사라진다.
    date: 도우미가 보던 날짜(정해진 일정이면 그 날짜) — 손으로 넣은 카드뿐이라 결과 날짜를 모를 때 쓴다 */
-export interface EventCtx { id: number; title: string; date: string | null }
+export interface EventCtx {
+  id: number; title: string; date: string | null;
+  /* 문맥을 세울 때 보이던 결과(계산 결과 배열 그대로) — 지금 결과가 이것과 같으면 아직 다시 계산하지 않은 옛 결과라
+     "이 일정에 넣기"를 붙이지 않는다(옛 결과의 고르지 않은 테마가 일정에 들어가지 않게) */
+  seen?: unknown;
+}
+
+/* 결과 카드의 넣기 상태 — none: 문맥 없음(일정 등록), stale: 문맥을 세운 뒤 아직 계산 안 함(일정 등록만, 띠가 안내),
+   blocked: 못 고치는 일정(목록 위 안내 한 번 + 새 일정으로 등록), insert: 이 일정에 넣기 */
+export type InsertMode = 'none' | 'stale' | 'blocked' | 'insert';
+export function insertMode(ctx: EventCtx | null, found: unknown, canManage: boolean | undefined): InsertMode {
+  if (!ctx) return 'none';
+  if (found === ctx.seen) return 'stale';
+  return canManage === false ? 'blocked' : 'insert';
+}
+
+/* 문맥을 들고 있을까 — 로그아웃·일정 API 꺼짐, 그 일정을 지웠으면(gone) 놓는다. 범위를 옮겨 목록에서 빠진 것만으로는 놓지 않는다 */
+export const ctxAlive = (ctx: EventCtx | null, on: boolean, gone: readonly number[]): boolean => !!ctx && on && !gone.includes(ctx.id);
 
 /* 다른 일정 문맥에서 넣은 카드 — 손으로 넣은 카드·문맥 없이 넣은 카드(ctx 없음)는 남긴다 */
 const otherCtx = (t: Theme, id: number) => t.ctx !== undefined && t.ctx !== id;

@@ -271,6 +271,9 @@ export function upsert(cur: EventDto[], ev: EventDto): EventDto[] {
   return sortEvents([...cur.filter((e) => e.id !== ev.id), ev]);
 }
 
+/* 지운 일정 id 목록에 더한다(최근 20개) — 계산 화면이 그 일정 문맥을 놓는 데 쓴다 */
+export const addGone = (g: number[], id: number): number[] => (g.includes(id) ? g : [...g.slice(-19), id]);
+
 export function dropEvent(cur: EventDto[], id: number): EventDto[] {
   return cur.filter((e) => e.id !== id);
 }

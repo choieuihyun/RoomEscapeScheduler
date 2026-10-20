@@ -14,7 +14,7 @@ import { useClubEvents } from './useClubEvents';
 import { useProfile } from './useProfile';
 import { useTodayKst } from './useToday';
 import { addDays, eventTitle, sortKeyDate, todayKst, windowLabel, windowToCalc } from './clubEvents';
-import { countOtherCtx, countSame, dropOtherCtx, stepCards, type EventCtx } from './eventFlow';
+import { countOtherCtx, countSame, ctxAlive, dropOtherCtx, insertMode, stepCards, type EventCtx } from './eventFlow';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
 import { bannerOf, swOpenId } from './swLink';
@@ -250,10 +250,11 @@ export function SchedulerPage() {
     const n = countOtherCtx(s.themes, id);
     return n ? ` 앞 일정의 테마 ${n}개는 뺐어요.` : '';
   };
+  /* 문맥을 세울 때 지금 결과를 기억한다 — 다시 계산하기 전의 옛 결과에는 "이 일정에 넣기"를 붙이지 않는다 */
   const calcWindow = (w: { start: number; end: number }, ev: EventDto) => {
     const gone = dropOthers(ev.id);
     if (gone) s.addServerThemes([], ev.id);
-    setEvCtx({ id: ev.id, title: eventTitle(ev), date: ev.date });
+    setEvCtx({ id: ev.id, title: eventTitle(ev), date: ev.date, seen: s.found });
     const o = windowToCalc(w);
     s.setOption('oStart', o.oStart);
     s.setOption('oEnd', o.oEnd);
@@ -266,12 +267,14 @@ export function SchedulerPage() {
     const gone = dropOthers(ev.id);
     const same = countSame(dropOtherCtx(s.themes, ev.id), items);
     s.addServerThemes(items, ev.id);
-    setEvCtx({ id: ev.id, title: eventTitle(ev), date: items[0]?.date ?? ev.date });
+    setEvCtx({ id: ev.id, title: eventTitle(ev), date: items[0]?.date ?? ev.date, seen: s.found });
     goView('calc');
     showToast(`테마 ${items.length}개를 넣었어요${same ? `(${same}개는 이미 있어서 바꿨어요)` : ''}.${gone}`);
   };
-  if (evCtx && !homeOn) setEvCtx(null);
+  /* 로그아웃·일정 API 꺼짐, 그 일정을 지웠을 때(목록에서 지운 일정) 문맥을 놓는다 */
+  if (evCtx && !ctxAlive(evCtx, homeOn, club.gone)) setEvCtx(null);
   const ctxEv = evCtx ? club.events.find((e) => e.id === evCtx.id) : undefined;
+  const insMode = insertMode(evCtx, s.found, ctxEv?.canManage);
   /* "이 일정에 넣기" — 저장하면 그 일정 상세를 연다. 본문은 누를 때 받는다(못 받으면 위 옛 탭 띠가 알린다) */
   const insertToEvent = (r: SearchResultRow) => {
     if (!evCtx || inserting.current) return;
@@ -464,14 +467,15 @@ export function SchedulerPage() {
           </header>
           {evCtx && (
             <div className="evctx" role="status">
-              <span>'{ctxEv ? eventTitle(ctxEv) : evCtx.title}' 일정의 테마를 고르는 중이에요</span>
+              <span>'{ctxEv ? eventTitle(ctxEv) : evCtx.title}' 일정의 테마를 고르는 중이에요
+                {insMode === 'stale' && <em> · 테마를 고른 뒤 '시간표 계산'을 눌러 주세요</em>}</span>
               <button type="button" className="evctx-x" onClick={() => setEvCtx(null)}>그만두기</button>
             </div>
           )}
           <ThemeList s={s} onOpenLoad={loadModal.openModal} watchCtl={watchCtl} />
           <ConditionsPanel s={s} />
           <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} onClubPost={homeOn ? postToClub : undefined}
-            onInsert={evCtx ? (ctxEv?.canManage === false ? null : insertToEvent) : undefined} watchCtl={watchCtl} />
+            onInsert={insMode === 'insert' ? insertToEvent : insMode === 'blocked' ? null : undefined} watchCtl={watchCtl} />
           <PlanSection auth={auth} plans={plans} s={s} />
         </div>
 

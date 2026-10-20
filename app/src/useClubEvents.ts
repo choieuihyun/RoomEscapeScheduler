@@ -4,7 +4,7 @@ import {
   listEvents, removeParticipant, sayClub, setAvailability, setBooked as setBookedApi, updateEvent,
   type EventDto, type EventInput,
 } from './server';
-import { afterActionError, dropEvent, mergeRange, upsert } from './clubEvents';
+import { addGone, afterActionError, dropEvent, mergeRange, upsert } from './clubEvents';
 import { showToast } from './toast';
 
 /* 동호회 일정 목록을 들고 있는 훅 — 서버 계약은 작업명세서 §4.7, 계획 Task E3.
@@ -118,6 +118,10 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   }, []);
 
   /* 한 일정만 다시 받는다. 지워졌으면(404 NO_SUCH_EVENT) 목록에서 빼고 null. */
+  /* 지운 일정 id(지우기·NO_SUCH_EVENT) — 계산 화면이 그 일정 문맥을 놓는다. 범위를 옮겨 목록에서 빠진 것과 가른다 */
+  const [gone, setGone] = useState<number[]>([]);
+  const markGone = (id: number) => setGone((g) => addGone(g, id));
+
   const refreshOne = useCallback(async (id: number): Promise<EventDto | null> => {
     if (!enabled) return null;
     const ep = epoch.current;
@@ -133,6 +137,7 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
     } catch (e) {
       if (errorCode(e) === 'NO_SUCH_EVENT' && live()) {
         setEvents((cur) => dropEvent(cur, id));
+        markGone(id);
         invalidateReload();
       }
       return null;
@@ -173,7 +178,7 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
       if (id !== null) {
         const fix = afterActionError(e);
         if (fix === 'refresh') await refreshOne(id);
-        else if (fix === 'drop' && live()) { setEvents((cur) => dropEvent(cur, id)); invalidateReload(); }
+        else if (fix === 'drop' && live()) { setEvents((cur) => dropEvent(cur, id)); markGone(id); invalidateReload(); }
       }
       throw e;
     } finally {
@@ -196,7 +201,7 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   const remove = useCallback(
     (id: number) => quiet(act(id, false, async (t, _put, live) => {
       await deleteEvent(id, t); // 이미 지워졌어도(404) 성공
-      if (live()) setEvents((cur) => dropEvent(cur, id));
+      if (live()) { setEvents((cur) => dropEvent(cur, id)); markGone(id); }
     })),
     [act],
   );
@@ -226,7 +231,7 @@ export function useClubEvents(enabled: boolean, ranges: Range[]) {
   );
 
   return {
-    events, api, error, reload, refreshOne, adopt,
+    events, api, error, reload, refreshOne, adopt, gone,
     create, update, remove, join, leave, answer, unanswer, addPerson, removePerson, setBooked, busyIds,
   };
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PathStep } from './core';
-import { countOtherCtx, countSame, dropOtherCtx, mergeServerThemes, stepCards } from './eventFlow';
+import { countOtherCtx, countSame, ctxAlive, dropOtherCtx, insertMode, mergeServerThemes, stepCards } from './eventFlow';
+import { addGone } from './clubEvents';
 import { blankTheme, type Theme } from './scheduler/types';
 import type { AddedTheme } from './useLoadModal';
 
@@ -100,3 +101,31 @@ describe('일정 문맥이 바뀌면 앞 일정 테마 카드 정리 (§5)', () 
   });
 });
 
+describe('일정에 넣기 — 문맥을 세운 뒤 계산한 결과에만 (§6)', () => {
+  const old: unknown[] = [];
+  const ctx = { id: 30, title: '토요 번개', date: null, seen: old };
+  it('문맥이 없으면 none, 문맥을 세울 때의 옛 결과면 stale(넣기 단추 없음)', () => {
+    expect(insertMode(null, old, true)).toBe('none');
+    expect(insertMode(ctx, old, true)).toBe('stale');
+    expect(insertMode(ctx, old, false)).toBe('stale');
+  });
+  it('문맥을 세운 뒤 다시 계산한 결과엔 넣기, 못 고치는 일정이면 blocked', () => {
+    const fresh: unknown[] = [];
+    expect(insertMode(ctx, fresh, true)).toBe('insert');
+    expect(insertMode(ctx, fresh, undefined)).toBe('insert');
+    expect(insertMode(ctx, fresh, false)).toBe('blocked');
+  });
+  it('그 일정을 지우면(gone) 문맥을 놓는다 — 로그아웃·API 꺼짐도', () => {
+    expect(ctxAlive(ctx, true, [])).toBe(true);
+    expect(ctxAlive(ctx, true, addGone([], 30))).toBe(false);
+    expect(ctxAlive(ctx, true, addGone([], 31))).toBe(true);
+    expect(ctxAlive(ctx, false, [])).toBe(false);
+    expect(ctxAlive(null, true, [])).toBe(false);
+  });
+  it('지운 일정 id 는 겹치지 않게 최근 20개까지', () => {
+    let g: number[] = [];
+    for (let i = 0; i < 25; i++) g = addGone(g, i);
+    expect(addGone(g, 24)).toBe(g);
+    expect([g.length, g[0], g[19]]).toEqual([20, 5, 24]);
+  });
+});

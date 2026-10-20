@@ -72,6 +72,18 @@ describe('planInsert — 계산 결과를 그 일정의 구간으로(일정 수�
     expect(p.input.segments[0]).toMatchObject({ themeName: '가'.repeat(40), branchName: '나'.repeat(40), themeKey: null });
   });
 
+  it('미정 일정을 후보에 없는 날짜로 정하려면 묻는다(후보 날이면 묻지 않는다)', () => {
+    expect(plan(ev(), '2026-10-27').confirm).toBe(`후보에 없는 날짜예요. ${dayLabel('2026-10-27')}로 정할까요?`);
+    expect(plan(ev(), '2026-10-26').confirm).toBe('');
+  });
+
+  it('구간 없이 일정 시각만 있던 정해진 일정은 그 시각이 바뀐다고 묻는다', () => {
+    const p = plan(ev({ date: '2026-10-25', startMin: 1140, endMin: 1380 }));
+    expect([p.input.startMin, p.input.endMin]).toEqual([null, null]);
+    expect(p.confirm).toBe('일정 시각(19:00–23:00)은 테마 시각으로 바뀌어요.');
+    expect(plan(ev({ date: '2026-10-25' })).confirm).toBe('');
+  });
+
   it('제목이 없는 일정도 구간이 있으니 저장된다', () => {
     expect(plan(ev({ title: '', date: '2026-10-25', segments: [seg('A', 600)] })).input.title).toBe('');
   });

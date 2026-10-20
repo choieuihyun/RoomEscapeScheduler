@@ -385,6 +385,7 @@ button:active{transform:scale(.97)}
   border:1px solid var(--blue-line);border-radius:var(--r-sm);
   padding:8px 12px;margin-bottom:14px;line-height:1.5}
 .evctx span{min-width:0;overflow-wrap:anywhere}
+.evctx em{font-style:normal;color:var(--ink2)}
 .evctx-x{background:none;border:0;padding:2px 0;font:inherit;font-weight:600;color:var(--blue-text);
   text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap}
 /* 체크박스 — 참고 시스템은 16px·모서리 4, 체크하면 라이트는 검정, 다크는 청록으로 채운다.
