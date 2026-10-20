@@ -33,7 +33,7 @@ describe('해 본 테마 집계', () => {
     expect(searchThemes(all, 'room', [played({ themeKey: 'other', themeName: 'room 2' })])[0].recorded).toBe(false);
   });
   it('sourceLabel 세 가지', () => {
-    expect(sourceLabel(played({ source: 'EVENT' }))).toBe('동호회 일정에서');
+    expect(sourceLabel(played({ source: 'EVENT' }))).toBe('모임 일정에서');
     expect(sourceLabel(played({ source: 'PLAN' }))).toBe('개인 일정에서');
     expect(sourceLabel(played({ source: 'MANUAL' }))).toBe('직접');
   });

@@ -426,7 +426,7 @@ export function SchedulerPage() {
   const listFailed = clubOn && club.error !== '' && club.events.length === 0;
   const failStrip = listFailed && (
     <div className="listfail" role="status">
-      <span>동호회 일정을 불러오지 못했어요.</span>
+      <span>일정을 불러오지 못했어요.</span>
       <button type="button" className="btn" disabled={retrying} onClick={() => {
         setRetrying(true);
         void club.reload().finally(() => setRetrying(false));

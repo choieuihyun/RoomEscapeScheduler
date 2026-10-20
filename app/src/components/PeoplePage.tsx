@@ -34,7 +34,7 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
     <header className="page-head">
       <button type="button" className="page-back" onClick={onBack}><span aria-hidden="true">‹</span> 더보기</button>
       <h1>멤버</h1>
-      <p>승인된 동호회 멤버예요. 서로의 프로필을 볼 수 있어요.</p>
+      <p>승인된 멤버예요. 서로의 프로필을 볼 수 있어요.</p>
     </header>
     <div className="ppl">
       <div className="ppl-bar">

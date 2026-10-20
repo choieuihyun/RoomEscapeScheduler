@@ -12,11 +12,11 @@ export function JoinPanel({ auth }: { auth: UseAuthReturn }) {
 
   return (
     <>
-      <h3>동호회 가입 신청</h3>
+      <h3>가입 신청</h3>
       {rejected && <p className="auth-box warn">지난 신청이 거절됐어요. 운영진과 이야기한 뒤 다시 신청해 주세요.</p>}
       <p className="msub">
         로그인됐어요. 오픈채팅방에서 쓰는 닉네임과 프로필을 적어 주세요. 운영진이 닉네임을 보고 승인하면
-        동호회 일정과 빈자리 알림을 쓸 수 있어요. 프로필은 승인된 멤버들에게 보여요.
+        일정과 빈자리 알림을 쓸 수 있어요. 프로필은 승인된 멤버들에게 보여요.
       </p>
       <ProfileForm
         seed={{ nickname: auth.member?.nickname ?? null, profile: auth.member?.profile }} nickLabel="오픈채팅 닉네임" nickHint="운영진이 알아볼 수 있게 채팅방 닉네임 그대로"
@@ -61,8 +61,8 @@ export function PendingPanel({ auth }: { auth: UseAuthReturn }) {
 export function RemovedPanel({ auth }: { auth: UseAuthReturn }) {
   return (
     <>
-      <h3>동호회 계정</h3>
-      <p className="msub">동호회에서 나간 계정이에요.</p>
+      <h3>나간 계정</h3>
+      <p className="msub">멤버에서 빠진 계정이에요. 이 계정으로는 다시 가입할 수 없어요.</p>
       <div className="mbtns"><button className="btn" type="button" onClick={auth.closeAuth}>닫기</button></div>
     </>
   );

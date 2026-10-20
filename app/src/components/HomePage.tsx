@@ -144,7 +144,7 @@ export function HomePage({
               return (
                 <button
                   key={iso} type="button" className={cls} onClick={() => onPickDay(iso)}
-                  aria-label={`${d.getMonth() + 1}월 ${d.getDate()}일${n ? `, 동호회 일정 ${n}개` : ''}`}
+                  aria-label={`${d.getMonth() + 1}월 ${d.getDate()}일${n ? `, 모임 일정 ${n}개` : ''}`}
                 >
                   <span className="home-cal-num">{d.getDate()}</span>
                   {n > 0 && <span className={'badge-n sm' + (iso < today ? ' past' : '')}>{n}</span>}

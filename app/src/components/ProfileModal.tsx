@@ -85,7 +85,7 @@ export function ProfileModal({ fill, auth, profile, onClose, onMissing }: Profil
         </div>
         <ProfileForm
           seed={{ nickname: m?.nickname ?? null, profile: m?.profile }} nickLabel="별명" nickHint="오픈채팅방에서 쓰는 닉네임" submitLabel="저장" playedCount={played}
-          lead={<p className="pfm-lead">{fill ? '동호회 멤버들에게 보여 줄 프로필을 채워 주세요. 닫아도 앱은 그대로 쓸 수 있고, 다음에 들어올 때 다시 여쭤요.'
+          lead={<p className="pfm-lead">{fill ? '멤버들에게 보여 줄 프로필을 채워 주세요. 닫아도 앱은 그대로 쓸 수 있고, 다음에 들어올 때 다시 여쭤요.'
             : '멤버 목록에서 승인된 멤버들에게 보여요.'}</p>}
           onSubmit={save} onCancel={askClose} cancelLabel={fill ? '나중에 할게요' : '닫기'} dirtyRef={dirty}
         />

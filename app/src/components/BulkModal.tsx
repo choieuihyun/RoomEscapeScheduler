@@ -31,7 +31,7 @@ const isFatal = (e: unknown) => statusOf(e) === 401 || statusOf(e) === 403;
 function fatalText(e: unknown): string {
   if (statusOf(e) === 401) return '로그인이 풀렸어요. 다시 로그인한 뒤 남은 것을 넣어 주세요.';
   const m = (e as { body?: { message?: string } } | null)?.body?.message;
-  return m || '승인된 멤버만 기록할 수 있어요.';
+  return m ? sayClub(e) : '승인된 멤버만 기록할 수 있어요.';
 }
 const dot = (iso: string) => iso.replaceAll('-', '.');
 const countLines = (t: string) => { let n = 0; for (const l of t.split('\n')) if (l.trim()) n++; return n; };

@@ -60,7 +60,7 @@ describe('buildWatchControl().toggle — 막지 않고 말한다', () => {
     buildWatchControl(w, true, false).toggle(172);
     expect(w.add).not.toHaveBeenCalled();
     expect(alert.mock.calls[0][0]).toContain('승인');
-    expect(alert.mock.calls[0][0]).toBe('동호회 승인을 받으면 빈자리 알림을 걸 수 있어요.');
+    expect(alert.mock.calls[0][0]).toBe('가입 승인을 받으면 빈자리 알림을 걸 수 있어요.');
   });
 
   it('멤버 상태를 불러오는 중이면 승인 전처럼 막고 잠시 뒤 다시 누르라고 한다', () => {

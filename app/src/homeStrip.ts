@@ -41,7 +41,7 @@ export function todayStrip(evs: EventDto[], now: Date): TodayStrip | null {
   const first = rows[0];
   if (!first) return null;
   const { e, day, start } = first;
-  const name = e.segments.length > 0 ? e.segments.map((g) => g.themeName).join(' → ') : e.title || '동호회 일정';
+  const name = e.segments.length > 0 ? e.segments.map((g) => g.themeName).join(' → ') : e.title || '일정';
   return {
     event: e,
     when: `${day === today ? '오늘' : '내일'} ${start === null ? '하루 종일' : clockLabel(start)}`,

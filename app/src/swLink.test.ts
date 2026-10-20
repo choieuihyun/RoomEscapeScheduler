@@ -103,9 +103,9 @@ describe('bannerOf (앱 안 알림 띠)', () => {
   const ROOT = 'https://choieuihyun.github.io/RoomEscapeScheduler/';
   it('notification 의 제목·본문, data.link 의 #e= 로 일정 id', () => {
     expect(bannerOf({
-      notification: { title: '내일 동호회 일정이 있어요', body: '정모 · 13:40 비밀의 화원' },
+      notification: { title: '내일 일정이 있어요', body: '정모 · 13:40 비밀의 화원' },
       data: { link: `${ROOT}#e=42` },
-    })).toEqual({ title: '내일 동호회 일정이 있어요', body: '정모 · 13:40 비밀의 화원', eventId: 42 });
+    })).toEqual({ title: '내일 일정이 있어요', body: '정모 · 13:40 비밀의 화원', eventId: 42 });
   });
   it('data.link 에 일정이 없으면 fcmOptions.link 를 본다, 둘 다 없거나 일정 링크가 아니면 null', () => {
     expect(bannerOf({ notification: { title: 'a' }, data: { link: ROOT }, fcmOptions: { link: `${ROOT}?view=calc#e=7` } })?.eventId).toBe(7);

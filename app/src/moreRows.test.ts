@@ -20,11 +20,11 @@ describe('moreGroups', () => {
     ]);
   });
 
-  it('서버가 프로필을 알면 동호회 그룹에 멤버 목록·랭킹(랭킹 API 가 없으면 멤버 목록만)', () => {
+  it('서버가 프로필을 알면 모임 그룹에 멤버 목록·랭킹(랭킹 API 가 없으면 멤버 목록만)', () => {
     expect(shape(moreGroups({ ...member, peopleOn: true, rankOn: true }))).toEqual([
       'records:played,past', 'club:people,ranking', 'alerts:push', 'settings:dark,tour', 'account:google/done', 'out:logout',
     ]);
-    expect(moreGroups({ ...member, peopleOn: true, rankOn: true }).find(x => x.id === 'club')?.title).toBe('동호회');
+    expect(moreGroups({ ...member, peopleOn: true, rankOn: true }).find(x => x.id === 'club')?.title).toBe('모임');
     expect(shape(moreGroups({ ...member, peopleOn: true, rankOn: false }))[1]).toBe('club:people');
     expect(shape(moreGroups({ ...member, loggedIn: false, peopleOn: true, rankOn: true }))).toEqual(['settings:dark,tour']);
   });

@@ -405,13 +405,13 @@ describe('홈 오늘·내일 띠 (§4.10)', () => {
     expect(g?.when).toBe('오늘 19:00');
   });
 
-  it('구간이 없으면 일정 시각 + 제목, 시각도 없으면 하루 종일, 제목도 없으면 동호회 일정', () => {
+  it('구간이 없으면 일정 시각 + 제목, 시각도 없으면 하루 종일, 제목도 없으면 "일정"', () => {
     const a = todayStrip([ev({ date: T, joined: true, title: '보드게임', startMin: 1080 })], N);
     expect(a && `${a.when} ${a.name}`).toBe('오늘 18:00 보드게임');
     const b = todayStrip([ev({ date: T, joined: true, title: '보드게임' })], N);
     expect(b && `${b.when} ${b.name}`).toBe('오늘 하루 종일 보드게임');
     const c = todayStrip([ev({ date: T, joined: true })], N);
-    expect(c && `${c.when} ${c.name}`).toBe('오늘 하루 종일 동호회 일정');
+    expect(c && `${c.when} ${c.name}`).toBe('오늘 하루 종일 일정');
   });
 
   it('내일이면 내일', () => {

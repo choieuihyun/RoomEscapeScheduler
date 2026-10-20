@@ -15,7 +15,7 @@ import { GoogleMark, KakaoMark } from './SsoMarks';
    하위 화면마다 기록을 하나 쌓아(history.state.moreSub) 폰의 뒤로 가기가 목록으로 돌아오게 한다. */
 
 type Sub = 'played' | 'past' | 'push';
-const SUB_TITLE: Record<Sub, string> = { played: '해 본 테마', past: '지난 동호회 일정', push: '이 기기 알림' };
+const SUB_TITLE: Record<Sub, string> = { played: '해 본 테마', past: '지난 일정', push: '이 기기 알림' };
 const readSub = (): Sub | null => {
   const v = (history.state as { moreSub?: string } | null)?.moreSub;
   return v === 'played' || v === 'past' || v === 'push' ? v : null;
@@ -194,7 +194,7 @@ export function MorePage({
           {profileOn && (
             <div className="more-stats">
               <div><b>{playedN}</b><span>해 본 테마</span></div>
-              <div><b>{pastN}</b><span>동호회 일정</span></div>
+              <div><b>{pastN}</b><span>지난 일정</span></div>
             </div>
           )}
         </section>

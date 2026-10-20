@@ -28,7 +28,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   let body;
   const joining = !!auth.me && !auth.memberLoading && (status === 'NONE' || status === 'REJECTED');
   if (auth.me && auth.memberLoading) {
-    body = <><h3>확인하는 중…</h3><p className="msub">동호회 가입 상태를 불러오고 있어요.</p>
+    body = <><h3>확인하는 중…</h3><p className="msub">가입 상태를 불러오고 있어요.</p>
       <div className="mbtns"><button className="btn" type="button" onClick={auth.closeAuth}>닫기</button></div></>;
   } else if (auth.me && (status === 'NONE' || status === 'REJECTED')) {
     body = <JoinPanel key={status} auth={auth} />;
@@ -50,7 +50,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
         <p className="msub auth-intro">
           {auth.inKakaoApp
             ? '카카오톡 안에서 열었어요. 카카오 로그인은 여기서 바로 돼요.'
-            : '동호회 일정과 빈자리 알림은 운영진 승인 뒤에 쓸 수 있어요.'}
+            : '일정과 빈자리 알림은 운영진 승인 뒤에 쓸 수 있어요.'}
         </p>
         <div className="sso">
           <button className="sso-btn sso-kakao" type="button" disabled={auth.busy} onClick={auth.loginKakao}>

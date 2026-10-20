@@ -83,7 +83,7 @@ export function useAuth() {
       const token = await (await cloud()).idToken();
       return token ? await getMe(token) : null;
     } catch (e) {
-      console.warn('동호회 상태 불러오기 실패:', e);
+      console.warn('가입 상태 불러오기 실패:', e);
       return null;
     }
   }, []);

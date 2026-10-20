@@ -194,10 +194,18 @@ export function pushTestMessage(r: PushTestDto): string {
    주므로 그대로 쓴다 — 나머지 에러는 say()와 같은 판단을 따른다. */
 export function sayWatch(err: unknown): string {
   const e = err as WatchApiError;
-  if (e?.status === 409 && e.body?.message) return e.body.message;
-  if (e?.status === 400 && e.body?.message) return e.body.message;
-  if (e?.status === 403 && e.body?.message) return e.body.message; // NOT_MEMBER
+  if ((e?.status === 409 || e?.status === 400 || e?.status === 403) && e.body?.message) return serverMsg(e); // 403 = NOT_MEMBER
   return say(err);
+}
+
+/* 서버 문구를 화면에 보일 때 — 앱이 아는 코드는 앱 문구로(서버가 옛 문구를 보내도 같은 말이 보이게),
+   그 밖에 남은 "동호회 " 는 뺀다(앱은 이 말을 쓰지 않는다) */
+const APP_MSG: Record<string, string> = {
+  NOT_MEMBER: '가입 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.',
+  NOT_CLUB_MEMBER: '가입 승인을 받은 계정만 일정을 볼 수 있어요.',
+};
+export function serverMsg(e: WatchApiError): string {
+  return APP_MSG[e.body?.error ?? ''] ?? (e.body?.message ?? '').replace(/동호회 /g, '');
 }
 
 /* ── 동호회 계정 API (작업명세서 §4.6) ── 서버가 아직 모르면 404 가 온다.
@@ -272,8 +280,8 @@ export const setMemberRole = (uid: string, role: 'ADMIN' | 'MEMBER', token: stri
    본문 없는 404 는 서버가 이 기능을 아직 배포받지 못한 것이다. */
 export function sayClub(err: unknown): string {
   const e = err as WatchApiError;
-  if (e?.body?.message) return e.body.message;
-  if (e?.status === 404) return '서버가 아직 동호회 기능을 몰라요. 잠시 뒤 다시 열어 주세요.';
+  if (e?.body?.message) return serverMsg(e);
+  if (e?.status === 404) return '서버가 아직 이 기능을 몰라요. 잠시 뒤 다시 열어 주세요.';
   return say(err);
 }
 

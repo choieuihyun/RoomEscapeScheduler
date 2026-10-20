@@ -3,7 +3,7 @@ import {
   addParticipant, conflictOf, createEvent, deleteEvent, errorCode, getEvent, isMissingApi, joinClub, kakaoLogin,
   leaveEvent, listClubMembers, listEvents, listMembers, memberAction, removeParticipant, sayClub, setBooked,
   setMemberRole, updateEvent, listPlayed, addPlayed, deletePlayed, memberPlayed, listThemes, myPastEvents, freshThemes, joinEvent, setAvailability, clearAvailability,
-  pushTest, deviceStatus, pushTestMessage, updateProfile, rankings,
+  pushTest, deviceStatus, pushTestMessage, updateProfile, rankings, addWatch, sayWatch,
 } from './server';
 import type { EventInput, ProfileDto } from './server';
 
@@ -116,7 +116,17 @@ describe('sayClub', () => {
   it('404 면 서버가 모른다는 문구', async () => {
     stubFetch(404, {});
     const err = await joinClub('a', null, 'T').catch(e => e);
-    expect(sayClub(err)).toBe('서버가 아직 동호회 기능을 몰라요. 잠시 뒤 다시 열어 주세요.');
+    expect(sayClub(err)).toBe('서버가 아직 이 기능을 몰라요. 잠시 뒤 다시 열어 주세요.');
+  });
+
+  it('"동호회" 가 든 옛 서버 문구 — 아는 코드는 앱 문구로, 모르는 코드는 "동호회 " 만 뺀다', async () => {
+    stubFetch(403, { error: 'NOT_CLUB_MEMBER', message: '동호회 승인을 받은 계정만 볼 수 있어요.' });
+    expect(sayClub(await memberAction('u', 'remove', 'T').catch(e => e))).toBe('가입 승인을 받은 계정만 일정을 볼 수 있어요.');
+    stubFetch(403, { error: 'NOT_MEMBER', message: '동호회 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.' });
+    const w = await addWatch(1, 'T').catch(e => e);
+    expect([sayWatch(w), sayClub(w)]).toEqual(['가입 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.', '가입 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.']);
+    stubFetch(400, { error: 'SOMETHING', message: '동호회 일정은 6개까지예요.' });
+    expect(sayClub(await memberAction('u', 'remove', 'T').catch(e => e))).toBe('일정은 6개까지예요.');
   });
 
   it('본문 message 가 있으면 404 여도 그 문구', async () => {

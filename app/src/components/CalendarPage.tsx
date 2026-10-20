@@ -365,7 +365,7 @@ export function CalendarPage({
     {/* 머리말은 이 청크 안에 둔다 — 진입 청크 크기(§4.64) */}
     <header className="page-head">
       <h1>캘린더</h1>
-      <p>{clubOn ? '동호회 일정과 저장한 일정, 빈자리 알림을' : '저장한 일정과 빈자리 알림을'} 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
+      <p>{clubOn ? '모임 일정과 저장한 일정, 빈자리 알림을' : '저장한 일정과 빈자리 알림을'} 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
     </header>
     <section className="calpage">
       <div className="cal-toolbar">
@@ -385,12 +385,12 @@ export function CalendarPage({
       </div>
       {/* 넓은 화면에선 왼쪽 메뉴의 "내 캘린더" 가 같은 일을 한다 — 좁은 화면에서만 보인다. */}
       <div className="cal-legend">
-        {clubOn && kindBtn('club', '동호회 일정')}
+        {clubOn && kindBtn('club', '모임 일정')}
         {kindBtn('wish', '하고 싶은 일정')}{kindBtn('done', '다녀온 일정')}{kindBtn('watch', '빈자리 알림')}
         {profile && kindBtn('played', '해 본 테마')}
       </div>
       {showClub && (
-        <div className="cal-stlegend" aria-label="동호회 일정 상태">
+        <div className="cal-stlegend" aria-label="모임 일정 상태">
           {(['talk', 'before', 'done'] as const).map(k => <span key={k}><i className={'cal-dot ' + k} />{STATUS_LABEL[k]}</span>)}
         </div>
       )}
@@ -492,7 +492,7 @@ export function CalendarPage({
             {!selEntry || (selEntry.plans.length === 0 && selEntry.watches.length === 0) ? (
               selClub.length === 0 && selPlayed.length === 0 && (
                 <div className="lmsg">
-                  {showClub ? '이날은 동호회 일정도, 저장한 일정도, 빈자리 알림도 없어요.' : '이날은 저장한 일정도, 빈자리 알림도 없어요.'}
+                  {showClub ? '이날은 모임 일정도, 저장한 일정도, 빈자리 알림도 없어요.' : '이날은 저장한 일정도, 빈자리 알림도 없어요.'}
                 </div>
               )
             ) : (
