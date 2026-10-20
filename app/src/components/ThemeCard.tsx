@@ -6,54 +6,69 @@ import { WatchBell } from './WatchBell';
 
 const DRAG_TYPE = 'application/x-theme-index';
 
-function fmtDay(t: number): string {
-  return t >= 24 * 60 ? '다음날 ' + fmt(t) : fmt(t);
-}
-
+/* 카드 아래 한 줄 요약 — 어디서 가져왔는지는 위 안내 줄이 말하므로 숫자만 */
 function ChipLine({ th }: { th: Theme }) {
   const avail = th.sessions.filter(s => !s.soldout).length;
   const sold = th.sessions.length - avail;
-  const src = th.source === 'image'
-    ? (th.imgCount > 1 ? `사진 ${th.imgCount}장에서 읽음` : '사진에서 읽음')
-    : th.source === 'image-edited' ? '사진 → 수정함'
-    : th.source === 'server' ? '불러옴'
-    : th.source === 'server-edited' ? '불러옴 → 수정함'
-    : th.sessions.length ? '직접 입력' : '';
   return (
     <span className="chip">
-      {src && <span className="src">{src}</span>}
-      {src && ' · '}
       {th.sessions.length ? (
-        <>회차 <b>{avail}</b>{sold ? <> · 매진 <i>{sold}</i></> : null} </>
+        <>예약 가능 <b>{avail}</b>{sold ? <> · 매진 <i>{sold}</i></> : null} </>
       ) : '회차 없음'}
     </span>
   );
 }
 
-function ParsedSessions({ th, watchCtl }: { th: Theme; watchCtl?: WatchControl }) {
+/* 회차 표(2026-10-20) — 알약을 줄줄이 흘리면 줄마다 들쭉날쭉해서 읽기 어려웠다. 같은 폭 칸의 격자로 세우고
+   시작 시각을 크게, 끝 시각은 작고 흐리게(좁은 화면은 뺀다). 회차가 많거나 자정을 넘기면 오전·오후·저녁·다음날로
+   줄을 나눈다. 매진은 흐린 글자 + 취소선 + 작은 "매진". */
+const PERIODS: [string, number][] = [['오전', 12 * 60], ['오후', 18 * 60], ['저녁', 24 * 60], ['다음날', Infinity]];
+const GROUP_AT = 8;
+
+function ParsedSessions({ th, watchCtl, soldIncluded }: { th: Theme; watchCtl?: WatchControl; soldIncluded?: boolean }) {
   if (!th.sessions.length) {
     return <div className="parsed"><span className="hint">시간을 넣으면 여기에 정리돼서 보여요</span></div>;
   }
   const over = th.sessions.some(s => s.t >= 24 * 60);
   const fixed = th.sessions.some(s => s.fixed);
   const sold = th.sessions.filter(s => s.soldout).length;
+  const grouped = over || th.sessions.length >= GROUP_AT;
+  const rows = grouped
+    ? PERIODS.map(([label, end], i) => ({
+      label, items: th.sessions.filter(s => s.t < end && s.t >= (i ? PERIODS[i - 1][1] : 0)),
+    })).filter(r => r.items.length)
+    : [{ label: '', items: th.sessions }];
   return (
     <div className="parsed">
-      {th.sessions.map((s, i) => {
-        const cls = 't' + (s.t >= 24 * 60 ? ' over' : '') + (s.fixed ? ' fix' : '') + (s.soldout ? ' so' : '');
-        const title = s.fixed ? '오전/오후가 없어서 오후로 바꿔 읽은 시간이에요' : undefined;
-        return (
-          <span key={i} className={cls} title={title}>
-            {fmtDay(s.t)}<span className="t-end">–{fmtDay(s.t + th.dur)}</span>{s.soldout ? ' 매진' : ''}
-            {s.soldout && s.id != null && watchCtl && <WatchBell slotId={s.id} ctl={watchCtl} />}
-          </span>
-        );
-      })}
-      {sold > 0 && <span className="note">매진으로 읽힌 {sold}개는 계산에서 빠져요</span>}
+      <div className="slots">
+        {rows.map(r => (
+          <div key={r.label} className="slot-row">
+            {grouped && <span className="slot-lb">{r.label}</span>}
+            <div className="slot-grid">
+              {r.items.map(s => {
+                const cls = 't' + (s.fixed ? ' fix' : '') + (s.soldout ? ' so' : '');
+                const title = s.fixed ? '오전/오후가 없어서 오후로 바꿔 읽은 시간이에요' : undefined;
+                return (
+                  <span key={th.sessions.indexOf(s)} className={cls} title={title}>
+                    <span className="t-s">{fmt(s.t)}</span>
+                    {s.soldout ? <span className="t-so">매진</span> : <span className="t-end">~{fmt(s.t + th.dur)}</span>}
+                    {s.soldout && s.id != null && watchCtl && <WatchBell slotId={s.id} ctl={watchCtl} />}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      {sold > 0 && (
+        <span className="note">
+          {soldIncluded ? '매진 회차도 계산에 넣고 있어요.' : <>매진 회차는 계산에서 빠져요. 넣으려면 아래에서 '매진 회차도 포함해서 계산'을 선택해 주세요.</>}
+        </span>
+      )}
       {over ? (
         <span className="warn">자정을 넘긴 회차가 있어요. 이른 시간부터 차례로 넣었는지 확인해 주세요 — 순서가 섞였으면 <b>오전</b>/<b>오후</b>를 붙이면 정확해져요.</span>
       ) : fixed ? (
-        <span className="note">파란 칩은 오후로 바꿔 읽은 시간이에요 (예: 1:10 → 13:10)</span>
+        <span className="note">옅은 파란 칸은 오후로 바꿔 읽은 시간이에요 (예: 1:10 → 13:10)</span>
       ) : null}
       {(th.fresh || th.date) && (
         <span className="note">
@@ -76,10 +91,12 @@ export interface ThemeCardProps {
   onReorder: (from: number, to: number) => void;
   onAttachImages: (id: number, files: File[]) => void;
   watchCtl?: WatchControl;
+  /* 조건의 "매진 회차도 포함해서 계산"이 켜져 있는지 — 매진 안내 문구가 달라진다 */
+  soldIncluded?: boolean;
   total: number;
 }
 
-export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, onReorder, onAttachImages, watchCtl, total }: ThemeCardProps) {
+export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, onReorder, onAttachImages, watchCtl, soldIncluded, total }: ThemeCardProps) {
   const [dragState, setDragState] = useState<'' | 'dragging' | 'over' | 'drag'>('');
 
   return (
@@ -152,7 +169,7 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
           if (file) onAttachImages(th.id, [file]);
         }}
       />
-      <ParsedSessions th={th} watchCtl={watchCtl} />
+      <ParsedSessions th={th} watchCtl={watchCtl} soldIncluded={soldIncluded} />
       <div className="card-foot">
         <label className="btn-img">
           {th.source.startsWith('image') && th.sessions.length ? '이미지 추가' : '이미지 첨부'}

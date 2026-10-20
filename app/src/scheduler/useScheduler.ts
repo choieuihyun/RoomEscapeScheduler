@@ -304,7 +304,6 @@ export function useScheduler() {
     }
 
     lastSnapshot.current = serializeNow();
-    const t0 = performance.now();
     const partial = options.oPartial;
     const { out, capped }: SearchOutcome = search(ready, {
       startMin, endMax, minGap, maxGap, moveMin, moveMap,
@@ -313,7 +312,7 @@ export function useScheduler() {
     });
     setFound(out); setSearchCapped(capped);
     setTabCount(null); setTabSet(null); setShowCount(SHOW);
-    setRunNote(`${Math.round(performance.now() - t0)}ms`);
+    setRunNote('');
   }, [themes, options, moveMap, teams, serializeNow]);
 
   const confirmTeam = useCallback((r: SearchResultRow) => {

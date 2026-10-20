@@ -56,7 +56,7 @@ export function LoadModal({ m }: { m: LoadModalState }) {
                     type="checkbox" checked={m.isPicked(i)}
                     onChange={e => m.togglePick(i, e.target.checked)}
                   />
-                  <img src={t.posterUrl || ''} alt="" loading="lazy" />
+                  {t.posterUrl ? <img src={t.posterUrl} alt="" loading="lazy" /> : <span className="li-ph" aria-hidden="true" />}
                   <div className="li-t">
                     <strong>{t.name}</strong>
                     <span className="li-m">{meta}{fits ? '' : <> · <b>인원이 안 맞아요</b></>}</span>
@@ -79,11 +79,11 @@ export function LoadModal({ m }: { m: LoadModalState }) {
         )}
         {pickedDates.length > 1 && (
           <p className="datewarn">
-            ⚠ 선택한 회차의 날짜가 서로 달라요 ({pickedDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날로 맞춰야 조합이 제대로 나와요.
+            고른 회차의 날짜가 서로 달라요 ({pickedDates.map(d => mdWeekday(d)).join(', ')}) — 같은 날로 맞춰야 조합이 제대로 나와요.
           </p>
         )}
         <div className="loadfoot">
-          <span>{m.pickedItems.size ? `${m.pickedItems.size}개 고름 — 지점을 바꿔도 그대로예요` : ''}</span>
+          <span>{m.pickedItems.size ? `${m.pickedItems.size}개 골랐어요. 지점을 바꿔도 그대로 남아요.` : ''}</span>
           <span className="fresh">{m.fresh}</span>
         </div>
         <p className="merr">{m.err}</p>

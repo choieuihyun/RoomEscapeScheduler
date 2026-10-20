@@ -113,7 +113,7 @@ export function DayBranches({
             type="search" className="db-search" placeholder="지점 검색 (예: 강남, 키이스케이프)"
             value={q} onChange={e => setQ(e.target.value)} aria-label="지점 검색"
           />
-          <p className="db-count">이날 회차가 있는 지점 {on.length}곳{picked.length > 0 && ` · ${picked.length}곳 고름`}</p>
+          <p className="db-count">이날 회차가 있는 지점 {on.length}곳{picked.length > 0 && ` · ${picked.length}곳 골랐어요`}</p>
           <div className="db-list">
             {groups.length === 0 && <div className="lmsg">{on.length ? '찾는 지점이 없어요.' : '이날은 회차 정보가 없어요.'}</div>}
             {groups.map(([store, bs]) => (
