@@ -20,8 +20,10 @@ export const AI_PROMPT = `아래는 내가 해 본 방탈출 기록이야. 한 �
 
 /* 확인 필요 사유. 막는 것(체크 불가) — noname: 테마 이름이 없음(글자·숫자가 하나도 없는 것 포함) · notname: 테마 칸이 날짜·숫자뿐 ·
    long: 테마 40자 넘음 · storeLong: 매장 40자 넘음(직접 기록일 때만 막힘).
-   기본 체크만 빼는 것(사람이 체크할 수 있다) — date: 날짜를 못 읽음·없는 날·미래 · format: 대부분 줄에 구분자가 있는데 이 줄만 없음 · talk: 설명 문장 */
-export type BulkIssue = 'noname' | 'notname' | 'long' | 'storeLong' | 'date' | 'format' | 'talk';
+   기본 체크만 빼는 것(사람이 체크할 수 있다) — date: 날짜를 못 읽음·없는 날·미래 ·
+   format: 대부분 줄에 구분자가 있는데 이 줄만 없음, 또는 표 안 줄인데 칸 모양이 머리줄과 안 맞음 · talk: 설명 문장 ·
+   headword: 테마가 칸 이름 낱말 하나("이름", "방탈출", "지점") — 머리줄로 건너뛰지 않고 남겨 둔다 */
+export type BulkIssue = 'noname' | 'notname' | 'long' | 'storeLong' | 'date' | 'format' | 'talk' | 'headword';
 export const ISSUE_TEXT: Record<BulkIssue, string> = {
   noname: '테마 이름이 없어요',
   notname: '테마 이름이 아니에요',
@@ -30,9 +32,12 @@ export const ISSUE_TEXT: Record<BulkIssue, string> = {
   date: '날짜를 확인해 주세요',
   format: '형식이 달라요',
   talk: '설명 문장 같아요',
+  headword: '테마 이름이 맞나요?',
 };
 /* 잘못 읽혔을 수 있는 줄 — 다른 줄과 합치지 않는다(멀쩡한 줄이 체크 안 된 줄에 묻히지 않게) */
-const ODD: BulkIssue[] = ['noname', 'notname', 'format', 'talk'];
+const ODD: BulkIssue[] = ['noname', 'notname', 'format', 'talk', 'headword'];
+/* 체크만 빼 두는 사유(막지는 않음) */
+export const SOFT: BulkIssue[] = ['date', 'format', 'talk', 'headword'];
 
 export interface BulkLine {
   no: number;           // 붙여 넣은 글의 몇 번째 줄(1부터). 합친 줄은 처음 나온 줄
@@ -67,19 +72,31 @@ for (const [col, words] of [
   ['skip', 'no 번호 순번 비고 메모 평점 별점 점수 후기 리뷰 한줄평 코멘트 인원 결과 성공 성공여부 탈출 탈출여부 난이도 장르 시간 소요시간 남은시간 힌트 지역 note notes memo rating review result people comment genre time region'],
 ] as const) for (const w of words.split(' ')) HEAD.set(w, col);
 const headCol = (c: string): HeadCol | null => (c === '#' ? 'skip' : HEAD.get(normalizeName(c)) ?? null);
+const NUM_HEAD = new Set(['no', '번호', '순번']);
+const isNumHead = (c: string) => c === '#' || NUM_HEAD.has(normalizeName(c));
 
-/* 머리줄에서 칸 순서 — 테마 칸이 없으면 null(그 머리줄은 건너뛰기만). n = 머리줄 칸 수 */
-interface Cols { theme: number; store: number[]; date: number; n: number }
+/* 머리줄에서 칸 순서 — 테마 칸이 없으면 null(그 머리줄은 건너뛰기만). num = 번호 칸들, n = 머리줄 칸 수 */
+interface Cols { theme: number; store: number[]; date: number; num: number[]; n: number }
 function colsOf(cells: string[]): Cols | null {
   let theme = -1, date = -1;
-  const store: number[] = [];
+  const store: number[] = [], num: number[] = [];
   cells.forEach((c, k) => {
     const h = headCol(c);
     if (h === 'theme' && theme < 0) theme = k;
     else if (h === 'store') store.push(k);
     else if (h === 'date' && date < 0) date = k;
+    else if (isNumHead(c)) num.push(k);
   });
-  return theme < 0 ? null : { theme, store, date, n: cells.length };
+  return theme < 0 ? null : { theme, store, date, num, n: cells.length };
+}
+
+/* 표 안 줄이 머리줄 모양에 맞나 — 칸 수가 같고, 번호 칸은 번호, 테마·매장 칸은 날짜가 아니고, 날짜 칸은 비었거나 날짜 모양 */
+function rowFits(cells: string[], c: Cols): boolean {
+  const at = (k: number) => cells[k] ?? '';
+  return cells.length === c.n
+    && c.num.every((k) => at(k) === '' || /^\d+[.)]?$/.test(at(k)))
+    && ![c.theme, ...c.store].some((k) => looksLikeDate(at(k)))
+    && (c.date < 0 || at(c.date) === '' || looksLikeDate(at(c.date)));
 }
 
 /* 날짜 — 2024-03-15 · 2024.03.15 · 2024/3/15 · 24.03.15 · 2024년 3월 15일 · 2024. 3. 15. · 20240315,
@@ -98,6 +115,7 @@ export function parseDate(s: string, today: string): { iso: string | null; bad: 
   const y = m[1].length === 2 ? 2000 + Number(m[1]) : Number(m[1]);
   const mo = Number(m[2]), d = Number(m[3]);
   const dt = new Date(Date.UTC(y, mo - 1, d));
+  /* 1990년 전은 못 읽은 날짜 — 한 개씩 넣기의 하한(playedView.ts PLAYED_MIN)과 같다 */
   if (y < 1990 || dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return { iso: null, bad: true };
   const iso = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   return iso > today ? { iso: null, bad: true } : { iso, bad: false };
@@ -110,6 +128,20 @@ const notName = (t: string) => looksLikeDate(t) || !/\p{L}/u.test(t);
 /* 설명 문장 — AI 인사말·맺음말("정리해 드릴게요!", "총 12개입니다.") */
 const TALK_END = /[.!?:。．！？：]$/;
 const TALK_WORD = /정리했|정리해|드릴게|드렸|입니다|습니다|총\s*\d+\s*개/;
+
+/* 구분 글자만 | 로 바꾼다 — 칸 글자는 그대로(NFKC 하면 저장되는 이름이 바뀐다). \| 는 잠시 다른 글자로 */
+const prep = (line: string) => line.replace(EDGE, '').replaceAll('\\|', ESC_BAR).replace(/[｜¦]/g, '|');
+/* 줄 모양 — 구분자와 앞뒤 | 여부. 같은 표의 줄은 모양이 같다 */
+function shapeOf(s: string): string | null {
+  if (s.includes('|')) { const t = s.trim(); return t.length > 1 && t.startsWith('|') && t.endsWith('|') ? '|o' : '|'; }
+  return s.includes('\t') ? '\t' : null;
+}
+/* 마크다운 표 구분 줄(|---|---|) */
+const isSepRow = (s: string) => {
+  if (!s.includes('|') || !s.includes('-')) return false;
+  const f = cellsOf(s).filter((c) => c !== '');
+  return f.length > 0 && f.every((c) => SEP_CELL.test(c));
+};
 
 /* 한 줄을 칸으로 — | 가 있으면 |, 없고 탭이 있으면 탭, 둘 다 없으면 줄 전체가 한 칸.
    마크다운 표 줄(| a | b |, 앞뒤 둘 다 |)만 앞뒤 | 를 떼어 낸다 — "| 매장 | 날짜" 는 테마 칸이 빈 줄이다 */
@@ -139,27 +171,35 @@ function assign(cells: string[]): { theme: string; store: string; date: string }
 }
 
 /* 붙여 넣은 글 → 줄. 빈 줄·``` 줄·# 제목 줄·표 구분 줄(| --- |)·머리줄·글자 없는 줄은 건너뛴다.
-   구분자는 | · 전각 ｜ · ¦ · 탭(\| 는 글자 |). 머리줄(테마 | 매장 | 날짜 처럼 칸 이름뿐인 줄)이 있으면 그 칸 순서대로 읽는다.
+   구분자는 | · 전각 ｜ · ¦ · 탭(\| 는 글자 |).
+   머리줄 — 칸 이름 낱말로만 된 두 칸 이상의 줄이 붙여 넣은 첫 줄이거나 바로 아래가 표 구분 줄일 때만. 그 칸 순서는
+   머리줄 바로 아래로 이어지는 같은 모양의 줄(같은 구분자, 앞뒤 | 여부 같음)에만 쓴다 — 빈 줄·모양이 다른 줄에서 표는 끝.
    같은 테마(정규화 이름 + 정규화 매장)가 여러 번이면 하나로(가장 이른 날짜). */
 export function parseBulk(text: string, today: string = todayKst()): BulkParse {
   const found: { no: number; cells: string[]; sep: boolean; cols: Cols | null }[] = [];
-  let cols: Cols | null = null, over = 0;
+  let table: { cols: Cols; shape: string } | null = null, over = 0, first = true;
   const raw = text.split(/\r\n|\r|\n/);
   for (let i = 0; i < raw.length; i++) {
-    let s = raw[i].replace(EDGE, '');
-    if (!s.trim() || FENCE.test(s.trim())) continue;
-    /* 구분 글자만 | 로 바꾼다 — 칸 글자는 그대로(NFKC 하면 저장되는 이름이 바뀐다) */
-    s = s.replaceAll('\\|', ESC_BAR).replace(/[｜¦]/g, '|');
-    const sep = s.includes('|') || s.includes('\t');
-    if (!sep && HEADING.test(s.trim())) continue;
+    let s = prep(raw[i]);
+    if (!s.trim() || FENCE.test(s.trim())) { table = null; continue; }
+    const shape = shapeOf(s);
+    if (!shape && HEADING.test(s.trim())) { table = null; continue; }
     if (!looksLikeDate(s.split(/[|\t]/, 1)[0].trim())) s = s.replace(BULLET, '');
     const cells = cellsOf(s);
     const filled = cells.filter((c) => c !== '');
-    if (filled.length === 0 || filled.every((c) => SEP_CELL.test(c))) continue;
-    if (cells[0] !== '' && filled.every((c) => headCol(c) !== null)) { cols = colsOf(cells) ?? cols; continue; }
+    if (filled.length === 0 || filled.every((c) => SEP_CELL.test(c))) continue;  // 표 구분 줄은 표를 끊지 않는다
     if (!filled.some((c) => normalizeName(c) !== '')) continue;
+    const head = filled.length >= 2 && cells[0] !== '' && filled.every((c) => headCol(c) !== null)
+      && (first || isSepRow(prep(raw[i + 1] ?? '')));
+    first = false;
+    if (head) {
+      const cols = colsOf(cells);
+      table = cols && shape ? { cols, shape } : null;
+      continue;
+    }
+    if (table && shape !== table.shape) table = null;
     if (found.length >= BULK_MAX_LINES) { over++; continue; }
-    found.push({ no: i + 1, cells, sep, cols });
+    found.push({ no: i + 1, cells, sep: shape !== null, cols: table?.cols ?? null });
   }
 
   /* 줄 절반 이상이 구분자를 가졌으면 구분자 없는 줄은 형식이 다른 줄(AI 인사말 같은 것) */
@@ -168,9 +208,9 @@ export function parseBulk(text: string, today: string = todayKst()): BulkParse {
   const byKey = new Map<string, BulkLine>();
   let merged = 0;
   for (const f of found) {
-    /* 머리줄 칸 순서는 칸 수가 같은 줄에만. 칸 수가 다른 줄(표 뒤에 직접 적은 줄 등)은 머리줄 없이 읽고 '형식이 달라요' */
-    const c = f.cols && f.sep && f.cells.length === f.cols.n ? f.cols : null;
-    const odd = !!f.cols && f.sep && !c;
+    /* 표 안 줄이라도 모양이 머리줄과 안 맞으면(칸 수, 번호 칸, 날짜 자리) 머리줄 없이 읽고 '형식이 달라요' */
+    const c = f.cols && rowFits(f.cells, f.cols) ? f.cols : null;
+    const odd = !!f.cols && !c;
     const at = (k: number) => f.cells[k] ?? '';
     let { theme, store, date } = c
       ? { theme: at(c.theme), store: c.store.map(at).filter(Boolean).join(' '), date: c.date < 0 ? '' : at(c.date) }
@@ -186,7 +226,8 @@ export function parseBulk(text: string, today: string = todayKst()): BulkParse {
     /* 문장이면 '설명 문장 같아요' 하나만(형식이 달라요까지 겹쳐 적지 않게) */
     const words = [theme, store].filter(Boolean).join(' | ');
     if (TALK_END.test(words) || TALK_WORD.test(words)) issues.push('talk');
-    else if ((strict && !f.sep) || odd) issues.push('format');
+    else if (((strict && !f.sep) || odd) && !issues.includes('notname')) issues.push('format');
+    if (headCol(theme) !== null) issues.push('headword');
     const line: BulkLine = { no: f.no, theme, store, date: pd.iso, rawDate: date, issues };
     if (issues.some((x) => ODD.includes(x))) { lines.push(line); continue; }
     const key = normalizeName(theme) + '|' + normalizeName(store);
@@ -266,7 +307,7 @@ export function blocked(r: BulkRow): boolean {
 export function rowStatus(r: BulkRow): BulkStatus {
   if (blocked(r)) return 'check';
   if (r.exists) return 'exists';
-  if (r.line.issues.some((x) => x === 'date' || x === 'format' || x === 'talk')) return 'check';
+  if (r.line.issues.some((x) => SOFT.includes(x))) return 'check';
   return r.ref ? 'found' : 'direct';
 }
 

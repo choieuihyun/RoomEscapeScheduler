@@ -280,7 +280,7 @@ describe('검토 수정 — 머리줄로 칸 맞추기', () => {
   it('머리줄과 칸 수가 다른 줄은 머리줄 없이 읽고 형식이 달라요(체크 안 됨)', () => {
     const themes = [ref('메모리컴퍼니', '키이스케이프', '강남점', 'k-mem'), ref('월야애담', '비트포비아', '홍대던전점', 'b-wol')];
     const look = (t: string) => matchBulk(P(t).lines, themes, []).rows.map((r) => [r.line.theme, r.line.store, rowStatus(r), checkedByDefault(r), r.line.issues.join(',')]);
-    expect(look('| # | 테마 | 매장 | 날짜 |\n|---|---|---|---|\n| 1 | 메모리컴퍼니 | 강남 | 2024-03-15 |\n월야애담 | 비트포비아 홍대 |')).toEqual([
+    expect(look('| # | 테마 | 매장 | 날짜 |\n|---|---|---|---|\n| 1 | 메모리컴퍼니 | 강남 | 2024-03-15 |\n| 2 | 월야애담 | 비트포비아 홍대 |')).toEqual([
       ['메모리컴퍼니', '강남', 'found', true, ''],
       ['월야애담', '비트포비아 홍대', 'check', false, 'format'],
     ]);
@@ -429,6 +429,67 @@ describe('검토 수정 — 작은 것', () => {
     const t = ref('x', '키이스케이프', '강남점');
     expect(['서울 강남', '강남역', '키이', '키이스케이프 홍대'].map((s) => storeRelated(s, t))).toEqual([true, true, true, true]);
     expect(['서울', '역삼', ''].map((s) => storeRelated(s, t))).toEqual([false, false, false]);
+  });
+});
+
+/* ── 최종 검토 수정 — 검토자 확인용 시험(finalreview/probe.test.ts)의 입력에 새 기대값 ── */
+describe('최종 검토 — 머리줄 순서는 그 표 덩어리에만', () => {
+  const themes = [ref('메모리컴퍼니', '키이스케이프', '강남점', 'k1'), ref('월야애담', '비트포비아', '홍대점', 'k2')];
+  const look = (t: string) => matchBulk(P(t).lines, themes, []).rows.map((r) =>
+    [r.line.theme, r.line.store, r.line.date, r.ref?.themeKey ?? null, rowStatus(r), checkedByDefault(r), r.line.issues.join(',')]);
+
+  it.each([
+    ['# 표 뒤 직접 적은 줄(끝 | 로 칸 수 같음)', '| # | 테마 | 매장 | 날짜 |\n|---|---|---|---|\n| 1 | 메모리컴퍼니 | 키이스케이프 강남점 | 2024-03-15 |\n월야애담 | 비트포비아 홍대 | 2024-05-01 |',
+      ['메모리컴퍼니', '키이스케이프 강남점', '2024-03-15', 'k1', 'found', true, '']],
+    ['탭 표(No) 뒤 | 줄', 'No\t테마\t매장\t날짜\n1\t메모리컴퍼니\t강남\t2024-03-15\n월야애담 | 비트포비아 홍대 | 2024-05-01 |',
+      ['메모리컴퍼니', '강남', '2024-03-15', 'k1', 'found', true, '']],
+    ['No 3칸 표 뒤 바깥 | 없는 줄', '| No | 테마 | 날짜 |\n|---|---|---|\n| 1 | 메모리컴퍼니 | 2024-03-15 |\n월야애담 | 홍대 | 2024-05-01',
+      ['메모리컴퍼니', '', '2024-03-15', 'k1', 'found', true, '']],
+  ])('%s — 표가 끝나면 머리줄 없는 규칙(월야애담 · 찾음)', (_, text, head) => {
+    const rows = look(text);
+    expect(rows[0]).toEqual(head);
+    expect(rows[1].slice(0, 6)).toEqual(['월야애담', rows[1][1], '2024-05-01', 'k2', 'found', true]);
+    expect(rows[1][1]).toMatch(/홍대/);
+  });
+  it('빈 줄이 오면 표는 끝', () => {
+    expect(look('날짜 | 테마 | 매장\n2024-03-15 | 메모리컴퍼니 | 강남\n\n월야애담 | 홍대 | 2024-05-01').map((r) => [r[0], r[4], r[5]]))
+      .toEqual([['메모리컴퍼니', 'found', true], ['월야애담', 'found', true]]);
+  });
+  it('같은 모양이 이어져도 날짜 자리에 날짜가 아니면 형식이 달라요(머리줄 없이 읽음, 체크 안 됨)', () => {
+    expect(look('날짜 | 테마 | 매장\n2024-03-15 | 메모리컴퍼니 | 강남\n월야애담 | 홍대 | ')).toEqual([
+      ['메모리컴퍼니', '강남', '2024-03-15', 'k1', 'found', true, ''],
+      ['월야애담', '홍대', null, 'k2', 'check', false, 'format'],
+    ]);
+  });
+  it('표 안 줄 모양 — 번호 칸이 번호가 아니거나 테마·매장 칸이 날짜면 형식이 달라요(머리줄 없이 읽음)', () => {
+    const t = '| # | 테마 | 매장 | 날짜 |\n|---|---|---|---|\n';
+    expect(look(t + '| 가 | 메모리컴퍼니 | 강남 | 2024-03-15 |').map((r) => [r[4], r[5], r[6]])).toEqual([['check', false, 'format']]);
+    expect(look(t + '| 1 | 메모리컴퍼니 | 2024-03-15 | 강남 |').map((r) => [r[4], r[5], r[6]])).toEqual([['check', false, 'format']]);
+    expect(look(t + '| 1 | 2024-03-15 | 강남 | |').map((r) => [r[4], r[5], r[6]])).toEqual([['check', false, 'format']]);
+    expect(look(t + '| 2 | 메모리컴퍼니 | 강남 | |').map((r) => [r[4], r[5]])).toEqual([['found', true]]);
+  });
+});
+
+describe('최종 검토 — 머리줄 인정 조건', () => {
+  const themes = [ref('메모리컴퍼니', '키이스케이프', '강남점', 'k1'), ref('월야애담', '비트포비아', '홍대점', 'k2')];
+  const look = (t: string) => matchBulk(P(t).lines, themes, []).rows.map((r) => [r.line.theme, rowStatus(r), checkedByDefault(r), blocked(r), r.line.issues.join(',')]);
+
+  it('칸 이름 낱말 하나뿐인 테마는 머리줄로 빼지 않고 테마 이름이 맞나요?(체크 안 됨, 고를 수 있음)', () => {
+    expect(look('메모리컴퍼니 | 키이스케이프 강남점 | 2024-03-15\n이름 | |\n월야애담 | 비트포비아 홍대 | 2024-05-01')).toEqual([
+      ['메모리컴퍼니', 'found', true, false, ''], ['이름', 'check', false, false, 'headword'], ['월야애담', 'found', true, false, ''],
+    ]);
+    expect(look('메모리컴퍼니 | 강남 | 2024-03-15\nTime | |\n월야애담 | 홍대 | 2024-05-01')[1]).toEqual(['Time', 'check', false, false, 'headword']);
+    expect(look('메모리컴퍼니\n방탈출\n월야애담\n지점')).toEqual([
+      ['메모리컴퍼니', 'found', true, false, ''], ['방탈출', 'check', false, false, 'headword'],
+      ['월야애담', 'found', true, false, ''], ['지점', 'check', false, false, 'headword'],
+    ]);
+  });
+  it('첫 줄이어도 칸이 하나면 머리줄이 아니다', () => {
+    expect(look('테마\n메모리컴퍼니')).toEqual([['테마', 'check', false, false, 'headword'], ['메모리컴퍼니', 'found', true, false, '']]);
+  });
+  it('첫 줄이 아니고 아래가 구분 줄도 아니면 머리줄이 아니다 — 아래가 구분 줄이면 중간이어도 머리줄', () => {
+    expect(look('메모리컴퍼니 | 강남 |\n테마 | 매장 |\n월야애담 | 홍대 |').map((r) => r[0])).toEqual(['메모리컴퍼니', '테마', '월야애담']);
+    expect(look('메모리컴퍼니 | 강남 |\n\n| 매장 | 테마 |\n|---|---|\n| 홍대 | 월야애담 |').map((r) => [r[0], r[1]])).toEqual([['메모리컴퍼니', 'found'], ['월야애담', 'found']]);
   });
 });
 

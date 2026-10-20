@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'rea
 import { cpLen, dayLabel, eventStatus, eventTitle, STATUS_LABEL, todayKst, weekday } from '../clubEvents';
 import { coolLeft, coolUntil, startCool, testLabel } from '../pushCool';
 import { isPlayableName, searchThemes, sourceLabel } from '../played';
-import { checkPlayedOn, fullDay, groupByYear, matchPlayed, playedSummary, sortPlayed, type PlayedSort } from '../playedView';
+import { PLAYED_MIN, checkPlayedOn, fullDay, groupByYear, matchPlayed, playedSummary, sortPlayed, type PlayedSort } from '../playedView';
 import type { EventDto, MeDto, PlayedDto, ThemeRef } from '../server';
 import { Avatar } from './Avatar';
 import { showToast } from '../toast';
@@ -33,6 +33,7 @@ const inTab = (p: PlayedDto, tab: Tab) => tab === 'all' || (tab === 'manual' ? p
 
 const NAME_MAX = 40;
 const FUTURE_ERR = '오늘까지의 날짜만 넣을 수 있어요.';
+const BAD_DATE_ERR = '날짜를 확인해 주세요.';
 /* 기록한 뒤 토스트. 같은 테마가 이미 있으면 서버가 있던 행을 그대로 줘서 적은 날짜가 들어가지 않는다 — 그걸 같이 알린다 */
 function addedText(r: { existed: boolean; row: PlayedDto }, playedOn: string | null): string {
   const kept = playedOn !== null && r.row.playedOn !== playedOn;
@@ -312,7 +313,7 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
   const pick = async (ref: ThemeRef) => {
     if (picking.current) return;
     const w = checkPlayedOn(when, today);
-    if (!w.ok) { setWhenErr(FUTURE_ERR); return; }
+    if (!w.ok) { setWhenErr(w.why === 'future' ? FUTURE_ERR : BAD_DATE_ERR); return; }
     picking.current = true;
     setAddingKey(ref.themeKey);
     try {
@@ -340,7 +341,7 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
     if (cpLen(name) > NAME_MAX) { setMErr(`테마 이름은 ${NAME_MAX}자까지예요.`); return; }
     if (cpLen(branch) > NAME_MAX) { setMErr(`매장·지점은 ${NAME_MAX}자까지예요.`); return; }
     const w = checkPlayedOn(when, today);
-    if (!w.ok) { setMErr(FUTURE_ERR); return; }
+    if (!w.ok) { setMErr(w.why === 'future' ? FUTURE_ERR : BAD_DATE_ERR); return; }
     if (picking.current) return;
     picking.current = true;
     setMBusy(true);
@@ -480,7 +481,7 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
       <div className={at === 'search' ? 'pf-when' : 'pf-field pf-when-f'}>
         <label htmlFor={id}>언제 했나요?</label>
         <span className="pf-when-row">
-          <input id={id} type="date" max={today} value={when} aria-invalid={whenErr ? true : undefined}
+          <input id={id} type="date" min={PLAYED_MIN} max={today} value={when} aria-invalid={whenErr ? true : undefined}
             aria-describedby={whenErr ? id + 'e' : undefined}
             onChange={(e) => { setWhen(e.target.value); setWhenErr(''); setMErr(''); }} />
           {when

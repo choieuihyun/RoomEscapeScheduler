@@ -332,9 +332,10 @@ const Row = memo(function Row({ i, r, on, toggle, pick }: {
   const st = rowStatus(r);
   const name = r.ref ? r.ref.themeName : r.line.theme;
   const off = blocked(r);
-  const notes: string[] = r.line.issues.filter((x) => x !== 'storeLong' || !r.ref).map((x) =>
-    x === 'date' ? `${ISSUE_TEXT.date}(${r.line.rawDate}) · 체크하면 날짜 없이 넣어요`
-      : x === 'format' || x === 'talk' ? `${ISSUE_TEXT[x]} · 맞으면 체크해 주세요` : ISSUE_TEXT[x]);
+  const is = r.line.issues;
+  const notes: string[] = is.filter((x) => x !== 'storeLong' || !r.ref).map((x) =>
+    x === 'date' ? `${ISSUE_TEXT.date}(${r.line.rawDate}) · 체크하면 날짜 없이 넣어요` : ISSUE_TEXT[x]);
+  if (!off && is.some((x) => x === 'format' || x === 'talk' || x === 'headword')) notes.push('맞으면 체크해 주세요');
   if (r.pick) notes.unshift('같은 이름 테마가 여러 매장에 있어요. 매장을 골라 주세요');
   return (
     <li className={'bk-row ' + st}>

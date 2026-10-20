@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkPlayedOn, fullDay, groupByYear, matchPlayed, playedByDate, playedSummary, sortPlayed } from './playedView';
+import { PLAYED_MIN, checkPlayedOn, fullDay, groupByYear, matchPlayed, playedByDate, playedSummary, sortPlayed } from './playedView';
 import type { PlayedDto } from './server';
 
 let seq = 0;
@@ -90,8 +90,14 @@ describe('checkPlayedOn — 날짜 칸', () => {
     expect(checkPlayedOn('', '2026-10-20')).toEqual({ ok: true, playedOn: null });
     expect(checkPlayedOn('2026-10-20', '2026-10-20')).toEqual({ ok: true, playedOn: '2026-10-20' });
     expect(checkPlayedOn('2019-02-03', '2026-10-20')).toEqual({ ok: true, playedOn: '2019-02-03' });
-    expect(checkPlayedOn('2026-10-21', '2026-10-20')).toEqual({ ok: false });
-    expect(checkPlayedOn('2026-1-2', '2026-10-20')).toEqual({ ok: false });
+    expect(checkPlayedOn('2026-10-21', '2026-10-20')).toEqual({ ok: false, why: 'future' });
+    expect(checkPlayedOn('2026-1-2', '2026-10-20')).toEqual({ ok: false, why: 'bad' });
+  });
+  it('1990년 전은 막는다(한꺼번에 넣기 parseDate 하한과 같게) — 직접 친 0024년 같은 것', () => {
+    expect(checkPlayedOn('0024-03-15', '2026-10-20')).toEqual({ ok: false, why: 'bad' });
+    expect(checkPlayedOn('1989-12-31', '2026-10-20')).toEqual({ ok: false, why: 'bad' });
+    expect(checkPlayedOn('1990-01-01', '2026-10-20')).toEqual({ ok: true, playedOn: '1990-01-01' });
+    expect(PLAYED_MIN).toBe('1990-01-01');
   });
 });
 

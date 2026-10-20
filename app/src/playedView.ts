@@ -83,11 +83,16 @@ export function playedSummary(list: readonly Pick<PlayedDto, 'playedOn'>[], toda
   return { total: list.length, thisYear };
 }
 
-/* 날짜 칸 값 확인 — 비면 null(몰라도 된다), 오늘(KST) 뒤면 'future'. max 속성만으로는 직접 친 미래 날짜가 막히지 않는다 */
-export function checkPlayedOn(value: string, today: string): { ok: true; playedOn: string | null } | { ok: false } {
+/* 날짜 칸 하한 — 한꺼번에 넣기(bulkPlayed.ts parseDate)의 1990년 하한과 같다 */
+export const PLAYED_MIN = '1990-01-01';
+
+/* 날짜 칸 값 확인 — 비면 null(몰라도 된다), 오늘(KST) 뒤면 'future', 모양이 틀리거나 1990년 전이면 'bad'.
+   min·max 속성만으로는 직접 친 날짜가 막히지 않는다 */
+export function checkPlayedOn(value: string, today: string): { ok: true; playedOn: string | null } | { ok: false; why: 'future' | 'bad' } {
   const v = value.trim();
   if (!v) return { ok: true, playedOn: null };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || v > today) return { ok: false };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || v < PLAYED_MIN) return { ok: false, why: 'bad' };
+  if (v > today) return { ok: false, why: 'future' };
   return { ok: true, playedOn: v };
 }
 
