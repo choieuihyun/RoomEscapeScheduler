@@ -57,8 +57,8 @@ export function searchThemes(
   return out;
 }
 
-export function sourceLabel(p: Pick<PlayedDto, 'source'>): '일정에서 자동' | '개인 일정에서' | '직접' {
-  return p.source === 'EVENT' ? '일정에서 자동' : p.source === 'PLAN' ? '개인 일정에서' : '직접';
+export function sourceLabel(p: Pick<PlayedDto, 'source'>): '동호회 일정에서' | '개인 일정에서' | '직접' {
+  return p.source === 'EVENT' ? '동호회 일정에서' : p.source === 'PLAN' ? '개인 일정에서' : '직접';
 }
 
 /* ── 협의 도우미(§4.9 fresh-themes) ── */

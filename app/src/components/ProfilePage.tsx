@@ -18,9 +18,9 @@ type Tab = 'all' | 'manual' | 'auto';
 const TABS: { id: Tab; label: string; empty: string }[] = [
   { id: 'all', label: '전체', empty: '아직 기록한 테마가 없어요. 위에서 찾아 "해 봤어요"를 눌러 보세요.' },
   { id: 'manual', label: '직접 적은 것', empty: '직접 기록한 테마가 없어요.' },
-  { id: 'auto', label: '일정에서 자동', empty: '일정에서 들어온 기록이 없어요. 예약 완료한 동호회 일정이 지나면 다음 날 새벽에 저절로 들어와요.' },
+  { id: 'auto', label: '일정에서 온 것', empty: '일정에서 들어온 기록이 없어요. 예약 완료한 동호회 일정이 지나면 다음 날 새벽에 저절로 들어와요.' },
 ];
-/* "일정에서 자동" 탭에는 개인 "다녀온 일정"에서 온 것(PLAN)도 같이 둔다 — 둘 다 손으로 적지 않은 기록이다 */
+/* "일정에서 온 것" 탭에는 개인 "다녀온 일정"에서 온 것(PLAN)도 같이 둔다 — 둘 다 손으로 적지 않은 기록이다 */
 const inTab = (p: PlayedDto, tab: Tab) => tab === 'all' || (tab === 'manual' ? p.source === 'MANUAL' : p.source !== 'MANUAL');
 
 const NAME_MAX = 40;
