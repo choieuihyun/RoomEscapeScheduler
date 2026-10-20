@@ -4,7 +4,7 @@ import { toFilter } from './useCalendar';
 describe('toFilter — 저장된 캘린더 필터 읽기', () => {
   it('동호회 일정 전에 저장한 값(club 없음)도 읽고 club 은 켠다', () => {
     expect(toFilter({ wish: false, done: true, watch: false }))
-      .toEqual({ wish: false, done: true, watch: false, club: true });
+      .toEqual({ wish: false, done: true, watch: false, club: true, played: true });
   });
 
   it('club 을 끈 값은 그대로', () => {
@@ -13,7 +13,13 @@ describe('toFilter — 저장된 캘린더 필터 읽기', () => {
 
   it('모양이 다르면 전부 켠 기본값', () => {
     for (const v of [null, 'x', { wish: 1 }, { wish: true, done: true }]) {
-      expect(toFilter(v)).toEqual({ wish: true, done: true, watch: true, club: true });
+      expect(toFilter(v)).toEqual({ wish: true, done: true, watch: true, club: true, played: true });
     }
+  });
+
+  it('해 본 테마 전에 저장한 값(played 없음)은 켜고, 끈 값은 그대로', () => {
+    expect(toFilter({ wish: true, done: false, watch: true, club: false }))
+      .toEqual({ wish: true, done: false, watch: true, club: false, played: true });
+    expect(toFilter({ wish: true, done: true, watch: true, club: true, played: false }).played).toBe(false);
   });
 });

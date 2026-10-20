@@ -357,8 +357,9 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
   }, [arm, expire, syncPending]);
 
   /* 기록 하나 더하기. 같은 테마가 이미 있으면 서버가 있던 행을 그대로 준다(멱등) — 보내기 전 목록에 그 id 가 있었으면 existed.
+     row 는 서버가 준 행(있던 행이면 날짜도 원래 것 — 부르는 쪽이 "날짜는 그대로"를 알린다).
      목록을 아직 못 받았으면 먼저 받고 나서 판정한다. 실패하면 서버 문구를 던진다(부르는 쪽이 칸 아래나 토스트로 보인다). */
-  const add = useCallback(async (input: PlayedInput): Promise<{ existed: boolean }> => {
+  const add = useCallback(async (input: PlayedInput): Promise<{ existed: boolean; row: PlayedDto }> => {
     const ep = epoch.current;
     const t = enabled ? await token() : null;
     if (!t || ep !== epoch.current) throw new Error('로그인해 주세요.');
@@ -369,11 +370,11 @@ export function useProfile(enabled: boolean, active: boolean, today: string) {
     } catch (e) {
       throw new Error(sayClub(e));
     }
-    if (ep !== epoch.current) return { existed: false };
+    if (ep !== epoch.current) return { existed: false, row };
     /* 지우려고 미뤄 둔 그 기록이 돌아왔으면 — 지우기를 거두고 다시 보인다(새로 기록한 것과 같다) */
     const revived = undo(row.id);
     await reloadPlayed(); // 기록 날짜가 없는 행이 어디에 끼는지는 서버 순서를 따른다
-    return { existed: wasRecorded(known, row.id, revived) };
+    return { existed: wasRecorded(known, row.id, revived), row };
   }, [enabled, reloadPlayed, undo]);
 
   return {

@@ -1,7 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
-import { cpLen, dayLabel, eventStatus, eventTitle, STATUS_LABEL, weekday } from '../clubEvents';
+import { cpLen, dayLabel, eventStatus, eventTitle, STATUS_LABEL, todayKst, weekday } from '../clubEvents';
 import { coolLeft, coolUntil, startCool, testLabel } from '../pushCool';
 import { isPlayableName, searchThemes, sourceLabel } from '../played';
+import { checkPlayedOn, fullDay, groupByYear, playedSummary, sortPlayed, type PlayedSort } from '../playedView';
 import type { EventDto, MeDto, PlayedDto, ThemeRef } from '../server';
 import { Avatar } from './Avatar';
 import { showToast } from '../toast';
@@ -12,7 +13,8 @@ import type { UsePushDeviceReturn } from '../usePushDevice';
    ① 프로필(닉네임·역할·로그인 수단·숫자 둘)과 그 아래 이 기기 알림(5단계, Task 11),
    ② 해 본 테마(찾아서 기록·직접 적기·탭·지우기), ③ 지난 동호회 일정. */
 
-const PER_PAGE = 10;
+/* 해 본 테마 목록은 처음 50개, "더 보기"마다 50개씩 더 — 400개를 한 번에 그리지 않는다 */
+const LIST_STEP = 50;
 
 /* 여러 개 한꺼번에 넣기 창 — 처음 열 때 받는다(지연 청크). 안 받아지면 한 번 더.
    lazyRetry·LazyBoundary 를 쓰지 않는 까닭: 그 둘을 이 청크로 끌어오면 진입 청크의 내보내기가 늘어난다(진입 크기 한도) */
@@ -30,6 +32,12 @@ const TABS: { id: Tab; label: string; empty: string }[] = [
 const inTab = (p: PlayedDto, tab: Tab) => tab === 'all' || (tab === 'manual' ? p.source === 'MANUAL' : p.source !== 'MANUAL');
 
 const NAME_MAX = 40;
+const FUTURE_ERR = '오늘까지의 날짜만 넣을 수 있어요.';
+/* 기록한 뒤 토스트. 같은 테마가 이미 있으면 서버가 있던 행을 그대로 줘서 적은 날짜가 들어가지 않는다 — 그걸 같이 알린다 */
+function addedText(r: { existed: boolean; row: PlayedDto }, playedOn: string | null): string {
+  const kept = playedOn !== null && r.row.playedOn !== playedOn;
+  return (r.existed ? '이미 기록돼 있어요.' : '기록했어요.') + (kept ? ' 날짜는 원래 기록 그대로예요.' : '');
+}
 const dowClass = (dow: number) => (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
 
 export function ProfilePage({
@@ -220,9 +228,15 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
   const uid = useId();
   const qId = uid + 'q';
   const resId = uid + 'res';
+  const whenId = uid + 'when';
   const [q, setQ] = useState('');
   const [tab, setTab] = useState<Tab>('all');
-  const [page, setPage] = useState(0);
+  const [sort, setSort] = useState<PlayedSort>('recent');
+  const [limit, setLimit] = useState(LIST_STEP);
+  /* 언제 했나 — 찾기의 "해 봤어요"와 직접 적기가 같이 쓴다. 누를 때마다 그대로 남아 같은 날 여러 테마를 넣기 쉽다 */
+  const [when, setWhen] = useState('');
+  const [whenErr, setWhenErr] = useState('');
+  const today = todayKst();
   const [addingKey, setAddingKey] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [mName, setMName] = useState('');
@@ -254,23 +268,30 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
     [dq, themes, kept],
   );
 
-  /* 지운 줄은 쪽 넘김·수에 넣지 않고 그 자리에 "지웠어요 · 되돌리기"로 남긴다(pageRows).
-     지우면 마지막 쪽이 비어 없어질 수 있다 — 쪽 번호는 그리면서 맞춘다 */
-  const rows = (played ?? []).filter((p) => inTab(p, tab));
-  const { shown, pages, count, cur } = pageRows(rows, pendingIds, page, PER_PAGE);
+  /* 정렬한 뒤 앞에서 limit 개. 지운 줄은 수에 넣지 않고 그 자리에 "지웠어요 · 되돌리기"로 남긴다(pageRows).
+     최근 순이면 연도별로 묶고, 묶음 머리의 수는 보이는 줄과 상관없이 그 해 전체 */
+  const rows = useMemo(() => sortPlayed((played ?? []).filter((p) => inTab(p, tab)), sort), [played, tab, sort]);
+  const { shown, count } = pageRows(rows, pendingIds, 0, limit);
+  const groups = useMemo(
+    () => (sort === 'recent' ? groupByYear(shown, rows.filter((p) => !pendingIds.has(p.id))) : [{ key: 'all', label: '', count, rows: shown }]),
+    [sort, shown, rows, pendingIds, count],
+  );
+  const left = count - Math.min(limit, count);
+  const sum = kept && playedSummary(kept, today);
   const tabInfo = TABS.find((t) => t.id === tab)!;
 
   /* 포커스 — × 를 누르면 그 자리의 "되돌리기"로, 되돌리면 그 줄 × 로, 시간이 다 돼 줄이 사라지면 그 자리에 온 줄로
      (없으면 앞 줄, 그것도 없으면 고른 탭). 사용자가 이미 다른 곳으로 옮겼으면 건드리지 않는다. */
-  const listRef = useRef<HTMLUListElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const lost = () => { const a = document.activeElement; return !a || a === document.body; };
   const fallback = () => tabsRef.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]');
   const focusIn = (sel: string) => listRef.current?.querySelector<HTMLButtonElement>(sel);
-  const del = async (p: PlayedDto, idx: number) => {
+  const del = async (p: PlayedDto) => {
+    const idx = shown.indexOf(p);   // 연도 묶음이 나뉘어도 줄(li)은 shown 순서 그대로 그려진다
     await profile.remove(p, () => requestAnimationFrame(() => {
       if (!lost()) return;
-      const items = listRef.current?.querySelectorAll<HTMLLIElement>(':scope > li');
+      const items = listRef.current?.querySelectorAll<HTMLLIElement>('li');
       const at = items?.[idx] ?? items?.[idx - 1];
       (at?.querySelector<HTMLButtonElement>('button') ?? fallback())?.focus();
     }));
@@ -283,11 +304,13 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
   const picking = useRef(false); // 단추가 꺼지기 전에 빠르게 또 눌러도 한 번만 보낸다
   const pick = async (ref: ThemeRef) => {
     if (picking.current) return;
+    const w = checkPlayedOn(when, today);
+    if (!w.ok) { setWhenErr(FUTURE_ERR); return; }
     picking.current = true;
     setAddingKey(ref.themeKey);
     try {
-      const r = await profile.add({ themeKey: ref.themeKey, themeName: ref.themeName, branchName: ref.branchName });
-      showToast(r.existed ? '이미 기록돼 있어요.' : '기록했어요.');
+      const r = await profile.add({ themeKey: ref.themeKey, themeName: ref.themeName, branchName: ref.branchName, playedOn: w.playedOn });
+      showToast(addedText(r, w.playedOn));
     } catch (e) {
       showToast((e as Error).message);
     } finally {
@@ -309,13 +332,15 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
     if (!isPlayableName(name)) { setMErr('테마 이름을 글자로 적어 주세요.'); return; }
     if (cpLen(name) > NAME_MAX) { setMErr(`테마 이름은 ${NAME_MAX}자까지예요.`); return; }
     if (cpLen(branch) > NAME_MAX) { setMErr(`매장·지점은 ${NAME_MAX}자까지예요.`); return; }
+    const w = checkPlayedOn(when, today);
+    if (!w.ok) { setMErr(FUTURE_ERR); return; }
     if (picking.current) return;
     picking.current = true;
     setMBusy(true);
     setMErr('');
     try {
-      const r = await profile.add({ themeName: name, branchName: branch || null });
-      showToast(r.existed ? '이미 기록돼 있어요.' : '기록했어요.');
+      const r = await profile.add({ themeName: name, branchName: branch || null, playedOn: w.playedOn });
+      showToast(addedText(r, w.playedOn));
       setMName('');
       setMBranch('');
       setManualOpen(false);
@@ -345,6 +370,8 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
         {dq && (
           <section className="pf-results" aria-labelledby={resId}>
             <h3 id={resId} className="sr-only">찾은 테마</h3>
+            {/* 언제 했나 — 아래 "해 봤어요"가 이 날짜로 기록한다(직접 적기 칸과 같은 값) */}
+            {profile.themes !== null && results.length > 0 && whenField('search')}
             {profile.themes === null ? (
               <p className="pf-res-note">{profile.themesError || '테마 목록을 불러오는 중…'}</p>
             ) : results.length === 0 ? (
@@ -373,6 +400,7 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
               <input value={mBranch} onChange={(e) => { setMBranch(e.target.value); setMErr(''); }} maxLength={NAME_MAX * 2}
                 placeholder="예: 제로월드 강남점" />
             </label>
+            {whenField('manual')}
             {mErr && <p className="merr" role="alert">{mErr}</p>}
             <div className="pf-manual-btns">
               <button type="button" className="btn" onClick={() => { setManualOpen(false); setMErr(''); }}>닫기</button>
@@ -393,10 +421,21 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
           <button
             key={t.id} type="button" role="tab" aria-selected={tab === t.id}
             className={'chip-pick' + (tab === t.id ? ' on' : '')}
-            onClick={() => { setTab(t.id); setPage(0); }}
+            onClick={() => { setTab(t.id); setLimit(LIST_STEP); }}
           >{t.label}</button>
         ))}
       </div>
+      {sum && sum.total > 0 && (
+        <div className="pf-sumrow">
+          <span className="pf-sum">모두 {sum.total}개 · 올해 {sum.thisYear}개</span>
+          <div className="pf-sort" role="group" aria-label="정렬">
+            {(['recent', 'name'] as const).map((k) => (
+              <button key={k} type="button" className="chip-pick" aria-pressed={sort === k}
+                onClick={() => { setSort(k); setLimit(LIST_STEP); }}>{k === 'recent' ? '최근 순' : '이름 순'}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {played === null ? (
         profile.error ? (
@@ -408,44 +447,72 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
       ) : count === 0 && shown.length === 0 ? (
         <p className="home-empty-p pf-loading">{tabInfo.empty}</p>
       ) : (
-        <ul className="pf-list" ref={listRef}>
-          {shown.map((p, i) => {
-            if (pendingIds.has(p.id)) {
-              /* 지운 줄 — 6초 뒤 보낸다. 마우스·포커스가 이 줄에 있는 동안은 기다린다.
-                 마우스는 enter 대신 move 로 본다 — × 를 누른 그 자리에서 줄이 바뀌면 포인터가 이미 안에 있어 enter 가 오지 않는다 */
-              return (
-                <li key={p.id} className="pf-row pf-gone"
-                  onMouseMove={() => profile.hold(p.id, 'hover')} onMouseLeave={() => profile.release(p.id, 'hover')}
-                  onFocus={() => profile.hold(p.id, 'focus')} onBlur={() => profile.release(p.id, 'focus')}>
-                  <span className="pf-gone-t">지웠어요<span className="pf-gone-n"> · {p.themeName}</span></span>
-                  <button type="button" className="pf-undo" data-undo={p.id} aria-label={`${p.themeName} 되돌리기`}
-                    onClick={() => undoRow(p)}>되돌리기</button>
-                </li>
-              );
-            }
-            const src = sourceLabel(p);
-            const meta = [p.storeName, p.branchName, p.playedOn && dayLabel(p.playedOn)].filter(Boolean).join(' · ');
-            return (
-              <li key={p.id} className="pf-row">
-                <div className="pf-row-main">
-                  <div className="pf-row-n">{p.themeName}</div>
-                  {meta && <div className="pf-row-m">{meta}</div>}
-                </div>
-                <span className={'chip-info pf-src' + (p.source === 'MANUAL' ? '' : ' muted')}>{src}</span>
-                <button type="button" className="pf-del" data-pid={p.id} aria-label={`${p.themeName} 기록 지우기`} title="지우기"
-                  onClick={() => void del(p, i)}>×</button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {pages > 1 && (
-        <div className="home-pager">
-          <button type="button" aria-label="이전" disabled={cur === 0} onClick={() => setPage(cur - 1)}>‹</button>
-          <span>{cur + 1}/{pages}</span>
-          <button type="button" aria-label="다음" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}>›</button>
+        /* 넓은 화면에선 카드가 끝없이 길어지지 않게 이 상자 안에서 굴린다(floduler.css) */
+        <div className="pf-listbox" ref={listRef}>
+          {groups.map((g) => g.label ? (
+            <section key={g.key} className="pf-yr" aria-label={`${g.label} ${g.count}개`}>
+              <h3 className="pf-yr-h" aria-hidden="true">{g.label}<span> · {g.count}개</span></h3>
+              <ul className="pf-list">{g.rows.map(rowOf)}</ul>
+            </section>
+          ) : <ul key={g.key} className="pf-list">{g.rows.map(rowOf)}</ul>)}
+          {left > 0 && (
+            <button type="button" className="pf-more" onClick={() => setLimit((n) => n + LIST_STEP)}>
+              더 보기 <span>· {left}개 남음</span>
+            </button>
+          )}
         </div>
       )}
     </section>
   );
+
+  /* 언제 했나 칸 — 찾기 결과 위와 직접 적기 폼 안 두 곳. 값은 하나(when), 두 곳이 같이 보일 수 있어 id 는 나눈다.
+     찾기 쪽 잘못은 칸 아래(whenErr), 직접 적기 쪽은 폼의 오류 줄(mErr)에 */
+  function whenField(at: 'search' | 'manual') {
+    const id = whenId + at;
+    return (
+      <div className={at === 'search' ? 'pf-when' : 'pf-field pf-when-f'}>
+        <label htmlFor={id}>언제 했나요?</label>
+        <span className="pf-when-row">
+          <input id={id} type="date" max={today} value={when} aria-invalid={whenErr ? true : undefined}
+            aria-describedby={whenErr ? id + 'e' : undefined}
+            onChange={(e) => { setWhen(e.target.value); setWhenErr(''); setMErr(''); }} />
+          {when
+            ? <button type="button" className="pf-when-x" onClick={() => { setWhen(''); setWhenErr(''); setMErr(''); }}>날짜 빼기</button>
+            : <em>몰라도 돼요</em>}
+        </span>
+        {whenErr && at === 'search' && <p id={id + 'e'} className="merr" role="alert">{whenErr}</p>}
+      </div>
+    );
+  }
+
+  function rowOf(p: PlayedDto) {
+    if (pendingIds.has(p.id)) {
+      /* 지운 줄 — 6초 뒤 보낸다. 마우스·포커스가 이 줄에 있는 동안은 기다린다.
+         마우스는 enter 대신 move 로 본다 — × 를 누른 그 자리에서 줄이 바뀌면 포인터가 이미 안에 있어 enter 가 오지 않는다 */
+      return (
+        <li key={p.id} className="pf-row pf-gone"
+          onMouseMove={() => profile.hold(p.id, 'hover')} onMouseLeave={() => profile.release(p.id, 'hover')}
+          onFocus={() => profile.hold(p.id, 'focus')} onBlur={() => profile.release(p.id, 'focus')}>
+          <span className="pf-gone-t">지웠어요<span className="pf-gone-n"> · {p.themeName}</span></span>
+          <button type="button" className="pf-undo" data-undo={p.id} aria-label={`${p.themeName} 되돌리기`}
+            onClick={() => undoRow(p)}>되돌리기</button>
+        </li>
+      );
+    }
+    const src = sourceLabel(p);
+    /* 최근 순은 연도 머리가 있어 "3/15 (금)", 이름 순은 연도까지 */
+    const day = p.playedOn && (sort === 'recent' ? dayLabel(p.playedOn) : fullDay(p.playedOn));
+    const meta = [p.storeName, p.branchName, day].filter(Boolean).join(' · ');
+    return (
+      <li key={p.id} className="pf-row">
+        <div className="pf-row-main">
+          <div className="pf-row-n">{p.themeName}</div>
+          {meta && <div className="pf-row-m">{meta}</div>}
+        </div>
+        <span className={'chip-info pf-src' + (p.source === 'MANUAL' ? '' : ' muted')}>{src}</span>
+        <button type="button" className="pf-del" data-pid={p.id} aria-label={`${p.themeName} 기록 지우기`} title="지우기"
+          onClick={() => void del(p)}>×</button>
+      </li>
+    );
+  }
 }

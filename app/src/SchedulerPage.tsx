@@ -216,6 +216,12 @@ export function SchedulerPage() {
   /* 내 정보의 지난 일정 → 캘린더 상세. 지난 일정은 받아 둔 목록 범위 밖일 수 있어 먼저 목록에 넣는다
      (없으면 '연 일정이 목록에서 사라짐' 처리가 패널을 바로 닫는다) */
   const openFromProfile = (ev: EventDto) => { club.adopt(ev); goView('calendar'); openEvent(ev); };
+  /* 캘린더 그날 패널의 "해 본 테마 모두 보기" — 넓은 화면은 내 정보, 좁은 화면은 더보기 › 해 본 테마.
+     더보기 하위 화면처럼 기록을 하나 더 쌓아 뒤로 가기가 더보기 목록 → 캘린더로 돌아온다 */
+  const openPlayedList = () => {
+    goView(wide ? 'profile' : 'more');
+    if (!wide) history.pushState({ moreSub: 'played' }, '', location.href);
+  };
   /* 홈 미니 달력의 날짜 → 캘린더 화면에서 그날을 고른다. 열려 있던 일정 상세는 닫는다(캘린더의 날짜 고르기와 같게) */
   const pickFromHome = (iso: string) => {
     goView('calendar');
@@ -394,7 +400,7 @@ export function SchedulerPage() {
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
         isAdmin={isAdmin} pendingCount={pendingCount}
       >
-        {nav.view === 'calendar' && <CalendarSide ctl={cal} clubOn={homeOn} />}
+        {nav.view === 'calendar' && <CalendarSide ctl={cal} clubOn={homeOn} playedOn={profileOn} />}
       </SideNav>
 
       <main className="main">
@@ -442,6 +448,7 @@ export function SchedulerPage() {
               club={club} clubOn={homeOn} clubToday={today}
               onNewEvent={eventForm.openNew} onEditEvent={eventForm.openEdit} onCloseEvent={closeEvent} onOpenEvent={openEvent}
               onCalcWindow={calcWindow} onCalcThemes={calcThemes}
+              profile={profileOn ? profile : null} onAllPlayed={openPlayedList}
             /></LazyBoundary>
           </div>
         )}

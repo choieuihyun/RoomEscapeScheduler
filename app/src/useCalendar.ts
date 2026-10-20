@@ -9,8 +9,9 @@ import { toISO } from './core';
    기준은 늘 `selected`(고른 날) 하나다. 주·일 보기는 그날이 든 주·그날을 보여주고,
    이전/다음은 보기 단위(달·주·일)만큼 움직인다. */
 export type CalMode = 'month' | 'week' | 'day';
-/* club = 동호회 일정(계획 Task E6) — 승인 멤버이고 일정 API 가 있을 때만 필터 줄이 보인다. */
-export type CalKind = 'wish' | 'done' | 'watch' | 'club';
+/* club = 동호회 일정(계획 Task E6) — 승인 멤버이고 일정 API 가 있을 때만 필터 줄이 보인다.
+   played = 해 본 테마(§4.62) — 승인 멤버이고 해 본 테마 API 가 있을 때만. */
+export type CalKind = 'wish' | 'done' | 'watch' | 'club' | 'played';
 export type CalFilter = Record<CalKind, boolean>;
 
 const FILTER_KEY = 'flod.cal.filter';
@@ -30,14 +31,14 @@ function save(key: string, v: unknown) {
 }
 const isMode = (v: unknown): v is CalMode => v === 'month' || v === 'week' || v === 'day';
 const isIds = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string');
-/* 저장된 필터를 읽는다. 동호회 일정 전에 저장한 값엔 club 키가 없다 — 그때는 켠 채로 채운다. */
+/* 저장된 필터를 읽는다. 동호회 일정·해 본 테마 전에 저장한 값엔 club·played 키가 없다 — 그때는 켠 채로 채운다. */
 export function toFilter(v: unknown): CalFilter {
   const ok = !!v && typeof v === 'object'
     && ['wish', 'done', 'watch'].every(k => typeof (v as Record<string, unknown>)[k] === 'boolean');
-  if (!ok) return { wish: true, done: true, watch: true, club: true };
+  if (!ok) return { wish: true, done: true, watch: true, club: true, played: true };
   const f = v as Record<string, unknown>;
   return { wish: f.wish as boolean, done: f.done as boolean, watch: f.watch as boolean,
-    club: typeof f.club === 'boolean' ? f.club : true };
+    club: f.club !== false, played: f.played !== false };
 }
 function loadFilter(): CalFilter {
   try { return toFilter(JSON.parse(localStorage.getItem(FILTER_KEY) || 'null')); } catch { return toFilter(null); }

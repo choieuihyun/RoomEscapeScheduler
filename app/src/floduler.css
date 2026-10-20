@@ -38,6 +38,7 @@
   --green:#00AF52; --green-text:#0D7738; --green-soft:#E0F4E2;
   --red:#FF502A;   --red-text:#C92208;  --red-soft:#FFE4DC;  --red-line:#FFBCAF;
   --amber:#E47B37; --amber-text:#99562C; --amber-soft:#FFEDDC; --amber-line:#FFD9B0;
+  --played:#6F918B;   /* 캘린더 "해 본 테마" 점 — 지난 기록이라 차분한 회색-청록(§4.62) */
   /* 동호회 일정 상태 색 — 협의 중 · 예약 전 · 예약 완료 (글자/바탕) */
   --st-talk-fg:#5B3CC4;   /* 협의 중 — 회색이면 흰 바탕에 묻혀 보라로 (2026-10-19) */
   --st-before-fg:#99562C;
@@ -104,6 +105,7 @@
     --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
     --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
     --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
+    --played:#8FB3AD;
     --st-talk-fg:#CDB8FF;
     --st-before-fg:#FFA45E;
     --st-done-fg:#6ED688;
@@ -147,6 +149,7 @@
   --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
   --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
   --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
+  --played:#8FB3AD;
   --st-talk-fg:#CDB8FF;
   --st-before-fg:#FFA45E;
   --st-done-fg:#6ED688;
@@ -871,6 +874,9 @@ button:active{transform:scale(.97)}
 .cal-ev.wish,.cal-key.wish{--ev:var(--blue)}
 .cal-ev.done,.cal-key.done{--ev:var(--green)}
 .cal-ev.watch,.cal-key.watch{--ev:var(--amber)}
+/* 해 본 테마(§4.62) — 지난 기록이라 보조 글자색으로 차분하게 */
+.cal-ev.played,.cal-key.played{--ev:var(--played)}
+.cal-ev.played{color:var(--ink2)}
 .cal-more{align-self:flex-start;font-size:11.5px;font-weight:600;color:var(--ink2);background:none;border:none;
   padding:0 6px;height:18px;border-radius:4px;font-family:inherit}
 .cal-more:hover{background:var(--chip-bg);color:var(--ink)}
@@ -940,6 +946,20 @@ button:active{transform:scale(.97)}
 .cal-stlegend span{display:inline-flex;align-items:center;gap:5px}
 .cal-day-club{padding:10px 12px 2px;gap:4px}
 .cal-day-club .cal-ev.club{height:26px;font-size:13px}
+.cal-day-club .cal-ev.played{height:26px;line-height:24px;padding:0 8px;font-size:13px}
+/* 그날 패널의 해 본 테마 묶음(§4.62) — 테마 · 매장, 아래에 "모두 보기" */
+.cal-played{margin:0 0 6px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm)}
+.cal-played .cal-side-h{display:flex;align-items:center;gap:6px;margin:0 0 6px}
+.cal-played .cal-side-h span{font-weight:400;color:var(--ink3);font-variant-numeric:tabular-nums}
+.cal-played ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.cal-played li{display:flex;align-items:baseline;gap:6px;min-width:0;font-size:13.5px;color:var(--ink)}
+.cal-played li .cal-key{flex:none;align-self:center;width:7px;height:7px;border-radius:999px}
+.cal-played li b{flex:0 1 auto;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-played li span{flex:1 1 0;min-width:0;font-size:12px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-played-all{margin-top:8px;padding:2px 0;border:none;background:none;font-family:inherit;font-size:12.5px;color:var(--blue-text);cursor:pointer}
+.cal-played-all:hover{text-decoration:underline}
+.cal-played-all:active{transform:none}
+.cal-played-all:focus-visible{outline:none;box-shadow:var(--ring);border-radius:4px}
 /* 상태·정보 칩(2026-10-20 톤 다운) — 다우오피스처럼 회색 테두리 + 회색 보통 굵기 글자. 색은 아껴서:
    상태는 글자 앞 6px 점 하나, 주의·위험만 글자색(차분한 주황·빨강). 테두리는 늘 회색 */
 .chip-st,.chip-info{flex:none;display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;box-sizing:border-box;
@@ -1329,6 +1349,9 @@ button:active{transform:scale(.97)}
   .cal-weekview .cal-ev.club>.cal-ev-t,.cal-day-club .cal-ev.club>*{display:inline}
   .cal-day-club .cal-ev.club{height:26px;padding:0 8px;font-size:13px;gap:5px;border:1px solid var(--line)}
   .cal-day-club .cal-ev.club>.cal-dot{display:inline-block}
+  .cal-day-club .cal-ev.played{width:auto;height:26px;line-height:24px;padding:0 8px;font-size:13px;
+    border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+  .cal-day-club .cal-ev.played::before{display:inline-block}
   /* 후보 날짜 칩은 속 빈 점 */
   .cal-ev.club.cand{background:transparent;border:0;box-shadow:inset 0 0 0 1.5px var(--st-dot)}
   .cal-weekview .cal-ev.club.cand,.cal-day-club .cal-ev.club.cand{background:var(--surface);box-shadow:none;
@@ -1655,6 +1678,32 @@ input.pf-q:not([type=checkbox]):not([type=radio]):not([type=file]){padding-left:
 .pf-push-btn:focus-visible{outline:none;box-shadow:var(--ring)}
 .pf-push-btn:disabled{color:var(--ink3);cursor:default}
 .pf-push-more{align-self:flex-start;margin-top:0}
+/* 해 본 테마 날짜·훑어보기(§4.62) — 언제 했나 칸, 요약·정렬 줄, 연도 묶음, 더 보기 */
+.pf-when{position:sticky;top:0;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:8px 12px;
+  border-bottom:1px solid var(--line);background:var(--surface2);font-size:12.5px;color:var(--ink2)}
+.pf-when .merr{flex-basis:100%;margin:0;min-height:0}
+.pf-when-row{display:inline-flex;align-items:center;gap:10px;min-width:0}
+/* 전역 입력칸 규칙(높이 40·여백 12)보다 세게 — 찾기 결과 위 한 줄에 맞게 낮춘다 */
+.pf-when-row input:not([type=checkbox]):not([type=radio]):not([type=file]){height:32px;padding:0 8px;font-size:13px;border-radius:8px}
+.pf-when-row em{font-style:normal;color:var(--ink3)}
+.pf-when-f .pf-when-row input:not([type=checkbox]):not([type=radio]):not([type=file]){flex:1;height:40px;padding:0 12px;font-size:14px}
+.pf-when-x{flex:none;padding:4px 0;border:none;background:none;font-family:inherit;font-size:12.5px;color:var(--blue-text);cursor:pointer}
+.pf-when-x:hover{text-decoration:underline}
+.pf-when-x:active{transform:none}
+.pf-sumrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 8px}
+.pf-sum{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.pf-sort{display:inline-flex;gap:4px}
+.pf-sort .chip-pick{height:26px;padding:0 10px;font-size:12px}
+.pf-yr-h{margin:0;padding:12px 0 6px;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--ink2)}
+.pf-yr:first-child .pf-yr-h{padding-top:2px}
+.pf-yr-h span{font-weight:400;color:var(--ink3);font-variant-numeric:tabular-nums}
+.pf-listbox .pf-more{width:100%;margin-top:10px}
+.pf-listbox .pf-more span{color:var(--ink3);font-variant-numeric:tabular-nums}
+/* 넓은 화면의 내 정보 카드 — 수백 개여도 카드가 끝없이 길어지지 않게 목록만 상자 안에서 굴리고, 연도 머리는 위에 붙인다 */
+@media not all and (max-width:900px){
+  .pf-listbox{max-height:560px;overflow-y:auto;margin-right:-8px;padding-right:8px}
+  .pf-yr-h{position:sticky;top:0;z-index:1;background:var(--surface)}
+}
 @media(max-width:1100px){
   .pf-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"me played" "push played" "past played"}
   .pf-col{display:contents}

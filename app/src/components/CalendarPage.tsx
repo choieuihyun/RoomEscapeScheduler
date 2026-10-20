@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fmt, monthGrid, toISO, WEEKDAYS } from '../core';
 import type { Plan } from '../cloud';
-import type { EventDto, WatchDto } from '../server';
+import type { EventDto, PlayedDto, WatchDto } from '../server';
 import type { UseAuthReturn } from '../useAuth';
 import type { UsePlansReturn } from '../usePlans';
 import type { UseWatchesReturn } from '../useWatches';
@@ -10,10 +10,12 @@ import { useDaySchedule } from '../useDaySchedule';
 import type { Scheduler } from '../scheduler/useScheduler';
 import { DayBranches } from './DayBranches';
 import { EventPanel } from './EventPanel';
-import { eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel } from '../clubEvents';
+import { dayLabel, eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
 import type { AddedTheme } from '../useLoadModal';
 import { playedCount } from '../played';
+import { playedByDate } from '../playedView';
+import { withoutPending, type UseProfileReturn } from '../useProfile';
 
 /* 캘린더 화면(§4.49) — 모달이던 것(§4.38·§4.40)을 왼쪽 메뉴의 한 화면으로 옮겼다.
    그룹웨어 월간 보기처럼 날짜 칸 안에 일정·감시 회차를 줄로 보여주고, 고른 날짜의
@@ -29,7 +31,7 @@ interface DayEntry { plans: Plan[]; watches: WatchDto[] }
 interface Ev { key: string; kind: CalKind; start: number; end: number | null; text: string; title: string }
 
 /* 칸 하나에 줄로 보여줄 최대 개수 — 주(週) 줄 높이 110px 에 날짜 숫자와 함께
-   들어가는 만큼. 넘치면 "+n" 으로 접는다. */
+   들어가는 만큼. 넘치면 두 줄 + "+n" 으로 접는다. */
 const CELL_MAX = 3;
 
 function eventsOf(entry: DayEntry | undefined, filter: CalFilter): Ev[] {
@@ -59,6 +61,18 @@ function eventsOf(entry: DayEntry | undefined, filter: CalFilter): Ev[] {
 }
 
 const EvLine = ({ e }: { e: Ev }) => <span className={'cal-ev ' + e.kind} title={e.title}>{e.text}</span>;
+
+/* 해 본 테마(§4.62) — 직접 적은 기록의 날짜에 테마 이름 한 줄. 시각이 없어 그날 줄의 맨 뒤에 둔다.
+   휴대폰 달 칸에선 점만 남아 이름은 화면 읽기용 글자로 */
+const playedPlace = (p: PlayedDto) => [p.storeName, p.branchName].filter(Boolean).join(' ');
+function PlayedLine({ p }: { p: PlayedDto }) {
+  const label = ['해 본 테마', p.themeName, playedPlace(p), p.playedOn && dayLabel(p.playedOn)].filter(Boolean).join(' · ');
+  return (
+    <span className="cal-ev played" title={label}>
+      <span className="sr-only">{label}</span><span aria-hidden="true">{p.themeName}</span>
+    </span>
+  );
+}
 
 /* 동호회 일정 칩(계획 Task E6) — 상태 점 + 제목(또는 첫 테마)과 시각 + 참여 수. 누르면 오른쪽 패널에 상세. */
 function chipText(ev: EventDto): string {
@@ -225,6 +239,7 @@ function DayTimeline({ evs }: { evs: Ev[] }) {
 
 export function CalendarPage({
   ctl, active, plans, watches, auth, s, onLoaded, club, clubOn, clubToday, onNewEvent, onEditEvent, onCloseEvent, onOpenEvent, onCalcWindow, onCalcThemes,
+  profile, onAllPlayed,
 }: {
   ctl: UseCalendarReturn; active: boolean; plans: UsePlansReturn; watches: UseWatchesReturn;
   auth: UseAuthReturn; s: Scheduler; onLoaded: () => void;
@@ -237,6 +252,10 @@ export function CalendarPage({
   onOpenEvent: (ev: EventDto, date?: string) => void;
   onCalcWindow: (w: { start: number; end: number }) => void;
   onCalcThemes: (items: AddedTheme[]) => void;
+  /* 해 본 테마 — 승인 멤버이고 해 본 테마 API 가 있을 때만(아니면 null). 내 정보가 이미 받아 둔 목록을 그대로 쓴다 */
+  profile: UseProfileReturn | null;
+  /* 그날 패널의 "해 본 테마 모두 보기" */
+  onAllPlayed: () => void;
 }) {
   const grid = useMemo(() => monthGrid(ctl.cursor.y, ctl.cursor.m), [ctl.cursor.y, ctl.cursor.m]);
   /* 칸의 오늘 표시와 동호회 일정의 '지난 날짜'는 모두 한국 날짜(clubToday, 자정에 갱신)로 본다 */
@@ -265,6 +284,15 @@ export function CalendarPage({
     return m;
   }, [club.events]);
   const clubOf = (iso: string) => (showClub ? clubByDate.get(iso) ?? [] : []);
+  /* 해 본 테마는 날짜별 Map 으로 한 번 묶는다(수백 개여도 칸마다 거르지 않게). 지우려고 미뤄 둔 기록은 뺀다 */
+  const playedList = profile?.played ?? null;
+  const playedPending = profile?.pendingIds;
+  const playedMap = useMemo(
+    () => playedByDate(playedList && playedPending ? withoutPending(playedList, playedPending) : []),
+    [playedList, playedPending],
+  );
+  const showPlayed = profile !== null && ctl.filter.played;
+  const playedOf = (iso: string) => (showPlayed ? playedMap.get(iso) ?? [] : []);
   const openEv = ctl.openEvent === null ? null : club.events.find(e => e.id === ctl.openEvent) ?? null;
   const openClub = onOpenEvent;
   /* 날짜를 고르면 그날 상세로 돌아간다 */
@@ -277,6 +305,7 @@ export function CalendarPage({
       <ClubChip key={'c' + ev.id} ev={ev} iso={iso} on={isOn(ev, iso)} past={iso < clubToday} onOpen={openClub} />
     )),
     ...evsOf(iso).map(e => <EvLine key={e.key} e={e} />),
+    ...playedOf(iso).map(p => <PlayedLine key={'d' + p.id} p={p} />),
   ];
 
   /* "+n" 작은 창 — 칸은 overflow:hidden 이라 칸 안에 둘 수 없어 문서 기준 위치(absolute)로
@@ -323,6 +352,7 @@ export function CalendarPage({
   const weeks = Array.from({ length: grid.length / 7 }, (_, i) => grid.slice(i * 7, i * 7 + 7));
   const popEvs = pop ? lineOf(pop.iso) : [];
   const selClub = clubOf(sel);
+  const selPlayed = playedOf(sel);
 
   const kindBtn = (k: CalKind, label: string) => (
     <button
@@ -352,6 +382,7 @@ export function CalendarPage({
       <div className="cal-legend">
         {clubOn && kindBtn('club', '동호회 일정')}
         {kindBtn('wish', '하고 싶은 일정')}{kindBtn('done', '다녀온 일정')}{kindBtn('watch', '빈자리 알림')}
+        {profile && kindBtn('played', '해 본 테마')}
       </div>
       {showClub && (
         <div className="cal-stlegend" aria-label="동호회 일정 상태">
@@ -372,6 +403,8 @@ export function CalendarPage({
                   {week.map(d => {
                     const iso = toISO(d);
                     const evs = lineOf(iso);
+                    /* 넘치면 "+n" 자리를 위해 한 줄 덜 — 세 줄 + "+n" 은 110px 칸 아래로 잘렸다(해 본 테마로 네 개 넘는 날이 흔해져 보였다) */
+                    const fit = evs.length > CELL_MAX ? CELL_MAX - 1 : CELL_MAX;
                     return (
                       <div
                         key={iso} className={cellClass(d, iso, today, sel, ctl.cursor.m)}
@@ -382,7 +415,7 @@ export function CalendarPage({
                         <span className="cal-dnum">{d.getDate()}</span>
                         {evs.length > 0 && (
                           <span className="cal-evs">
-                            {evs.slice(0, CELL_MAX)}
+                            {evs.slice(0, fit)}
                             {evs.length > CELL_MAX && (
                               <button
                                 type="button" className="cal-more"
@@ -392,7 +425,7 @@ export function CalendarPage({
                                   pick(iso);
                                   setPop({ iso, x: scrollX + Math.max(8, Math.min(r.left, innerWidth - 276)), y: scrollY + r.top });
                                 }}
-                              >+{evs.length - CELL_MAX}</button>
+                              >+{evs.length - fit}</button>
                             )}
                           </span>
                         )}
@@ -426,12 +459,13 @@ export function CalendarPage({
 
           {ctl.mode === 'day' && (
             <div className="cal-dayview">
-              {/* 동호회 일정은 시각이 없거나(하루 종일·협의 중) 여러 구간이라 시간 축 대신 위에 줄로 둔다 */}
-              {selClub.length > 0 && (
+              {/* 동호회 일정은 시각이 없거나(하루 종일·협의 중) 여러 구간이라 시간 축 대신 위에 줄로 둔다. 해 본 테마도 시각이 없어 같이 */}
+              {(selClub.length > 0 || selPlayed.length > 0) && (
                 <div className="cal-day-club cal-evs">
                   {selClub.map(ev => (
                     <ClubChip key={ev.id} ev={ev} iso={sel} on={isOn(ev, sel)} past={sel < clubToday} onOpen={openClub} />
                   ))}
+                  {selPlayed.map(p => <PlayedLine key={'d' + p.id} p={p} />)}
                 </div>
               )}
               <DayTimeline evs={evsOf(sel)} />
@@ -451,7 +485,7 @@ export function CalendarPage({
           <div className="cal-detail">
             {selClub.map(ev => <ClubRow key={ev.id} ev={ev} iso={sel} onOpen={openClub} />)}
             {!selEntry || (selEntry.plans.length === 0 && selEntry.watches.length === 0) ? (
-              selClub.length === 0 && (
+              selClub.length === 0 && selPlayed.length === 0 && (
                 <div className="lmsg">
                   {showClub ? '이날은 동호회 일정도, 저장한 일정도, 빈자리 알림도 없어요.' : '이날은 저장한 일정도, 빈자리 알림도 없어요.'}
                 </div>
@@ -463,6 +497,17 @@ export function CalendarPage({
                 ))}
                 {selEntry.watches.map(w => <WatchDetailRow key={w.id} w={w} watches={watches} />)}
               </>
+            )}
+            {selPlayed.length > 0 && (
+              <section className="cal-played" aria-label="이날 해 본 테마">
+                <p className="cal-side-h">해 본 테마 <span>{selPlayed.length}</span></p>
+                <ul>
+                  {selPlayed.map(p => (
+                    <li key={p.id}><i className="cal-key played" /><b>{p.themeName}</b>{playedPlace(p) && <span>{playedPlace(p)}</span>}</li>
+                  ))}
+                </ul>
+                <button type="button" className="cal-played-all" onClick={onAllPlayed}>해 본 테마 모두 보기 ›</button>
+              </section>
             )}
             <DayBranches iso={sel} day={day} picked={ctl.branches} onToggle={ctl.toggleBranch} onClear={ctl.clearBranches} />
           </div>
