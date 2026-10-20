@@ -394,6 +394,7 @@ export function CalendarPage({
       {showClub && (
         <div className="cal-stlegend" aria-label="모임 일정 상태">
           {(['talk', 'before', 'done'] as const).map(k => <span key={k}><i className={'cal-dot ' + k} />{STATUS_LABEL[k]}</span>)}
+          <span><i className="cal-dot cand" />후보 날짜(점선)</span>
         </div>
       )}
       {!auth.me && <p className="cal-note">로그인하면 저장한 일정과 빈자리 알림이 달력에 나와요.</p>}
