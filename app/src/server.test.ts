@@ -119,14 +119,16 @@ describe('sayClub', () => {
     expect(sayClub(err)).toBe('서버가 아직 이 기능을 몰라요. 잠시 뒤 다시 열어 주세요.');
   });
 
-  it('"동호회" 가 든 옛 서버 문구 — 아는 코드는 앱 문구로, 모르는 코드는 "동호회 " 만 뺀다', async () => {
+  it('"동호회" 가 든 옛 서버 문구 — 아는 코드는 앱 문구로, 모르는 코드는 서버 문구 그대로(낱말만 빼면 뜻이 바뀐다)', async () => {
     stubFetch(403, { error: 'NOT_CLUB_MEMBER', message: '동호회 승인을 받은 계정만 볼 수 있어요.' });
     expect(sayClub(await memberAction('u', 'remove', 'T').catch(e => e))).toBe('가입 승인을 받은 계정만 일정을 볼 수 있어요.');
     stubFetch(403, { error: 'NOT_MEMBER', message: '동호회 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.' });
     const w = await addWatch(1, 'T').catch(e => e);
     expect([sayWatch(w), sayClub(w)]).toEqual(['가입 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.', '가입 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.']);
     stubFetch(400, { error: 'SOMETHING', message: '동호회 일정은 6개까지예요.' });
-    expect(sayClub(await memberAction('u', 'remove', 'T').catch(e => e))).toBe('일정은 6개까지예요.');
+    expect(sayClub(await memberAction('u', 'remove', 'T').catch(e => e))).toBe('동호회 일정은 6개까지예요.');
+    stubFetch(409, { error: 'SOMETHING', message: '같은 동호회 사람만 넣을 수 있어요.' });
+    expect(sayWatch(await addWatch(1, 'T').catch(e => e))).toBe('같은 동호회 사람만 넣을 수 있어요.');
   });
 
   it('본문 message 가 있으면 404 여도 그 문구', async () => {

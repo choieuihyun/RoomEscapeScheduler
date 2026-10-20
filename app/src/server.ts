@@ -199,13 +199,13 @@ export function sayWatch(err: unknown): string {
 }
 
 /* 서버 문구를 화면에 보일 때 — 앱이 아는 코드는 앱 문구로(서버가 옛 문구를 보내도 같은 말이 보이게),
-   그 밖에 남은 "동호회 " 는 뺀다(앱은 이 말을 쓰지 않는다) */
+   그 밖은 서버 문구 그대로. 낱말만 빼면 "동호회에"·"같은 동호회 사람만" 처럼 조사가 남거나 뜻이 바뀐다 */
 const APP_MSG: Record<string, string> = {
   NOT_MEMBER: '가입 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.',
   NOT_CLUB_MEMBER: '가입 승인을 받은 계정만 일정을 볼 수 있어요.',
 };
 export function serverMsg(e: WatchApiError): string {
-  return APP_MSG[e.body?.error ?? ''] ?? (e.body?.message ?? '').replace(/동호회 /g, '');
+  return APP_MSG[e.body?.error ?? ''] ?? e.body?.message ?? '';
 }
 
 /* ── 동호회 계정 API (작업명세서 §4.6) ── 서버가 아직 모르면 404 가 온다.
