@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AI_PROMPT, BULK_MAX_LINES, blocked, bulkSummary, checkedByDefault, choose, matchBulk, parseBulk, parseDate, raceKey, rowStatus, runPool,
-  storeFits, toInput,
+  AI_PROMPT, BULK_MAX_LINES, blocked, bulkSummary, checkedByDefault, choose, closeAsk, matchBulk, parseBulk, parseDate, raceKey, retryable,
+  rowStatus, runPool, storeFits, storeRelated, toInput,
 } from './bulkPlayed';
 import type { PlayedDto, ThemeRef } from './server';
 
@@ -16,7 +16,7 @@ const played = (o: Partial<PlayedDto>): PlayedDto => ({
 
 describe('parseBulk — 칸 나누기', () => {
   it('안내 예시 세 줄: | 로 나누고, 빈 칸·없는 칸은 비운다', () => {
-    const r = P('메모리컴퍼니 | 키이스케이프 강남점 | 2024-03-15\n월야애담 | 비트포비아 홍대 |\n그림자 없는 상점');
+    const r = P('메모리컴퍼니 | 키이스케이프 강남점 | 2024-03-15\n월야애담 | 비트포비아 홍대 |\n그림자 없는 상점 | |');
     expect(r.lines.map((l) => [l.theme, l.store, l.date])).toEqual([
       ['메모리컴퍼니', '키이스케이프 강남점', '2024-03-15'],
       ['월야애담', '비트포비아 홍대', null],
@@ -41,9 +41,11 @@ describe('parseBulk — 칸 나누기', () => {
     const r = P('```\n\n메모리컴퍼니 | | \n---\n```text\n   \n');
     expect(r.lines.map((l) => l.theme)).toEqual(['메모리컴퍼니']);
   });
-  it('줄 앞 번호·기호를 뗀다 — 띄어쓰기 없는 숫자 이름은 그대로', () => {
+  it('줄 앞 번호·기호를 뗀다 — 숫자가 이어지는 이름은 그대로, 숫자뿐인 줄은 테마 이름이 아니에요', () => {
     const r = P('1. 메모리컴퍼니\n2) 월야애담\n3)그림자\n- 데드맨\n• 셜록\n* 비밀의 화원\n· 고백\n1999\n2.5차원 | 매장 |');
     expect(r.lines.map((l) => l.theme)).toEqual(['메모리컴퍼니', '월야애담', '그림자', '데드맨', '셜록', '비밀의 화원', '고백', '1999', '2.5차원']);
+    expect(r.lines[7].issues).toEqual(['notname']);
+    expect(r.lines[8].issues).toEqual([]);
   });
   it('굵게(**)·백틱을 걷어 낸다', () => {
     expect(P('**메모리컴퍼니** | `키이스케이프` |').lines[0]).toMatchObject({ theme: '메모리컴퍼니', store: '키이스케이프' });
@@ -88,7 +90,7 @@ describe('parseBulk — 이름 검사·합치기·1000줄', () => {
   it('테마가 비었거나 글자가 없으면 noname, 40자 넘으면 long, 매장 40자 넘으면 storeLong(자르지 않는다)', () => {
     const long = '가'.repeat(41), store = '나'.repeat(41);
     const r = P(` | 키이스케이프 | 2024-01-01\n!!! | 매장\n${long}\n${'가'.repeat(40)} | ${store}`);
-    expect(r.lines.map((l) => l.issues)).toEqual([['noname'], ['noname'], ['long'], ['storeLong']]);
+    expect(r.lines.map((l) => l.issues)).toEqual([['noname'], ['noname'], ['long', 'format'], ['storeLong']]);
     expect(r.lines[3].store).toBe(store);
   });
   it('40자는 코드 포인트로 센다(이모지 하나 = 1)', () => {
@@ -124,15 +126,22 @@ describe('matchBulk', () => {
   it('이름이 하나면 찾음 — 서버 이름·키·지점으로 보낸다', () => {
     const { rows } = go('메모리 컴퍼니 | 키이스케이프 강남 | 2024-03-15');
     expect(rowStatus(rows[0])).toBe('found');
-    expect(rows[0].mismatch).toBe(false);
     expect(toInput(rows[0])).toEqual({ themeKey: 'k-mem', themeName: '메모리컴퍼니', branchName: '강남점', playedOn: '2024-03-15', source: 'MANUAL' });
   });
-  it('매장을 적었는데 전혀 다르면 그래도 찾음 + mismatch, 일부만 맞으면 mismatch 아님', () => {
-    expect(go('메모리컴퍼니 | 셜록홈즈 신촌').rows[0]).toMatchObject({ mismatch: true });
-    expect(rowStatus(go('메모리컴퍼니 | 셜록홈즈 신촌').rows[0])).toBe('found');
-    expect(go('메모리컴퍼니 | 키이스케이프').rows[0].mismatch).toBe(false);
-    expect(go('월야애담 | 비트포비아 홍대').rows[0].mismatch).toBe(false);
-    expect(go('메모리컴퍼니 | 강남').rows[0].mismatch).toBe(false);
+  it('적은 매장이 매장·지점 어느 쪽과라도 겹치면 찾음, 전혀 다르면 적은 매장 그대로 직접 기록(키 없이)', () => {
+    for (const s of ['키이스케이프', '강남', '서울 강남', '강남역', '키이 강남', '키스케 강남']) expect(rowStatus(go(`메모리컴퍼니 | ${s}`).rows[0])).toBe('found');
+    expect(rowStatus(go('월야애담 | 비트포비아 홍대').rows[0])).toBe('found');
+    for (const s of ['셜록홈즈 신촌', '서울', '역삼']) {
+      const r = go(`메모리컴퍼니 | ${s} | 2024-01-01`).rows[0];
+      expect(rowStatus(r)).toBe('direct');
+      expect(toInput(r)).toEqual({ themeKey: null, themeName: '메모리컴퍼니', branchName: s, playedOn: '2024-01-01', source: 'MANUAL' });
+    }
+  });
+  it('같은 이름 여러 개 — 딱 맞는 것 하나, 아니면 너그럽게 맞는 것 하나면 찾음, 하나도 안 맞으면 직접 기록', () => {
+    expect(go('셜록 | 강남').rows[0].ref?.themeKey).toBe('z-sher-gn');
+    expect(go('셜록 | 넥스트에디션 신촌').rows[0].ref?.themeKey).toBe('n-sher');
+    const d = go('셜록 | 아무데나').rows[0];
+    expect([d.pick, d.ref, rowStatus(d), toInput(d).branchName]).toEqual([false, null, 'direct', '아무데나']);
   });
   it('같은 이름 여러 개면 적은 매장으로 고른다', () => {
     expect(go('셜록 | 제로월드 홍대').rows[0].ref?.themeKey).toBe('z-sher-hd');
@@ -146,7 +155,6 @@ describe('matchBulk', () => {
     expect(rowStatus(a)).toBe('check');
     expect(blocked(a)).toBe(true);
     expect(go('셜록').rows[0].cands).toHaveLength(3);
-    expect(go('셜록 | 아무데나').rows[0].cands).toHaveLength(3);
   });
   it('choose 로 고르면 찾음, null 이면 직접 기록', () => {
     const a = go('셜록').rows[0];
@@ -166,7 +174,7 @@ describe('matchBulk', () => {
   it('이미 있어요 — 서버 판정(키가 같거나, 한쪽에 키가 없으면 이름)', () => {
     const mine = [played({ themeKey: 'k-mem', themeName: '메모리컴퍼니' }), played({ id: 2, themeName: '그림자 없는 상점', branchName: '다른 곳' }),
       played({ id: 3, themeKey: 'z-sher-gn', themeName: '셜록' })];
-    const { rows } = go('메모리컴퍼니\n그림자없는상점 | 동네\n셜록 | 제로월드 홍대\n월야애담', mine);
+    const { rows } = go('메모리컴퍼니 |\n그림자없는상점 | 동네\n셜록 | 제로월드 홍대\n월야애담 |', mine);
     expect(rows.map(rowStatus)).toEqual(['exists', 'exists', 'found', 'found']);
     expect(rows.map(checkedByDefault)).toEqual([false, false, true, true]);
   });
@@ -192,7 +200,7 @@ describe('matchBulk', () => {
   });
   it('매장 40자 초과는 직접 기록이면 저장 불가, 찾음이면 테마의 지점을 보내 저장 가능', () => {
     const s = '가'.repeat(41);
-    const { rows } = go(`없는테마 | ${s}\n메모리컴퍼니 | ${s}`);
+    const { rows } = go(`없는테마 | ${s}\n메모리컴퍼니 | 키이스케이프 강남점 ${s}`);
     expect(rows.map(blocked)).toEqual([true, false]);
     expect(toInput(rows[1]).branchName).toBe('강남점');
   });
@@ -220,6 +228,194 @@ describe('AI 정리 문구', () => {
   it('형식과 자리 표시가 들어 있다', () => {
     expect(AI_PROMPT).toContain('"테마 | 매장 | 날짜"');
     expect(AI_PROMPT.endsWith('(여기에 내 기록을 붙여 넣기)')).toBe(true);
+  });
+});
+
+/* ── 검토 수정(6cfcdad) — 검토자 확인용 입력을 그대로 가져와 새 규칙의 기대값을 적었다.
+   원칙: 잘못 읽혔을 수 있는 줄은 기본 체크로 저장되지 않는다 ── */
+const cut = (t: string) => P(t).lines.map((l) => [l.theme, l.store, l.date ?? l.rawDate, l.issues.join(',')]);
+
+describe('검토 수정 — 구분자', () => {
+  it('전각 ｜ · ¦ 도 구분자 — 칸 글자는 NFKC 하지 않는다(저장되는 이름 그대로)', () => {
+    expect(cut('메모리컴퍼니 ｜ 강남 ｜ 2024-03-15')).toEqual([['메모리컴퍼니', '강남', '2024-03-15', '']]);
+    expect(cut('메모리컴퍼니｜강남｜2024.03.15')).toEqual([['메모리컴퍼니', '강남', '2024-03-15', '']]);
+    expect(cut('메모리컴퍼니 ¦ 강남 ¦ 2024-03-15')).toEqual([['메모리컴퍼니', '강남', '2024-03-15', '']]);
+    expect(cut('ＭＥＭＯＲＹ ｜ 키이스케이프　강남')).toEqual([['ＭＥＭＯＲＹ', '키이스케이프　강남', '', '']]);
+  });
+  it('\\| 는 글자 | (구분자 아님)', () => {
+    expect(cut('A\\|B | 강남 | 2024-03-15')).toEqual([['A|B', '강남', '2024-03-15', '']]);
+  });
+  it('탭 — 줄 앞뒤 탭을 지우지 않는다(시트의 빈 첫 칸은 테마 없음)', () => {
+    expect(cut('메모리컴퍼니\t강남\t2024-03-15\n월야\t\t\n\t강남\t2024-01-01')).toEqual([
+      ['메모리컴퍼니', '강남', '2024-03-15', ''], ['월야', '', '', ''], ['', '강남', '2024-01-01', 'noname'],
+    ]);
+  });
+  it('CRLF·앞뒤 | 섞임', () => {
+    expect(cut('메모리컴퍼니 | 강남 | 2024-03-15\r\n월야애담 | | \r\n')).toEqual([['메모리컴퍼니', '강남', '2024-03-15', ''], ['월야애담', '', '', '']]);
+    expect(cut('메모리컴퍼니 | 강남 | 2024-03-15 |')).toEqual([['메모리컴퍼니', '강남', '2024-03-15', '']]);
+    expect(cut('메모리컴퍼니 || 2024-03-15')).toEqual([['메모리컴퍼니', '', '2024-03-15', '']]);
+    expect(cut('| 메모리컴퍼니 | 강남 | 2024-03-15')[0][3]).toBe('noname');
+  });
+});
+
+describe('검토 수정 — 머리줄로 칸 맞추기', () => {
+  it.each([
+    ['마크다운 표', '| 테마 | 매장 | 날짜 |\n|---|---|---|\n| 메모리컴퍼니 | 키이스케이프 강남점 | 2024-03-15 |', ['메모리컴퍼니', '키이스케이프 강남점', '2024-03-15', '']],
+    ['앞뒤 공백·정렬 구분 줄', '| 테마 | 매장 | 날짜 |   \n| :--- | :---: | ---: |\n| 메모리컴퍼니 | 키이스케이프 강남점 | 2024-03-15 |  ', ['메모리컴퍼니', '키이스케이프 강남점', '2024-03-15', '']],
+    ['바깥 | 없는 표', '테마 | 매장 | 날짜\n--- | --- | ---\n메모리컴퍼니 | 강남 | 2024.3.15(금)', ['메모리컴퍼니', '강남', '2024-03-15', '']],
+    ['# 번호 칸', '| # | 테마 | 매장 | 날짜 |\n|---|---|---|---|\n| 1 | 메모리컴퍼니 | 강남 | 2024-03-15 |', ['메모리컴퍼니', '강남', '2024-03-15', '']],
+    ['No 칸, 매장 칸 없음', '| No | 테마 | 날짜 |\n|---|---|---|\n| 1 | 메모리컴퍼니 | 2024-03-15 |', ['메모리컴퍼니', '', '2024-03-15', '']],
+    ['매장·지점 따로 → 이어 붙임', '| 테마 | 매장 | 지점 | 날짜 |\n|---|---|---|---|\n| 메모리컴퍼니 | 키이스케이프 | 강남점 | 2024-03-15 |', ['메모리컴퍼니', '키이스케이프 강남점', '2024-03-15', '']],
+    ['비고 칸은 버림', '| 테마 | 매장 | 날짜 | 비고 |\n|---|---|---|---|\n| 메모리컴퍼니 | 강남 | 2024-03-15 | 재밌음! |', ['메모리컴퍼니', '강남', '2024-03-15', '']],
+    ['순서가 다른 머리줄', '날짜 | 매장 | 테마 | 평점\n2024-03-15 | 강남 | 메모리컴퍼니 | 5', ['메모리컴퍼니', '강남', '2024-03-15', '']],
+    ['탭 머리줄', '테마\t매장\t날짜\n메모리컴퍼니\t강남\t2024-03-15', ['메모리컴퍼니', '강남', '2024-03-15', '']],
+    ['영어 머리줄', 'Theme | Store | Date\nA | B | 2024-01-01', ['A', 'B', '2024-01-01', '']],
+    ['테마 이름 · 매장(지점) · 플레이 날짜', '테마 이름 | 매장(지점) | 플레이 날짜\nA | B | 2024-01-01', ['A', 'B', '2024-01-01', '']],
+    ['테마명 · 방문 날짜', '테마명 | 매장 | 방문 날짜\nA | B | 2024-01-01', ['A', 'B', '2024-01-01', '']],
+    ['방탈출 테마 · 카페', '방탈출 테마 | 카페 | 일자\n셜록 | 홍대 | 2024-01-01', ['셜록', '홍대', '2024-01-01', '']],
+    ['``` 안의 표', '```markdown\n| 테마 | 매장 | 날짜 |\n|---|---|---|\n| a테마 | b | 2024-03-15 |\n```', ['a테마', 'b', '2024-03-15', '']],
+  ])('%s', (_, text, want) => {
+    expect(cut(text)).toEqual([want]);
+  });
+  it('# 제목 줄·머리줄 자체는 건너뛴다, 인사말 뒤에 나온 표 머리줄도', () => {
+    expect(cut('# 내 방탈출 기록\n## 2024년\n메모리컴퍼니 | 강남 |\n월야애담 | 홍대 |')).toEqual([['메모리컴퍼니', '강남', '', ''], ['월야애담', '홍대', '', '']]);
+    expect(cut('정리했어요.\n\n| 번호 | 테마 | 날짜 |\n|---|---|---|\n| 1 | 메모리컴퍼니 | 2024-03-15 |').slice(1)).toEqual([['메모리컴퍼니', '', '2024-03-15', '']]);
+  });
+});
+
+describe('검토 수정 — 머리줄이 없을 때 칸 배정', () => {
+  it('날짜 모양 칸은 자리와 상관없이 날짜, 번호 칸은 버리고, 남은 칸을 테마 → 매장', () => {
+    expect(cut('2024-03-15 | 메모리컴퍼니 | 강남')).toEqual([['메모리컴퍼니', '강남', '2024-03-15', '']]);
+    expect(cut('2024-03-15 | 메모리컴퍼니')).toEqual([['메모리컴퍼니', '', '2024-03-15', '']]);
+    expect(cut('1 | 메모리컴퍼니 | 2024-03-15')).toEqual([['메모리컴퍼니', '', '2024-03-15', '']]);
+    expect(cut('12 | 메모리컴퍼니 | 키이스케이프 | 2024-03-15')).toEqual([['메모리컴퍼니', '키이스케이프', '2024-03-15', '']]);
+    expect(cut('2024. 3. 15. | 메모리컴퍼니')).toEqual([['메모리컴퍼니', '', '2024-03-15', '']]);
+  });
+  it('남는 칸은 조용히 버린다', () => {
+    expect(cut('메모리 | 컴퍼니 | 강남 | 2024-03-15')).toEqual([['메모리', '컴퍼니', '2024-03-15', '']]);
+    expect(cut('A|B | 강남 | 2024-03-15')).toEqual([['A', 'B', '2024-03-15', '']]);
+  });
+  it('날짜 모양 칸이 없으면 셋째 칸이 날짜 자리 — 못 읽으면 날짜를 확인해 주세요', () => {
+    expect(cut('메모리 | 강남 | 3/15')).toEqual([['메모리', '강남', '3/15', 'date']]);
+    expect(cut('메모리 | 강남 | 2024-03-15 14:30')).toEqual([['메모리', '강남', '2024-03-15 14:30', 'date']]);
+  });
+  it('테마 자리가 날짜·숫자뿐이면 테마 이름이 아니에요(체크 불가)', () => {
+    const themes = [ref('메모리컴퍼니', '키이스케이프', '강남점', 'k-mem')];
+    for (const t of ['2024-03-15', '2024-03-15\n2024-04-01', '1999 | 강남 | 2024-03-15', '1 2 3 | 강남 |', '1 | 2024-03-15', '7']) {
+      const { rows } = matchBulk(P(t).lines, themes, []);
+      expect(rows.length).toBeGreaterThan(0);
+      for (const r of rows) {
+        expect(r.line.issues).toContain('notname');
+        expect([rowStatus(r), blocked(r), checkedByDefault(r)]).toEqual(['check', true, false]);
+      }
+    }
+  });
+});
+
+describe('검토 수정 — 잡음 줄은 기본 체크 해제', () => {
+  const themes = [ref('메모리컴퍼니', '키이스케이프', '강남점', 'k-mem'), ref('월야애담', '비트포비아', '홍대던전점', 'b-wol')];
+  const look = (t: string) => matchBulk(P(t).lines, themes, []).rows.map((r) => [r.line.theme, rowStatus(r), checkedByDefault(r), blocked(r), r.line.issues.join(',')]);
+
+  it('AI 인사말·맺음말(문장) — 체크 안 됨, 고를 수는 있다', () => {
+    expect(look('네, 정리해 드릴게요!\n\n메모리컴픈니 | 강남 | 2024-03-15\n\n총 1개입니다.')).toEqual([
+      ['네, 정리해 드릴게요!', 'check', false, false, 'talk'],
+      ['메모리컴픈니', 'direct', true, false, ''],
+      ['총 1개입니다.', 'check', false, false, 'talk'],
+    ]);
+    expect(look('네, 정리해 드릴게요!\n메모리컴퍼니 | 강남 | 2024-03-15\n총 1개입니다.').map((r) => r[2])).toEqual([false, true, false]);
+  });
+  it('문장 판정 — 콜론·물음표로 끝남, "정리했"·"총 n개" 포함. 날짜 칸의 마침표는 아님', () => {
+    expect(look('아래처럼 정리했어요\n내 기록 목록:\n총 12 개\n메모리컴퍼니\n월야애담').map((r) => r[4])).toEqual(['talk', 'talk', 'talk', '', '']);
+    expect(look('메모리컴퍼니 | 강남 | 2024. 3. 15.')[0]).toEqual(['메모리컴퍼니', 'found', true, false, '']);
+  });
+  it('구분자 있는 줄이 절반 이상이면 구분자 없는 줄은 형식이 달라요(체크 안 됨, 고를 수는 있다)', () => {
+    expect(look('메모리컴퍼니 | 강남 |\n월야애담 | 홍대 |\n여기까지 기록\n그림자 없는 상점')).toEqual([
+      ['메모리컴퍼니', 'found', true, false, ''],
+      ['월야애담', 'found', true, false, ''],
+      ['여기까지 기록', 'check', false, false, 'format'],
+      ['그림자 없는 상점', 'check', false, false, 'format'],
+    ]);
+  });
+  it('구분자 있는 줄이 절반 미만이면(테마 이름 목록) 지금처럼 체크', () => {
+    expect(look('메모리컴퍼니\n월야애담\n그림자 없는 상점 | 동네').map((r) => [r[1], r[2]])).toEqual([['found', true], ['found', true], ['direct', true]]);
+  });
+  it('잘못 읽혔을 수 있는 줄은 멀쩡한 줄과 합치지 않는다', () => {
+    const r = matchBulk(P('메모리컴퍼니 | 강남 | 2024-03-15\n메모리컴퍼니.').lines, themes, []);
+    expect(r.merged).toBe(0);
+    expect(r.rows.map(checkedByDefault)).toEqual([true, false]);
+  });
+});
+
+describe("검토 수정 — '모두'는 고를 수 있는 줄만", () => {
+  it('찾음·직접 기록만 — 확인 필요(날짜·형식·문장 포함)·이미 있어요는 빠진다', () => {
+    const themes = [ref('메모리컴퍼니', '키이스케이프', '강남점', 'k-mem')];
+    const { rows } = matchBulk(P('메모리컴퍼니 | 강남 | 2024-03-15\n동네테마 | 동네 |\n이미한것 | | \n날짜틀림 | | 2099-01-01\n형식다름\n안녕하세요.').lines, themes,
+      [played({ themeName: '이미한것' })]);
+    expect(rows.map(rowStatus)).toEqual(['found', 'direct', 'exists', 'check', 'check', 'check']);
+    expect(rows.flatMap((r, i) => (checkedByDefault(r) ? [i] : []))).toEqual([0, 1]);
+  });
+});
+
+describe('검토 수정 — 줄 합치기는 키 있는 줄을 남긴다', () => {
+  const themes = [ref('메모리컴퍼니', '키이스케이프', '강남점', 'k-mem')];
+  it('키 없는 줄이 먼저여도 키 있는 줄이 남는다(날짜는 가장 이른 것)', () => {
+    const r = matchBulk(P('메모리컴퍼니 | 서울 | 2023-01-01\n메모리컴퍼니 | 강남 | 2024-01-01').lines, themes, []);
+    expect(r.merged).toBe(1);
+    expect(r.rows).toHaveLength(1);
+    expect(toInput(r.rows[0])).toEqual({ themeKey: 'k-mem', themeName: '메모리컴퍼니', branchName: '강남점', playedOn: '2023-01-01', source: 'MANUAL' });
+  });
+  it('키 있는 줄이 먼저면 그대로, 이미 있어요도 키로 다시 본다', () => {
+    const r = matchBulk(P('메모리컴퍼니 | 강남\n메모리컴퍼니 | 서울 | 2022-05-05').lines, themes, [played({ themeKey: 'k-mem', themeName: '메모리컴퍼니' })]);
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]).toMatchObject({ ref: { themeKey: 'k-mem' }, exists: true });
+    expect(r.rows[0].line.date).toBe('2022-05-05');
+  });
+  it('입력 줄을 바꾸지 않는다', () => {
+    const lines = P('메모리컴퍼니 | 서울 | 2023-01-01\n메모리컴퍼니 | 강남 | 2024-01-01').lines;
+    const before = JSON.stringify(lines);
+    matchBulk(lines, themes, []);
+    expect(JSON.stringify(lines)).toBe(before);
+  });
+  it('1000줄 — 같은 이름 키 없는 줄 500쌍을 합친다(빠르게)', () => {
+    const text = Array.from({ length: 1000 }, (_, i) => `테마${i % 500} | 매장${i} | 2024-01-${String((i % 28) + 1).padStart(2, '0')}`).join('\n');
+    const lines = P(text).lines;
+    expect(lines).toHaveLength(1000);
+    const t0 = performance.now();
+    const r = matchBulk(lines, themes, []);
+    expect(performance.now() - t0).toBeLessThan(50);
+    expect(r.rows).toHaveLength(500);
+    expect(r.merged).toBe(500);
+    expect(r.rows[0].line.date).toBe('2024-01-01');
+  });
+});
+
+describe('검토 수정 — 작은 것', () => {
+  it.each([
+    ['2024-03-15 금', '2024-03-15'], ['2024년 3월 15일 금요일', '2024-03-15'], ['2024-03-15 (금요일)', '2024-03-15'],
+    ['2024. 3. 15. (금)', '2024-03-15'], ['20240315 금', '2024-03-15'],
+  ])('요일 꼬리 %s → %s', (s, iso) => {
+    expect(parseDate(s, TODAY)).toEqual({ iso, bad: false });
+  });
+  it('띄어쓰기 없는 번호 떼기 — 10.그림자, 3.월야애담2. 뒤가 숫자면 그대로(2.5차원)', () => {
+    expect(cut('1. 메모리컴퍼니 | 강남 | 2024-03-15\n2) 월야애담\n10.그림자\n3.월야애담2\n2.5차원').map((l) => l[0]))
+      .toEqual(['메모리컴퍼니', '월야애담', '그림자', '월야애담2', '2.5차원']);
+  });
+  it('다시 보낼 실패 — 400(이름 문제)은 빼고, 나머지(5xx·연결 끊김)는 다시', () => {
+    expect(retryable(Object.assign(new Error('x'), { status: 400, body: { error: 'BAD_PLAYED' } }))).toBe(false);
+    expect(retryable(Object.assign(new Error('x'), { status: 500 }))).toBe(true);
+    expect(retryable(new TypeError('Failed to fetch'))).toBe(true);
+  });
+  it('닫기 전에 묻기 — 붙여 넣은 글이 있거나 미리 보기면, 저장 중이면', () => {
+    expect(closeAsk('paste', false, false)).toBeNull();
+    expect(closeAsk('paste', true, false)).toBe('붙여 넣은 내용이 사라져요. 닫을까요?');
+    expect(closeAsk('preview', false, false)).toBe('붙여 넣은 내용이 사라져요. 닫을까요?');
+    expect(closeAsk('save', true, true)).toBe('저장을 멈추고 닫을까요?');
+    expect(closeAsk('save', true, false)).toBeNull();
+  });
+  it('storeRelated — 매장이나 지점 한쪽과 겹치면', () => {
+    const t = ref('x', '키이스케이프', '강남점');
+    expect(['서울 강남', '강남역', '키이', '키이스케이프 홍대'].map((s) => storeRelated(s, t))).toEqual([true, true, true, true]);
+    expect(['서울', '역삼', ''].map((s) => storeRelated(s, t))).toEqual([false, false, false]);
   });
 });
 

@@ -1682,6 +1682,7 @@ input.pf-q:not([type=checkbox]):not([type=radio]):not([type=file]){padding-left:
 .bk-foot .btn,.bk-foot .btn-go{height:40px;padding:0 16px;font-size:14px;font-weight:500;border-radius:var(--r-sm)}
 .bk-lead{margin:0;font-size:14px;color:var(--ink);line-height:1.6}
 .bk-lead b{font-weight:600}
+.bk-body [tabindex="-1"]:focus{outline:none}
 .bk-hint{margin:0;font-size:12.5px;color:var(--ink3);line-height:1.6;word-break:keep-all}
 .bk-code{margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface2);
   font-family:var(--sans);font-size:13px;line-height:1.7;color:var(--ink2);
@@ -1715,7 +1716,6 @@ textarea.bk-text{min-height:200px;font-size:13px;line-height:1.7;border-radius:v
 .bk-name{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bk-name em{font-style:normal;font-weight:400;color:var(--ink3)}
 .bk-store{min-width:0;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bk-store small{display:block;font-size:11.5px;white-space:normal;word-break:keep-all}
 .bk-row select{width:100%;height:30px;padding:0 6px;font-size:12.5px;border-radius:var(--r-xs)}
 .bk-date{color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
 .bk-dim{color:var(--ink3)}

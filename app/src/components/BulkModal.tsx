@@ -1,8 +1,8 @@
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  AI_PROMPT, BULK_MAX_LINES, ISSUE_TEXT, STATUS_TEXT, blocked, bulkSummary, checkedByDefault, choose, matchBulk, parseBulk, raceKey,
-  rowStatus, runPool, toInput, type BulkRow,
+  AI_PROMPT, BULK_MAX_LINES, ISSUE_TEXT, STATUS_TEXT, blocked, bulkSummary, checkedByDefault, choose, closeAsk, matchBulk, parseBulk, raceKey,
+  retryable, rowStatus, runPool, toInput, type BulkRow,
 } from '../bulkPlayed';
 import { todayKst } from '../clubEvents';
 import { addPlayed, sayClub, type PlayedDto, type ThemeRef } from '../server';
@@ -13,14 +13,15 @@ import { withoutPending, type UseProfileReturn } from '../useProfile';
    ① 안내 + 붙여넣기 → ② 미리 보기(서버 테마에 맞춘 표, 체크) → ③ 4개씩 저장(진행 막대, 끝 요약, 실패한 것만 다시).
    서버는 그대로 — POST /api/me/played 를 줄마다 부른다(멱등). 창을 닫으면 새로 보내지 않는다(이미 보낸 것은 남는다). */
 
-const EXAMPLE = '메모리컴퍼니 | 키이스케이프 강남점 | 2024-03-15\n월야애담 | 비트포비아 홍대 |\n그림자 없는 상점';
+/* 셋째 줄도 | 를 남긴다 — 구분자가 있는 줄 사이에 구분자 없는 줄은 '형식이 달라요'(체크 안 됨)로 읽기 때문(AI 문구와 같게) */
+const EXAMPLE = '메모리컴퍼니 | 키이스케이프 강남점 | 2024-03-15\n월야애담 | 비트포비아 홍대 |\n그림자 없는 상점 | |';
 
 type Step = 'paste' | 'preview' | 'save';
 type Preview = { rows: BulkRow[]; checked: ReadonlySet<number>; merged: number; over: number; mine: PlayedDto[] };
 type Saving = {
   total: number; settled: number; running: boolean;
   inserted: number; existed: number;
-  failed: { row: BulkRow; msg: string }[];
+  failed: { row: BulkRow; msg: string; retry: boolean }[];  // retry=false: 400(이름 문제) — 다시 보내도 같다
   left: BulkRow[];   // 멈춰서 보내지 못한 것
   fatal: string;     // 로그인 만료·승인 아님 — 멈춘 까닭
 };
@@ -45,6 +46,8 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
   const boxRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLPreElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const leadRef = useRef<HTMLParagraphElement>(null);
+  const askRef = useRef<string | null>(null);
 
   const { themes, themesError, loadThemes, played, pendingIds, undo, reloadPlayed } = profile;
   useEffect(() => { void loadThemes(); }, [loadThemes]);
@@ -59,10 +62,31 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
     };
   }, []);
 
-  /* Esc 로 닫고, Tab 은 창 안에서만 돈다 */
+  /* 닫기 전에 묻는다 — 붙여 넣은 글·미리 보기가 사라지거나 저장이 멈출 때(Esc·×·붙여넣기 단계의 닫기) */
+  useEffect(() => { askRef.current = closeAsk(step, text.trim() !== '', !!sv?.running); });
+  const askClose = useCallback(() => {
+    const q = askRef.current;
+    if (q && !confirm(q)) return;
+    onClose();
+  }, [onClose]);
+
+  /* 단계가 바뀌면 그 단계 첫 줄(제목 구실)로 포커스 — 처음 열 때는 붙여넣기 칸 */
+  const stage = step + (sv && !sv.running ? '-done' : '');
+  const stageRef = useRef(stage);
+  useEffect(() => {
+    if (stageRef.current === stage) return;
+    stageRef.current = stage;
+    leadRef.current?.focus();
+  }, [stage]);
+
+  /* Esc 로 닫고(한글 조합 중이면 무시), Tab 은 창 안에서만 돈다 */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key === 'Escape') {
+        if (e.isComposing || e.keyCode === 229) return;
+        askClose();
+        return;
+      }
       if (e.key !== 'Tab') return;
       const box = boxRef.current;
       if (!box) return;
@@ -76,7 +100,7 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [askClose]);
 
   /* 문구 복사 — 안 되면(권한·http) 문구를 골라 둔 상태로 두고 직접 복사하라고 한다 */
   const copy = async () => {
@@ -153,7 +177,7 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
     if (ac.signal.aborted) return;
     setSv((s) => s && {
       ...s, running: false, inserted, existed,
-      failed: r.failed.map(({ item, error }) => ({ row: item, msg: sayClub(error) })),
+      failed: r.failed.map(({ item, error }) => ({ row: item, msg: sayClub(error), retry: retryable(error) })),
       left: r.left,
       fatal: r.fatal ? fatalText(r.fatal) : '',
     });
@@ -162,15 +186,16 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
   const rows = useMemo(() => pv?.rows ?? [], [pv]);
   const checked = useMemo(() => pv?.checked ?? new Set<number>(), [pv]);
   const sum = useMemo(() => bulkSummary(rows, checked), [rows, checked]);
-  const selectable = useMemo(() => rows.flatMap((r, i) => (!blocked(r) && rowStatus(r) !== 'exists' ? [i] : [])), [rows]);
+  /* '모두'는 찾음·직접 기록만 — 확인 필요·이미 있어요는 하나씩 체크한다(이미 체크해 둔 것은 그대로) */
+  const selectable = useMemo(() => rows.flatMap((r, i) => (checkedByDefault(r) ? [i] : [])), [rows]);
   const allOn = selectable.length > 0 && selectable.every((i) => checked.has(i));
-  const toggleAll = () => setPv((cur) => cur && { ...cur, checked: allOn ? new Set() : new Set(selectable) });
+  const toggleAll = () => setPv((cur) => cur && { ...cur, checked: allOn ? new Set() : new Set([...cur.checked, ...selectable]) });
 
   const body = (() => {
     if (step === 'paste') {
       return (
         <>
-          <p className="bk-lead">한 줄에 테마 하나씩, <b>테마 | 매장 | 날짜</b> 순서로 적어 주세요.</p>
+          <p className="bk-lead" ref={leadRef} tabIndex={-1}>한 줄에 테마 하나씩, <b>테마 | 매장 | 날짜</b> 순서로 적어 주세요.</p>
           <pre className="bk-code" aria-label="예시">{EXAMPLE}</pre>
           <p className="bk-hint">매장과 날짜는 몰라도 돼요. 엑셀·구글 시트에서 세 칸을 그대로 복사해 붙여도 돼요.</p>
           <details className="bk-ai">
@@ -201,7 +226,7 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
     if (step === 'preview' && pv) {
       return (
         <>
-          <p className="bk-sum">
+          <p className="bk-sum" ref={leadRef} tabIndex={-1}>
             <b>{sum.total}개</b> 중 저장할 것 <b>{sum.save}</b> · 이미 있어요 {sum.exists} · 확인 필요 {sum.check}
           </p>
           {pv.merged > 0 && <p className="bk-hint">{pv.merged}줄이 겹쳐서 합쳤어요.</p>}
@@ -226,10 +251,9 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
     }
     if (step === 'save' && sv) {
       const pct = sv.total === 0 ? 100 : Math.round((sv.settled / sv.total) * 100);
-      const retry = [...sv.failed.map((f) => f.row), ...sv.left];
       return sv.running ? (
         <div className="bk-run">
-          <p className="bk-lead">저장하고 있어요.</p>
+          <p className="bk-lead" ref={leadRef} tabIndex={-1}>저장하고 있어요.</p>
           <div className="bk-bar" role="progressbar" aria-valuemin={0} aria-valuemax={sv.total} aria-valuenow={sv.settled} aria-label="저장한 수">
             <i style={{ width: pct + '%' }} />
           </div>
@@ -238,7 +262,7 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
         </div>
       ) : (
         <div className="bk-run">
-          <p className="bk-lead" role="status">
+          <p className="bk-lead" role="status" ref={leadRef} tabIndex={-1}>
             <b>{sv.inserted}개</b> 넣었어요
             {sv.existed > 0 && <> · {sv.existed}개는 이미 있었어요</>}
             {sv.failed.length > 0 && <> · <span className="bk-warn">{sv.failed.length}개 실패</span></>}
@@ -248,21 +272,23 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
           {sv.failed.length > 0 && (
             <ul className="bk-fail">
               {sv.failed.map((f, k) => (
-                <li key={k}><b>{toInput(f.row).themeName}</b><span>{f.msg}</span></li>
+                <li key={k}><b>{toInput(f.row).themeName}</b><span>{f.msg}{!f.retry && ' · 다시 해도 안 돼요'}</span></li>
               ))}
             </ul>
           )}
-          {retry.length === 0 && <p className="bk-hint">해 본 테마 목록에 들어갔어요.</p>}
+          {sv.failed.some((f) => !f.retry) && <p className="bk-hint">이름 때문에 안 들어간 줄은 ‹ 다시 붙여넣기에서 고쳐 넣어 주세요.</p>}
+          {sv.failed.length === 0 && sv.left.length === 0 && <p className="bk-hint">해 본 테마 목록에 들어갔어요.</p>}
         </div>
       );
     }
     return null;
   })();
 
-  const retryRows = sv && !sv.running ? [...sv.failed.map((f) => f.row), ...sv.left] : [];
+  /* 다시 보낼 것 — 이름 문제(400)는 빼고 */
+  const retryRows = sv && !sv.running ? [...sv.failed.filter((f) => f.retry).map((f) => f.row), ...sv.left] : [];
   const foot = step === 'paste' ? (
     <>
-      <button type="button" className="btn" onClick={onClose}>닫기</button>
+      <button type="button" className="btn" onClick={askClose}>닫기</button>
       <button type="button" className="btn-go" disabled={!text.trim() || !ready} onClick={preview}>미리 보기</button>
     </>
   ) : step === 'preview' ? (
@@ -289,7 +315,7 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
       <div className="mbox bk-box" ref={boxRef} role="dialog" aria-modal="true" aria-labelledby={uid + 'h'}>
         <div className="bk-head">
           <h3 id={uid + 'h'}>여러 개 한꺼번에 넣기</h3>
-          <button type="button" className="bk-x" aria-label="닫기" onClick={onClose}>×</button>
+          <button type="button" className="bk-x" aria-label="닫기" onClick={askClose}>×</button>
         </div>
         <div className="bk-body">{body}</div>
         <div className="bk-foot">{foot}</div>
@@ -307,7 +333,8 @@ const Row = memo(function Row({ i, r, on, toggle, pick }: {
   const name = r.ref ? r.ref.themeName : r.line.theme;
   const off = blocked(r);
   const notes: string[] = r.line.issues.filter((x) => x !== 'storeLong' || !r.ref).map((x) =>
-    x === 'date' ? `${ISSUE_TEXT.date}(${r.line.rawDate}) · 체크하면 날짜 없이 넣어요` : ISSUE_TEXT[x]);
+    x === 'date' ? `${ISSUE_TEXT.date}(${r.line.rawDate}) · 체크하면 날짜 없이 넣어요`
+      : x === 'format' || x === 'talk' ? `${ISSUE_TEXT[x]} · 맞으면 체크해 주세요` : ISSUE_TEXT[x]);
   if (r.pick) notes.unshift('같은 이름 테마가 여러 매장에 있어요. 매장을 골라 주세요');
   return (
     <li className={'bk-row ' + st}>
@@ -326,7 +353,7 @@ const Row = memo(function Row({ i, r, on, toggle, pick }: {
             <option value="direct">직접 기록</option>
           </select>
         ) : r.ref ? (
-          <>{r.ref.storeName} {r.ref.branchName}{r.mismatch && <small className="bk-dim">매장이 달라요 · 적은 것: {r.line.store}</small>}</>
+          <>{r.ref.storeName} {r.ref.branchName}</>
         ) : (r.line.store || <span className="bk-dim">–</span>)}
       </span>
       <span className="bk-date">{r.line.date ? dot(r.line.date) : <span className="bk-dim">–</span>}</span>
