@@ -10,6 +10,9 @@
 
 export type KakaoMode = 'login' | 'link'
 
+/* 연결 왕복에서 되살릴 수 있는 화면 이름(useView 의 View 와 같다 — 여기서 import 하지 않으려고 따로 적는다) */
+const VIEWS = /^(home|calc|calendar|profile|members|more)$/
+
 const KEY = 'flod.kakao.trip'
 const TTL_MS = 10 * 60 * 1000
 
@@ -19,11 +22,12 @@ function defaultRand(): string {
   return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')
 }
 
-/** 나가기 직전에 부른다. state 를 만들어 맡기고 그 state 를 돌려준다. */
-export function beginKakaoTrip(mode: KakaoMode, hash: string, rand: () => string = defaultRand): string {
+/** 나가기 직전에 부른다. state 를 만들어 맡기고 그 state 를 돌려준다.
+ *  view: 지금 보던 화면(?view=) — 연결 왕복이 끝나면 그 화면으로 돌아오게 맡긴다. 로그인 왕복은 넘기지 않는다. */
+export function beginKakaoTrip(mode: KakaoMode, hash: string, rand: () => string = defaultRand, view = ''): string {
   const state = rand()
   try {
-    localStorage.setItem(KEY, JSON.stringify({ state, mode, hash, at: Date.now() }))
+    localStorage.setItem(KEY, JSON.stringify({ state, mode, hash, view, at: Date.now() }))
   } catch {
     // 저장이 막힌 환경(시크릿 창 등): 맡기지 못해도 나가는 건 막지 않는다. 돌아올 때 end 가 null 로 실패 처리한다.
   }
@@ -34,16 +38,17 @@ export function beginKakaoTrip(mode: KakaoMode, hash: string, rand: () => string
  * 돌아왔을 때 부른다. 맡긴 state 와 같고 10분 안이면 mode·hash 를 돌려주고 지운다(한 번만).
  * 다르면 null — 이때는 지우지 않는다(위조 시도가 진짜 왕복을 깨뜨리지 못하게).
  */
-export function endKakaoTrip(state: string, now: number = Date.now()): { mode: KakaoMode; hash: string } | null {
+export function endKakaoTrip(state: string, now: number = Date.now()): { mode: KakaoMode; hash: string; view?: string } | null {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return null
-    const t = JSON.parse(raw) as { state?: unknown; mode?: unknown; hash?: unknown; at?: unknown }
+    const t = JSON.parse(raw) as { state?: unknown; mode?: unknown; hash?: unknown; view?: unknown; at?: unknown }
     if (t.state !== state) return null
     localStorage.removeItem(KEY)
     if (typeof t.at !== 'number' || now - t.at > TTL_MS) return null
     if (t.mode !== 'login' && t.mode !== 'link') return null
-    return { mode: t.mode, hash: typeof t.hash === 'string' ? t.hash : '' }
+    const view = typeof t.view === 'string' && VIEWS.test(t.view) ? t.view : undefined
+    return { mode: t.mode, hash: typeof t.hash === 'string' ? t.hash : '', view }
   } catch {
     return null
   }

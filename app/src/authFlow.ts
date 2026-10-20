@@ -10,15 +10,16 @@ import { readEventHash } from './eventLink'
 export type KakaoReturnResult =
   | { kind: 'none' }
   | { kind: 'signedIn' }
-  | { kind: 'linked' }
+  /* view: 연결(link) 왕복을 떠날 때 보던 화면 — 성공·실패 모두 그 화면으로 되살린다. 로그인 왕복은 싣지 않는다 */
+  | { kind: 'linked'; view?: string }
   /* mode: 왕복을 연 뒤의 오류면 그 왕복의 종류. 만료·취소처럼 왕복을 못 연 경우는 없다 */
-  | { kind: 'error'; message: string; mode?: KakaoMode }
+  | { kind: 'error'; message: string; mode?: KakaoMode; view?: string }
 
 export interface KakaoReturnDeps {
   search: string
   href: string
   replaceUrl: (url: string) => void
-  endTrip: (state: string) => { mode: KakaoMode; hash: string } | null
+  endTrip: (state: string) => { mode: KakaoMode; hash: string; view?: string } | null
   kakaoLogin: (code: string, redirectUri: string) => Promise<{ customToken: string }>
   kakaoLink: (code: string, redirectUri: string, token: string) => Promise<{ linked: boolean }>
   signInWithCustom: (token: string) => Promise<unknown>
@@ -37,6 +38,9 @@ function safeHash(h: string): string {
   return h === '' || h.startsWith('#s=') || h.startsWith('#z=') || readEventHash(h) !== null ? h : ''
 }
 
+/** 연결 왕복이 맡겨 둔 화면만 되살린다. 로그인 왕복의 첫 화면 결정(#s=·#z=·#e=)은 건드리지 않는다. */
+const linkView = (t: { mode: KakaoMode; view?: string } | null) => (t?.mode === 'link' ? t.view : undefined)
+
 export async function handleKakaoReturn(d: KakaoReturnDeps): Promise<KakaoReturnResult> {
   const r = readKakaoReturn(d.search)
   const hasCode = new URLSearchParams(d.search).has('code')
@@ -44,7 +48,10 @@ export async function handleKakaoReturn(d: KakaoReturnDeps): Promise<KakaoReturn
 
   if (r && 'error' in r) {
     d.replaceUrl(stripKakaoParams(d.href))
-    return { kind: 'error', message: '카카오 로그인을 취소했어요.' }
+    /* 취소에도 카카오가 state 를 돌려준다 — 맞으면 연결 왕복이던 화면을 되살린다(로그인 왕복이면 아무것도 안 싣는다) */
+    const st = new URLSearchParams(d.search).get('state')
+    const t = st ? d.endTrip(st) : null
+    return { kind: 'error', message: '카카오 로그인을 취소했어요.', view: linkView(t) }
   }
   // state 가 비었으면 endTrip 을 부르지 않는다 — 빈 값으로 맡긴 분을 건드리지 않고 바로 만료 처리.
   if (!r) {
@@ -58,7 +65,7 @@ export async function handleKakaoReturn(d: KakaoReturnDeps): Promise<KakaoReturn
   d.replaceUrl(clean.toString())
   // 이 확인이 link-CSRF 의 유일한 방어다(서버는 state 를 모른다). 맡긴 왕복이 없거나 state 가 다르면 어떤 교환도 하지 않는다.
   if (!trip) return { kind: 'error', message: EXPIRED }
-  if (!d.cloudOn) return { kind: 'error', message: NOT_SET, mode: trip.mode }
+  if (!d.cloudOn) return { kind: 'error', message: NOT_SET, mode: trip.mode, view: linkView(trip) }
 
   try {
     if (trip.mode === 'login') {
@@ -67,10 +74,10 @@ export async function handleKakaoReturn(d: KakaoReturnDeps): Promise<KakaoReturn
       return { kind: 'signedIn' }
     }
     const token = await d.idToken()
-    if (!token) return { kind: 'error', message: '로그인해 주세요.', mode: trip.mode }
+    if (!token) return { kind: 'error', message: '로그인해 주세요.', mode: trip.mode, view: linkView(trip) }
     await d.kakaoLink(r.code, d.redirectUri, token)
-    return { kind: 'linked' }
+    return { kind: 'linked', view: linkView(trip) }
   } catch (e) {
-    return { kind: 'error', message: sayClub(e), mode: trip.mode }
+    return { kind: 'error', message: sayClub(e), mode: trip.mode, view: linkView(trip) }
   }
 }

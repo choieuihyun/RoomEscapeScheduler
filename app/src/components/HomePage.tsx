@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Avatar } from './Avatar';
 import { monthGrid, toISO, WEEKDAYS } from '../core';
 import {
   addDays, clockLabel, dayLabel, eventStatus, eventTitle, longDayLabel, sortKeyDate, STATUS_LABEL, timeLabel,
@@ -30,12 +31,14 @@ const people = (ev: EventDto) => (ev.capacity === null ? `${ev.count}명` : `${e
 const dowClass = (dow: number) => (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
 
 export function HomePage({
-  club, today, nickname, isAdmin, watchCount, watchLimit, pendingCount, month,
+  club, today, nickname, photo, isAdmin, watchCount, watchLimit, pendingCount, month,
   onMonth, onWatches, onMembers, onNewEvent, onCalc, onOpenEvent, onPickDay,
 }: {
   club: UseClubEventsReturn;
   today: string;
   nickname: string;
+  /* 구글 사진 주소 — 없으면 이름 첫 글자 */
+  photo?: string;
   isAdmin: boolean;
   watchCount: number;
   watchLimit: number;
@@ -86,7 +89,6 @@ export function HomePage({
   }
   const cells = monthGrid(month.y, month.m);
 
-  const initial = [...nickname][0] ?? '?';
   /* 맨 위 띠 — 내가 참여한 오늘·내일 일정(푸시를 못 받는 사람용, §4.10). 오늘 이미 끝난 일정은 뺀다(한국 시각) */
   /* 목록을 못 받은 상태면 낡은 목록으로 띠를 만들지 않는다 */
   const strip = club.error ? null : todayStrip(events, now);
@@ -106,7 +108,7 @@ export function HomePage({
     <div className="home-grid">
       <div className="home-col">
         <section className="home-card home-me" aria-label="내 정보">
-          <div className="home-avatar" aria-hidden="true">{initial}</div>
+          <Avatar name={nickname} photo={photo} className="home-avatar" />
           <b className="home-name">{nickname} 님</b>
           <span className="home-role">{isAdmin ? '운영진' : '멤버'}</span>
           <b className="home-big">{joinedCount}</b>

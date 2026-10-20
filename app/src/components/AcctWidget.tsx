@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { UseAuthReturn } from '../useAuth';
+import { Avatar } from './Avatar';
 import { GoogleMark, KakaoMark } from './SsoMarks';
 
 /* 왼쪽 메뉴 아래 계정 자리 — 닉네임·상태 칩·로그아웃, 아이디 계정이면 카카오·구글 연결 상자(§4.54).
@@ -48,7 +49,7 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
   return (
     <div className={'acct-wrap' + (popOpen ? ' open' : '')}>
       <div className="acct-id">
-        <span className="acct-ava" aria-hidden="true">{[...name][0]}</span>
+        <Avatar name={name} photo={auth.me.photo} className="acct-ava" />
         <div className="acct-who">
           <b title={name}>{name}{nickname || auth.me.id ? ' 님' : ''}</b>
           {chip && <span className={'chip-info ' + chip.cls}>{chip.text}</span>}

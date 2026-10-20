@@ -45,7 +45,7 @@ const PUSH_CHIP: Record<NonNullable<UsePushDeviceReturn['card']>, { text: string
   '켜짐': { text: '켜짐', cls: 'ok' },
   '꺼짐': { text: '꺼짐', cls: 'muted' },
   '거부됨': { text: '거부됨', cls: 'warn' },
-  'ios-install': { text: '지원 안 함', cls: 'muted' },
+  'ios-install': { text: '추가 필요', cls: 'muted' },
   'kakao-inapp': { text: '지원 안 함', cls: 'muted' },
   'unsupported': { text: '지원 안 함', cls: 'muted' },
 };

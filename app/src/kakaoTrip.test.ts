@@ -66,6 +66,14 @@ describe('카카오 왕복 보관', () => {
     localStorage.setItem('flod.kakao.trip', '{oops')
     expect(endKakaoTrip('x')).toBeNull()
   })
+  it('연결 왕복이 보던 화면을 맡기고 되찾는다', () => {
+    const state = beginKakaoTrip('link', '', undefined, 'more')
+    expect(endKakaoTrip(state)).toEqual({ mode: 'link', hash: '', view: 'more' })
+  })
+  it('알 수 없는 화면 이름은 버린다', () => {
+    const state = beginKakaoTrip('link', '', undefined, '<x>')
+    expect(endKakaoTrip(state)).toEqual({ mode: 'link', hash: '' })
+  })
 })
 
 describe('저장이 막힌 환경', () => {

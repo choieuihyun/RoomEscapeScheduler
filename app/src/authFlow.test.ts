@@ -140,4 +140,29 @@ describe('handleKakaoReturn', () => {
     expect(d.idToken).not.toHaveBeenCalled()
     expect(d.replaceUrl).toHaveBeenCalled()
   })
+
+  describe('연결 왕복 뒤 화면 되살리기', () => {
+    const linkTrip = (view?: string) => vi.fn(() => ({ mode: 'link' as const, hash: '', ...(view ? { view } : {}) }))
+    it('연결 성공이면 맡긴 화면을 싣는다', async () => {
+      const d = deps({ endTrip: linkTrip('more') })
+      expect(await handleKakaoReturn(d)).toEqual({ kind: 'linked', view: 'more' })
+    })
+    it('연결 실패여도 맡긴 화면을 싣는다', async () => {
+      const d = deps({ endTrip: linkTrip('more'), kakaoLink: vi.fn(async () => { throw new Error('x') }) })
+      expect(await handleKakaoReturn(d)).toMatchObject({ kind: 'error', mode: 'link', view: 'more' })
+    })
+    it('카카오에서 취소해도 state 가 맞으면 맡긴 화면을 싣는다', async () => {
+      const d = deps({ search: '?error=access_denied&state=S', href: R + '?error=access_denied&state=S', endTrip: linkTrip('more') })
+      expect(await handleKakaoReturn(d)).toEqual({ kind: 'error', message: '카카오 로그인을 취소했어요.', view: 'more' })
+      expect(d.endTrip).toHaveBeenCalledWith('S')
+    })
+    it('로그인 왕복은 화면을 싣지 않는다', async () => {
+      const d = deps({ endTrip: vi.fn(() => ({ mode: 'login' as const, hash: '', view: 'more' })) })
+      expect(await handleKakaoReturn(d)).toEqual({ kind: 'signedIn' })
+    })
+    it('로그인 왕복의 취소도 화면을 싣지 않는다', async () => {
+      const d = deps({ search: '?error=access_denied&state=S', href: R + '?error=access_denied&state=S', endTrip: vi.fn(() => ({ mode: 'login' as const, hash: '', view: 'more' })) })
+      expect(await handleKakaoReturn(d)).toEqual({ kind: 'error', message: '카카오 로그인을 취소했어요.' })
+    })
+  })
 })

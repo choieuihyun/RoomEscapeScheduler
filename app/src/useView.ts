@@ -53,6 +53,12 @@ export function decideFirstScreen(o: {
   return o.clubApi !== 'unknown' || o.clubError !== '';
 }
 
+/* 화면을 옮길 때 기록을 어떻게 다룰지. 주소가 달라지면 쌓고, 같은 주소로 가는 이동(더보기 하위 화면에서 강조된 더보기 칸을 누름)은
+   쌓지 않고 지금 기록의 상태만 비운다(replace) — 쌓으면 뒤로 가기가 하위 화면으로 되돌아온다. */
+export function moveMode(replace: boolean, urlChanged: boolean): 'pushState' | 'replaceState' {
+  return !replace && urlChanged ? 'pushState' : 'replaceState';
+}
+
 export function useView(o: Opts) {
   /* v 가 null 이면 주소에 ?view= 가 없는 것 — 그때만 hash 로 첫 화면을 고른다.
      go() 로 직접 옮긴 뒤엔 hash 를 무시한다(공유 링크 주소에서 홈 메뉴를 눌러도 홈으로 간다). */
@@ -72,9 +78,7 @@ export function useView(o: Opts) {
     else q.set('view', next);
     const search = q.toString();
     const url = location.pathname + (search ? '?' + search : '') + location.hash;
-    if (replace) history.replaceState(null, '', url);
-    /* 주소가 같아도 기록에 상태가 있으면(더보기 하위 화면) 새로 쌓는다 — 더보기 칸을 누르면 목록으로 돌아오게 */
-    else if (url !== location.pathname + location.search + location.hash || history.state !== null) history.pushState(null, '', url);
+    history[moveMode(replace, url !== location.pathname + location.search + location.hash)](null, '', url);
     setRaw({ v: next, hash: '' });
   }, []);
 

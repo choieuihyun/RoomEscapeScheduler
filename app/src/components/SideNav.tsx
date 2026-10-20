@@ -67,7 +67,9 @@ export function SideNav({
     : auth.authLoading ? <span className="lnb-me-wait">확인 중…</span>
     : !auth.me ? <button className="btn lnb-login" type="button" onClick={() => auth.openAuth()}>로그인</button>
     : (
-      <button className={'lnb-me' + (view === 'more' ? ' on' : '')} type="button" onClick={() => onView('more')} title="더보기">
+      <button className={'lnb-me' + (view === 'more' ? ' on' : '')} type="button" onClick={() => onView('more')} title="더보기"
+        aria-label={`${myName}${m?.nickname || auth.me.id ? ' 님' : ''}${myChip ? ' ' + myChip.text : ''}, 더보기 열기`}
+        aria-current={view === 'more' ? 'page' : undefined}>
         <Avatar name={myName} photo={auth.me.photo} />
         <span className="lnb-me-n">{myName}{m?.nickname || auth.me.id ? ' 님' : ''}</span>
         {myChip && <span className={'chip-info lnb-me-chip ' + myChip.cls}>{myChip.text}</span>}

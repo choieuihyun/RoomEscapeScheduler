@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decideFirstScreen, readView, settleDefault } from './useView';
+import { decideFirstScreen, moveMode, readView, settleDefault } from './useView';
 
 const on = { calendarOn: true, isAdmin: false, homeOn: true, profileOn: true, decided: true };
 
@@ -106,5 +106,17 @@ describe('decideFirstScreen', () => {
   it('로그인 복원 중이면 false, 계정 기능이 꺼졌으면 true', () => {
     expect(decideFirstScreen({ ...base, authLoading: true })).toBe(false);
     expect(decideFirstScreen({ ...base, cloudOn: false })).toBe(true);
+  });
+});
+
+describe('moveMode', () => {
+  it('주소가 달라지면 기록을 쌓는다', () => {
+    expect(moveMode(false, true)).toBe('pushState');
+  });
+  it('같은 주소로 가면(더보기 하위 화면 → 더보기) 쌓지 않고 바꾼다', () => {
+    expect(moveMode(false, false)).toBe('replaceState');
+  });
+  it('replace 요청이면 늘 바꾼다', () => {
+    expect(moveMode(true, true)).toBe('replaceState');
   });
 });

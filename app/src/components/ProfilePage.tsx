@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { cpLen, dayLabel, eventStatus, eventTitle, STATUS_LABEL, weekday } from '../clubEvents';
 import { coolLeft, coolUntil, startCool, testLabel } from '../pushCool';
 import { isPlayableName, searchThemes, sourceLabel } from '../played';
 import type { EventDto, MeDto, PlayedDto, ThemeRef } from '../server';
+import { Avatar } from './Avatar';
 import { showToast } from '../toast';
 import { pageRows, withoutPending, type UseProfileReturn } from '../useProfile';
 import type { UsePushDeviceReturn } from '../usePushDevice';
@@ -26,9 +27,11 @@ const NAME_MAX = 40;
 const dowClass = (dow: number) => (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
 
 export function ProfilePage({
-  profile, member, providerIds, isAdmin, pendingCount, onMembers, onOpenEvent, push,
+  profile, member, photo, providerIds, isAdmin, pendingCount, onMembers, onOpenEvent, push,
 }: {
   profile: UseProfileReturn;
+  /* 구글 사진 주소 — 없으면 이름 첫 글자 */
+  photo?: string;
   push: UsePushDeviceReturn;
   member: MeDto | null;
   providerIds: string[];
@@ -41,7 +44,6 @@ export function ProfilePage({
   const { played } = profile;
   const kept = played === null ? null : withoutPending(played, profile.pendingIds);
   const nickname = member?.nickname?.trim() || '';
-  const initial = [...nickname][0] ?? '?';
 
   /* 로그인 수단 — 카카오는 서버가 붙인 것이라 member.kakaoLinked 로, 구글은 Firebase 로그인 수단으로 안다 */
   const linked = [
@@ -67,7 +69,7 @@ export function ProfilePage({
           </section>
         )}
         <section className="home-card home-me pf-me" aria-label="내 프로필">
-          <div className="home-avatar" aria-hidden="true">{initial}</div>
+          <Avatar name={nickname} photo={photo} className="home-avatar" />
           <b className="home-name">{nickname} 님</b>
           <span className={'chip-info pf-role' + (isAdmin ? ' role' : '')}>{isAdmin ? '운영진' : '멤버'}</span>
           {linkLine && <span className="pf-link">{linkLine}</span>}
@@ -208,6 +210,10 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
   const { played, pendingIds } = profile;
   /* 지운 줄(되돌리기 자리)은 수·찾기 판정에서 뺀다 — 찾기에서 다시 "해 봤어요"를 누르면 지우기를 거둔다 */
   const kept = useMemo(() => (played === null ? null : withoutPending(played, pendingIds)), [played, pendingIds]);
+  /* 더보기 하위 화면과 내 정보가 같이 마운트될 수 있어 id 가 겹치지 않게 한다 */
+  const uid = useId();
+  const qId = uid + 'q';
+  const resId = uid + 'res';
   const [q, setQ] = useState('');
   const [tab, setTab] = useState<Tab>('all');
   const [page, setPage] = useState(0);
@@ -312,16 +318,16 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
       </div>
 
       <div className="pf-search">
-        <label htmlFor="pf-q" className="sr-only">테마 찾기</label>
+        <label htmlFor={qId} className="sr-only">테마 찾기</label>
         <input
-          id="pf-q" className="pf-q" type="search" autoComplete="off" placeholder="테마나 매장 이름으로 찾기"
+          id={qId} className="pf-q" type="search" autoComplete="off" placeholder="테마나 매장 이름으로 찾기"
           value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => void profile.loadThemes()}
         />
         <svg className="pf-q-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
           strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
         {dq && (
-          <section className="pf-results" aria-labelledby="pf-res-h">
-            <h3 id="pf-res-h" className="sr-only">찾은 테마</h3>
+          <section className="pf-results" aria-labelledby={resId}>
+            <h3 id={resId} className="sr-only">찾은 테마</h3>
             {profile.themes === null ? (
               <p className="pf-res-note">{profile.themesError || '테마 목록을 불러오는 중…'}</p>
             ) : results.length === 0 ? (

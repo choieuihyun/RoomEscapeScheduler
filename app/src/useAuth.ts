@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Me } from './cloud';
-import { handleKakaoReturn } from './authFlow';
-import { appRedirectUri, isKakaoInApp, kakaoAuthUrl, readKakaoReturn } from './kakao';
+import { appRedirectUri, isKakaoInApp, kakaoAuthUrl, readKakaoReturn, stripKakaoParams } from './kakao';
 import { beginKakaoTrip, endKakaoTrip } from './kakaoTrip';
 import { getMe, joinClub, kakaoLink, kakaoLogin, type MeDto } from './server';
 
@@ -62,6 +61,8 @@ export function useAuth() {
   const [busy, setBusy] = useState(false);
   /* 계정 자리의 "카카오·구글 연결" 실패 문구 — 로그인 창의 err 와 섞이지 않게 따로 둔다 */
   const [linkErr, setLinkErr] = useState('');
+  /* 연결(link) 왕복에서 돌아와 되살릴 화면 — SchedulerPage 가 한 번 받아 그 화면으로 옮긴다 */
+  const [returnView, setReturnView] = useState<{ view: string } | null>(null);
   /* 이 계정에 붙은 로그인 수단('password'·'google.com') — 아이디 계정인지, 구글이 붙었는지 */
   const [providerIds, setProviderIds] = useState<string[]>([]);
   /* 방금 로그인했다 — 멤버 상태가 오면 가입 신청 단계를 로그인 창 안에서 이어서 보여 준다 */
@@ -91,8 +92,17 @@ export function useAuth() {
     if (!kakaoBack || kakaoHandled.current) return;
     kakaoHandled.current = true;
     (async () => {
-      /* handleKakaoReturn 을 먼저(동기로) 부른다 — 주소 정리가 SDK 로드·실패와 상관없이 끝나게.
-         Firebase 가 필요한 의존성은 지연해서 넘긴다. */
+      /* handleKakaoReturn 을 먼저 부른다 — 주소 정리가 SDK 로드·실패와 상관없이 끝나게.
+         Firebase 가 필요한 의존성은 지연해서 넘긴다. 이 흐름은 돌아왔을 때만 쓰여서 코드도 그때 받는다(진입 크기). */
+      let handleKakaoReturn: typeof import('./authFlow').handleKakaoReturn;
+      try {
+        ({ handleKakaoReturn } = await import('./authFlow'));
+      } catch (e) {
+        console.warn('카카오 돌아오기 처리 실패:', e);
+        history.replaceState(null, '', stripKakaoParams(location.href));
+        setErr('카카오 로그인을 마무리하지 못했어요. 다시 눌러 주세요.'); setOpen(true); setAuthLoading(false);
+        return;
+      }
       const r = await handleKakaoReturn({
         search: location.search,
         href: location.href,
@@ -105,6 +115,7 @@ export function useAuth() {
         redirectUri: appRedirectUri(location),
         cloudOn,
       });
+      if ((r.kind === 'linked' || r.kind === 'error') && r.view) setReturnView({ view: r.view });
       if (r.kind === 'signedIn') {
         localStorage.setItem(SEEN_KEY, '1');
         /* 이후 다른 탭의 로그아웃 등도 따라가도록 상태 구독을 건다 */
@@ -238,7 +249,7 @@ export function useAuth() {
     if (!cloudOn) { setLinkErr('로그인이 아직 설정되지 않았어요.'); return; }
     const clientId = window.KAKAO_CLIENT_ID;
     if (!clientId) { setLinkErr('카카오 로그인이 아직 설정되지 않았어요.'); return; }
-    const state = beginKakaoTrip('link', location.hash);
+    const state = beginKakaoTrip('link', location.hash, undefined, new URLSearchParams(location.search).get('view') ?? '');
     location.assign(kakaoAuthUrl(clientId, appRedirectUri(location), state));
   }, [cloudOn]);
 
@@ -291,7 +302,7 @@ export function useAuth() {
   return {
     cloudOn, me, authLoading, open, id, setId, pw, setPw, err, busy, openAuth, closeAuth, submit, logout,
     member, memberLoading, memberChecked: !!uid && checkedUid === uid, refreshMember, recheckMember, loginKakao, loginGoogle, linkKakao, linkGoogle, join,
-    inKakaoApp, legacyOpen, setLegacyOpen, linkErr, providerIds: uid ? providerIds : [],
+    inKakaoApp, legacyOpen, setLegacyOpen, linkErr, returnView, providerIds: uid ? providerIds : [],
   };
 }
 

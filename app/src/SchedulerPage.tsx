@@ -59,7 +59,8 @@ function useStaleStrip(): boolean {
 }
 
 /* 넓은 화면(왼쪽 메뉴, >900px)인지 — 더보기(§4.60)는 좁은 화면 전용이라 넓어지면 내 정보로 바꾼다 */
-const WIDE = '(min-width: 901px)';
+/* CSS 의 max-width:900px 와 정확히 반대 — min-width:901px 는 900~901 사이 소수 폭이 양쪽에서 빠진다 */
+const WIDE = 'not (max-width: 900px)';
 function useWide(): boolean {
   const [wide, setWide] = useState(() => matchMedia(WIDE).matches);
   useEffect(() => {
@@ -203,6 +204,13 @@ export function SchedulerPage() {
   useEffect(() => {
     if (wide && nav.view === 'more' && profileKnown) go(profileOn ? 'profile' : 'calc', true);
   }, [wide, nav.view, profileKnown, profileOn, go]);
+  /* 카카오 연결 왕복에서 돌아오면 떠날 때 보던 화면으로(성공·실패 모두) — 실패 문구가 보이는 화면에 닿게 */
+  const { returnView } = auth;
+  useEffect(() => { if (returnView) go(returnView.view as View, true); }, [returnView, go]);
+  /* 좁은 화면에선 연결 실패 문구가 있는 왼쪽 메뉴 계정 자리가 숨어 있다 — 새로 생기면 토스트로도 알린다 */
+  useEffect(() => {
+    if (auth.linkErr && !matchMedia(WIDE).matches) showToast(auth.linkErr);
+  }, [auth.linkErr]);
   /* 홈에서 줄·"일정 자세히 보기"를 누르면 캘린더 화면으로 넘어가 그 일정 상세를 연다 */
   const openFromHome = (ev: EventDto) => { goView('calendar'); openEvent(ev); };
   /* 내 정보의 지난 일정 → 캘린더 상세. 지난 일정은 받아 둔 목록 범위 밖일 수 있어 먼저 목록에 넣는다
@@ -411,7 +419,7 @@ export function SchedulerPage() {
               <h1>홈</h1>
             </header>
             <LazyBoundary><HomePage
-              club={club} today={today} nickname={auth.member ? memberName(auth.member) : ''} isAdmin={isAdmin}
+              club={club} today={today} nickname={auth.member ? memberName(auth.member) : ''} photo={auth.me?.photo} isAdmin={isAdmin}
               watchCount={watches.watches.length} watchLimit={watches.limit} pendingCount={pendingCount}
               month={homeMonth} onMonth={stepHomeMonth}
               onWatches={watches.openModal} onMembers={() => goView('members')}
@@ -445,7 +453,7 @@ export function SchedulerPage() {
               <h1>내 정보</h1>
             </header>
             <LazyBoundary><ProfilePage
-              profile={profile} member={auth.member} providerIds={auth.providerIds} isAdmin={isAdmin}
+              profile={profile} member={auth.member} photo={auth.me?.photo} providerIds={auth.providerIds} isAdmin={isAdmin}
               pendingCount={pendingCount} onMembers={() => goView('members')}
               onOpenEvent={openFromProfile} push={push}
             /></LazyBoundary>
