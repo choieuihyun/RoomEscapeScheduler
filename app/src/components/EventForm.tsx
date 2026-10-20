@@ -259,10 +259,6 @@ function Body({ m, create, update, adopt, played }: Props) {
           </div>
         )}
         {f.segs.length >= MAX_SEGS && <p className="evf-past">테마는 {MAX_SEGS}개까지예요.</p>}
-        {/* 같이 가요에서 채워 연 테마처럼 시각이 빈 줄 — 테마 구간은 시작 시각이 있어야 저장된다(§4.7) */}
-        {f.segs.some((g) => g.themeName.trim() && !g.start.trim()) && (
-          <p className="evf-past">테마 시작 시각을 적어야 만들 수 있어요. 아직 모르면 × 로 테마를 빼고 제목만으로 만들어도 돼요.</p>
-        )}
       </div>
 
       <div className="mrow">

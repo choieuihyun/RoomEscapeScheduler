@@ -51,11 +51,19 @@ export function wanterChips(g: WishGroupDto, meUid: string): { uid: string; name
   return [...me, ...g.wanters.filter((w) => w.uid !== meUid).map((w) => ({ uid: w.uid, name: w.nickname, me: false }))];
 }
 
+/* 일정에 이 테마가 들었나 — 구간이 있으면 구간(키, 없으면 이름), 구간이 없는 협의 중 일정은 제목에 테마 이름이 들어 있으면
+   (정리한 이름으로 — "월야애담 같이 가요"처럼 같이 가요에서 만든 일정) */
+export function eventHas(ev: Pick<EventDto, 'segments' | 'title'>, g: WishRef): boolean {
+  if (ev.segments.length > 0) return ev.segments.some((s) => sameTheme(s, g));
+  const name = normalizeName(g.themeName);
+  return name.length > 0 && normalizeName(ev.title).includes(name);
+}
+
 /* 이 테마가 든 다가오는 일정 — 앱이 받아 둔 목록에서. 날짜(미정이면 오늘 이후 가장 이른 후보)가 오늘 이후인 것 중 가장 이른 것 */
 export function upcomingWith(g: WishRef, events: EventDto[], today: string): { ev: EventDto; date: string } | null {
   let best: { ev: EventDto; date: string } | null = null;
   for (const ev of events) {
-    if (!ev.segments.some((s) => sameTheme(s, g))) continue;
+    if (!eventHas(ev, g)) continue;
     const date = sortKeyDate(ev, today);
     if (date < today) continue;
     if (!best || date < best.date || (date === best.date && ev.id < best.ev.id)) best = { ev, date };
@@ -65,15 +73,15 @@ export function upcomingWith(g: WishRef, events: EventDto[], today: string): { e
 
 const clip = (s: string, n: number) => (cpLen(s) <= n ? s : [...s].slice(0, n).join(''));
 
-/* "이 사람들과 일정 만들기" — 제목 "{테마} 같이 가요", 테마 구간 하나(시각은 비움), 후보 날짜 모드.
-   참여자는 넣지 않는다(각자 참여). 구간의 지점 칸은 일정 구간과 같은 "매장 지점"(40자) */
+/* "이 사람들과 일정 만들기" — 구간 없는 협의 중 일정으로 연다(테마 구간은 시각이 있어야 저장되는데 이때는 보통 모른다, §4.7).
+   제목 "{테마} 같이 가요", 메모 "같이 가요: {테마} · {매장 지점}", 후보 날짜 모드. 참여자는 넣지 않는다(각자 참여) */
 export function wishForm(g: WishRef & { storeName?: string | null }, today: string): FormState {
-  const name = clip(g.themeName.trim(), 40);
+  const name = g.themeName.trim();
+  const place = placeLabel(g);
   return {
     ...emptyForm(today),
     title: clip(`${name} 같이 가요`, 60),
-    allDay: false,
+    memo: clip(`같이 가요: ${name}${place ? ` · ${place}` : ''}`, 500),
     dateMode: 'candidates',
-    segs: [{ themeName: name, branchName: clip(placeLabel(g), 40), themeKey: g.themeKey && cpLen(g.themeKey) <= 80 ? g.themeKey : null, start: '', end: '' }],
   };
 }

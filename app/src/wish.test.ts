@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toInput } from './eventForm';
 import type { EventDto, WishGroupDto } from './server';
-import { filterGroups, inPick, placeLabel, sameTheme, upcomingWith, wanterChips, wishForm, wishKey } from './wish';
+import { eventHas, filterGroups, inPick, placeLabel, sameTheme, upcomingWith, wanterChips, wishForm, wishKey } from './wish';
 
 const G = (o: Partial<WishGroupDto> & { n?: string[] }): WishGroupDto => ({
   themeKey: null, themeName: '테마', branchName: null, storeName: null, playedBy: [],
@@ -87,34 +87,37 @@ describe('그 테마가 든 다가오는 일정', () => {
     expect(upcomingWith(g, evs, '2026-10-20')).toMatchObject({ date: '2026-10-23', ev: { id: 5 } });
     expect(upcomingWith(g, evs, '2026-10-24')).toBeNull();
   });
+  it('구간 없는 협의 중 일정은 제목에 테마 이름이 들어 있으면(정리한 이름)', () => {
+    const evs = [ev({ id: 6, date: '2026-10-26', title: '월야 애담 같이 가요!', segments: [] }), ev({ id: 7, date: '2026-10-21', title: '이번 주 번개', segments: [] })];
+    expect(upcomingWith(g, evs, '2026-10-20')).toMatchObject({ ev: { id: 6 } });
+    expect(eventHas(ev({ title: '월야애담', segments: [seg('셜록')] }), g)).toBe(false); // 구간이 있으면 구간으로만
+  });
   it('없으면 null', () => {
     expect(upcomingWith(g, [ev({ segments: [seg('고백')] })], '2026-10-20')).toBeNull();
   });
 });
 
 describe('"이 사람들과 일정 만들기" 폼', () => {
-  it('제목 "{테마} 같이 가요", 테마 구간 하나(시각 비움, 지점은 "매장 지점"), 후보 날짜 모드, 참여자·후보 없음', () => {
+  it('협의 중 일정(구간 없음) — 제목 "{테마} 같이 가요", 메모 "같이 가요: {테마} · {매장 지점}", 후보 날짜 모드, 참여자·후보 없음', () => {
     const f = wishForm({ themeKey: 'b1', themeName: '월야애담', branchName: '홍대던전점', storeName: '비트포비아' }, '2026-10-20');
     expect(f.title).toBe('월야애담 같이 가요');
+    expect(f.memo).toBe('같이 가요: 월야애담 · 비트포비아 홍대던전점');
+    expect(f.segs).toEqual([]);
     expect(f.dateMode).toBe('candidates');
     expect(f.candidates).toEqual([]);
-    expect(f.segs).toEqual([{ themeName: '월야애담', branchName: '비트포비아 홍대던전점', themeKey: 'b1', start: '', end: '' }]);
-    expect(f.allDay).toBe(false);
+    expect(wishForm({ themeKey: null, themeName: '고백', branchName: null }, '2026-10-20').memo).toBe('같이 가요: 고백');
   });
-  it('긴 이름은 계약 글자 수(제목 60·이름 40·지점 40)로 자른다', () => {
-    const long = '가'.repeat(45);
-    const f = wishForm({ themeKey: null, themeName: long, branchName: '나'.repeat(50), storeName: null }, '2026-10-20');
-    expect([...f.segs[0].themeName].length).toBe(40);
-    expect([...f.segs[0].branchName].length).toBe(40);
-    expect([...f.title].length).toBeLessThanOrEqual(60);
+  it('긴 이름은 제목 60자로 자른다', () => {
+    const f = wishForm({ themeKey: null, themeName: '가'.repeat(70), branchName: null, storeName: null }, '2026-10-20');
+    expect([...f.title].length).toBe(60);
   });
-  it('그대로는 저장되지 않는다 — 후보 날짜와 테마 시각을 채우라고 알린다(SegmentInput.startMin 필수, §4.7)', () => {
+  it('후보 날짜만 고르면 그대로 저장된다 — 협의 중(날짜 null·구간 없음·하루 종일)', () => {
     const f = wishForm({ themeKey: 'b1', themeName: '월야애담', branchName: null }, '2026-10-20');
     expect(toInput(f)).toEqual({ error: '후보 날짜를 하나 이상 골라 주세요.' });
-    const r = toInput({ ...f, candidates: ['2026-10-24'] });
-    expect('error' in r && r.error).toMatch(/1번째 테마의 시작 시각/);
-    const ok = toInput({ ...f, candidates: ['2026-10-24'], segs: [{ ...f.segs[0], start: '14:00' }] });
-    expect('input' in ok && ok.input).toMatchObject({ title: '월야애담 같이 가요', date: null, candidates: ['2026-10-24'],
-      segments: [{ themeName: '월야애담', themeKey: 'b1', startMin: 840 }] });
+    const ok = toInput({ ...f, candidates: ['2026-10-24', '2026-10-25'] });
+    expect('input' in ok && ok.input).toEqual({
+      title: '월야애담 같이 가요', date: null, candidates: ['2026-10-24', '2026-10-25'], startMin: null, endMin: null,
+      location: null, capacity: null, booked: false, memo: '같이 가요: 월야애담', segments: [],
+    });
   });
 });

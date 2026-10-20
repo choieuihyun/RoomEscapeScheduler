@@ -208,17 +208,19 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
               const k = t.from.uid + '>' + t.to.uid;
               const p = d.payInfo[t.to.uid];
               const can = canMark(t, meUid, ev.canManage);
+              const mine = t.from.uid === meUid;
               return (
-                <li key={k} className={'stl-tr' + (t.from.uid === meUid ? ' mine' : '') + (t.paid ? ' paid' : '')}>
+                <li key={k} className={'stl-tr' + (mine ? ' mine' : '') + (t.paid ? ' paid' : '')}>
                   <div className="stl-tr-top">
                     <span className="stl-who">{nameOf(t.from)}<i> → </i>{nameOf(t.to)}</span>
                     <b className="stl-amt">{won(t.amount)}</b>
                   </div>
                   <div className="stl-tr-acts">
-                    {!t.paid && p?.bankText && (
+                    {/* 계좌·카카오페이는 내가 보낼 줄에만 — 남의 줄은 금액·상태만 읽는다 */}
+                    {mine && !t.paid && p?.bankText && (
                       <button type="button" className="stl-link" onClick={() => void copy(p.bankText as string, `${t.to.nickname} 님 계좌를 복사했어요.`).then((ok) => { if (!ok) showToast(p.bankText as string); })}>계좌 복사</button>
                     )}
-                    {!t.paid && p?.kakaopayUrl && <a className="stl-link" href={p.kakaopayUrl} target="_blank" rel="noopener noreferrer">카카오페이</a>}
+                    {mine && !t.paid && p?.kakaopayUrl && <a className="stl-link" href={p.kakaopayUrl} target="_blank" rel="noopener noreferrer">카카오페이</a>}
                     {can ? (
                       <label className="stl-paid">
                         <input type="checkbox" checked={t.paid} disabled={marking !== ''} onChange={(e) => void mark(t, e.target.checked)} />
