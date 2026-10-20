@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'rea
 import { cpLen, dayLabel, eventStatus, eventTitle, STATUS_LABEL, todayKst, weekday } from '../clubEvents';
 import { coolLeft, coolUntil, startCool, testLabel } from '../pushCool';
 import { isPlayableName, searchThemes, sourceLabel } from '../played';
-import { checkPlayedOn, fullDay, groupByYear, playedSummary, sortPlayed, type PlayedSort } from '../playedView';
+import { checkPlayedOn, fullDay, groupByYear, matchPlayed, playedSummary, sortPlayed, type PlayedSort } from '../playedView';
 import type { EventDto, MeDto, PlayedDto, ThemeRef } from '../server';
 import { Avatar } from './Avatar';
 import { showToast } from '../toast';
@@ -268,9 +268,16 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
     [dq, themes, kept],
   );
 
-  /* 정렬한 뒤 앞에서 limit 개. 지운 줄은 수에 넣지 않고 그 자리에 "지웠어요 · 되돌리기"로 남긴다(pageRows).
-     최근 순이면 연도별로 묶고, 묶음 머리의 수는 보이는 줄과 상관없이 그 해 전체 */
-  const rows = useMemo(() => sortPlayed((played ?? []).filter((p) => inTab(p, tab)), sort), [played, tab, sort]);
+  /* 출처 탭·찾기 글자로 거르고 정렬한 뒤 앞에서 limit 개. 지운 줄은 수에 넣지 않고 그 자리에 "지웠어요 · 되돌리기"로 남긴다(pageRows).
+     최근 순이면 연도별로 묶고, 묶음 머리의 수는 보이는 줄과 상관없이 (거른 것 중) 그 해 전체.
+     탭·정렬·찾기 글자가 바뀌면 다시 처음 50개부터 */
+  const rows = useMemo(
+    () => sortPlayed((played ?? []).filter((p) => inTab(p, tab) && matchPlayed(p, dq)), sort),
+    [played, tab, sort, dq],
+  );
+  const listKey = `${tab}|${sort}|${dq}`;
+  const [shownKey, setShownKey] = useState(listKey);
+  if (shownKey !== listKey) { setShownKey(listKey); setLimit(LIST_STEP); }
   const { shown, count } = pageRows(rows, pendingIds, 0, limit);
   const groups = useMemo(
     () => (sort === 'recent' ? groupByYear(shown, rows.filter((p) => !pendingIds.has(p.id))) : [{ key: 'all', label: '', count, rows: shown }]),
@@ -421,17 +428,17 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
           <button
             key={t.id} type="button" role="tab" aria-selected={tab === t.id}
             className={'chip-pick' + (tab === t.id ? ' on' : '')}
-            onClick={() => { setTab(t.id); setLimit(LIST_STEP); }}
+            onClick={() => setTab(t.id)}
           >{t.label}</button>
         ))}
       </div>
       {sum && sum.total > 0 && (
         <div className="pf-sumrow">
-          <span className="pf-sum">모두 {sum.total}개 · 올해 {sum.thisYear}개</span>
+          <span className="pf-sum">모두 {sum.total}개 · 올해 {sum.thisYear}개{dq && ` · 찾은 기록 ${count}개`}</span>
           <div className="pf-sort" role="group" aria-label="정렬">
             {(['recent', 'name'] as const).map((k) => (
               <button key={k} type="button" className="chip-pick" aria-pressed={sort === k}
-                onClick={() => { setSort(k); setLimit(LIST_STEP); }}>{k === 'recent' ? '최근 순' : '이름 순'}</button>
+                onClick={() => setSort(k)}>{k === 'recent' ? '최근 순' : '이름 순'}</button>
             ))}
           </div>
         </div>
@@ -445,7 +452,7 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
           </div>
         ) : <p className="home-empty-p pf-loading">불러오는 중…</p>
       ) : count === 0 && shown.length === 0 ? (
-        <p className="home-empty-p pf-loading">{tabInfo.empty}</p>
+        <p className="home-empty-p pf-loading">{dq ? `'${dq}' 들어간 기록이 없어요.` : tabInfo.empty}</p>
       ) : (
         /* 넓은 화면에선 카드가 끝없이 길어지지 않게 이 상자 안에서 굴린다(floduler.css) */
         <div className="pf-listbox" ref={listRef}>

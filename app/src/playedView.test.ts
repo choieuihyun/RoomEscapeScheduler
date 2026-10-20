@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkPlayedOn, fullDay, groupByYear, playedByDate, playedSummary, sortPlayed } from './playedView';
+import { checkPlayedOn, fullDay, groupByYear, matchPlayed, playedByDate, playedSummary, sortPlayed } from './playedView';
 import type { PlayedDto } from './server';
 
 let seq = 0;
@@ -97,4 +97,20 @@ describe('checkPlayedOn — 날짜 칸', () => {
 
 it('fullDay — 이름 순 줄의 날짜', () => {
   expect(fullDay('2024-03-05')).toBe('2024.3.5');
+});
+
+describe('matchPlayed — 찾기 칸으로 목록 거르기', () => {
+  const p = P('셜록 홈즈', null, 'MANUAL', { storeName: '제로월드', branchName: '강남점' });
+  it('테마·매장·지점 부분 일치, 공백·대소문자·전각 무시', () => {
+    expect(matchPlayed(p, '셜록홈')).toBe(true);
+    expect(matchPlayed(p, ' 제로 월드 ')).toBe(true);
+    expect(matchPlayed(p, '강남')).toBe(true);
+    expect(matchPlayed(P('ＡＢＣ room', null), 'abcRoom')).toBe(true);
+    expect(matchPlayed(p, '홍대')).toBe(false);
+  });
+  it('빈 글자면 다 맞다, 매장이 없어도 된다', () => {
+    expect(matchPlayed(p, '')).toBe(true);
+    expect(matchPlayed(P('고백', null), '  ')).toBe(true);
+    expect(matchPlayed(P('고백', null), 'null')).toBe(false);
+  });
 });

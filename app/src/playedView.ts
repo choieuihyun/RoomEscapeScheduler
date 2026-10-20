@@ -68,6 +68,13 @@ export function groupByYear<T extends Pick<PlayedDto, 'playedOn'>>(rows: readonl
   return groups;
 }
 
+/* 찾기 칸의 글자로 목록도 거른다 — 테마·매장·지점 부분 일치(NFKC·대소문자·공백 무시, 테마 찾기와 같은 규칙). 빈 글자면 다 맞다 */
+const squash = (s: string) => s.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+export function matchPlayed(p: Pick<PlayedDto, 'themeName' | 'storeName' | 'branchName'>, q: string): boolean {
+  const needle = squash(q);
+  return !needle || squash(`${p.themeName} ${p.storeName ?? ''} ${p.branchName ?? ''}`).includes(needle);
+}
+
 /* 위쪽 요약 "모두 412개 · 올해 23개" — 올해는 한국 날짜 오늘(today, YYYY-MM-DD)의 연도로 센다 */
 export function playedSummary(list: readonly Pick<PlayedDto, 'playedOn'>[], today: string): { total: number; thisYear: number } {
   const y = today.slice(0, 4);
