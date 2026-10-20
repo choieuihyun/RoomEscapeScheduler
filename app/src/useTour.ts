@@ -83,7 +83,9 @@ export function useTour() {
     if (prevBtn) prevBtn.addEventListener('click', () => showStep(stepRef.current - 1));
 
     requestAnimationFrame(() => {
-      const th = tip.offsetHeight, tw = tip.offsetWidth, vw = innerWidth, vh = innerHeight;
+      /* 좁은 화면의 아래 탭(§4.59) 위까지만 쓴다 — 탭이 숨어 있으면 높이 0 */
+      const th = tip.offsetHeight, tw = tip.offsetWidth, vw = innerWidth,
+        vh = innerHeight - (document.querySelector('.bnav')?.getBoundingClientRect().height ?? 0);
       let top = r.bottom + pad + 14;
       if (top + th > vh - 16) top = Math.max(16, r.top - pad - 14 - th);
       const left = Math.min(Math.max(16, r.left), vw - tw - 16);

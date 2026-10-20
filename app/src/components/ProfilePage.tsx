@@ -26,13 +26,16 @@ const NAME_MAX = 40;
 const dowClass = (dow: number) => (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
 
 export function ProfilePage({
-  profile, member, providerIds, isAdmin, onOpenEvent, push,
+  profile, member, providerIds, isAdmin, pendingCount, onMembers, onOpenEvent, push,
 }: {
   profile: UseProfileReturn;
   push: UsePushDeviceReturn;
   member: MeDto | null;
   providerIds: string[];
   isAdmin: boolean;
+  /* 운영진의 멤버 관리 길(§4.59) — 좁은 화면의 아래 탭엔 멤버 관리가 없어서 여기 맨 위에 둔다 */
+  pendingCount: number;
+  onMembers: () => void;
   onOpenEvent: (ev: EventDto) => void;
 }) {
   const { played, past } = profile;
@@ -52,8 +55,17 @@ export function ProfilePage({
   const pastCount = profile.pastTotal ?? '–';
 
   return (
-    <div className="pf-grid">
+    <div className={'pf-grid' + (isAdmin ? ' admin' : '')}>
       <div className="pf-col">
+        {isAdmin && (
+          <section className="home-card pf-admin" aria-label="운영진">
+            <button type="button" className="pf-admin-row" onClick={onMembers}>
+              <b>멤버 관리</b>
+              {pendingCount > 0 && <span>승인 대기 {pendingCount}명</span>}
+              <i aria-hidden="true">›</i>
+            </button>
+          </section>
+        )}
         <section className="home-card home-me pf-me" aria-label="내 프로필">
           <div className="home-avatar" aria-hidden="true">{initial}</div>
           <b className="home-name">{nickname} 님</b>

@@ -1,10 +1,12 @@
 import { useState, type ReactNode } from 'react';
+import { bottomTabs, type BottomTabId } from '../bottomTabs';
 import type { UseAuthReturn } from '../useAuth';
 import type { View } from '../useView';
 import { AcctWidget } from './AcctWidget';
 
 /* 왼쪽 메뉴(§4.49) — 그룹웨어식 LNB. 위는 로고와 화면 메뉴, 아래는 도구(사용법·
-   다크 모드·계정). 좁은 화면에선 CSS 가 위쪽 가로 막대로 접는다. 아이콘은 직접 그린
+   다크 모드·계정). 좁은 화면에선 CSS 가 위쪽 가로 막대로 접고, 화면 메뉴는 아래 탭(§4.59)으로
+   옮긴다 — 두 마크업을 같이 그리고 폭에 따라 CSS 가 한쪽을 display:none 한다. 아이콘은 직접 그린
    24px 선 아이콘이다(참고 사이트의 아이콘은 가져오지 않는다). */
 const Icon = ({ children }: { children: ReactNode }) => (
   <svg className="lnb-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -48,8 +50,12 @@ export function SideNav({
   /* 로그인했지만 아직 승인 전이면 동호회 메뉴에 "승인 후" 꼬리표를 단다 */
   const gated = !!auth.me && auth.member !== null && auth.member.status !== 'APPROVED';
   const item = (v: View) => 'lnb-item' + (view === v ? ' on' : '');
-  return (
-    <aside className={'lnb' + (folded ? ' folded' : '')}>
+  const tabs = bottomTabs({ homeOn, cloudOn: auth.cloudOn, profileOn, isAdmin, gated, pendingCount, watchCount, view });
+  const tabIcon: Record<BottomTabId, ReactNode> = {
+    home: <IcHome />, calc: <IcCalc />, calendar: <IcCal />, watches: <IcBell />, profile: <IcMe />, members: <IcPeople />,
+  };
+  return (<>
+    <aside className={'lnb' + (folded ? ' folded' : '') + (tabs.length ? ' has-bnav' : '')}>
       <div className="lnb-top">
         <div className="lnb-logo">{folded ? <span className="dim">F</span> : <>Flo<span className="dim">duler</span></>}</div>
         <button className="lnb-fold" type="button" onClick={toggleFold}
@@ -106,5 +112,18 @@ export function SideNav({
         <div className="lnb-acct acct"><AcctWidget auth={auth} /></div>
       </div>
     </aside>
-  );
+    {tabs.length > 0 && (
+      <nav className="bnav" aria-label="메뉴">
+        {tabs.map(t => (
+          <button key={t.id} type="button" className={'bnav-i' + (t.on ? ' on' : '') + (t.gated ? ' gated' : '')}
+            onClick={t.id === 'watches' ? onWatches : () => onView(t.id as View)} aria-current={t.on ? 'page' : undefined}>
+            {tabIcon[t.id]}<span className="bnav-t">{t.label}</span>
+            {t.gated && <span className="sr-only">승인 후</span>}
+            {!t.gated && !!t.count && <span className="badge-n muted bnav-n">{t.count}</span>}
+            {t.pending && <span className="bnav-dot" role="img" aria-label={`승인 대기 ${t.pending}명`} />}
+          </button>
+        ))}
+      </nav>
+    )}
+  </>);
 }

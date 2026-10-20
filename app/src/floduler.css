@@ -358,7 +358,7 @@ button:active{transform:scale(.97)}
   border:1px solid var(--amber-line);border-radius:var(--r-sm);
   padding:8px 12px;margin-bottom:14px;line-height:1.5}
 /* 창(모달)을 늦게 받다 실패한 안내는 .shell 맨 끝에 그려져 화면 밖이다 — 화면 아래에 고정해 보이게 */
-.shell > .listfail{position:fixed;left:16px;right:16px;bottom:16px;z-index:95;max-width:560px;margin:0 auto;
+.shell > .listfail{position:fixed;left:16px;right:16px;bottom:calc(16px + var(--bnav-h));z-index:95;max-width:560px;margin:0 auto;
   box-shadow:0 6px 24px rgba(0,0,0,.18)}
 
 /* ── result tabs ── */
@@ -677,7 +677,7 @@ button:active{transform:scale(.97)}
 .lnb-check input{width:16px;height:16px;margin:0;accent-color:var(--ctl-on);cursor:pointer}
 
 /* 화면 아래 잠깐 뜨는 알림(§4.50) */
-.toasts{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:90;display:flex;
+.toasts{position:fixed;left:50%;bottom:calc(24px + var(--bnav-h));transform:translateX(-50%);z-index:90;display:flex;
   flex-direction:column;align-items:center;gap:8px;pointer-events:none}
 .toast{background:var(--ink);color:var(--surface);font-size:13.5px;padding:10px 16px;border-radius:var(--r-sm);
   box-shadow:var(--sh-up);animation:toastIn .18s ease-out both;max-width:calc(100vw - 32px)}
@@ -715,6 +715,44 @@ button:active{transform:scale(.97)}
   .main{padding:0 16px}
   .page-head{padding:22px 0 18px}
   .page-head h1{font-size:21px}
+}
+
+/* ── 아래 탭(§4.59) — 좁은 화면(≤900px)에서만. 화면 메뉴는 아래로 내려가고 위쪽 막대엔 로고와
+   도구(사용법·다크 모드·계정)만 남는다. 칸이 2개 미만이면 탭 없이 위쪽 막대에 메뉴를 그대로 둔다.
+   --bnav-h 는 탭에 가리면 안 되는 것들(본문 끝·토스트·실패 띠·투어 말풍선)이 같이 쓴다. ── */
+:root{--bnav-h:0px}
+.bnav{display:none}
+/* 아이폰 가로 모드 — viewport-fit=cover 라 노치 밑으로 들어가지 않게 좌우를 띄운다(없으면 0) */
+.shell{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+@media(max-width:900px){
+  :root:has(.bnav){--bnav-h:calc(56px + env(safe-area-inset-bottom))}
+  .lnb,.lnb.folded{padding-top:calc(8px + env(safe-area-inset-top))}
+  /* 접기는 넓은 화면 설정이다 — 좁은 화면 막대에선 로고 줄을 가운데 맞춤 그대로 둔다 */
+  .lnb.folded .lnb-top{flex-direction:row;padding:0 8px 0 4px}
+  .lnb.has-bnav .lnb-menu{display:none}
+  .main{padding-bottom:var(--bnav-h)}
+  .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;box-sizing:border-box;height:var(--bnav-h);
+    padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:var(--surface);border-top:1px solid var(--line)}
+  .bnav-i{position:relative;flex:1 1 0;min-width:0;height:56px;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:4px;padding:0 2px;border:none;border-radius:0;background:none;color:var(--ink3);
+    font-size:11px;font-weight:500;line-height:1}
+  .bnav-i:active{transform:none}
+  .bnav-i:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+  .bnav-i .lnb-ic{width:22px;height:22px;color:inherit}
+  .bnav-i.on{color:var(--blue-text);font-weight:700}
+  .bnav-i.gated{opacity:.55}
+  .bnav-t{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bnav-n{position:absolute;top:4px;left:calc(50% + 5px);min-width:16px;height:16px;padding:0 4px;font-size:10px}
+  .bnav-dot{position:absolute;top:6px;left:calc(50% + 7px);width:8px;height:8px;border-radius:999px;
+    background:var(--badge-bg);box-shadow:0 0 0 2px var(--surface)}
+  /* 글자 입력 칸에 포커스가 있으면(키보드가 올라오면) 탭을 숨긴다 — 체크박스 같은 건 키보드가 없어 그대로 */
+  :root:has(:is(input:not([type=checkbox],[type=radio],[type=button],[type=submit],[type=reset],[type=range],[type=file],[type=color]),
+    textarea,select,[contenteditable]:not([contenteditable=false])):focus) .bnav{display:none}
+}
+@media(max-width:900px) and (hover:hover){
+  .bnav-i:hover{color:var(--ink)}
+  .bnav-i.on:hover{color:var(--blue-text)}
 }
 
 /* ── F-16 감시 토글 ── */
@@ -1469,6 +1507,17 @@ button:active{transform:scale(.97)}
 .pf-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:start;padding-bottom:48px}
 .pf-col{display:flex;flex-direction:column;gap:24px;min-width:0}
 .pf-me{padding:32px 28px 24px}
+/* 운영진만 — 멤버 관리로 가는 줄(§4.59) */
+.pf-admin{padding:6px}
+.pf-admin-row{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;padding:0 12px;border:none;
+  background:none;color:var(--ink);font-size:15px;text-align:left;border-radius:var(--r-sm)}
+.pf-admin-row:hover{background:var(--btn-bg-hover)}
+.pf-admin-row:active{transform:none}
+.pf-admin-row:focus-visible{outline:none;box-shadow:var(--ring)}
+.pf-admin-row b{font-weight:600}
+.pf-admin-row span{margin-left:auto;font-size:13px;font-weight:600;color:var(--blue-text);font-variant-numeric:tabular-nums}
+.pf-admin-row i{font-style:normal;font-size:20px;line-height:1;color:var(--ink3)}
+.pf-admin-row b+i{margin-left:auto}
 .pf-role{margin-top:4px}
 .pf-link{margin-top:4px;font-size:12.5px;color:var(--ink3)}
 .pf-stats{align-self:stretch;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
@@ -1556,9 +1605,12 @@ input.pf-q:not([type=checkbox]):not([type=radio]):not([type=file]){padding-left:
   .pf-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"me played" "push played" "past played"}
   .pf-col{display:contents}
   .pf-me{grid-area:me} .pf-push{grid-area:push} .pf-played{grid-area:played} .pf-past{grid-area:past}
+  .pf-grid.admin{grid-template-areas:"admin played" "me played" "push played" "past played"}
+  .pf-admin{grid-area:admin}
 }
 @media(max-width:600px){
   .pf-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"me" "push" "played" "past";gap:16px}
+  .pf-grid.admin{grid-template-areas:"admin" "me" "push" "played" "past"}
   .pf-me{padding:24px 20px 16px}
   .pf-played,.pf-past,.pf-push{padding:16px}
 }

@@ -421,6 +421,7 @@ export function SchedulerPage() {
             </header>
             <LazyBoundary><ProfilePage
               profile={profile} member={auth.member} providerIds={auth.providerIds} isAdmin={isAdmin}
+              pendingCount={pendingCount} onMembers={() => goView('members')}
               onOpenEvent={openFromProfile} push={push}
             /></LazyBoundary>
           </div>
