@@ -2297,3 +2297,94 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
   .tg-mine{padding:16px}
   .tg-acts .btn,.tg-acts .btn-go{flex:1}
 }
+
+/* ── 정산(§4.13) — 일정 상세의 한 칸. 금액은 굵은 숫자, 색은 진행 막대·내 줄 바탕·글 단추에만 ── */
+.stl{display:flex;flex-direction:column;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
+.stl-h{display:flex;align-items:center;gap:8px;min-height:30px}
+.stl-h h3{margin:0;font-size:14px;font-weight:700;color:var(--ink)}
+.stl-h .btn{margin-left:auto}
+.stl-none .evp-hint{margin-top:-6px}
+.stl-sum{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:var(--r-sm);background:var(--surface2)}
+.stl-total{margin:0;font-size:14px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.stl-total b{font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.stl-prog{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.stl-bar{display:block;height:4px;border-radius:var(--pill);background:var(--line);overflow:hidden}
+.stl-bar i{display:block;height:100%;border-radius:inherit;background:var(--blue);transition:width .2s}
+.stl-prog-none{font-size:12.5px;color:var(--ink3)}
+.stl-notice{margin:0;padding:8px 12px;border:1px solid var(--line2);border-radius:var(--r-sm);font-size:12.5px;color:var(--ink2)}
+.stl-text{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.stl-text .evp-post{align-self:stretch}
+.stl-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.stl-item{width:100%;display:flex;flex-direction:column;gap:3px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--surface);color:var(--ink);font-family:inherit;text-align:left;cursor:pointer}
+.stl-item:hover{border-color:var(--line2);background:var(--btn-bg-hover)}
+.stl-item:focus-visible{outline:none;box-shadow:var(--ring)}
+.stl-item-top{display:flex;align-items:baseline;gap:10px;min-width:0}
+.stl-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600}
+.stl-amt{margin-left:auto;flex:none;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+.stl-item-sub{font-size:12.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.stl-add{align-self:flex-start;margin-top:-4px;padding:4px 0;border:none;background:none;font-family:inherit;font-size:13px;color:var(--blue-text);cursor:pointer}
+.stl-add:hover{text-decoration:underline}
+.stl-trs{display:flex;flex-direction:column;gap:8px;margin-top:2px}
+.stl-sh{margin:0;font-size:13px;font-weight:600;color:var(--ink2)}
+.stl-trs ul{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.stl-tr{display:flex;flex-direction:column;gap:6px;padding:10px 14px;border-top:1px solid var(--line)}
+.stl-tr:first-child{border-top:none}
+.stl-tr.mine{background:var(--blue-soft)}
+.stl-tr-top{display:flex;align-items:baseline;gap:8px;min-width:0}
+.stl-who{min-width:0;font-size:13.5px;color:var(--ink)}
+.stl-who i{font-style:normal;color:var(--ink3)}
+.stl-who em{font-style:normal;font-size:12px;color:var(--ink3)}
+.stl-tr .stl-amt{font-size:14px}
+.stl-tr.paid .stl-who,.stl-tr.paid .stl-amt{color:var(--ink3)}
+.stl-tr-acts{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;min-height:22px}
+.stl-link{padding:0;border:none;background:none;font-family:inherit;font-size:12.5px;color:var(--blue-text);text-decoration:none;cursor:pointer}
+.stl-link:hover{text-decoration:underline}
+.stl-link:focus-visible,.stl-add:focus-visible{outline:none;box-shadow:var(--ring);border-radius:4px}
+.stl-paid{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.stl-paid input{width:16px;height:16px;margin:0;accent-color:var(--ctl-on)}
+.stl-state{margin-left:auto;font-size:12px;color:var(--ink3)}
+.stl-state.on{color:var(--green-text)}
+.stl-payhint{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.6}
+/* 항목 고치기 창 */
+.stl-box .msub{margin-bottom:16px}
+.stl-chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip-pick.gone{border-style:dashed}
+.stl-lbl{font-size:14px;font-weight:500;color:var(--ink)}
+.stl-lbl em{margin-left:2px;font-style:normal;font-weight:400;font-size:12.5px;color:var(--ink3)}
+.stl-lbl-row{display:flex;align-items:center;gap:8px}
+.stl-lbl-row .stl-link{margin-left:auto}
+.stl-amtbox{position:relative;display:flex;align-items:center}
+.stl-box .stl-amtbox input[inputmode]{width:100%;padding-right:36px;text-align:right;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.stl-amtbox>span{position:absolute;right:12px;font-size:14px;color:var(--ink3);pointer-events:none}
+.stl-split{display:flex;flex-direction:column;gap:8px;margin:2px 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface2)}
+.stl-split-h{display:flex;align-items:center;gap:8px;min-height:24px}
+.stl-split-h .stl-link{margin-left:auto}
+.stl-split-even{font-size:12.5px;color:var(--ink3)}
+.stl-split ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.stl-share{display:flex;align-items:center;gap:10px}
+.stl-share label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;color:var(--ink)}
+.stl-share label em{font-style:normal;font-size:12px;color:var(--ink3)}
+.stl-amtbox.sm{flex:none;width:150px}
+.stl-box .stl-amtbox.sm input[inputmode]{height:36px;font-size:14px;font-weight:500}
+.stl-gap{margin:0;font-size:13px;font-weight:600;color:var(--red-text)}
+.stl-split .evp-hint{margin:0}
+.stl-del{display:block;margin:14px auto 0;padding:4px 8px;border:none;background:none;font-family:inherit;font-size:13px;color:var(--red-text);cursor:pointer}
+.stl-del:hover{text-decoration:underline}
+@media(max-width:640px){
+  .stl-modal.modal{padding:0;align-items:flex-end}
+  .stl-modal .mbox{max-width:none;max-height:92vh;border-radius:16px 16px 0 0;padding:22px 18px 20px}
+}
+/* 송금 정보(더보기 · 내 정보 · 정산 칸의 안내) */
+.pay-card .home-h{margin:0 0 6px}
+.pay-sub{margin:0 0 16px;font-size:13px;color:var(--ink3);line-height:1.6}
+.pay-form{display:flex;flex-direction:column;gap:12px}
+.pay-form .pf-field>span{display:flex;align-items:baseline;gap:4px}
+.pay-count{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.pay-count.over{color:var(--red-text)}
+.pay-help{margin:-4px 0 0;font-size:12px;color:var(--ink3);line-height:1.6;overflow-wrap:anywhere}
+.pay-form .merr{margin:0;min-height:0}
+.pay-btns{display:flex;justify-content:flex-end}
+.more-pay{display:inline-block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+/* 홈 보낼 돈 띠 — 오늘·내일 띠와 붙어 있을 때 사이를 좁힌다 */
+.home-strip+.home-strip{margin-top:-14px}

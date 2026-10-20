@@ -125,7 +125,7 @@ export interface WatchDto {
 }
 
 interface WatchApiError extends ApiError {
-  body?: { error?: string; message?: string; event?: EventDto };
+  body?: { error?: string; message?: string; event?: EventDto; settlement?: SettlementDto };
 }
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -203,9 +203,7 @@ export function sayWatch(err: unknown): string {
 const APP_MSG: Record<string, string> = {
   NOT_MEMBER: '가입 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.',
   NOT_CLUB_MEMBER: '가입 승인을 받은 계정만 일정을 볼 수 있어요.',
-  /* 같이 갈 사람 찾기(§4.12) */
-  BAD_WISH: '테마 이름을 확인해 주세요. 이름은 40자, 지점은 40자까지예요.',
-  TOO_MANY_WISHES: '하고 싶은 테마는 200개까지 올릴 수 있어요.',
+  /* §4.12·§4.13 오류(BAD_WISH·BAD_SETTLEMENT·NOT_PARTICIPANT 등)는 서버 문구를 그대로 쓴다 — 상황마다 문구가 달라서다(§4.13 서버가 정한 문구) */
 };
 export function serverMsg(e: WatchApiError): string {
   return APP_MSG[e.body?.error ?? ''] ?? e.body?.message ?? '';
@@ -349,6 +347,8 @@ export interface EventDto {
   joined: boolean;
   mine: boolean;
   canManage: boolean;
+  /* 정산(§4.13)이 있으면 합계, 없으면 null — 목록·칩용. 옛 서버면 빠져 오는데 normEvent 가 null 로 채운다 */
+  settlementTotal: number | null;
 }
 
 /* §4.11 에서 늘어난 필드는 옛 서버면 빠져 온다 — 정규화하지 않고 undefined 로 둔다(프로필 없음 = null 과 구별) */
@@ -369,6 +369,7 @@ export function normEvent(ev: EventDto): EventDto {
     ...ev,
     candidates: ev.candidates ?? [],
     segments: (ev.segments ?? []).map((s) => ({ ...s, playedBy: s.playedBy ?? [] })),
+    settlementTotal: ev.settlementTotal ?? null,
   };
 }
 const evOne = async (p: Promise<EventDto>): Promise<EventDto> => normEvent(await p);
@@ -577,6 +578,12 @@ export function conflictOf(err: unknown): EventDto | null {
   return e?.status === 409 && e.body?.error === 'EVENT_CONFLICT' && e.body.event ? normEvent(e.body.event) : null;
 }
 
+/* 정산 저장 충돌(409 SETTLEMENT_CONFLICT)이면 서버가 실어 보낸 최신 정산을, 아니면 null(conflictOf 와 같은 모양) */
+export function settleConflictOf(err: unknown): SettlementDto | null {
+  const e = err as WatchApiError | null | undefined;
+  return e?.status === 409 && e.body?.error === 'SETTLEMENT_CONFLICT' && e.body.settlement ? normSettle(e.body.settlement) : null;
+}
+
 export function errorCode(err: unknown): string | null {
   return (err as WatchApiError | null | undefined)?.body?.error ?? null;
 }
@@ -586,3 +593,64 @@ export function isMissingApi(err: unknown): boolean {
   const e = err as WatchApiError | null | undefined;
   return e?.status === 404 && !e.body?.error;
 }
+
+/* ── 정산 (작업명세서 §4.13) ── 알림은 없다. 송금 계산은 서버가 하고 화면은 받은 transfers 를 그린다 */
+export interface PayInfoDto {
+  bankText: string | null;     // 0~60자 자유 글("카카오뱅크 3333-01-1234567 홍길동")
+  kakaopayUrl: string | null;  // null 또는 "https://qr.kakaopay.com/" 로 시작, 200자 이하
+}
+export interface SettlementItemInput {
+  label: string;   // 1~20자
+  amount: number;  // 정수 1~10,000,000(원)
+  payerUid: string;
+  shares: { uid: string; amount: number }[];  // 1~30명, 겹침 없음, 합 = amount
+}
+export interface Who { uid: string; nickname: string }
+export interface SettlementItemDto {
+  id: number;
+  label: string;
+  amount: number;
+  payer: Who;
+  shares: (Who & { amount: number })[];
+}
+export interface TransferDto { from: Who; to: Who; amount: number; paid: boolean; paidAt: string | null }
+export interface SettlementDto {
+  eventId: number;
+  version: number;  // 정산이 없으면 0. PUT 마다 +1(송금 체크는 안 오름)
+  updatedAt: string | null;
+  updatedBy: Who | null;
+  items: SettlementItemDto[];   // 보낸 순서
+  total: number;
+  transfers: TransferDto[];
+  payInfo: Record<string, PayInfoDto>;  // transfers 의 받는 사람들 것만
+}
+
+/* 배열·맵이 빠져 와도(배포 경주) 화면이 안 깨지게 — normEvent 와 같은 까닭 */
+function normSettle(d: SettlementDto): SettlementDto {
+  return {
+    ...d,
+    items: (d.items ?? []).map((it) => ({ ...it, shares: it.shares ?? [] })),
+    transfers: d.transfers ?? [],
+    payInfo: d.payInfo ?? {},
+    total: d.total ?? 0,
+  };
+}
+const stlPath = (eventId: number) => `${EVENTS}/${eventId}/settlement`;
+
+export const getSettlement = async (eventId: number, token: string): Promise<SettlementDto> =>
+  normSettle(await authed<SettlementDto>(stlPath(eventId), token, 'GET'));
+
+/* 항목 통째로 바꾼다. version 이 낡으면 409 SETTLEMENT_CONFLICT(settleConflictOf 로 최신을 꺼낸다). items: [] 면 정산 지우기 */
+export const putSettlement = async (eventId: number, version: number, items: SettlementItemInput[], token: string): Promise<SettlementDto> =>
+  normSettle(await authed<SettlementDto>(stlPath(eventId), token, 'PUT', { version, items }));
+
+/* 보냈어요 체크 — (from, to) 쌍마다. version 은 안 오른다 */
+export const markTransfer = async (eventId: number, fromUid: string, toUid: string, paid: boolean, token: string): Promise<SettlementDto> =>
+  normSettle(await authed<SettlementDto>(`${stlPath(eventId)}/transfers`, token, 'POST', { fromUid, toUid, paid }));
+
+const normPay = (p: PayInfoDto): PayInfoDto => ({ bankText: p?.bankText ?? null, kakaopayUrl: p?.kakaopayUrl ?? null });
+
+export const getPayInfo = async (token: string): Promise<PayInfoDto> => normPay(await authed<PayInfoDto>('/api/me/payinfo', token, 'GET'));
+
+export const putPayInfo = async (info: PayInfoDto, token: string): Promise<PayInfoDto> =>
+  normPay(await authed<PayInfoDto>('/api/me/payinfo', token, 'PUT', info));

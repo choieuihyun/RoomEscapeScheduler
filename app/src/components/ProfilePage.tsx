@@ -9,7 +9,7 @@ import { ProfileFacts } from './MemberViews';
 import { showToast } from '../toast';
 import { pageRows, withoutPending, type UseProfileReturn } from '../useProfile';
 import type { UsePushDeviceReturn } from '../usePushDevice';
-import { WishToggle } from '../clubStore';
+import { PayCard, useClubStore, WishToggle } from '../clubStore';
 
 /* 내 정보 — 계획 Task 7, 작업명세서 §4.9 "화면 쪽 약속". 홈과 같은 세 칸 카드:
    ① 프로필(닉네임·역할·로그인 수단·숫자 둘)과 그 아래 이 기기 알림(5단계, Task 11),
@@ -63,6 +63,7 @@ export function ProfilePage({
   onBack: () => void;
 }) {
   const { played } = profile;
+  const club7 = useClubStore();
   const kept = played === null ? null : withoutPending(played, profile.pendingIds);
   const nickname = member?.nickname?.trim() || '';
 
@@ -105,6 +106,8 @@ export function ProfilePage({
           </div>
         </section>
         <PushCard push={push} />
+        {/* 송금 정보(§4.13) — 서버가 정산을 알 때 */}
+        {club7.settleApi === 'on' && <PayCard />}
       </div>
 
       <PlayedCard profile={profile} />

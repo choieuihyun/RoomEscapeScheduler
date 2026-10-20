@@ -35,6 +35,11 @@ describe('moreGroups', () => {
     expect(shape(moreGroups({ ...member, loggedIn: false, togetherOn: true }))).toEqual(['settings:dark,tour']);
   });
 
+  it('정산 API(§4.13)를 알면 계정 그룹 맨 앞에 송금 정보', () => {
+    expect(shape(moreGroups({ ...member, payOn: true })).find((x) => x.startsWith('account'))).toBe('account:pay,google/done');
+    expect(shape(moreGroups({ ...member, loggedIn: false, payOn: true }))).toEqual(['settings:dark,tour']);
+  });
+
   it('운영진이면 운영진 그룹에 멤버 관리', () => {
     const g = moreGroups({ ...member, isAdmin: true, member: { ...approved, kakaoLinked: true } });
     expect(shape(g)).toEqual([

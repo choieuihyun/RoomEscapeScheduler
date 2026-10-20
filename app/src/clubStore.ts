@@ -1,9 +1,14 @@
 /* 7단계 공유 상태 — 내 하고 싶은 테마(§4.12). 같이 가요 화면·테마 도우미·테마 찾기·해 본 테마 찾기가 같은 목록을 본다.
+   정산(§4.13) — 내 송금 정보, 받아 둔 정산(일정 상세가 고치면 홈 "보낼 돈" 띠도 같이 바뀐다).
    지연 청크끼리 나눠 쓰는 모듈이라 진입 청크(SchedulerPage)는 동적 import 로 startClub 만 부른다 —
    서버가 이 API 를 아는지(본문 없는 404 면 모름) 알려 주면 메뉴를 켠다.
    "하고 싶어요" 단추(WishToggle)도 여기서 다시 내보낸다. */
 import { useSyncExternalStore } from 'react';
-import { addWish, deleteWish, isMissingApi, listMyWishes, sayClub, type WishDto } from './server';
+import {
+  addWish, deleteWish, getPayInfo, getSettlement, isMissingApi, listMyWishes, myPastEvents, putPayInfo, sayClub,
+  type EventDto, type PayInfoDto, type SettlementDto, type WishDto,
+} from './server';
+import { myDue } from './settle';
 import { showToast } from './toast';
 import { sameTheme, wishKey, type WishRef } from './wish';
 
@@ -16,14 +21,24 @@ export interface ClubState {
   wishErr: string;
   /* 지금 보내는 중인 테마(wishKey) — 같은 단추를 두 번 누르지 않게 */
   busy: ReadonlySet<string>;
+  /* 정산·송금 정보 API(§4.13) — 첫 송금 정보 요청으로 안다 */
+  settleApi: Api;
+  pay: PayInfoDto | null;
+  /* 받아 둔 정산 — 일정 id → (받을 때의 settlementTotal 열쇠, 정산) */
+  settles: ReadonlyMap<number, { key: string; dto: SettlementDto }>;
+  /* 홈 "보낼 돈" 띠가 볼 일정(정산이 있는 내 일정, 최근 것 몇 개) */
+  dueEvents: EventDto[];
 }
 
-const blank = (uid: string): ClubState => ({ uid, wishApi: 'unknown', wishes: null, wishErr: '', busy: new Set() });
+const blank = (uid: string): ClubState => ({
+  uid, wishApi: 'unknown', wishes: null, wishErr: '', busy: new Set(),
+  settleApi: 'unknown', pay: null, settles: new Map(), dueEvents: [],
+});
 let st: ClubState = blank('');
 const subs = new Set<() => void>();
-/* SchedulerPage 가 메뉴를 켜고 끄는 데 쓰는 신호 — 1: 같이 가요 */
+/* SchedulerPage 가 메뉴를 켜고 끄는 데 쓰는 신호 — 1: 같이 가요, 2: 정산 */
 let onFlags: ((f: number) => void) | null = null;
-export const flagsOf = (s: ClubState): number => (s.wishApi === 'on' ? 1 : 0);
+export const flagsOf = (s: ClubState): number => (s.wishApi === 'on' ? 1 : 0) | (s.settleApi === 'on' ? 2 : 0);
 
 function set(patch: Partial<ClubState>) {
   st = { ...st, ...patch };
@@ -62,6 +77,78 @@ export function startClub(uid: string, flags: (f: number) => void): void {
   if (st.uid !== uid) st = blank(uid);
   flags(flagsOf(st));
   if (st.wishApi !== 'missing') void reloadWishes();
+  if (st.settleApi !== 'missing') void reloadPay();
+}
+
+/* 내 송금 정보 — 정산 API 를 아는지도 이것으로 안다(본문 없는 404 면 정산 칸·송금 정보 행을 숨긴다) */
+export async function reloadPay(): Promise<void> {
+  const uid = st.uid;
+  try {
+    const pay = await getPayInfo(await token());
+    if (same(uid)) set({ settleApi: 'on', pay });
+  } catch (e) {
+    if (!same(uid)) return;
+    if (isMissingApi(e)) set({ settleApi: 'missing', pay: null });
+    else if (st.settleApi === 'unknown') set({ settleApi: 'on' }); // 잠깐의 오류로 기능을 숨기지 않는다 — 고칠 때 다시 받는다
+  }
+}
+
+/* 정산 API 가 본문 없는 404 를 주면(서버가 모름) 이 접속 동안 숨긴다 */
+export const settleMissing = () => set({ settleApi: 'missing', pay: null });
+
+/* 송금 정보 저장 — 던지면 부르는 쪽이 문구를 보인다 */
+export async function savePay(info: PayInfoDto): Promise<PayInfoDto> {
+  const uid = st.uid;
+  const pay = await putPayInfo(info, await token());
+  if (same(uid)) set({ pay });
+  return pay;
+}
+
+/* 받은 정산을 넣어 둔다(일정 상세가 받거나 고칠 때). key 는 그때의 settlementTotal */
+export function keepSettle(dto: SettlementDto) {
+  const n = new Map(st.settles);
+  n.set(dto.eventId, { key: String(dto.items.length ? dto.total : null), dto });
+  set({ settles: n });
+}
+
+/* 홈 "보낼 돈" — 정산이 있는 내 일정(받아 둔 목록 + 지난 일정 첫 쪽 — 정산은 보통 일정이 끝난 뒤에 한다)에서 최근 것
+   몇 개만 정산을 받는다. 합계가 그대로인 일정은 다시 받지 않는다(force 면 다시 — 창이 다시 보일 때, 1분에 한 번) */
+const DUE_EVENTS = 6;
+let pastAt = 0;
+let past: EventDto[] = [];
+let dueBusy = false;
+export async function refreshDues(listed: EventDto[], force = false): Promise<void> {
+  if (st.settleApi !== 'on' || dueBusy) return;
+  const uid = st.uid;
+  dueBusy = true;
+  try {
+    const t = await token();
+    if (force || Date.now() - pastAt > 60_000) {
+      try { past = (await myPastEvents(null, 10, t)).events; pastAt = Date.now(); } catch { /* 지난 일정을 못 받으면 받아 둔 목록만 */ }
+    }
+    const byId = new Map<number, EventDto>();
+    for (const e of [...listed.filter((x) => x.joined), ...past]) if (e.settlementTotal !== null && !byId.has(e.id)) byId.set(e.id, e);
+    const evs = [...byId.values()].sort((a, b) => ((b.date ?? '') < (a.date ?? '') ? -1 : (b.date ?? '') > (a.date ?? '') ? 1 : b.id - a.id)).slice(0, DUE_EVENTS);
+    for (const e of evs) {
+      const had = st.settles.get(e.id);
+      if (!force && had && had.key === String(e.settlementTotal)) continue;
+      try {
+        const dto = await getSettlement(e.id, t);
+        if (!same(uid)) return;
+        keepSettle(dto);
+      } catch (err) {
+        if (isMissingApi(err)) { settleMissing(); return; }
+      }
+    }
+    if (same(uid)) set({ dueEvents: evs });
+  } catch { /* 로그인 토큰을 못 받음 — 다음에 */ } finally {
+    dueBusy = false;
+  }
+}
+
+/* 홈 띠에 보일 것 — 내가 아직 안 보낸 돈이 있는 일정(최근 순) */
+export function duesOf(s: ClubState): { ev: EventDto; amount: number }[] {
+  return s.dueEvents.map((ev) => ({ ev, amount: myDue(s.settles.get(ev.id)?.dto, s.uid) })).filter((d) => d.amount > 0);
 }
 
 const busyWith = (k: string, on: boolean) => {
@@ -123,3 +210,4 @@ export const toggleWishFor = (r: WishRef): Promise<boolean> => (myWish(st.wishes
 
 /* "하고 싶어요" 단추도 이 모듈을 거쳐 가져간다 — 따로 가져가면 청크가 하나 더 생겨 진입 청크의 미리 받기 목록이 길어진다(진입 크기 한도) */
 export { WishToggle } from './components/WishToggle';
+export { PayCard, PayForm } from './components/PayInfo';

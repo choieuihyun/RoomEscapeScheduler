@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useClubStore } from '../clubStore';
+import { useEffect, useRef, useState } from 'react';
+import { duesOf, refreshDues, useClubStore } from '../clubStore';
+import { won } from '../settle';
 import { showToast } from '../toast';
 import type { UseProfileReturn } from '../useProfile';
 import type { View } from '../useView';
@@ -126,6 +127,23 @@ export function HomePage({
   }
   const cells = monthGrid(month.y, month.m);
 
+  /* 보낼 돈 띠(§4.13) — 정산이 있는 내 일정(받아 둔 목록 + 지난 일정 첫 쪽)에서 최근 것 몇 개만 정산을 받는다.
+     합계가 그대로면 다시 받지 않고, 창이 다시 보이면 새로 받는다(보냈어요 체크는 합계를 바꾸지 않는다) */
+  const settleOn = club7.settleApi === 'on';
+  const evRef = useRef(events);
+  useEffect(() => { evRef.current = events; }, [events]);
+  useEffect(() => { if (settleOn) void refreshDues(events); }, [settleOn, events]);
+  useEffect(() => {
+    if (!settleOn) return;
+    const on = () => { if (document.visibilityState === 'visible') void refreshDues(evRef.current, true); };
+    document.addEventListener('visibilitychange', on);
+    return () => document.removeEventListener('visibilitychange', on);
+  }, [settleOn]);
+  const dues = settleOn && !club.error ? duesOf(club7) : [];
+  const due = dues[0];
+  /* 지난 일정은 받아 둔 목록 밖일 수 있어 먼저 넣는다(없으면 '연 일정이 목록에서 사라짐' 처리가 패널을 바로 닫는다) */
+  const openDue = (ev: EventDto) => { if (!events.some((e) => e.id === ev.id)) club.adopt(ev); onOpenEvent(ev); };
+
   /* 맨 위 띠 — 내가 참여한 오늘·내일 일정(푸시를 못 받는 사람용, §4.10). 오늘 이미 끝난 일정은 뺀다(한국 시각) */
   /* 목록을 못 받은 상태면 낡은 목록으로 띠를 만들지 않는다 */
   const strip = club.error ? null : todayStrip(events, now);
@@ -139,6 +157,15 @@ export function HomePage({
         <b className="home-strip-when">{strip.when}</b>{' '}
         <span className="home-strip-name">{strip.name}</span>
         {strip.more > 0 && <>{' '}<span className="home-strip-more">외 {strip.more}</span></>}
+        <span className="home-strip-go" aria-hidden="true">›</span>
+      </button>
+    )}
+    {due && (
+      <button type="button" className="home-strip home-due" onClick={() => openDue(due.ev)}>
+        <svg className="home-strip-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M3 10.5h18M7 15h4" /></svg>
+        <b className="home-strip-when">보낼 돈 {won(due.amount)}</b>{' '}
+        <span className="home-strip-name">· {due.ev.date ? `${+due.ev.date.slice(5, 7)}/${+due.ev.date.slice(8, 10)} ` : ''}{eventTitle(due.ev)}</span>
+        {dues.length > 1 && <>{' '}<span className="home-strip-more">외 {dues.length - 1}건</span></>}
         <span className="home-strip-go" aria-hidden="true">›</span>
       </button>
     )}
@@ -222,6 +249,7 @@ export function HomePage({
                         <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
                         {/* 좁은 줄이라 이름은 둘까지, 나머지는 title 로 */}
                         {who.length > 0 && <span className="chip-info warn who" title={playedWhoTitle(who)}>{playedWhoLabel(who)}</span>}
+                        {ev.settlementTotal !== null && <span className="chip-info muted">정산</span>}
                         {/* 제목 단추의 ::after 가 줄 전체를 덮어 줄 어디를 눌러도 연다. 참여 단추는 그 위에 따로 있다 */}
                         <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
                       </div>

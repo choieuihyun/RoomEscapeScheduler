@@ -128,6 +128,7 @@ function ClubRow({ ev, iso, onOpen }: { ev: EventDto; iso: string; onOpen: (ev: 
     <button type="button" className="cal-club-row" onClick={() => onOpen(ev, iso)}>
       <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
       {who.length > 0 && <span className="chip-info warn who" title={playedWhoTitle(who)}>{playedWhoLabel(who)}</span>}
+      {ev.settlementTotal !== null && <span className="chip-info muted">정산</span>}
       <span className="ccr-t">{eventTitle(ev)}</span>
       <span className="ccr-m">{when} · 참여 {peopleText(ev)}</span>
     </button>

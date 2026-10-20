@@ -10,6 +10,7 @@ import type { AddedTheme } from '../useLoadModal';
 import { EventHelper } from './EventHelper';
 import { EventTalk, EventTalkDone } from './EventTalk';
 import { PlayedDots } from './PlayedDots';
+import { SettlePanel } from './SettlePanel';
 
 /* 캘린더 오른쪽 패널의 동호회 일정 상세 (계획 Task E6, 목업 "캘린더 + 일정 상세").
    보이는 일정은 늘 목록(useClubEvents)에서 꺼낸 최신 값이다 — 정원 초과 뒤 다시 불러온 값,
@@ -208,6 +209,9 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
           <p className="evp-hint">참여한 사람, 만든 사람, 운영진이 바꿀 수 있어요.</p>
         </div>
       )}
+
+      {/* 정산(§4.13) — 참여자 목록·예약 아래. 참여자·운영진·만든 사람(정산이 있으면 항목에 든 사람도) */}
+      <SettlePanel key={ev.id} ev={ev} club={club} meUid={meUid} />
 
       {!undecided && ev.candidates.length > 0 && <EventTalkDone ev={ev} club={club} onCalcWindow={onCalcWindow && ((w) => onCalcWindow(w, ev))} onPicked={onPicked} />}
       {!undecided && helper}

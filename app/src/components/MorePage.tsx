@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useClubStore } from '../clubStore';
+import { PayCard, useClubStore } from '../clubStore';
 import { moreGroups, type MoreRow, type MoreRowId } from '../moreRows';
 import type { EventDto } from '../server';
 import type { UseAuthReturn } from '../useAuth';
@@ -15,11 +15,11 @@ import { GoogleMark, KakaoMark } from './SsoMarks';
    해 본 테마·지난 일정·이 기기 알림은 하위 화면으로 들어가고(내 정보의 카드를 그대로 쓴다),
    하위 화면마다 기록을 하나 쌓아(history.state.moreSub) 폰의 뒤로 가기가 목록으로 돌아오게 한다. */
 
-type Sub = 'played' | 'past' | 'push';
-const SUB_TITLE: Record<Sub, string> = { played: '해 본 테마', past: '지난 일정', push: '이 기기 알림' };
+type Sub = 'played' | 'past' | 'push' | 'pay';
+const SUB_TITLE: Record<Sub, string> = { played: '해 본 테마', past: '지난 일정', push: '이 기기 알림', pay: '송금 정보' };
 const readSub = (): Sub | null => {
   const v = (history.state as { moreSub?: string } | null)?.moreSub;
-  return v === 'played' || v === 'past' || v === 'push' ? v : null;
+  return v === 'played' || v === 'past' || v === 'push' || v === 'pay' ? v : null;
 };
 
 const Ic = ({ children }: { children: ReactNode }) => (
@@ -30,6 +30,7 @@ const ICON: Partial<Record<MoreRowId, ReactNode>> = {
   played: <Ic><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.8 2.8L16 9.8" /></Ic>,
   past: <Ic><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5" /><path d="M3.5 3.5v5h5M12 7.5V12l3 2" /></Ic>,
   push: <Ic><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></Ic>,
+  pay: <Ic><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M3 10.5h18M7 15h4" /></Ic>,
   together: <Ic><path d="M5 21V4h11l-1.6 4L16 12H5" /></Ic>,
   people: <Ic><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Ic>,
   ranking: <Ic><path d="M5 20v-8M12 20V5M19 20v-5" /></Ic>,
@@ -100,9 +101,9 @@ export function MorePage({
   /* 같이 가요(§4.12)·송금 정보(§4.13) — 서버가 그 API 를 아는지는 공유 상태가 안다 */
   const club7 = useClubStore();
   const groups = moreGroups({ loggedIn, profileOn, clubOn, isAdmin, member: m, providerIds: auth.providerIds, peopleOn, rankOn,
-    togetherOn: clubOn && club7.wishApi === 'on' });
+    togetherOn: clubOn && club7.wishApi === 'on', payOn: clubOn && club7.settleApi === 'on' });
   /* 하위 화면은 그 그룹이 보일 때만 — 로그아웃했으면 목록으로 */
-  const subOk = sub !== null && (sub === 'push' ? loggedIn && clubOn : loggedIn && profileOn);
+  const subOk = sub !== null && (sub === 'push' ? loggedIn && clubOn : sub === 'pay' ? loggedIn && clubOn && club7.settleApi === 'on' : loggedIn && profileOn);
 
   if (subOk) {
     return (
@@ -121,6 +122,7 @@ export function MorePage({
         {sub === 'played' && <PlayedCard profile={profile} />}
         {sub === 'past' && <PastCard profile={profile} onOpenEvent={onOpenEvent} />}
         {sub === 'push' && <PushCard push={push} />}
+        {sub === 'pay' && <PayCard />}
       </div>
     );
   }
@@ -139,7 +141,7 @@ export function MorePage({
   const pushChip = push.card === null ? { text: '확인 중', cls: 'muted' } : PUSH_CHIP[push.card];
 
   const act: Partial<Record<MoreRowId, () => void>> = {
-    played: () => openSub('played'), past: () => openSub('past'), push: () => openSub('push'),
+    played: () => openSub('played'), past: () => openSub('past'), push: () => openSub('push'), pay: () => openSub('pay'),
     together: () => onView('together'), people: () => onView('people'), ranking: () => onView('ranking'),
     members: onMembers, dark: onToggleTheme, tour: onTour,
     kakao: auth.linkKakao, google: () => void auth.linkGoogle(), join: () => auth.openAuth(), logout: () => void auth.logout(),
@@ -150,6 +152,7 @@ export function MorePage({
       case 'played': return <span className="more-v num">{playedN}</span>;
       case 'past': return <span className="more-v num">{pastN}</span>;
       case 'push': return <span className={'chip-info ' + pushChip.cls}>{pushChip.text}</span>;
+      case 'pay': return <span className="more-v more-pay">{club7.pay?.bankText || (club7.pay?.kakaopayUrl ? '카카오페이' : '비어 있음')}</span>;
       case 'members': return pendingCount > 0 ? <span className="more-v strong">승인 대기 {pendingCount}명</span> : null;
       case 'dark': return <span className={'more-switch' + (dark ? ' on' : '')} aria-hidden="true" />;
       default: return null;

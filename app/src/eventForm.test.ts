@@ -8,7 +8,7 @@ const ev = (o: Partial<EventDto> = {}): EventDto => ({
   id: 1, title: '', date: '2026-10-20', candidates: [], startMin: null, endMin: null, location: null,
   capacity: null, booked: false, memo: null, segments: [], version: 3,
   createdBy: { uid: 'u1', nickname: '가' }, createdAt: '', updatedAt: '',
-  participants: [], count: 1, joined: false, mine: true, canManage: true, ...o,
+  participants: [], count: 1, joined: false, mine: true, canManage: true, settlementTotal: null, ...o,
 });
 
 const base = (o: Partial<FormState> = {}): FormState => ({ ...emptyForm('2026-10-20'), ...o });

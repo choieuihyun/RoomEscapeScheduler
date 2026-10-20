@@ -12,7 +12,7 @@ const G = (o: Partial<WishGroupDto> & { n?: string[] }): WishGroupDto => ({
 const ev = (o: Partial<EventDto>): EventDto => ({
   id: 1, title: '', date: '2026-10-24', candidates: [], startMin: null, endMin: null, location: null, capacity: null, booked: false,
   memo: null, segments: [], version: 1, createdBy: { uid: 'u2', nickname: 'x' }, createdAt: '', updatedAt: '', participants: [],
-  count: 0, joined: false, mine: false, canManage: false, ...o,
+  count: 0, joined: false, mine: false, canManage: false, settlementTotal: null, ...o,
 });
 const seg = (themeName: string, themeKey: string | null = null) => ({ themeName, themeKey, branchName: null, startMin: 600, endMin: 670, playedBy: [] });
 

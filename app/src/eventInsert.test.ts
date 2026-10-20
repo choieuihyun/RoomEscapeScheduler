@@ -9,7 +9,7 @@ const ev = (o: Partial<EventDto> = {}): EventDto => ({
   id: 7, title: '토요 번개', date: null, candidates: [{ date: '2026-10-25', responses: [] }, { date: '2026-10-26', responses: [] }],
   startMin: null, endMin: null, location: '강남역', capacity: 4, booked: false, memo: '늦지 마요', segments: [], version: 5,
   createdBy: { uid: 'u1', nickname: '가' }, createdAt: '', updatedAt: '',
-  participants: [], count: 1, joined: true, mine: true, canManage: true, ...o,
+  participants: [], count: 1, joined: true, mine: true, canManage: true, settlementTotal: null, ...o,
 });
 const step = (name: string, place: string, start: number, end: number) => ({ name, place, start, end }) as PathStep;
 const steps = [step('비밀의 화원', '제로월드 강남점', 820, 890), step('셜록의 서재', '제로월드 강남점', 960, 1020)];

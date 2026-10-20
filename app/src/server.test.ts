@@ -5,6 +5,7 @@ import {
   setMemberRole, updateEvent, listPlayed, addPlayed, deletePlayed, memberPlayed, listThemes, myPastEvents, freshThemes, joinEvent, setAvailability, clearAvailability,
   pushTest, deviceStatus, pushTestMessage, updateProfile, rankings, addWatch, sayWatch,
   listMyWishes, addWish, deleteWish, listClubWishes,
+  getSettlement, putSettlement, markTransfer, getPayInfo, putPayInfo, settleConflictOf,
 } from './server';
 import type { EventInput, ProfileDto } from './server';
 
@@ -437,9 +438,62 @@ describe('같이 갈 사람 찾기 API (§4.12)', () => {
     expect(g).toMatchObject({ storeName: null, wanters: [], playedBy: [] });
   });
 
-  it('오류 문구 — TOO_MANY_WISHES 는 앱 문구', async () => {
-    stubFetch(409, { error: 'TOO_MANY_WISHES', message: 'server' });
+  it('오류 문구 — 서버 message 그대로(§4.13 서버가 정한 문구)', async () => {
+    stubFetch(409, { error: 'TOO_MANY_WISHES', message: '하고 싶은 테마는 200개까지 담을 수 있어요.' });
     const err = await addWish({ themeName: 'a' }, 'T').catch((e) => e);
-    expect(sayClub(err)).toBe('하고 싶은 테마는 200개까지 올릴 수 있어요.');
+    expect(sayClub(err)).toBe('하고 싶은 테마는 200개까지 담을 수 있어요.');
+  });
+});
+
+describe('정산 API (§4.13)', () => {
+  const S = { eventId: 5, version: 2, updatedAt: null, updatedBy: null, items: [], total: 0, transfers: [], payInfo: {} };
+  it('GET·PUT 모양 — PUT 은 { version, items } 통째로, 정수 그대로', async () => {
+    let fn = stubFetch(200, { eventId: 5, version: 0 });
+    const d = await getSettlement(5, 'T');
+    expect(call(fn).url).toContain('/api/club/events/5/settlement');
+    expect(d).toMatchObject({ items: [], transfers: [], payInfo: {}, total: 0 });
+    fn = stubFetch(200, S);
+    const items = [{ label: '방탈출', amount: 132000, payerUid: 'a', shares: [{ uid: 'a', amount: 66000 }, { uid: 'b', amount: 66000 }] }];
+    await putSettlement(5, 2, items, 'T');
+    const { init } = call(fn);
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual({ version: 2, items });
+    expect(init.body).toContain('"amount":132000');
+  });
+  it('보냈어요 — POST …/transfers { fromUid, toUid, paid }', async () => {
+    const fn = stubFetch(200, S);
+    await markTransfer(5, 'b', 'a', true, 'T');
+    const { url, init } = call(fn);
+    expect(url).toContain('/api/club/events/5/settlement/transfers');
+    expect(JSON.parse(init.body as string)).toEqual({ fromUid: 'b', toUid: 'a', paid: true });
+  });
+  it('409 SETTLEMENT_CONFLICT 면 본문의 최신 정산, 다른 오류는 null', async () => {
+    stubFetch(409, { error: 'SETTLEMENT_CONFLICT', message: '다른 사람이 먼저 고쳤어요. 새로 불러온 정산을 확인해 주세요.', settlement: { ...S, version: 4 } });
+    const err = await putSettlement(5, 2, [], 'T').catch((e) => e);
+    expect(settleConflictOf(err)?.version).toBe(4);
+    expect(sayClub(err)).toBe('다른 사람이 먼저 고쳤어요. 새로 불러온 정산을 확인해 주세요.');
+    stubFetch(400, { error: 'BAD_SETTLEMENT', message: '정산 내용을 다시 확인해 주세요.' });
+    const bad = await putSettlement(5, 2, [], 'T').catch((e) => e);
+    expect(settleConflictOf(bad)).toBeNull();
+    expect(sayClub(bad)).toBe('정산 내용을 다시 확인해 주세요.');
+  });
+  it('NOT_PARTICIPANT 는 상황별 서버 문구 그대로', async () => {
+    stubFetch(403, { error: 'NOT_PARTICIPANT', message: '보내는 사람, 받는 사람, 만든 사람, 운영진만 체크할 수 있어요.' });
+    const err = await markTransfer(5, 'b', 'a', true, 'T').catch((e) => e);
+    expect(sayClub(err)).toBe('보내는 사람, 받는 사람, 만든 사람, 운영진만 체크할 수 있어요.');
+  });
+  it('송금 정보 GET·PUT, 빠진 칸은 null', async () => {
+    let fn = stubFetch(200, {});
+    expect(await getPayInfo('T')).toEqual({ bankText: null, kakaopayUrl: null });
+    expect(call(fn).url).toContain('/api/me/payinfo');
+    fn = stubFetch(200, { bankText: '카뱅', kakaopayUrl: null });
+    await putPayInfo({ bankText: '카뱅', kakaopayUrl: null }, 'T');
+    expect(call(fn).init.method).toBe('PUT');
+    expect(JSON.parse(call(fn).init.body as string)).toEqual({ bankText: '카뱅', kakaopayUrl: null });
+  });
+  it('일정의 settlementTotal — 옛 서버(없음)는 null, 있으면 그대로', async () => {
+    stubFetch(200, [{ id: 1, segments: [] }, { id: 2, segments: [], settlementTotal: 212000 }]);
+    const evs = await listEvents('2026-10-01', '2026-10-31', 'T');
+    expect(evs.map((e) => e.settlementTotal)).toEqual([null, 212000]);
   });
 });
