@@ -243,7 +243,7 @@ textarea{width:100%;min-height:66px;resize:vertical;
   font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:0;white-space:nowrap;
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);color:var(--ink)}
 .parsed .t .t-s{font-size:14px;font-weight:600}
-.parsed .t .t-end{font-size:11.5px;color:var(--ink3)}
+.parsed .t .t-end{font-size:11.5px;color:var(--ink2)}  /* 11.5px 글자라 ink3(4.2:1)는 모자람 */
 .parsed .t.fix{background:var(--chip-info);border-color:transparent}
 .parsed .t.so{background:var(--surface2)}
 .parsed .t.so .t-s{font-weight:400;color:var(--ink-past);text-decoration:line-through}  /* surface2 위 4.5:1 넘게 — ink3 는 모자람 */

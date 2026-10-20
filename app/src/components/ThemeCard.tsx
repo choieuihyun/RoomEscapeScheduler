@@ -51,7 +51,7 @@ function ParsedSessions({ th, watchCtl, soldIncluded }: { th: Theme; watchCtl?: 
                 return (
                   <span key={th.sessions.indexOf(s)} className={cls} title={title}>
                     <span className="t-s">{fmt(s.t)}</span>
-                    {s.soldout ? <span className="t-so">매진</span> : <span className="t-end">~{fmt(s.t + th.dur)}</span>}
+                    {s.soldout ? <span className="t-so">매진</span> : <span className="t-end">~{s.t < 1440 && s.t + th.dur >= 1440 ? '다음날 ' : ''}{fmt(s.t + th.dur)}</span>}
                     {s.soldout && s.id != null && watchCtl && <WatchBell slotId={s.id} ctl={watchCtl} />}
                   </span>
                 );
@@ -62,7 +62,7 @@ function ParsedSessions({ th, watchCtl, soldIncluded }: { th: Theme; watchCtl?: 
       </div>
       {sold > 0 && (
         <span className="note">
-          {soldIncluded ? '매진 회차도 계산에 넣고 있어요.' : <>매진 회차는 계산에서 빠져요. 넣으려면 아래에서 '매진 회차도 포함해서 계산'을 선택해 주세요.</>}
+          {soldIncluded ? '매진 회차도 계산에 넣고 있어요.' : <>매진 회차는 계산에서 빠져요. 아래에서 '매진 회차도 포함해서 계산'을 선택해 주세요.</>}
         </span>
       )}
       {over ? (
