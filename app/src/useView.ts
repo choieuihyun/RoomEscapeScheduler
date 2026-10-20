@@ -73,7 +73,8 @@ export function useView(o: Opts) {
     const search = q.toString();
     const url = location.pathname + (search ? '?' + search : '') + location.hash;
     if (replace) history.replaceState(null, '', url);
-    else if (url !== location.pathname + location.search + location.hash) history.pushState(null, '', url);
+    /* 주소가 같아도 기록에 상태가 있으면(더보기 하위 화면) 새로 쌓는다 — 더보기 칸을 누르면 목록으로 돌아오게 */
+    else if (url !== location.pathname + location.search + location.hash || history.state !== null) history.pushState(null, '', url);
     setRaw({ v: next, hash: '' });
   }, []);
 
