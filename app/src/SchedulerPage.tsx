@@ -21,6 +21,7 @@ import { listenForegroundPush, PUSH_READY_EVT } from './notify';
 import { usePushDevice } from './usePushDevice';
 import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './server';
 import { isClubAdmin, memberName, useMembers } from './useMembers';
+import { canEditProfile, needsProfile, profileApiOn } from './profileGate';
 import { ThemeList } from './components/ThemeList';
 import { ConditionsPanel } from './components/ConditionsPanel';
 import { ResultsPanel } from './components/ResultsPanel';
@@ -46,6 +47,8 @@ const AuthModal = lazyRetry(() => import('./components/AuthModal').then(m => ({ 
 const SaveModal = lazyRetry(() => import('./components/SaveModal').then(m => ({ default: m.SaveModal })));
 const WatchListModal = lazyRetry(() => import('./components/WatchListModal').then(m => ({ default: m.WatchListModal })));
 const PushGuide = lazyRetry(() => import('./components/PushGuide').then(m => ({ default: m.PushGuide })));
+/* 멤버 목록·랭킹 화면과 프로필 창(§4.11)은 한 청크 — 진입 청크에 늘어나는 것을 줄인다 */
+const MemberViews = lazyRetry(() => import('./components/MemberViews').then(m => ({ default: m.MemberViews })));
 
 /* 배포 뒤 옛 탭에서 청크를 못 찾으면(vite:preloadError) 맨 위 띠로 한 번 알린다 */
 function useStaleStrip(): boolean {
@@ -172,7 +175,16 @@ export function SchedulerPage() {
   const [profileActive, setProfileActive] = useState(false);
   const profile = useProfile(homeOn, profileActive, today);
   const profileOn = homeOn && profile.api === 'on';
-  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided });
+  /* 멤버 프로필(§4.11) — 서버가 프로필을 알면(MeDto.profile 필드가 있으면) 멤버 목록·랭킹을 연다.
+     랭킹·프로필 고치기가 본문 없는 404 면 그 기능만 이 접속 동안 숨긴다 */
+  const [rankGone, setRankGone] = useState(false);
+  const [editGone, setEditGone] = useState(false);
+  const peopleOn = homeOn && profileApiOn(auth.member);
+  const rankOn = peopleOn && !rankGone;
+  const editOn = canEditProfile(auth.member) && !editGone;
+  const [editOpen, setEditOpen] = useState(false);
+  const openEdit = editOn ? () => setEditOpen(true) : undefined;
+  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided, peopleOn, rankOn });
   const onProfile = nav.view === 'profile' || nav.view === 'more';
   if (profileActive !== onProfile) setProfileActive(onProfile);
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
@@ -334,15 +346,25 @@ export function SchedulerPage() {
     })();
   }, [linkId, authSettled, auth.me, memberStatus, clubOn, openAuth, adopt, go, calSelect, setOpenEvent]);
 
-  /* 알림 켜기 안내 — 승인된 멤버에게 이 기기에서 한 번. 첫 화면이 정해지고, 로그인 창·일정 창·빈자리 알림 창·사용법 투어·링크로 여는 일정과 겹치지 않을 때 */
-  const { maybeAutoGuide } = push;
-  const guideFree = clubOn && decided && !auth.open && !eventForm.open && !loadModal.open && !saveModal.open && !watches.open && !tour.active && linkId === null
+  /* "프로필을 채워 주세요"(§4.11) — 프로필이 null 인 가입 신청자·멤버에게. 닫으면 이번 접속 동안은 묻지 않는다(새로 고침·다음 로그인에 다시).
+     다른 창·투어·링크로 여는 일정과 겹치지 않게 기다리고, 한 번 뜨면 채우거나 닫을 때까지 둔다. 알림 켜기 안내는 이 창 뒤에 */
+  const [askedOff, setAskedOff] = useState('');
+  if (askedOff && askedOff !== meUid) setAskedOff(''); // 로그아웃·다른 계정이면 다시 묻는다
+  const wantAsk = needsProfile(auth.member) && !editGone && askedOff !== meUid;
+  const calm = decided && !auth.open && !eventForm.open && !loadModal.open && !saveModal.open && !watches.open && !tour.active && linkId === null
     && readEventHash(location.hash) === null;
+  const [asking, setAsking] = useState(false);
+  if (wantAsk && calm && !editOpen && push.guide === null && !asking) setAsking(true);
+  if (asking && !wantAsk) setAsking(false);
+
+  /* 알림 켜기 안내 — 승인된 멤버에게 이 기기에서 한 번. 첫 화면이 정해지고, 로그인 창·일정 창·빈자리 알림 창·사용법 투어·링크로 여는 일정·프로필 창과 겹치지 않을 때 */
+  const { maybeAutoGuide } = push;
+  const guideFree = clubOn && calm && !wantAsk && !editOpen;
   useEffect(() => { if (guideFree) maybeAutoGuide(); }, [guideFree, maybeAutoGuide]);
 
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || e.isComposing || e.keyCode === 229) return; // 한글 조합 중 Esc 는 조합만 끝낸다
       if (loadModal.open) loadModal.close();
       if (auth.open) auth.closeAuth();
       if (saveModal.open) saveModal.close();
@@ -374,6 +396,7 @@ export function SchedulerPage() {
   const profileMounted = useEver(nav.view === 'profile');
   const membersMounted = useEver(nav.view === 'members');
   const moreMounted = useEver(nav.view === 'more' && !wide);
+  const clubPagesMounted = useEver(nav.view === 'people' || nav.view === 'ranking');
   const formMounted = useEver(eventForm.open);
   const authMounted = useEver(auth.open);
   const loadMounted = useEver(loadModal.open);
@@ -395,7 +418,7 @@ export function SchedulerPage() {
   return (
     <div className="shell">
       <SideNav
-        view={nav.view} onView={goView} auth={auth} homeOn={homeOn} profileOn={profileOn}
+        view={nav.view} onView={goView} auth={auth} homeOn={homeOn} profileOn={profileOn} peopleOn={peopleOn} rankOn={rankOn}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
         isAdmin={isAdmin} pendingCount={pendingCount}
@@ -438,10 +461,6 @@ export function SchedulerPage() {
         {auth.cloudOn && calMounted && (
           <div className={'view' + (nav.view === 'calendar' ? '' : ' off')}>
             {failStrip}
-            <header className="page-head">
-              <h1>캘린더</h1>
-              <p>{homeOn ? '동호회 일정과 저장한 일정, 빈자리 알림을' : '저장한 일정과 빈자리 알림을'} 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
-            </header>
             <LazyBoundary><CalendarPage
               ctl={cal} active={nav.view === 'calendar'} plans={plans} watches={watches} auth={auth} s={s}
               onLoaded={() => { goView('calc'); showToast('일정을 불러왔어요.'); }}
@@ -455,26 +474,18 @@ export function SchedulerPage() {
 
         {profileOn && profileMounted && (
           <div className={'view home-view' + (nav.view === 'profile' ? '' : ' off')}>
-            <header className="page-head">
-              <button type="button" className="page-back" onClick={() => goView('more')}><span aria-hidden="true">‹</span> 더보기</button>
-              <h1>내 정보</h1>
-            </header>
-            <LazyBoundary><ProfilePage
+            <LazyBoundary><ProfilePage onBack={() => goView('more')}
               profile={profile} member={auth.member} photo={auth.me?.photo} providerIds={auth.providerIds} isAdmin={isAdmin}
               pendingCount={pendingCount} onMembers={() => goView('members')}
-              onOpenEvent={openFromProfile} push={push}
+              onOpenEvent={openFromProfile} push={push} onEditProfile={openEdit}
             /></LazyBoundary>
           </div>
         )}
 
         {isAdmin && membersMounted && (
           <div className={'view' + (nav.view === 'members' ? '' : ' off')}>
-            <header className="page-head">
-              <button type="button" className="page-back" onClick={() => goView('more')}><span aria-hidden="true">‹</span> 더보기</button>
-              <h1>멤버 관리</h1>
-              <p>가입 신청을 오픈채팅 닉네임과 맞춰 보고 승인해 주세요. 한 사람이 계정을 여러 개 만들었으면 하나만 승인하면 돼요.</p>
-            </header>
-            <LazyBoundary><MembersPage ctl={members} meUid={auth.member?.uid ?? ''} /></LazyBoundary>
+            {/* 머리말은 화면 청크 안에 둔다 — 진입 청크 크기(§4.64) */}
+            <LazyBoundary><MembersPage ctl={members} meUid={auth.member?.uid ?? ''} onBack={() => goView('more')} /></LazyBoundary>
           </div>
         )}
         {moreMounted && (
@@ -484,9 +495,14 @@ export function SchedulerPage() {
               isAdmin={isAdmin} pendingCount={pendingCount} push={push}
               dark={theme.dark} onToggleTheme={theme.toggle} onTour={startTour}
               onMembers={() => goView('members')} onOpenEvent={openFromProfile}
+              peopleOn={peopleOn} rankOn={rankOn} onView={goView} onEditProfile={openEdit}
             /></LazyBoundary>
           </div>
         )}
+        {peopleOn && clubPagesMounted && <LazyBoundary><MemberViews
+          part="pages" view={nav.view} rankOn={rankOn} meUid={meUid} today={today} onBack={() => goView('more')}
+          onRankMissing={() => { setRankGone(true); go('more', true); }}
+        /></LazyBoundary>}
       </main>
 
       {authMounted && <LazyBoundary><AuthModal auth={auth} /></LazyBoundary>}
@@ -495,6 +511,11 @@ export function SchedulerPage() {
       {clubOn && formMounted && <LazyBoundary><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} played={profile.played} /></LazyBoundary>}
       {auth.cloudOn && watchMounted && <LazyBoundary><WatchListModal w={watches} /></LazyBoundary>}
       {clubOn && guideMounted && <LazyBoundary><PushGuide push={push} /></LazyBoundary>}
+      {(asking || editOpen) && <LazyBoundary><MemberViews
+        part="modal" fill={asking} auth={auth} profile={profileOn ? profile : null}
+        onClose={() => { if (asking) setAskedOff(meUid); setEditOpen(false); }}
+        onMissing={() => { setEditGone(true); setEditOpen(false); }}
+      /></LazyBoundary>}
       <PushBanner onOpen={openFromBanner} />
       <Toaster />
     </div>

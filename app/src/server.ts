@@ -128,9 +128,10 @@ interface WatchApiError extends ApiError {
   body?: { error?: string; message?: string; event?: EventDto };
 }
 
+type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 /* token 이 null 이면 Authorization 헤더를 싣지 않는다(카카오 로그인처럼 인증 전 POST). */
 /* keepalive: 탭이 닫히거나 가려진 뒤에도 요청이 끝까지 가게(미뤄 둔 지우기, §4.9 내 정보) */
-async function send<T>(path: string, token: string | null, method: 'GET' | 'POST' | 'DELETE', body?: unknown, keepalive = false): Promise<T> {
+async function send<T>(path: string, token: string | null, method: Method, body?: unknown, keepalive = false): Promise<T> {
   const res = await fetch(base() + path, {
     method,
     ...(keepalive ? { keepalive: true } : {}),
@@ -152,7 +153,7 @@ async function send<T>(path: string, token: string | null, method: 'GET' | 'POST
   return res.json();
 }
 
-const authed = <T>(path: string, token: string, method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> =>
+const authed = <T>(path: string, token: string, method: Method, body?: unknown): Promise<T> =>
   send<T>(path, token, method, body);
 
 /* 실측: GET은 배열이 아니라 { limit, watches } 객체로 온다(작업명세서 §4.5 문서와 다른 점). */
@@ -207,6 +208,8 @@ export interface MeDto {
   role: 'ADMIN' | 'MEMBER' | null;
   status: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REMOVED';
   kakaoLinked: boolean;
+  /* §4.11 — null 은 아직 안 채움, 필드가 없으면(undefined) 서버가 프로필을 모른다(묻지도 보이지도 않는다) */
+  profile?: ProfileDto | null;
 }
 
 export interface MemberDto {
@@ -217,7 +220,23 @@ export interface MemberDto {
   createdAt: string;
   decidedAt: string | null;
   hasDevice: boolean;
+  profile?: ProfileDto | null;
 }
+
+/* ── 멤버 프로필·랭킹 (작업명세서 §4.11) ── 장르·MBTI 목록과 화면 규칙은 지연 청크(memberProfile.ts)에 둔다 */
+export type Genre = '공포' | '스릴러' | '추리' | '미스터리' | '감성' | '드라마' | '코믹' | '판타지' | 'SF' | '어드벤처' | '잠입' | '액션' | '기타';
+export type Mbti = 'ISTJ' | 'ISFJ' | 'INFJ' | 'INTJ' | 'ISTP' | 'ISFP' | 'INFP' | 'INTP'
+  | 'ESTP' | 'ESFP' | 'ENFP' | 'ENTP' | 'ESTJ' | 'ESFJ' | 'ENFJ' | 'ENTJ' | 'UNKNOWN';
+export interface LifeTheme { themeName: string; branchName: string | null; themeKey: string | null }
+export interface ProfileDto {
+  realName: string;
+  birthDate: string; // YYYY-MM-DD
+  mbti: Mbti;
+  roomCount: number;
+  genres: Genre[];
+  lifeTheme: LifeTheme;
+}
+export interface RankMonthDto { month: string; ranks: { rank: number; uid: string; nickname: string; count: number }[] }
 
 /* 로그인 전이라 토큰이 없다 — 받은 customToken 으로 Firebase 에 로그인하는 건 호출부 몫. */
 export const kakaoLogin = (code: string, redirectUri: string): Promise<{ customToken: string }> =>
@@ -228,8 +247,17 @@ export const kakaoLink = (code: string, redirectUri: string, token: string): Pro
 
 export const getMe = (token: string): Promise<MeDto> => authed('/api/me', token, 'GET');
 
-export const joinClub = (nickname: string, token: string): Promise<MeDto> =>
-  authed('/api/me/join', token, 'POST', { nickname });
+/* profile 은 서버가 선택으로 받는다(옛 서버는 무시) — 화면이 필수로 받아 함께 보낸다 */
+export const joinClub = (nickname: string, profile: ProfileDto | null, token: string): Promise<MeDto> =>
+  authed('/api/me/join', token, 'POST', profile ? { nickname, profile } : { nickname });
+
+/* 별명·프로필을 통째로 바꾼다(PENDING·APPROVED). 서버가 모르면 본문 없는 404 */
+export const updateProfile = (nickname: string, profile: ProfileDto, token: string): Promise<MeDto> =>
+  authed('/api/me/profile', token, 'PUT', { nickname, profile });
+
+/* from·to 는 YYYY-MM, 둘 다 포함, 12달까지. 최신 달 먼저 */
+export const rankings = async (from: string, to: string, token: string): Promise<RankMonthDto[]> =>
+  (await authed<RankMonthDto[]>(`/api/club/rankings?from=${from}&to=${to}`, token, 'GET')).map((m) => ({ ...m, ranks: m.ranks ?? [] }));
 
 export const listMembers = (status: 'PENDING' | 'APPROVED' | 'ALL', token: string): Promise<MemberDto[]> =>
   authed(`/api/admin/members?status=${status}`, token, 'GET');
@@ -312,9 +340,13 @@ export interface EventDto {
   canManage: boolean;
 }
 
+/* §4.11 에서 늘어난 필드는 옛 서버면 빠져 온다 — 정규화하지 않고 undefined 로 둔다(프로필 없음 = null 과 구별) */
 export interface ClubMemberDto {
   uid: string;
   nickname: string;
+  role?: 'ADMIN' | 'MEMBER';
+  approvedAt?: string | null;
+  profile?: ProfileDto | null;
 }
 
 const EVENTS = '/api/club/events';

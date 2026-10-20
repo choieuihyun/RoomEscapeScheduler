@@ -4,7 +4,9 @@ import type { EventDto } from '../server';
 import type { UseAuthReturn } from '../useAuth';
 import { withoutPending, type UseProfileReturn } from '../useProfile';
 import type { UsePushDeviceReturn } from '../usePushDevice';
+import type { View } from '../useView';
 import { Avatar } from './Avatar';
+import { ProfileFacts } from './MemberViews';
 import { PastCard, PlayedCard, PushCard } from './ProfilePage';
 import { GoogleMark, KakaoMark } from './SsoMarks';
 
@@ -27,7 +29,9 @@ const ICON: Partial<Record<MoreRowId, ReactNode>> = {
   played: <Ic><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.8 2.8L16 9.8" /></Ic>,
   past: <Ic><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5" /><path d="M3.5 3.5v5h5M12 7.5V12l3 2" /></Ic>,
   push: <Ic><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></Ic>,
-  members: <Ic><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Ic>,
+  people: <Ic><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Ic>,
+  ranking: <Ic><path d="M5 20v-8M12 20V5M19 20v-5" /></Ic>,
+  members: <Ic><circle cx="10" cy="8" r="4" /><path d="M3 21c0-4 3-7 7-7 1.4 0 2.7.4 3.8 1M15 18.5l2 2 4-4" /></Ic>,
   dark: <Ic><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></Ic>,
   tour: <Ic><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></Ic>,
   kakao: <span className="more-kakao"><KakaoMark /></span>,
@@ -52,6 +56,7 @@ const PUSH_CHIP: Record<NonNullable<UsePushDeviceReturn['card']>, { text: string
 
 export function MorePage({
   active, auth, profile, profileOn, clubOn, isAdmin, pendingCount, push, dark, onToggleTheme, onTour, onMembers, onOpenEvent,
+  peopleOn, rankOn, onView, onEditProfile,
 }: {
   /* 지금 더보기 화면인지 — 아래 탭으로 다시 들어오면 목록부터 보인다 */
   active: boolean;
@@ -59,6 +64,9 @@ export function MorePage({
   isAdmin: boolean; pendingCount: number; push: UsePushDeviceReturn;
   dark: boolean; onToggleTheme: () => void; onTour: () => void;
   onMembers: () => void; onOpenEvent: (ev: EventDto) => void;
+  peopleOn: boolean; rankOn: boolean; onView: (v: View) => void;
+  /* 프로필 고치기(§4.11) — 서버가 고치기를 모르거나 가입 신청 전이면 없다 */
+  onEditProfile?: () => void;
 }) {
   const [sub, setSub] = useState<Sub | null>(readSub);
   useEffect(() => {
@@ -87,7 +95,7 @@ export function MorePage({
 
   const m = auth.member;
   const loggedIn = !!auth.me;
-  const groups = moreGroups({ loggedIn, profileOn, clubOn, isAdmin, member: m, providerIds: auth.providerIds });
+  const groups = moreGroups({ loggedIn, profileOn, clubOn, isAdmin, member: m, providerIds: auth.providerIds, peopleOn, rankOn });
   /* 하위 화면은 그 그룹이 보일 때만 — 로그아웃했으면 목록으로 */
   const subOk = sub !== null && (sub === 'push' ? loggedIn && clubOn : loggedIn && profileOn);
 
@@ -127,6 +135,7 @@ export function MorePage({
 
   const act: Partial<Record<MoreRowId, () => void>> = {
     played: () => openSub('played'), past: () => openSub('past'), push: () => openSub('push'),
+    people: () => onView('people'), ranking: () => onView('ranking'),
     members: onMembers, dark: onToggleTheme, tour: onTour,
     kakao: auth.linkKakao, google: () => void auth.linkGoogle(), join: () => auth.openAuth(), logout: () => void auth.logout(),
   };
@@ -180,6 +189,8 @@ export function MorePage({
               {linkLine && <span className="more-me-sub">{linkLine}</span>}
             </div>
           </div>
+          {/* 내 프로필(§4.11) — 가입 신청한 사람·승인 멤버이고 서버가 프로필을 알 때 */}
+          {(m?.status === 'PENDING' || m?.status === 'APPROVED') && <ProfileFacts p={m.profile} onEdit={onEditProfile} />}
           {profileOn && (
             <div className="more-stats">
               <div><b>{playedN}</b><span>해 본 테마</span></div>

@@ -19,13 +19,14 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   /* 화면 전체를 덮으니 바깥을 눌러 닫을 곳이 없다 — Esc 와 오른쪽 위 × 로 닫는다 */
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeAuth(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.isComposing && e.keyCode !== 229) closeAuth(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, closeAuth]);
 
   const status = auth.member?.status;
   let body;
+  const joining = !!auth.me && !auth.memberLoading && (status === 'NONE' || status === 'REJECTED');
   if (auth.me && auth.memberLoading) {
     body = <><h3>확인하는 중…</h3><p className="msub">동호회 가입 상태를 불러오고 있어요.</p>
       <div className="mbtns"><button className="btn" type="button" onClick={auth.closeAuth}>닫기</button></div></>;
@@ -97,7 +98,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   }
 
   return (
-    <div className={'modal auth-modal' + (open ? ' on' : '')} role="dialog" aria-modal="true" aria-label="로그인">
+    <div className={'modal auth-modal' + (open ? ' on' : '') + (joining ? ' auth-join' : '')} role="dialog" aria-modal="true" aria-label="로그인">
       <button className="auth-x" type="button" aria-label="닫기" onClick={closeAuth}>×</button>
       <div className="mbox">
         <div className="auth-logo" aria-hidden="true">Flo<span className="dim">duler</span></div>

@@ -2,7 +2,7 @@ import type { View } from './useView';
 
 /* 좁은 화면(≤900px)의 아래 탭(§4.59·§4.60) — 홈 · 계산 · 캘린더 · 빈자리 · 더보기.
    앞 네 칸은 왼쪽 메뉴와 같은 조건으로만 보이고, 맨 오른쪽 더보기는 로그아웃이어도 늘 있다
-   (로그인·다크 모드·사용법이 그 안에 있다). 내 정보·멤버 관리는 더보기 안으로 들어가서
+   (로그인·다크 모드·사용법이 그 안에 있다). 내 정보·멤버 관리·멤버 목록·랭킹은 더보기 안으로 들어가서
    그 화면들에 있을 때도 더보기 칸이 강조된다. 칸이 2개 미만이면 빈 배열 — 더보기가 늘 있어 실제로는 생기지 않는다. */
 export type BottomTabId = View | 'watches';
 export interface BottomTab {
@@ -30,6 +30,7 @@ export function bottomTabs(o: {
     tabs.push({ id: 'calendar', label: '캘린더', on: o.view === 'calendar', gated: o.gated });
     tabs.push({ id: 'watches', label: '빈자리', on: false, count: o.watchCount, gated: o.gated });
   }
-  tabs.push({ id: 'more', label: '더보기', on: o.view === 'more' || o.view === 'profile' || o.view === 'members', pending });
+  const v = o.view;
+  tabs.push({ id: 'more', label: '더보기', on: v === 'more' || v === 'profile' || v === 'members' || v === 'people' || v === 'ranking', pending });
   return tabs.length < 2 ? [] : tabs;
 }

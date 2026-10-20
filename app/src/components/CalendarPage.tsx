@@ -361,7 +361,12 @@ export function CalendarPage({
     ><i className={'cal-key ' + k} />{label}</button>
   );
 
-  return (
+  return (<>
+    {/* 머리말은 이 청크 안에 둔다 — 진입 청크 크기(§4.64) */}
+    <header className="page-head">
+      <h1>캘린더</h1>
+      <p>{clubOn ? '동호회 일정과 저장한 일정, 빈자리 알림을' : '저장한 일정과 빈자리 알림을'} 날짜별로 모아 봐요. 날짜를 누르면 그날 예약할 수 있는 회차도 볼 수 있어요.</p>
+    </header>
     <section className="calpage">
       <div className="cal-toolbar">
         <button className="cal-nav" type="button" onClick={ctl.prev} aria-label="이전" title="이전 (←)">‹</button>
@@ -526,5 +531,5 @@ export function CalendarPage({
         </div>
       )}
     </section>
-  );
+  </>);
 }

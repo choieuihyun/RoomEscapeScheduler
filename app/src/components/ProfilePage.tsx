@@ -5,6 +5,7 @@ import { isPlayableName, searchThemes, sourceLabel } from '../played';
 import { PLAYED_MIN, checkPlayedOn, fullDay, groupByYear, matchPlayed, playedSummary, sortPlayed, type PlayedSort } from '../playedView';
 import type { EventDto, MeDto, PlayedDto, ThemeRef } from '../server';
 import { Avatar } from './Avatar';
+import { ProfileFacts } from './MemberViews';
 import { showToast } from '../toast';
 import { pageRows, withoutPending, type UseProfileReturn } from '../useProfile';
 import type { UsePushDeviceReturn } from '../usePushDevice';
@@ -42,7 +43,7 @@ function addedText(r: { existed: boolean; row: PlayedDto }, playedOn: string | n
 const dowClass = (dow: number) => (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
 
 export function ProfilePage({
-  profile, member, photo, providerIds, isAdmin, pendingCount, onMembers, onOpenEvent, push,
+  profile, member, photo, providerIds, isAdmin, pendingCount, onMembers, onOpenEvent, push, onEditProfile, onBack,
 }: {
   profile: UseProfileReturn;
   /* 구글 사진 주소 — 없으면 이름 첫 글자 */
@@ -55,6 +56,10 @@ export function ProfilePage({
   pendingCount: number;
   onMembers: () => void;
   onOpenEvent: (ev: EventDto) => void;
+  /* 프로필 고치기(§4.11) — 서버가 고치기를 모르면 없다 */
+  onEditProfile?: () => void;
+  /* 좁은 화면의 "‹ 더보기" — 머리말은 이 청크에 둔다(진입 청크 크기) */
+  onBack: () => void;
 }) {
   const { played } = profile;
   const kept = played === null ? null : withoutPending(played, profile.pendingIds);
@@ -71,7 +76,11 @@ export function ProfilePage({
   /* 지난 일정 수 — 서버가 주는 전체 수(받은 쪽 수와 상관없이) */
   const pastCount = profile.pastTotal ?? '–';
 
-  return (
+  return (<>
+    <header className="page-head">
+      <button type="button" className="page-back" onClick={onBack}><span aria-hidden="true">‹</span> 더보기</button>
+      <h1>내 정보</h1>
+    </header>
     <div className={'pf-grid' + (isAdmin ? ' admin' : '')}>
       <div className="pf-col">
         {isAdmin && (
@@ -88,6 +97,7 @@ export function ProfilePage({
           <b className="home-name">{nickname} 님</b>
           <span className={'chip-info pf-role' + (isAdmin ? ' role' : '')}>{isAdmin ? '운영진' : '멤버'}</span>
           {linkLine && <span className="pf-link">{linkLine}</span>}
+          <ProfileFacts p={member?.profile} onEdit={onEditProfile} />
           <div className="pf-stats">
             <div><b>{kept === null ? '–' : kept.length}</b><span>해 본 테마</span></div>
             <div><b>{pastCount}</b><span>동호회 일정</span></div>
@@ -100,7 +110,7 @@ export function ProfilePage({
 
       <PastCard profile={profile} onOpenEvent={onOpenEvent} />
     </div>
-  );
+  </>);
 }
 
 /* 지난 동호회 일정 카드 — 내 정보 세 번째 칸, 좁은 화면 더보기의 하위 화면(§4.60)이 같이 쓴다 */

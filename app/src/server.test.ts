@@ -3,9 +3,9 @@ import {
   addParticipant, conflictOf, createEvent, deleteEvent, errorCode, getEvent, isMissingApi, joinClub, kakaoLogin,
   leaveEvent, listClubMembers, listEvents, listMembers, memberAction, removeParticipant, sayClub, setBooked,
   setMemberRole, updateEvent, listPlayed, addPlayed, deletePlayed, memberPlayed, listThemes, myPastEvents, freshThemes, joinEvent, setAvailability, clearAvailability,
-  pushTest, deviceStatus, pushTestMessage,
+  pushTest, deviceStatus, pushTestMessage, updateProfile, rankings,
 } from './server';
-import type { EventInput } from './server';
+import type { EventInput, ProfileDto } from './server';
 
 /* fetch 를 대체해 요청 모양만 본다 — 서버 없이 계약(작업명세서 §4.6)을 확인한다. */
 function stubFetch(status: number, body: unknown) {
@@ -34,7 +34,7 @@ describe('동호회 API 호출', () => {
 
   it('joinClub 은 Bearer 를 싣는다', async () => {
     const fn = stubFetch(200, { uid: 'u', nickname: '곰', role: null, status: 'PENDING', kakaoLinked: false });
-    await joinClub('곰', 'TOK');
+    await joinClub('곰', null, 'TOK');
     const { url, init, headers } = call(fn);
     expect(url).toContain('/api/me/join');
     expect(headers.Authorization).toBe('Bearer TOK');
@@ -57,6 +57,55 @@ describe('동호회 API 호출', () => {
   });
 });
 
+describe('멤버 프로필·랭킹 (§4.11)', () => {
+  const PROFILE: ProfileDto = {
+    realName: '김방탈', birthDate: '1997-06-28', mbti: 'ENFP', roomCount: 312, genres: ['공포', '추리'],
+    lifeTheme: { themeName: '메모리컴퍼니', branchName: '키이스케이프 강남점', themeKey: 'k-mem' },
+  };
+
+  it('가입 신청에 프로필을 함께 싣는다', async () => {
+    const fn = stubFetch(200, { uid: 'u', nickname: '곰', role: null, status: 'PENDING', kakaoLinked: false, profile: PROFILE });
+    const me = await joinClub('곰', PROFILE, 'T');
+    expect(JSON.parse(call(fn).init.body as string)).toEqual({ nickname: '곰', profile: PROFILE });
+    expect(me.profile).toEqual(PROFILE);
+  });
+
+  it('프로필 고치기는 PUT /api/me/profile 에 별명과 통째로', async () => {
+    const fn = stubFetch(200, { uid: 'u', nickname: '새별명', role: 'MEMBER', status: 'APPROVED', kakaoLinked: false, profile: PROFILE });
+    await updateProfile('새별명', PROFILE, 'T');
+    const { url, init, headers } = call(fn);
+    expect(url).toContain('/api/me/profile');
+    expect(init.method).toBe('PUT');
+    expect(headers.Authorization).toBe('Bearer T');
+    expect(JSON.parse(init.body as string)).toEqual({ nickname: '새별명', profile: PROFILE });
+  });
+
+  it('랭킹은 YYYY-MM 범위로 묻고, ranks 가 빠져 와도 빈 배열', async () => {
+    const fn = stubFetch(200, [{ month: '2026-10', ranks: [{ rank: 1, uid: 'a', nickname: '곰', count: 3 }] }, { month: '2026-09' }]);
+    const r = await rankings('2026-08', '2026-10', 'T');
+    expect(call(fn).url).toContain('/api/club/rankings?from=2026-08&to=2026-10');
+    expect(r[1].ranks).toEqual([]);
+  });
+
+  it('옛 서버 응답(profile 필드 없음)은 그대로 undefined — null(안 채움)과 구별한다', async () => {
+    stubFetch(200, { uid: 'u', nickname: '곰', role: 'MEMBER', status: 'APPROVED', kakaoLinked: false });
+    expect((await joinClub('곰', PROFILE, 'T')).profile).toBeUndefined();
+    stubFetch(200, [{ uid: 'u', nickname: '곰' }]);
+    const [m] = await listClubMembers('T');
+    expect(m.profile).toBeUndefined();
+    expect(m.role).toBeUndefined();
+  });
+
+  it('랭킹 API 를 모르는 서버(본문 없는 404)는 isMissingApi, BAD_RANGE 는 서버 문구', async () => {
+    stubFetch(404, {});
+    expect(isMissingApi(await rankings('2026-08', '2026-10', 'T').catch(e => e))).toBe(true);
+    stubFetch(400, { error: 'BAD_RANGE', message: '랭킹은 한 번에 12달까지 볼 수 있어요.' });
+    const err = await rankings('2025-01', '2026-10', 'T').catch(e => e);
+    expect(isMissingApi(err)).toBe(false);
+    expect(sayClub(err)).toBe('랭킹은 한 번에 12달까지 볼 수 있어요.');
+  });
+});
+
 describe('sayClub', () => {
   it('카카오 코드 재사용 400 은 서버 문구 그대로', async () => {
     stubFetch(400, { error: 'KAKAO_CODE_INVALID', message: '카카오 로그인이 만료됐어요. 다시 눌러 주세요.' });
@@ -66,7 +115,7 @@ describe('sayClub', () => {
 
   it('404 면 서버가 모른다는 문구', async () => {
     stubFetch(404, {});
-    const err = await joinClub('a', 'T').catch(e => e);
+    const err = await joinClub('a', null, 'T').catch(e => e);
     expect(sayClub(err)).toBe('서버가 아직 동호회 기능을 몰라요. 잠시 뒤 다시 열어 주세요.');
   });
 
@@ -88,7 +137,7 @@ describe('요청 시간 제한', () => {
   it('요청에 AbortSignal 이 실린다', async () => {
     const f = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
     vi.stubGlobal('fetch', f);
-    await joinClub('a', 'T');
+    await joinClub('a', null, 'T');
     expect(f.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
   });
 });

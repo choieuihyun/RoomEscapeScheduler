@@ -19,6 +19,8 @@ const IcHome = () => <Icon><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13
 const IcCalc = () => <Icon><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" /></Icon>;
 const IcCal = () => <Icon><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></Icon>;
 const IcPeople = () => <Icon><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Icon>;
+const IcAdmin = () => <Icon><circle cx="10" cy="8" r="4" /><path d="M3 21c0-4 3-7 7-7 1.4 0 2.7.4 3.8 1M15 18.5l2 2 4-4" /></Icon>;
+const IcRank = () => <Icon><path d="M5 20v-8M12 20V5M19 20v-5" /></Icon>;
 const IcMe = () => <Icon><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7.5 8-7.5s8 3.1 8 7.5" /></Icon>;
 const IcBell = () => <Icon><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></Icon>;
 const IcHelp = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></Icon>;
@@ -32,13 +34,15 @@ const FOLD_KEY = 'flod.lnb.folded';
 const readFold = () => { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; } };
 
 export function SideNav({
-  view, onView, auth, homeOn, profileOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, children,
+  view, onView, auth, homeOn, profileOn, peopleOn, rankOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, children,
 }: {
   view: View | null; onView: (v: View) => void; auth: UseAuthReturn;
   /* 승인 멤버(이고 일정 API 가 있을 때)만 "홈" 메뉴 */
   homeOn: boolean;
   /* 승인 멤버이고 서버가 해 본 테마 API 를 알 때만 "내 정보" 메뉴 */
   profileOn: boolean;
+  /* 승인 멤버이고 서버가 프로필(§4.11)을 알 때 "멤버", 랭킹 API 도 있으면 "랭킹" */
+  peopleOn: boolean; rankOn: boolean;
   watchCount: number; watchLimit: number; onWatches: () => void;
   onTour: () => void; dark: boolean; onToggleTheme: () => void;
   /* 운영진에게만 "멤버 관리" 메뉴와 승인 대기 숫자 */
@@ -61,7 +65,13 @@ export function SideNav({
   };
   /* 로그인했지만 아직 승인 전이면 동호회 메뉴에 "승인 후" 꼬리표를 단다 */
   const gated = !!auth.me && auth.member !== null && auth.member.status !== 'APPROVED';
-  const item = (v: View) => 'lnb-item' + (view === v ? ' on' : '');
+  /* 화면 메뉴 한 줄 — 아이콘 · 이름 · 뒤에 붙는 꼬리표나 숫자 */
+  const menu = (v: View, label: string, icon: ReactNode, tail?: ReactNode) => (
+    <button className={'lnb-item' + (view === v ? ' on' : '')} type="button" onClick={() => onView(v)} title={label}
+      aria-current={view === v ? 'page' : undefined}>
+      {icon}<span className="lnb-txt">{label}</span>{tail}
+    </button>
+  );
   const tabs = bottomTabs({ homeOn, cloudOn: auth.cloudOn, isAdmin, gated, pendingCount, watchCount, view });
   const tabIcon: Partial<Record<BottomTabId, ReactNode>> = {
     home: <IcHome />, calc: <IcCalc />, calendar: <IcCal />, watches: <IcBell />, more: <IcMore />,
@@ -97,42 +107,20 @@ export function SideNav({
       </div>
       {meSlot && <div className="lnb-me-slot">{meSlot}</div>}
       <nav className="lnb-menu" aria-label="메뉴">
-        {homeOn && (
-          <button className={item('home')} type="button" onClick={() => onView('home')} title="홈"
-            aria-current={view === 'home' ? 'page' : undefined}>
-            <IcHome /><span className="lnb-txt">홈</span>
-          </button>
-        )}
-        <button className={item('calc')} type="button" onClick={() => onView('calc')} title="시간표 계산"
-          aria-current={view === 'calc' ? 'page' : undefined}>
-          <IcCalc /><span className="lnb-txt">시간표 계산</span>
-        </button>
-        {auth.cloudOn && (
-          <button className={item('calendar')} type="button" onClick={() => onView('calendar')} title="캘린더"
-            aria-current={view === 'calendar' ? 'page' : undefined}>
-            <IcCal /><span className="lnb-txt">캘린더</span>
-            {gated && <span className="chip-info muted lnb-tag">승인 후</span>}
-          </button>
-        )}
+        {homeOn && menu('home', '홈', <IcHome />)}
+        {menu('calc', '시간표 계산', <IcCalc />)}
+        {auth.cloudOn && menu('calendar', '캘린더', <IcCal />, gated && <span className="chip-info muted lnb-tag">승인 후</span>)}
         {auth.cloudOn && (
           <button className="lnb-item" type="button" onClick={onWatches} title="빈자리 알림">
             <IcBell /><span className="lnb-txt">빈자리 알림</span>
             {gated ? <span className="chip-info muted lnb-tag">승인 후</span> : <span className="badge-n muted lnb-count">{watchCount}/{watchLimit}</span>}
           </button>
         )}
-        {profileOn && (
-          <button className={item('profile')} type="button" onClick={() => onView('profile')} title="내 정보"
-            aria-current={view === 'profile' ? 'page' : undefined}>
-            <IcMe /><span className="lnb-txt">내 정보</span>
-          </button>
-        )}
-        {isAdmin && (
-          <button className={item('members')} type="button" onClick={() => onView('members')} title="멤버 관리"
-            aria-current={view === 'members' ? 'page' : undefined}>
-            <IcPeople /><span className="lnb-txt">멤버 관리</span>
-            {pendingCount > 0 && <span className="badge-n lnb-badge" aria-label={`승인 대기 ${pendingCount}명`}>{pendingCount}</span>}
-          </button>
-        )}
+        {profileOn && menu('profile', '내 정보', <IcMe />)}
+        {peopleOn && menu('people', '멤버', <IcPeople />)}
+        {rankOn && menu('ranking', '랭킹', <IcRank />)}
+        {isAdmin && menu('members', '멤버 관리', <IcAdmin />,
+          pendingCount > 0 && <span className="badge-n lnb-badge" aria-label={`승인 대기 ${pendingCount}명`}>{pendingCount}</span>)}
       </nav>
       {!folded && children}
       <div className="lnb-foot">

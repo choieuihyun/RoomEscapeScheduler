@@ -1,59 +1,28 @@
 import { useState } from 'react';
 import type { UseAuthReturn } from '../useAuth';
-import { sayClub } from '../server';
+import { ProfileForm } from './MemberViews';
 
 /* 로그인 창 안에서 이어지는 동호회 단계 — 가입 신청 / 승인 대기 / 나간 계정.
    어느 것을 보일지는 AuthModal 이 member.status 로 가른다. */
 
-/* 서버(§4.6)와 같은 셈법: 앞뒤 공백을 떼고 코드 포인트로 1~20자 */
-const NICK_MAX = 20;
-const nickLength = (s: string) => [...s.trim()].length;
-
+/* 가입 신청 — 오픈채팅 닉네임과 프로필 전부(§4.11, 전부 필수). 거절된 뒤 다시 신청하면 지난 값으로 채워 둔다.
+   옛 서버는 profile 을 모르고 무시하므로 그대로 보낸다. */
 export function JoinPanel({ auth }: { auth: UseAuthReturn }) {
-  const [nick, setNick] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-  const len = nickLength(nick);
   const rejected = auth.member?.status === 'REJECTED';
-  const over = len > NICK_MAX;
-  const ok = len >= 1 && !over;
-
-  async function submit() {
-    if (!ok || busy) return;
-    setBusy(true); setErr('');
-    try { await auth.join(nick.trim()); }
-    catch (e) { setErr(sayClub(e)); }
-    finally { setBusy(false); }
-  }
 
   return (
     <>
       <h3>동호회 가입 신청</h3>
       {rejected && <p className="auth-box warn">지난 신청이 거절됐어요. 운영진과 이야기한 뒤 다시 신청해 주세요.</p>}
       <p className="msub">
-        로그인됐어요. 오픈채팅방에서 쓰는 닉네임을 적어 주세요. 운영진이 닉네임을 보고 승인하면
-        동호회 일정과 빈자리 알림을 쓸 수 있어요.
+        로그인됐어요. 오픈채팅방에서 쓰는 닉네임과 프로필을 적어 주세요. 운영진이 닉네임을 보고 승인하면
+        동호회 일정과 빈자리 알림을 쓸 수 있어요. 프로필은 승인된 멤버들에게 보여요.
       </p>
-      <div className="mrow">
-        <label htmlFor="join-nick">오픈채팅 닉네임</label>
-        <input
-          id="join-nick" autoFocus autoComplete="off" spellCheck={false} placeholder="채팅방 닉네임"
-          value={nick} onChange={e => setNick(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') submit(); }}
-        />
-        <span className={'auth-hint' + (over ? ' bad' : '')}>
-          {over ? `닉네임은 ${NICK_MAX}자까지 쓸 수 있어요 (지금 ${len}자)`
-            : len === 0 ? '1~20자 · 운영진이 알아볼 수 있게 채팅방 닉네임 그대로'
-            : `${len}/${NICK_MAX}자`}
-        </span>
-      </div>
-      <p className="merr">{err}</p>
-      <div className="mbtns col">
-        <button className="btn-go" type="button" disabled={!ok || busy} onClick={submit}>
-          {busy ? '잠시만…' : '가입 신청'}
-        </button>
-        <button className="btn" type="button" onClick={auth.closeAuth}>나중에 할게요</button>
-      </div>
+      <ProfileForm
+        seed={{ nickname: auth.member?.nickname ?? null, profile: auth.member?.profile }} nickLabel="오픈채팅 닉네임" nickHint="운영진이 알아볼 수 있게 채팅방 닉네임 그대로"
+        submitLabel="가입 신청" playedCount={null} autoFocus
+        onSubmit={(nickname, profile) => auth.join(nickname, profile)} onCancel={auth.closeAuth} cancelLabel="나중에 할게요"
+      />
     </>
   );
 }

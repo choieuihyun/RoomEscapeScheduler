@@ -3,7 +3,7 @@ import type { Me } from './cloud';
 import { handleKakaoReturn } from './authFlow';
 import { appRedirectUri, isKakaoInApp, kakaoAuthUrl, readKakaoReturn } from './kakao';
 import { beginKakaoTrip, endKakaoTrip } from './kakaoTrip';
-import { getMe, joinClub, kakaoLink, kakaoLogin, type MeDto } from './server';
+import { getMe, joinClub, kakaoLink, kakaoLogin, type MeDto, type ProfileDto } from './server';
 
 declare global {
   interface Window {
@@ -276,11 +276,11 @@ export function useAuth() {
     }
   }, []);
 
-  /* 동호회 가입 신청. 실패는 호출한 화면이 sayClub 으로 보여 주도록 그대로 던진다 */
-  const join = useCallback(async (nickname: string) => {
+  /* 동호회 가입 신청(프로필 함께, §4.11). 실패는 호출한 화면이 sayClub 으로 보여 주도록 그대로 던진다 */
+  const join = useCallback(async (nickname: string, profile: ProfileDto) => {
     const token = await (await cloud()).idToken();
     if (!token) throw new Error('로그인해 주세요.');
-    setMember(await joinClub(nickname, token));
+    setMember(await joinClub(nickname, profile, token));
   }, []);
 
   const logout = useCallback(async () => {
@@ -294,6 +294,8 @@ export function useAuth() {
   return {
     cloudOn, me, authLoading, open, id, setId, pw, setPw, err, busy, openAuth, closeAuth, submit, logout,
     member, memberLoading, memberChecked: !!uid && checkedUid === uid, refreshMember, recheckMember, loginKakao, loginGoogle, linkKakao, linkGoogle, join,
+    /* 프로필 고치기(§4.11) 창이 서버가 준 MeDto 를 넣는다 — 요청은 그 창(지연 청크)이 한다 */
+    adoptMember: setMember,
     inKakaoApp, legacyOpen, setLegacyOpen, linkErr, returnView, providerIds: uid ? providerIds : [],
   };
 }

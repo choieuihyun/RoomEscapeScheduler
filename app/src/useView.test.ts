@@ -29,6 +29,13 @@ describe('readView', () => {
   it('운영진이 아니면 ?view=members 는 계산으로', () => {
     expect(readView('?view=members', '', on)).toBe('calc');
   });
+  it('멤버 목록·랭킹(§4.11)은 켜졌을 때만, 아니면 계산으로', () => {
+    expect(readView('?view=people', '', { ...on, peopleOn: true })).toBe('people');
+    expect(readView('?view=ranking', '', { ...on, peopleOn: true, rankOn: true })).toBe('ranking');
+    expect(readView('?view=people', '', on)).toBe('calc');
+    expect(readView('?view=ranking', '', { ...on, peopleOn: true, rankOn: false })).toBe('calc');
+    expect(readView('?view=nope', '', on)).toBe('home');
+  });
   it('운영진이면 members', () => {
     expect(readView('?view=members', '', { ...on, isAdmin: true })).toBe('members');
   });

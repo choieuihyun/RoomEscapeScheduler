@@ -4,7 +4,7 @@ import { formatKst, memberName, sameNicknameUids, splitMembers, type UseMembersR
 
 /* 멤버 관리 화면(기획 §4.54, 운영진 전용). 승인 대기 → 멤버 → 접힌 "지난 신청" 순.
    버튼을 숨기는 건 편의일 뿐이고 승인·운영진 여부는 서버가 모든 요청에서 다시 본다. */
-export function MembersPage({ ctl, meUid }: { ctl: UseMembersReturn; meUid: string }) {
+export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meUid: string; onBack: () => void }) {
   const { list, err, busy, act, setRole } = ctl;
   const parts = useMemo(() => splitMembers(list ?? []), [list]);
   const dup = useMemo(() => sameNicknameUids(list ?? []), [list]);
@@ -18,7 +18,12 @@ export function MembersPage({ ctl, meUid }: { ctl: UseMembersReturn; meUid: stri
     if (confirm(`${memberName(m)} 님의 운영진을 해제할까요?\n멤버는 그대로 남아요.`)) void setRole(m, 'MEMBER');
   };
 
-  return (
+  return (<>
+    <header className="page-head">
+      <button type="button" className="page-back" onClick={onBack}><span aria-hidden="true">‹</span> 더보기</button>
+      <h1>멤버 관리</h1>
+      <p>가입 신청을 오픈채팅 닉네임과 맞춰 보고 승인해 주세요. 한 사람이 계정을 여러 개 만들었으면 하나만 승인하면 돼요.</p>
+    </header>
     <div className="mem">
       {err && <p className="mem-err" role="alert">{err}</p>}
       {list === null && !err && <p className="mem-empty">불러오는 중이에요…</p>}
@@ -102,5 +107,5 @@ export function MembersPage({ ctl, meUid }: { ctl: UseMembersReturn; meUid: stri
         </section>
       </>)}
     </div>
-  );
+  </>);
 }

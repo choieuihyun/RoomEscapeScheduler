@@ -2012,3 +2012,129 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
   .more-row:not(.static):hover{background:var(--btn-bg-hover)}
 }
 @media(prefers-reduced-motion:reduce){.more-switch,.more-switch::after{transition:none}}
+
+/* ── 멤버 프로필 · 멤버 목록 · 랭킹 (§4.64, 작업명세서 §4.11) ──
+   다우오피스식 차분한 톤 — 칩은 테두리 칩, 강조는 청록 글자 하나, 메달·그라데이션 없이. */
+/* 가입 신청 단계는 칸이 많아 로그인 화면 한 줄을 넓힌다 */
+.auth-modal.auth-join .mbox{max-width:520px}
+.pfm{display:flex;flex-direction:column;min-height:0}
+.pfm-body{display:flex;flex-direction:column;gap:18px}
+.pfm-row{display:flex;flex-direction:column;gap:6px}
+.pfm-row>label,.pfm-set legend{font-size:14px;font-weight:500;color:var(--ink)}
+.pfm-row input{width:100%;box-sizing:border-box;font-size:14px}
+.pfm-note{margin:0;font-size:12px;line-height:1.55;color:var(--ink3)}
+.pfm-bad{margin:0;font-size:12.5px;line-height:1.5;color:var(--red-text);font-weight:500}
+.pfm .pfm-err{margin:0;padding:10px 12px;text-align:left;border-radius:var(--r-sm);background:var(--red-soft)}
+.pfm-set{margin:0;padding:0;border:0;min-width:0;display:flex;flex-direction:column;gap:8px}
+.pfm-set legend{padding:0;margin-bottom:8px}
+.pfm-n{margin-left:6px;font-size:12px;font-weight:400;color:var(--ink3);font-variant-numeric:tabular-nums}
+.pfm-mbti{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.pfm-mbti .chip-pick{width:100%;padding:0;height:34px;font-size:13px;letter-spacing:.02em}
+.pfm-unknown.chip-pick{width:100%;height:34px}
+.pfm-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pfm-rooms{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2)}
+.pfm-row .pfm-rooms input{width:110px;font-variant-numeric:tabular-nums}
+.pfm-rooms em{margin-left:6px;font-style:normal;font-size:12.5px;color:var(--ink3)}
+.pfm-picked{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line2);border-radius:var(--r-sm);background:var(--surface2)}
+.pfm-picked-n{flex:1;min-width:0;font-size:14px;color:var(--ink);word-break:keep-all}
+.pfm-link{align-self:flex-start;padding:2px 0;border:none;background:none;font-family:inherit;font-size:13px;color:var(--blue-text);cursor:pointer}
+.pfm-link:hover{text-decoration:underline}
+.pfm-link:focus-visible{outline:none;box-shadow:var(--ring);border-radius:4px}
+.pfm-find,.pfm-manual{display:flex;flex-direction:column;gap:8px}
+.pfm-find input{width:100%;box-sizing:border-box}
+.pfm-sub{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink2)}
+.pfm-sub em{font-style:normal;color:var(--ink3)}
+.pfm-sub input{width:100%;box-sizing:border-box}
+.pfm-results{list-style:none;margin:0;padding:4px;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.pfm-results button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;padding:8px 10px;border:none;border-radius:6px;
+  background:none;font-family:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.pfm-results button:hover{background:var(--btn-bg-hover)}
+.pfm-results button:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+.pfm-results b{font-size:13.5px;font-weight:500}
+.pfm-results span{font-size:12px;color:var(--ink3)}
+.pfm-foot{display:flex;gap:8px;margin-top:22px}
+.pfm-foot .btn,.pfm-foot .btn-go{height:44px;padding:0 18px;font-size:14px;font-weight:500;border-radius:var(--r-sm)}
+.pfm-foot .btn-go{flex:1}
+.btn-go.off{opacity:.45;box-shadow:none}
+.pfm-left{margin:8px 0 0;font-size:12.5px;color:var(--ink3);text-align:right}
+/* 프로필 창 — 위 머리·아래 단추는 그대로, 가운데 폼만 굴린다 */
+.pfm-modal .bk-box{max-width:560px}
+.pfm-lead{margin:0 0 -4px;font-size:13.5px;line-height:1.6;color:var(--ink2);word-break:keep-all}
+.pfm-modal .pfm{flex:1}
+.pfm-modal .pfm-body{flex:1;min-height:0;overflow:auto;padding:16px 24px 20px}
+.pfm-modal .pfm-foot{margin:0;padding:12px 20px 14px;border-top:1px solid var(--line);justify-content:flex-end}
+.pfm-modal .pfm-foot .btn-go{flex:none;min-width:96px}
+.pfm-modal .pfm-left{margin:0;padding:0 20px 12px}
+.pfm-modal h3:focus{outline:none}
+
+/* 내 프로필 덩이 — 더보기·내 정보 카드 */
+.pfx{align-self:stretch;display:flex;flex-direction:column;gap:12px;padding:14px 0 16px;border-top:1px solid var(--line);text-align:left}
+.pf-me .pfx{margin-top:16px}
+.pfx-dl{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.pfx-dl>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pfx-dl>div.wide{grid-column:1 / -1}
+.pfx-dl dt{font-size:12px;color:var(--ink3)}
+.pfx-dl dd{margin:0;font-size:14px;color:var(--ink);word-break:keep-all}
+.pfx-sub{color:var(--ink3);font-size:13px}
+.pfx-genres,.ppl-genres{display:flex;flex-wrap:wrap;gap:5px}
+.pfx-g{display:inline-flex;align-items:center;height:22px;padding:0 9px;box-sizing:border-box;border:1px solid var(--line2);border-radius:var(--pill);
+  background:var(--surface);font-size:12px;color:var(--ink2)}
+.pfx-edit{align-self:flex-start;height:32px;padding:0 12px;font-size:13px;border-radius:var(--r-sm)}
+.pfx-fill{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 16px;padding:12px 14px;border:1px dashed var(--line2);border-radius:var(--r-sm);
+  background:var(--surface2);font-family:inherit;font-size:13.5px;color:var(--ink2);text-align:left;cursor:pointer}
+.pfx-fill i{margin-left:auto;font-style:normal;font-size:18px;color:var(--ink3)}
+.pfx-fill:hover{border-color:var(--btn-line-hover);color:var(--ink)}
+.pf-me .pfx-fill{margin:16px 0 0}
+
+/* 멤버 목록 */
+.ppl{display:flex;flex-direction:column;gap:16px;padding-bottom:48px}
+.ppl-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.ppl-q{position:relative;flex:0 1 320px;min-width:200px}
+/* 전역 input 규칙(:not 세 개)과 특이도를 맞춰 왼쪽 돋보기 자리를 비운다 */
+.ppl .ppl-q input[type=search]{width:100%;box-sizing:border-box;padding-left:36px;border-radius:10px}
+.ppl-sort{display:flex;gap:6px}
+.ppl-n{margin-left:auto;font-size:12.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.ppl-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.ppl-card{display:flex;flex-direction:column;gap:9px;padding:16px 18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.ppl-card.me{border-color:var(--blue-line)}
+.ppl-top{display:flex;align-items:center;gap:12px;min-width:0}
+.ppl-ava.ava{width:40px;height:40px;font-size:16px}
+.ppl-who{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ppl-n1{display:flex;align-items:center;gap:6px;min-width:0}
+.ppl-n1 b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--ink)}
+.ppl-n1 .chip-info{height:20px;padding:0 7px;font-size:11px}
+.ppl-real{font-size:12.5px;color:var(--ink3)}
+.ppl-line{margin:0;font-size:13.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.ppl-life{margin:0;font-size:13px;color:var(--ink);line-height:1.5;word-break:keep-all}
+.ppl-life span{margin-right:2px;font-size:12px;color:var(--ink3)}
+.ppl-none{margin:0;font-size:13px;color:var(--ink3)}
+
+/* 랭킹 */
+.rk{display:flex;flex-direction:column;gap:14px;padding-bottom:48px}
+.rk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.rk-month{padding:18px 18px 12px}
+.rk-h{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:16px;font-weight:600;color:var(--ink)}
+.rk-now{font-size:12px;font-weight:400;color:var(--ink3)}
+.rk-empty{margin:0;padding:14px 0 10px;font-size:13px;color:var(--ink3)}
+.rk-list{list-style:none;margin:0;padding:0}
+.rk-row{display:flex;align-items:center;gap:12px;min-height:40px;padding:0 8px;margin:0 -8px;border-radius:var(--r-sm);border-top:1px solid var(--line)}
+.rk-row:first-child{border-top:none}
+.rk-row.me{background:var(--surface2)}
+.rk-no{flex:none;width:22px;text-align:center;font-size:15px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.rk-row.first .rk-no{color:var(--blue-text)}
+.rk-nick{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;color:var(--ink)}
+.rk-me{margin-left:6px;font-size:12px;color:var(--ink3)}
+.rk-cnt{flex:none;font-size:13.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.rk-more{align-self:center;min-width:200px;padding:0 18px}
+@media(max-width:1100px){
+  .ppl-grid,.rk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:640px){
+  .ppl-grid,.rk-grid{grid-template-columns:minmax(0,1fr)}
+  .ppl-q{flex:1 1 100%}
+  .ppl-n{margin-left:0}
+  .rk-more{align-self:stretch}
+  .pfm-modal .bk-box{max-height:none;height:100%;border-radius:0}
+  .pfm-modal.modal{padding:0}
+  .pfm-modal .pfm-body{padding:14px 18px 18px}
+}
