@@ -5,7 +5,8 @@ import { GoogleMark, KakaoMark } from './SsoMarks';
 
 /* 왼쪽 메뉴 아래 계정 자리 — 닉네임·상태 칩·로그아웃, 아이디 계정이면 카카오·구글 연결 상자(§4.54).
    접힌 메뉴·좁은 화면에선 이름 대신 동그란 머리글자만 두고, 연결 상자는 눌러야 뜨는 작은 창이 된다. */
-export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
+/* onEditProfile: 프로필을 고칠 수 있을 때(가입 신청한 사람·승인 멤버이고 서버가 프로필을 알 때) — 넓은 화면에서 승인 전에도 내 프로필을 볼 곳 */
+export function AcctWidget({ auth, onEditProfile }: { auth: UseAuthReturn; onEditProfile?: () => void }) {
   const [linkOpen, setLinkOpen] = useState(false);
   /* 연결 실패 문구가 오면 팝업(접힌 메뉴·좁은 화면)을 저절로 펴서 보이게 한다. 사용자가 닫은 문구는 다시 안 편다 */
   const [closedErr, setClosedErr] = useState('');
@@ -56,6 +57,9 @@ export function AcctWidget({ auth }: { auth: UseAuthReturn }) {
           {nickname && auth.me.id && <span className="acct-sub">아이디: {auth.me.id}</span>}
         </div>
       </div>
+      {onEditProfile && (
+        <button className="acct-prof" type="button" onClick={onEditProfile}>{m?.profile ? '프로필 고치기' : '프로필 채우기'}</button>
+      )}
       {needJoin && (
         <button className="btn acct-join" type="button" onClick={() => auth.openAuth()}>가입 신청</button>
       )}

@@ -34,7 +34,7 @@ const FOLD_KEY = 'flod.lnb.folded';
 const readFold = () => { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; } };
 
 export function SideNav({
-  view, onView, auth, homeOn, profileOn, peopleOn, rankOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, children,
+  view, onView, auth, homeOn, profileOn, peopleOn, rankOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, onEditProfile, children,
 }: {
   view: View | null; onView: (v: View) => void; auth: UseAuthReturn;
   /* 승인 멤버(이고 일정 API 가 있을 때)만 "홈" 메뉴 */
@@ -47,6 +47,8 @@ export function SideNav({
   onTour: () => void; dark: boolean; onToggleTheme: () => void;
   /* 운영진에게만 "멤버 관리" 메뉴와 승인 대기 숫자 */
   isAdmin: boolean; pendingCount: number;
+  /* 계정 칸의 "프로필 고치기" — 고칠 수 있을 때만 */
+  onEditProfile?: () => void;
   /* 화면별로 메뉴 아래에 붙는 것 — 캘린더 화면의 미니 달력·내 캘린더(§4.50) */
   children?: ReactNode;
 }) {
@@ -130,7 +132,7 @@ export function SideNav({
         <button className="lnb-item lnb-tool" type="button" onClick={onToggleTheme} title={dark ? '라이트 모드' : '다크 모드'}>
           {dark ? <IcSun /> : <IcMoon />}<span className="lnb-txt">{dark ? '라이트 모드' : '다크 모드'}</span>
         </button>
-        <div className="lnb-acct acct"><AcctWidget auth={auth} /></div>
+        <div className="lnb-acct acct"><AcctWidget auth={auth} onEditProfile={onEditProfile} /></div>
       </div>
     </aside>
     {tabs.length > 0 && (

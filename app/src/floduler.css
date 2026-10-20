@@ -1497,6 +1497,12 @@ button:active{transform:scale(.97)}
 .acct-join{align-self:flex-start;height:32px;padding:0 12px}
 .acct-out{align-self:flex-start;height:32px;padding:0 12px}
 .acct-linkbtn{display:none}
+/* 계정 칸의 "프로필 고치기" — 넓은 화면에서만(좁은 화면은 더보기 카드, 접은 메뉴는 숨김) */
+.acct-prof{align-self:flex-start;height:auto;padding:0;border:0;background:none;font-family:inherit;font-size:12.5px;color:var(--blue-text);cursor:pointer}
+.acct-prof:hover{text-decoration:underline}
+.acct-prof:active{transform:none}
+.acct-prof:focus-visible{outline:none;box-shadow:var(--ring);border-radius:4px}
+.lnb.folded .acct-prof{display:none}
 .acct-link{display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--surface2);
   border:1px solid var(--line);border-radius:var(--r)}
 .acct-link>b{font-size:13px;color:var(--ink)}
@@ -1522,6 +1528,7 @@ button:active{transform:scale(.97)}
   .acct-who,.lnb.folded .acct-who{display:none}
   .ava.acct-ava,.lnb.folded .ava.acct-ava{display:inline-flex}
   .acct-join,.acct-out,.acct-linkbtn{display:inline-flex;height:30px;padding:0 9px;font-size:12.5px}
+  .acct-prof{display:none}
   .acct-wrap:not(.open) .acct-link{display:none}
   .acct-wrap.open .acct-link,.lnb.folded .acct-wrap.open .acct-link{display:flex;position:fixed;top:54px;right:12px;
     left:auto;bottom:auto;width:min(300px,calc(100vw - 24px));z-index:40;box-shadow:var(--sh-up)}
@@ -1552,6 +1559,9 @@ button:active{transform:scale(.97)}
 .mem-row:last-child{border-bottom:none}
 .mem-row b,.mem-table b{font-size:14.5px;font-weight:700;color:var(--ink)}
 .mem-sub{font-size:12.5px;color:var(--ink3)}
+.mem-prof{flex-basis:100%;font-size:12.5px;line-height:1.5;color:var(--ink2)}
+.mem-prof.none{color:var(--ink3)}
+.mem-table .mem-prof{display:block;margin-top:3px;max-width:380px}
 .mem-warn{font-size:11.5px;font-weight:500;color:var(--chip-warn-fg);background:var(--surface);border:1px solid var(--line2);border-radius:var(--pill);padding:1px 9px}
 .mem-btns{margin-left:auto;display:flex;gap:6px}
 .mem-ok,.mem-ok:hover{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}

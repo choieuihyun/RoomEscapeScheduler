@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { firstRange, mergeMonths, monthLabel, olderRange, topRanks } from '../memberProfile';
+import { allEmpty, firstRange, mergeMonths, monthLabel, olderRange, topRanks } from '../memberProfile';
 import { isMissingApi, rankings, sayClub, type RankMonthDto } from '../server';
 import { showToast } from '../toast';
 
@@ -13,6 +13,8 @@ export function RankingPage({ active, today, meUid, onBack, onMissing }: {
   const [oldest, setOldest] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  /* 더 보기로 받은 3달이 모두 비었으면 더 옛날은 묻지 않는다(단추를 숨긴다) */
+  const [ended, setEnded] = useState(false);
   const seq = useRef(0);
   /* 부르는 쪽이 매번 새 함수를 넘겨도 다시 받지 않게 — 최신 것만 기억한다 */
   const missingRef = useRef(onMissing);
@@ -20,12 +22,12 @@ export function RankingPage({ active, today, meUid, onBack, onMissing }: {
 
   const inflight = useRef('');
   /* 마지막으로 물은 범위 — "다시 시도"는 이 범위만 다시 묻는다(받아 둔 전체를 다시 물으면 12달을 넘어 BAD_RANGE 가 된다) */
-  const lastRange = useRef<{ from: string; to: string } | null>(null);
-  const load = useCallback(async (range: { from: string; to: string }) => {
+  const lastRange = useRef<{ from: string; to: string; older: boolean } | null>(null);
+  const load = useCallback(async (range: { from: string; to: string }, older = false) => {
     const key = range.from + range.to;
     if (inflight.current === key) return; // 같은 범위를 이미 묻는 중(들어오자마자 두 번 불려도 한 번만)
     inflight.current = key;
-    lastRange.current = range;
+    lastRange.current = { ...range, older };
     const my = ++seq.current;
     setBusy(true);
     try {
@@ -36,6 +38,7 @@ export function RankingPage({ active, today, meUid, onBack, onMissing }: {
       setMonths((had) => mergeMonths(had ?? [], got, range));
       setOldest((o) => (o === null || range.from < o ? range.from : o));
       setErr('');
+      if (older && allEmpty(got)) setEnded(true);
     } catch (e) {
       if (my !== seq.current) return;
       if (isMissingApi(e)) { showToast('서버가 아직 랭킹을 몰라요. 잠시 뒤에 다시 열어 주세요.'); missingRef.current(); return; }
@@ -61,7 +64,7 @@ export function RankingPage({ active, today, meUid, onBack, onMissing }: {
       <p>달마다 해 본 테마를 많이 기록한 멤버 5등까지예요. 날짜를 적은 기록만 세고, 같은 수면 같은 순위예요.</p>
     </header>
     <div className="rk">
-      {err && <div className="home-empty rk-err"><p>{err}</p><button type="button" className="btn" disabled={busy} onClick={() => void load(lastRange.current ?? first)}>다시 시도</button></div>}
+      {err && <div className="home-empty rk-err"><p>{err}</p><button type="button" className="btn" disabled={busy} onClick={() => void (lastRange.current ? load(lastRange.current, lastRange.current.older) : load(first))}>다시 시도</button></div>}
       {!err && months === null && <p className="mem-empty">불러오는 중이에요…</p>}
       {months && (
         <div className="rk-grid">
@@ -89,8 +92,8 @@ export function RankingPage({ active, today, meUid, onBack, onMissing }: {
           })}
         </div>
       )}
-      {months && oldest && (
-        <button type="button" className="pf-more rk-more" disabled={busy} onClick={() => void load(olderRange(oldest))}>
+      {months && oldest && !ended && (
+        <button type="button" className="pf-more rk-more" disabled={busy} onClick={() => void load(olderRange(oldest), true)}>
           {busy ? '불러오는 중…' : '이전 달 더 보기'}
         </button>
       )}

@@ -43,6 +43,8 @@ export function checkBirth(masked: string, today: string): BirthCheck {
   if (!d) return { ok: false, why: 'empty' };
   if (d.length < 8) return { ok: false, why: 'partial' };
   const y = +d.slice(0, 4), m = +d.slice(4, 6), day = +d.slice(6, 8);
+  /* 1940 전 해(0001 같은 아주 작은 해 포함)는 범위 문구로 — Date.UTC 는 0~99 년을 1900 년대로 읽어 "없는 날짜"가 됐다 */
+  if (y < +BIRTH_MIN.slice(0, 4)) return { ok: false, why: 'range' };
   const t = new Date(Date.UTC(y, m - 1, day));
   if (m < 1 || m > 12 || t.getUTCFullYear() !== y || t.getUTCMonth() !== m - 1 || t.getUTCDate() !== day) return { ok: false, why: 'invalid' };
   const iso = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
@@ -209,6 +211,8 @@ export function addMonths(ym: string, n: number): string {
   const i = +ym.slice(0, 4) * 12 + (+ym.slice(5, 7) - 1) + n;
   return `${Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`;
 }
+/* 받은 달이 모두 비었나(기록 없는 달만, 또는 하나도 안 옴) — 더 보기로 받은 3달이 이러면 더 옛날은 묻지 않는다 */
+export const allEmpty = (got: RankMonthDto[]): boolean => got.every((m) => m.ranks.length === 0);
 export const monthsBetween = (from: string, to: string): number =>
   (+to.slice(0, 4) * 12 + +to.slice(5, 7)) - (+from.slice(0, 4) * 12 + +from.slice(5, 7)) + 1;
 

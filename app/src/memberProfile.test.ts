@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GENRES, MBTI_ROWS, addMonths, ageKst, birthLabel, checkBirth, cleanRooms, draftFrom, draftIssues, emptyDraft, firstRange, lifeFromRef,
+  GENRES, MBTI_ROWS, addMonths, ageKst, allEmpty, birthLabel, checkBirth, cleanRooms, draftFrom, draftIssues, emptyDraft, firstRange, lifeFromRef,
   lifeLabel, maskBirth, matchPerson, mergeMonths, monthLabel, monthsBetween, olderRange, personLine, searchLife, sortPeople,
   toProfile, toggleGenre, topRanks, type Draft,
 } from './memberProfile';
@@ -50,6 +50,11 @@ describe('생일 칸', () => {
     expect(checkBirth('1940.01.01', TODAY).ok).toBe(true);
     expect(checkBirth('2026.10.20', TODAY).ok).toBe(true);
     expect(checkBirth('2026.10.21', TODAY)).toEqual({ ok: false, why: 'range' });
+  });
+  it('1940 전 아주 작은 해(0001·0099·1000)도 "없는 날짜"가 아니라 범위 문구', () => {
+    expect(checkBirth('0001.01.01', TODAY)).toEqual({ ok: false, why: 'range' });
+    expect(checkBirth('0099.06.28', TODAY)).toEqual({ ok: false, why: 'range' });
+    expect(checkBirth('1000.02.30', TODAY)).toEqual({ ok: false, why: 'range' });
   });
 });
 
@@ -192,6 +197,11 @@ describe('랭킹 달 범위', () => {
     expect(addMonths('2026-01', -1)).toBe('2025-12');
     expect(addMonths('2025-12', 1)).toBe('2026-01');
     expect(monthLabel('2026-07')).toBe('2026년 7월');
+  });
+  it('더 보기로 받은 달이 모두 비면(또는 하나도 안 오면) 끝', () => {
+    expect(allEmpty([{ month: '2026-07', ranks: [] }, { month: '2026-06', ranks: [] }])).toBe(true);
+    expect(allEmpty([])).toBe(true);
+    expect(allEmpty([{ month: '2026-07', ranks: [] }, { month: '2026-06', ranks: [{ rank: 1, uid: 'a', nickname: 'a', count: 1 }] }])).toBe(false);
   });
   it('받은 달 합치기 — 최신 달 먼저, 빠진 달은 빈 달, 같은 달은 새것', () => {
     const r1 = { month: '2026-10', ranks: [{ rank: 1, uid: 'a', nickname: '곰', count: 3 }] };

@@ -384,7 +384,7 @@ export function SchedulerPage() {
     function onKeydown(e: KeyboardEvent) {
       if (e.key !== 'Escape' || e.isComposing || e.keyCode === 229) return; // 한글 조합 중 Esc 는 조합만 끝낸다
       if (loadModal.open) loadModal.close();
-      if (auth.open) auth.closeAuth();
+      /* 로그인 창은 AuthModal 이 스스로 닫는다 — 가입 칸에 적은 게 있으면 먼저 묻는다 */
       if (saveModal.open) saveModal.close();
       if (eventForm.open) eventForm.close();
       if (watches.open) watches.close();
@@ -439,7 +439,7 @@ export function SchedulerPage() {
         view={nav.view} onView={goView} auth={auth} homeOn={homeOn} profileOn={profileOn} peopleOn={peopleOn} rankOn={rankOn}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
-        isAdmin={isAdmin} pendingCount={pendingCount}
+        isAdmin={isAdmin} pendingCount={pendingCount} onEditProfile={openEdit}
       >
         {nav.view === 'calendar' && <CalendarSide ctl={cal} clubOn={homeOn} playedOn={profileOn} />}
       </SideNav>

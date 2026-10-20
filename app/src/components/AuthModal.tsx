@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { UseAuthReturn } from '../useAuth';
 import { GoogleMark, KakaoMark } from './SsoMarks';
 import { JoinPanel, PendingPanel, RemovedPanel } from './JoinPanel';
@@ -10,6 +10,12 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   const idRef = useRef<HTMLInputElement>(null);
   const pwRef = useRef<HTMLInputElement>(null);
   const { open, closeAuth } = auth;
+  /* 가입 신청 칸에 적은 게 있나 — 있으면 ×·Esc·"나중에 할게요" 로 닫을 때 묻는다(프로필 창과 같게) */
+  const joinDirty = useRef(false);
+  const close = useCallback(() => {
+    if (joinDirty.current && !confirm('적은 내용이 사라져요. 닫을까요?')) return;
+    closeAuth();
+  }, [closeAuth]);
 
   /* 기존 아이디 칸을 펼쳤을 때만 아이디 칸으로 커서를 보낸다 — 열자마자 키보드가 올라오지 않게 */
   useEffect(() => {
@@ -19,10 +25,10 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   /* 화면 전체를 덮으니 바깥을 눌러 닫을 곳이 없다 — Esc 와 오른쪽 위 × 로 닫는다 */
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.isComposing && e.keyCode !== 229) closeAuth(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.isComposing && e.keyCode !== 229) close(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, closeAuth]);
+  }, [open, close]);
 
   const status = auth.member?.status;
   let body;
@@ -31,7 +37,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
     body = <><h3>확인하는 중…</h3><p className="msub">가입 상태를 불러오고 있어요.</p>
       <div className="mbtns"><button className="btn" type="button" onClick={auth.closeAuth}>닫기</button></div></>;
   } else if (auth.me && (status === 'NONE' || status === 'REJECTED')) {
-    body = <JoinPanel key={status} auth={auth} />;
+    body = <JoinPanel key={status} auth={auth} dirtyRef={joinDirty} onClose={close} />;
   } else if (auth.me && status === 'PENDING') {
     body = <PendingPanel auth={auth} />;
   } else if (auth.me && status === 'REMOVED') {
@@ -99,7 +105,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
 
   return (
     <div className={'modal auth-modal' + (open ? ' on' : '') + (joining ? ' auth-join' : '')} role="dialog" aria-modal="true" aria-label="로그인">
-      <button className="auth-x" type="button" aria-label="닫기" onClick={closeAuth}>×</button>
+      <button className="auth-x" type="button" aria-label="닫기" onClick={close}>×</button>
       <div className="mbox">
         <div className="auth-logo" aria-hidden="true">Flo<span className="dim">duler</span></div>
         {body}

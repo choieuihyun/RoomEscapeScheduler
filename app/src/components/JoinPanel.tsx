@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, type MutableRefObject } from 'react';
 import type { UseAuthReturn } from '../useAuth';
 import { ProfileForm } from './MemberViews';
 
@@ -7,8 +7,14 @@ import { ProfileForm } from './MemberViews';
 
 /* 가입 신청 — 오픈채팅 닉네임과 프로필 전부(§4.11, 전부 필수). 거절된 뒤 다시 신청하면 지난 값으로 채워 둔다.
    옛 서버는 profile 을 모르고 무시하므로 그대로 보낸다. */
-export function JoinPanel({ auth }: { auth: UseAuthReturn }) {
+export function JoinPanel({ auth, dirtyRef, onClose }: {
+  auth: UseAuthReturn;
+  /* 처음과 달라졌나 — 로그인 창이 닫을 때 묻는다. 이 패널이 사라지면(신청 성공 등) 끈다 */
+  dirtyRef: MutableRefObject<boolean>;
+  onClose: () => void;
+}) {
   const rejected = auth.member?.status === 'REJECTED';
+  useEffect(() => () => { dirtyRef.current = false; }, [dirtyRef]);
 
   return (
     <>
@@ -21,7 +27,7 @@ export function JoinPanel({ auth }: { auth: UseAuthReturn }) {
       <ProfileForm
         seed={{ nickname: auth.member?.nickname ?? null, profile: auth.member?.profile }} nickLabel="오픈채팅 닉네임" nickHint="운영진이 알아볼 수 있게 채팅방 닉네임 그대로"
         submitLabel="가입 신청" playedCount={null} autoFocus
-        onSubmit={(nickname, profile) => auth.join(nickname, profile)} onCancel={auth.closeAuth} cancelLabel="나중에 할게요"
+        onSubmit={(nickname, profile) => auth.join(nickname, profile)} onCancel={onClose} cancelLabel="나중에 할게요" dirtyRef={dirtyRef}
       />
     </>
   );
