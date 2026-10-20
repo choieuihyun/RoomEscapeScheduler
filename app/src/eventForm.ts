@@ -104,15 +104,17 @@ export function formFromEvent(ev: EventDto): FormState {
   };
 }
 
+const keyOk = (k: string | null | undefined): string | null => (k && cpLen(k) <= 80 ? k : null);
+
 /* 계산 결과 단계 → 구간 (결과 카드에서 일정으로 만들 때, E8). 예약은 아직 안 한 것으로 시작한다.
-   keys: 단계마다 서버 테마 키(불러온 카드만) — 해 본 테마 표시가 키로 맞춘다 */
+   keys: 단계마다 서버 테마 키(불러온 카드만) — 해 본 테마 표시가 키로 맞춘다. 저장 한도(80자)를 넘는 키는 싣지 않는다(eventPick 과 같다) */
 export function formFromSteps(date: string, steps: PathStep[], keys: (string | null)[] = []): FormState {
   return {
     ...emptyForm(date),
     ...nextDayDate(date, steps[0]?.start ?? null),
     allDay: false,
     segs: steps.slice(0, MAX_SEGS).map((st, i) => ({
-      themeName: st.name, branchName: st.place, themeKey: keys[i] ?? null,
+      themeName: st.name, branchName: st.place, themeKey: keyOk(keys[i]),
       start: fmt(st.start), end: fmt(st.end),
     })),
   };

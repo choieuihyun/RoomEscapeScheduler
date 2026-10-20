@@ -66,6 +66,12 @@ describe('planInsert — 계산 결과를 그 일정의 구간으로(일정 수�
     expect(p.input.segments[0]).toMatchObject({ startMin: 30, endMin: 110 });
   });
 
+  it('이름·지점은 40자로 자르고, 80자 넘는 테마 키는 싣지 않는다', () => {
+    const long = '가'.repeat(45);
+    const p = plan(ev(), '2026-10-25', [step(long, '나'.repeat(50), 600, 660)], ['k'.repeat(81)]);
+    expect(p.input.segments[0]).toMatchObject({ themeName: '가'.repeat(40), branchName: '나'.repeat(40), themeKey: null });
+  });
+
   it('제목이 없는 일정도 구간이 있으니 저장된다', () => {
     expect(plan(ev({ title: '', date: '2026-10-25', segments: [seg('A', 600)] })).input.title).toBe('');
   });

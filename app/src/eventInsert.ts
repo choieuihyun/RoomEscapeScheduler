@@ -9,6 +9,8 @@ import { conflictOf, errorCode, getEvent, sayClub, type EventDto, type EventInpu
 import { showToast } from './toast';
 import type { UseClubEventsReturn } from './useClubEvents';
 
+const clip = (t: string) => [...t.trim()].slice(0, 40).join('');
+
 export type InsertPlan = { input: EventInput; confirm: string; done: string } | { error: string };
 
 /* 일정 + 결과 → 수정 본문. 수정 창·"이 날짜로 정하기"와 같은 길(formFromEvent → toInput)이라 제목·위치·정원·메모는 그대로 간다.
@@ -21,9 +23,11 @@ export function planInsert(ev: EventDto, steps: PathStep[], keys: (string | null
   const day = date ?? ev.date;
   if (!day) return { error: '어느 날 회차인지 몰라서 날짜를 정할 수 없어요. 협의 도우미나 회차 불러오기로 넣은 테마로 계산해 주세요.' };
   const s = formFromSteps(day, steps, keys);
+  /* 고칠 창이 없으니 이름·지점은 저장 한도(40자)로 자른다(테마 찾아 넣기와 같다) — 넘으면 막다른 오류가 된다 */
+  const segs = s.segs.map((g) => ({ ...g, themeName: clip(g.themeName), branchName: clip(g.branchName) }));
   const r = toInput({
     ...formFromEvent(ev), dateMode: 'fixed', date: s.date, dateMoved: s.dateMoved, origDate: s.origDate,
-    allDay: false, segs: s.segs, booked: false,
+    allDay: false, segs, booked: false,
   });
   if ('error' in r) return r;
   const n = ev.segments.length;

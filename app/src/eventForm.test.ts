@@ -178,6 +178,13 @@ describe('eventForm', () => {
     expect(err(base({ title: '😀'.repeat(61) }))).toBe('제목은 60자까지예요.');
   });
 
+  it('formFromSteps 는 단계마다 서버 테마 키를 싣는다(없거나 80자를 넘으면 null)', () => {
+    const st = (start: number) => ({ name: 'A', place: 'P', start, end: start + 60 }) as PathStep;
+    const f = formFromSteps('2026-10-20', [st(600), st(700), st(800)], ['zero-gn:1', 'k'.repeat(81)]);
+    expect(f.segs.map((g) => g.themeKey)).toEqual(['zero-gn:1', null, null]);
+    expect(formFromSteps('2026-10-20', [st(600)]).segs[0].themeKey).toBeNull();
+  });
+
   it('formFromSteps 는 계산 결과 단계를 구간으로 (1440 이상은 24시간제로 접고 저장 때 다음날로)', () => {
     const step = (name: string, place: string, start: number, end: number) =>
       ({ i: 0, name, place, dur: end - start, start, end, soldout: false, move: 0 }) as PathStep;
