@@ -6,6 +6,7 @@ import { REGIONS, inRegion, pageAt, pageFor, pageOf, regionCounts, type PageAt, 
 import { ago, freshThemes, isMissingApi, sayClub, toSessions, type EventDto, type FreshDto, type FreshTheme } from '../server';
 import type { AddedTheme } from '../useLoadModal';
 import { PlayedDots } from './PlayedDots';
+import { WishToggle } from '../clubStore';
 
 /* 일정 상세의 협의 도우미 "어떤 테마가 좋을까요?"(§4.9, 계획 Task 8, 목업 ② 왼쪽 아래).
    그날 열린 회차가 있는 테마를 "아무도 안 해 봄" 먼저(서버가 세운 순서) 보이고, 고른 테마로 조합 계산을 연다.
@@ -206,6 +207,8 @@ export function EventHelper({ ev, onCalcThemes }: {
                     </span>
                     <PlayedDots dots={dots} />
                   </label>
+                  {/* 하고 싶어요(§4.12) — 라벨 밖에 둔다(누르면 체크가 같이 바뀌지 않게) */}
+                  <WishToggle theme={{ themeKey: t.themeKey || t.id, themeName: t.name, branchName: t.branchName }} />
                 </li>
               );
             })}

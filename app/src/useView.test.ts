@@ -36,6 +36,11 @@ describe('readView', () => {
     expect(readView('?view=ranking', '', { ...on, peopleOn: true, rankOn: false })).toBe('calc');
     expect(readView('?view=nope', '', on)).toBe('home');
   });
+  it('같이 가요(§4.12)는 위시 API 를 알 때만, 아니면 계산으로', () => {
+    expect(readView('?view=together', '', { ...on, togetherOn: true })).toBe('together');
+    expect(readView('?view=together', '', on)).toBe('calc');
+    expect(readView('?view=together', '', { ...on, togetherOn: false, peopleOn: true })).toBe('calc');
+  });
   it('운영진이면 members', () => {
     expect(readView('?view=members', '', { ...on, isAdmin: true })).toBe('members');
   });

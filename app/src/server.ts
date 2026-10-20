@@ -203,6 +203,9 @@ export function sayWatch(err: unknown): string {
 const APP_MSG: Record<string, string> = {
   NOT_MEMBER: '가입 승인을 받은 계정만 빈자리 알림을 걸 수 있어요.',
   NOT_CLUB_MEMBER: '가입 승인을 받은 계정만 일정을 볼 수 있어요.',
+  /* 같이 갈 사람 찾기(§4.12) */
+  BAD_WISH: '테마 이름을 확인해 주세요. 이름은 40자, 지점은 40자까지예요.',
+  TOO_MANY_WISHES: '하고 싶은 테마는 200개까지 올릴 수 있어요.',
 };
 export function serverMsg(e: WatchApiError): string {
   return APP_MSG[e.body?.error ?? ''] ?? e.body?.message ?? '';
@@ -522,6 +525,51 @@ export const freshThemes = async (eventId: number, date: string | null, token: s
 
 export const listClubMembers = (token: string): Promise<ClubMemberDto[]> =>
   authed('/api/club/members', token, 'GET');
+
+/* ── 같이 갈 사람 찾기 — 하고 싶은 테마 (작업명세서 §4.12) ── 알림은 없다(화면에서만) */
+export interface WishDto {
+  id: number;
+  themeKey: string | null;
+  themeName: string;
+  branchName: string | null;
+  /* 키로 서버가 아는 매장 이름(해 본 테마와 같다). 키 없음·모르는 키는 null */
+  storeName: string | null;
+  createdAt: string;
+}
+export interface WishInput { themeKey?: string | null; themeName: string; branchName?: string | null }
+/* 같은 테마끼리 묶은 것 — 원하는 사람이 많은 순 → 가장 최근 since 순. 키·이름·지점은 묶음 대표(가장 먼저 생긴 위시) 값 */
+export interface WishGroupDto {
+  themeKey: string | null;
+  themeName: string;
+  branchName: string | null;
+  storeName: string | null;
+  wanters: { uid: string; nickname: string; since: string }[]; // since 오래된 순
+  playedBy: string[]; // 승인 멤버 중 이 테마를 해 본 사람
+}
+
+/* 필드가 빠져 와도(배포 경주) 화면이 안 깨지게 — normPlayed 와 같은 까닭 */
+const normWish = (w: WishDto): WishDto => ({ ...w, storeName: w.storeName ?? null });
+const normGroup = (g: WishGroupDto): WishGroupDto => ({ ...g, storeName: g.storeName ?? null, wanters: g.wanters ?? [], playedBy: g.playedBy ?? [] });
+
+export const listMyWishes = async (token: string): Promise<WishDto[]> =>
+  (await authed<WishDto[]>('/api/me/wishes', token, 'GET')).map(normWish);
+
+/* 같은 테마가 이미 있으면 그 행을 그대로 준다(멱등) */
+export const addWish = async (body: WishInput, token: string): Promise<WishDto> =>
+  normWish(await authed<WishDto>('/api/me/wishes', token, 'POST', body));
+
+/* 이미 내려갔으면(NO_SUCH_WISH) 목적은 이뤄진 것이라 성공으로 끝낸다. 본문 없는 404(서버가 모름)는 그대로 던진다 */
+export async function deleteWish(id: number, token: string): Promise<void> {
+  try {
+    await authed<unknown>(`/api/me/wishes/${id}`, token, 'DELETE');
+  } catch (e) {
+    if (errorCode(e) === 'NO_SUCH_WISH') return;
+    throw e;
+  }
+}
+
+export const listClubWishes = async (token: string): Promise<WishGroupDto[]> =>
+  (await authed<WishGroupDto[]>('/api/club/wishes', token, 'GET')).map(normGroup);
 
 /* 수정 충돌(409 EVENT_CONFLICT)이면 서버가 실어 보낸 최신 일정을, 아니면 null. */
 export function conflictOf(err: unknown): EventDto | null {

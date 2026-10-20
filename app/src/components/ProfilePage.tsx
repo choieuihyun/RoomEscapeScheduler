@@ -9,6 +9,7 @@ import { ProfileFacts } from './MemberViews';
 import { showToast } from '../toast';
 import { pageRows, withoutPending, type UseProfileReturn } from '../useProfile';
 import type { UsePushDeviceReturn } from '../usePushDevice';
+import { WishToggle } from '../clubStore';
 
 /* 내 정보 — 계획 Task 7, 작업명세서 §4.9 "화면 쪽 약속". 홈과 같은 세 칸 카드:
    ① 프로필(닉네임·역할·로그인 수단·숫자 둘)과 그 아래 이 기기 알림(5단계, Task 11),
@@ -398,6 +399,7 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
               <div key={ref.themeKey} className={'pf-res' + (recorded ? ' done' : '')}>
                 <span className="pf-res-n">{ref.themeName}</span>
                 <span className="pf-res-b">{ref.storeName} · {ref.branchName}</span>
+                <WishToggle theme={{ themeKey: ref.themeKey, themeName: ref.themeName, branchName: ref.branchName }} />
                 {recorded ? <span className="pf-res-a">기록됨</span> : (
                   <button type="button" className="pf-res-btn" disabled={addingKey !== null || mBusy}
                     onClick={() => void pick(ref)}>{addingKey === ref.themeKey ? '기록 중…' : '해 봤어요'}</button>

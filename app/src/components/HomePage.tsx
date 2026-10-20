@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useClubStore } from '../clubStore';
 import { showToast } from '../toast';
 import type { UseProfileReturn } from '../useProfile';
 import type { View } from '../useView';
@@ -77,16 +78,19 @@ export function HomePage({
       showToast('새 버전이 나왔거나 연결이 끊겼어요. 새로 고침해 주세요.');
     }
   };
-  /* 바로가기 — 아래 탭에 있는 시간표 계산·빈자리 알림 대신 자주 쓰는 곳으로. 쓸 수 없는 칸은 뺀다 */
+  const club7 = useClubStore();
+  /* 바로가기 — 아래 탭에 있는 시간표 계산·빈자리 알림 대신 자주 쓰는 곳으로. 쓸 수 없는 칸은 뺀다.
+     네 칸까지(2×2) — 같이 가요(§4.12)가 켜지면 맨 뒤 랭킹이 빠진다(랭킹은 더보기·왼쪽 메뉴에 있다) */
   const tiles = [
     { key: 'new', label: '일정 만들기', on: true, go: onNewEvent,
       ic: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5" /></> },
+    { key: 'together', label: '같이 가요', on: club7.wishApi === 'on', go: () => onView('together'), ic: <path d="M5 21V4h11l-1.6 4L16 12H5" /> },
     { key: 'played', label: '해 본 테마 기록', on: !!profile, go: () => void openBulk(),
       ic: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 9.5l2.2 2.2L15 7M8 16h8" /></> },
     { key: 'people', label: '멤버', on: peopleOn, go: () => onView('people'),
       ic: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></> },
     { key: 'ranking', label: '랭킹', on: rankOn, go: () => onView('ranking'), ic: <path d="M5 20v-8M12 20V5M19 20v-5" /> },
-  ].filter((t) => t.on);
+  ].filter((t) => t.on).slice(0, 4);
   const [tab, setTab] = useState<Tab>('all');
   const [page, setPage] = useState(0);
   /* 지금 시각 — 1분마다(탭이 보일 때만, 다시 보이면 바로) 갱신해 끝난 일정·자정 넘긴 '내일'이 띠와 다음 일정에 반영되게 한다 */

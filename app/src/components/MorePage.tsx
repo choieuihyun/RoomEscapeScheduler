@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useClubStore } from '../clubStore';
 import { moreGroups, type MoreRow, type MoreRowId } from '../moreRows';
 import type { EventDto } from '../server';
 import type { UseAuthReturn } from '../useAuth';
@@ -29,6 +30,7 @@ const ICON: Partial<Record<MoreRowId, ReactNode>> = {
   played: <Ic><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.8 2.8L16 9.8" /></Ic>,
   past: <Ic><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5" /><path d="M3.5 3.5v5h5M12 7.5V12l3 2" /></Ic>,
   push: <Ic><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></Ic>,
+  together: <Ic><path d="M5 21V4h11l-1.6 4L16 12H5" /></Ic>,
   people: <Ic><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Ic>,
   ranking: <Ic><path d="M5 20v-8M12 20V5M19 20v-5" /></Ic>,
   members: <Ic><circle cx="10" cy="8" r="4" /><path d="M3 21c0-4 3-7 7-7 1.4 0 2.7.4 3.8 1M15 18.5l2 2 4-4" /></Ic>,
@@ -95,7 +97,10 @@ export function MorePage({
 
   const m = auth.member;
   const loggedIn = !!auth.me;
-  const groups = moreGroups({ loggedIn, profileOn, clubOn, isAdmin, member: m, providerIds: auth.providerIds, peopleOn, rankOn });
+  /* 같이 가요(§4.12)·송금 정보(§4.13) — 서버가 그 API 를 아는지는 공유 상태가 안다 */
+  const club7 = useClubStore();
+  const groups = moreGroups({ loggedIn, profileOn, clubOn, isAdmin, member: m, providerIds: auth.providerIds, peopleOn, rankOn,
+    togetherOn: clubOn && club7.wishApi === 'on' });
   /* 하위 화면은 그 그룹이 보일 때만 — 로그아웃했으면 목록으로 */
   const subOk = sub !== null && (sub === 'push' ? loggedIn && clubOn : loggedIn && profileOn);
 
@@ -135,7 +140,7 @@ export function MorePage({
 
   const act: Partial<Record<MoreRowId, () => void>> = {
     played: () => openSub('played'), past: () => openSub('past'), push: () => openSub('push'),
-    people: () => onView('people'), ranking: () => onView('ranking'),
+    together: () => onView('together'), people: () => onView('people'), ranking: () => onView('ranking'),
     members: onMembers, dark: onToggleTheme, tour: onTour,
     kakao: auth.linkKakao, google: () => void auth.linkGoogle(), join: () => auth.openAuth(), logout: () => void auth.logout(),
   };

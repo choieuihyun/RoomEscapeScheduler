@@ -30,7 +30,7 @@ describe('bottomTabs', () => {
   });
 
   it('더보기·내 정보·멤버 관리·멤버 목록·랭킹 화면에선 더보기 칸이 강조된다', () => {
-    for (const view of ['more', 'profile', 'members', 'people', 'ranking'] as const) {
+    for (const view of ['more', 'profile', 'members', 'people', 'ranking', 'together'] as const) {
       expect(onId(bottomTabs({ ...member, isAdmin: true, view }))).toEqual(['more']);
     }
   });

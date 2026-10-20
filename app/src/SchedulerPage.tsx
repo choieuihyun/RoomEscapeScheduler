@@ -188,7 +188,17 @@ export function SchedulerPage() {
   const editOn = canEditProfile(auth.member) && !editGone;
   const [editOpen, setEditOpen] = useState(false);
   const openEdit = editOn ? () => setEditOpen(true) : undefined;
-  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided, peopleOn, rankOn });
+  /* 7단계(§4.12) — 서버가 위시 API 를 아는지는 공유 상태(지연 모듈)가 첫 목록을 받아 알려 준다. 1: 같이 가요 */
+  const [club7, setClub7] = useState(0);
+  const meUid = auth.me?.uid ?? '';
+  useEffect(() => {
+    if (!homeOn) return;
+    let live = true;
+    import('./clubStore').then((m) => m.startClub(meUid, (f) => { if (live) setClub7(f); }), () => {});
+    return () => { live = false; };
+  }, [homeOn, meUid]);
+  const togetherOn = homeOn && (club7 & 1) > 0;
+  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided, peopleOn, rankOn, togetherOn });
   const onProfile = nav.view === 'profile' || nav.view === 'more';
   if (profileActive !== onProfile) setProfileActive(onProfile);
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
@@ -293,7 +303,6 @@ export function SchedulerPage() {
      로그인한 사람이 바뀔 때도 다시 읽는다. */
   const [linkId, setLinkId] = useState<number | null>(null);
   const authSettled = !auth.authLoading && (!auth.me || auth.memberChecked);
-  const meUid = auth.me?.uid ?? '';
   useEffect(() => {
     if (!auth.cloudOn || !authSettled) return;
     const read = () => { const id = readEventHash(location.hash); if (id !== null) setLinkId(id); };
@@ -425,7 +434,7 @@ export function SchedulerPage() {
   const profileMounted = useEver(nav.view === 'profile');
   const membersMounted = useEver(nav.view === 'members');
   const moreMounted = useEver(nav.view === 'more' && !wide);
-  const clubPagesMounted = useEver(nav.view === 'people' || nav.view === 'ranking');
+  const clubPagesMounted = useEver(nav.view === 'people' || nav.view === 'ranking' || nav.view === 'together');
   const formMounted = useEver(eventForm.open);
   const authMounted = useEver(auth.open);
   const loadMounted = useEver(loadModal.open);
@@ -447,7 +456,7 @@ export function SchedulerPage() {
   return (
     <div className="shell">
       <SideNav
-        view={nav.view} onView={goView} auth={auth} homeOn={homeOn} profileOn={profileOn} peopleOn={peopleOn} rankOn={rankOn}
+        view={nav.view} onView={goView} auth={auth} homeOn={homeOn} profileOn={profileOn} peopleOn={peopleOn} rankOn={rankOn} togetherOn={togetherOn}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
         isAdmin={isAdmin} pendingCount={pendingCount} onEditProfile={openEdit}
@@ -537,9 +546,11 @@ export function SchedulerPage() {
             /></LazyBoundary>
           </div>
         )}
-        {peopleOn && clubPagesMounted && <LazyBoundary><MemberViews
+        {(peopleOn || togetherOn) && clubPagesMounted && <LazyBoundary><MemberViews
           part="pages" view={nav.view} rankOn={rankOn} meUid={meUid} today={today} onBack={() => goView('more')}
           onRankMissing={() => { setRankGone(true); go('more', true); }}
+          togetherOn={togetherOn} events={club.events} played={profile.played}
+          onMakeEvent={(f) => eventForm.show(f, null)} onOpenEvent={openFromHome}
         /></LazyBoundary>}
       </main>
 

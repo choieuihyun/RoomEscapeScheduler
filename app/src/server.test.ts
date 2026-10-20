@@ -4,6 +4,7 @@ import {
   leaveEvent, listClubMembers, listEvents, listMembers, memberAction, removeParticipant, sayClub, setBooked,
   setMemberRole, updateEvent, listPlayed, addPlayed, deletePlayed, memberPlayed, listThemes, myPastEvents, freshThemes, joinEvent, setAvailability, clearAvailability,
   pushTest, deviceStatus, pushTestMessage, updateProfile, rankings, addWatch, sayWatch,
+  listMyWishes, addWish, deleteWish, listClubWishes,
 } from './server';
 import type { EventInput, ProfileDto } from './server';
 
@@ -404,5 +405,41 @@ describe('이 기기 알림 API (§4.10)', () => {
     expect(pushTestMessage({ devices: 3, delivered: 1, failed: 2 })).toBe('1대 기기로 보냈어요.');
     expect(pushTestMessage({ devices: 0, delivered: 0, failed: 0 })).toBe('이 계정에 등록된 기기가 없어요. 알림 켜기를 먼저 해 주세요.');
     expect(pushTestMessage({ devices: 1, delivered: 0, failed: 1 })).toBe('기기로 보내지 못했어요. 알림 켜기를 다시 해 주세요.');
+  });
+});
+
+describe('같이 갈 사람 찾기 API (§4.12)', () => {
+  it('내 위시 목록·올리기 모양, storeName 이 빠져 오면 null', async () => {
+    let fn = stubFetch(200, [{ id: 1, themeKey: null, themeName: '고백', branchName: null, createdAt: 'x' }]);
+    const list = await listMyWishes('T');
+    expect(call(fn).url).toContain('/api/me/wishes');
+    expect(list[0].storeName).toBeNull();
+    fn = stubFetch(200, { id: 2, themeKey: 'k', themeName: '월야애담', branchName: '홍대', storeName: '비트포비아', createdAt: 'x' });
+    await addWish({ themeKey: 'k', themeName: '월야애담', branchName: '홍대' }, 'T');
+    const { init } = call(fn);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ themeKey: 'k', themeName: '월야애담', branchName: '홍대' });
+  });
+
+  it('내리기 — NO_SUCH_WISH(이미 내려감)는 성공, 본문 없는 404(서버가 모름)는 던진다', async () => {
+    const fn = stubFetch(404, { error: 'NO_SUCH_WISH', message: '…' });
+    await expect(deleteWish(3, 'T')).resolves.toBeUndefined();
+    expect(call(fn).url).toContain('/api/me/wishes/3');
+    expect(call(fn).init.method).toBe('DELETE');
+    stubFetch(404, {});
+    const err = await deleteWish(3, 'T').catch((e) => e);
+    expect(isMissingApi(err)).toBe(true);
+  });
+
+  it('묶음 — 빠진 배열은 빈 배열로', async () => {
+    stubFetch(200, [{ themeKey: 'k', themeName: '월야애담', branchName: null }]);
+    const [g] = await listClubWishes('T');
+    expect(g).toMatchObject({ storeName: null, wanters: [], playedBy: [] });
+  });
+
+  it('오류 문구 — TOO_MANY_WISHES 는 앱 문구', async () => {
+    stubFetch(409, { error: 'TOO_MANY_WISHES', message: 'server' });
+    const err = await addWish({ themeName: 'a' }, 'T').catch((e) => e);
+    expect(sayClub(err)).toBe('하고 싶은 테마는 200개까지 올릴 수 있어요.');
   });
 });

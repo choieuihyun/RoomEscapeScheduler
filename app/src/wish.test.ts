@@ -1,0 +1,120 @@
+import { describe, expect, it } from 'vitest';
+import { toInput } from './eventForm';
+import type { EventDto, WishGroupDto } from './server';
+import { filterGroups, inPick, placeLabel, sameTheme, upcomingWith, wanterChips, wishForm, wishKey } from './wish';
+
+const G = (o: Partial<WishGroupDto> & { n?: string[] }): WishGroupDto => ({
+  themeKey: null, themeName: '테마', branchName: null, storeName: null, playedBy: [],
+  wanters: (o.n ?? ['u2']).map((uid, i) => ({ uid, nickname: uid === 'me' ? '방탈출러버' : `닉${uid}`, since: `2026-10-0${i + 1}T00:00:00Z` })),
+  ...o,
+});
+
+const ev = (o: Partial<EventDto>): EventDto => ({
+  id: 1, title: '', date: '2026-10-24', candidates: [], startMin: null, endMin: null, location: null, capacity: null, booked: false,
+  memo: null, segments: [], version: 1, createdBy: { uid: 'u2', nickname: 'x' }, createdAt: '', updatedAt: '', participants: [],
+  count: 0, joined: false, mine: false, canManage: false, ...o,
+});
+const seg = (themeName: string, themeKey: string | null = null) => ({ themeName, themeKey, branchName: null, startMin: 600, endMin: 670, playedBy: [] });
+
+describe('같은 테마 판정(§4.12 = §4.9)', () => {
+  it('둘 다 키가 있으면 키만 본다', () => {
+    expect(sameTheme({ themeKey: 'a', themeName: '고백' }, { themeKey: 'a', themeName: '다른 이름' })).toBe(true);
+    expect(sameTheme({ themeKey: 'a', themeName: '고백' }, { themeKey: 'b', themeName: '고백' })).toBe(false);
+  });
+  it('한쪽이라도 키가 없으면 정리한 이름(공백·기호·대소문자 무시)', () => {
+    expect(sameTheme({ themeKey: null, themeName: '월야 애담!' }, { themeKey: 'k', themeName: '월야애담' })).toBe(true);
+    expect(sameTheme({ themeKey: null, themeName: 'SHERLOCK' }, { themeKey: null, themeName: 'sherlock' })).toBe(true);
+    expect(sameTheme({ themeKey: null, themeName: '고백' }, { themeKey: null, themeName: '폐교' })).toBe(false);
+  });
+  it('단추 열쇠 — 키, 없으면 정리한 이름', () => {
+    expect(wishKey({ themeKey: 'k', themeName: 'x' })).toBe('k');
+    expect(wishKey({ themeKey: null, themeName: '월야 애담' })).toBe(wishKey({ themeKey: null, themeName: '월야애담!' }));
+  });
+});
+
+describe('매장·지점 한 줄', () => {
+  it('매장 + 지점, 지점에 매장이 이미 들어 있으면 그대로', () => {
+    expect(placeLabel({ storeName: '비트포비아', branchName: '홍대던전점' })).toBe('비트포비아 홍대던전점');
+    expect(placeLabel({ storeName: '키이스케이프', branchName: '키이스케이프 강남점' })).toBe('키이스케이프 강남점');
+    expect(placeLabel({ storeName: null, branchName: '제로월드 강남점' })).toBe('제로월드 강남점');
+    expect(placeLabel({ storeName: '키이스케이프', branchName: null })).toBe('키이스케이프');
+    expect(placeLabel({ storeName: null, branchName: null })).toBe('');
+  });
+});
+
+describe('카드 거르기', () => {
+  const list = [
+    G({ themeName: '월야애담', storeName: '비트포비아', branchName: '홍대던전점', themeKey: 'b1', n: ['u2', 'me', 'u3'] }),
+    G({ themeName: '메모리컴퍼니', storeName: '키이스케이프', branchName: '강남점', themeKey: 'k1', n: ['u3', 'u4'] }),
+    G({ themeName: '고백', n: ['me'] }),
+    G({ themeName: '폐교', storeName: '제로월드', branchName: '부산서면점', themeKey: 'z1', n: ['u5'] }),
+  ];
+  const base = { pick: 'all' as const, q: '', region: '전체' as const, meUid: 'me' };
+  it('전체 · 2명 이상 · 내가 원하는 것 — 서버 순서 그대로', () => {
+    expect(filterGroups(list, base).map((g) => g.themeName)).toEqual(['월야애담', '메모리컴퍼니', '고백', '폐교']);
+    expect(filterGroups(list, { ...base, pick: 'two' }).map((g) => g.themeName)).toEqual(['월야애담', '메모리컴퍼니']);
+    expect(filterGroups(list, { ...base, pick: 'mine' }).map((g) => g.themeName)).toEqual(['월야애담', '고백']);
+    expect(list.filter((g) => inPick(g, 'mine', 'me')).length).toBe(2);
+  });
+  it('찾기 — 테마·매장·지점·원하는 사람 별명(공백·대소문자 무시)', () => {
+    expect(filterGroups(list, { ...base, q: '키이 스케이프' }).map((g) => g.themeName)).toEqual(['메모리컴퍼니']);
+    expect(filterGroups(list, { ...base, q: '닉u5' }).map((g) => g.themeName)).toEqual(['폐교']);
+  });
+  it('지역 — regions.ts 규칙(지점 이름으로)', () => {
+    expect(filterGroups(list, { ...base, region: '홍대' }).map((g) => g.themeName)).toEqual(['월야애담']);
+    expect(filterGroups(list, { ...base, region: '부산' }).map((g) => g.themeName)).toEqual(['폐교']);
+    expect(filterGroups(list, { ...base, region: '기타' }).map((g) => g.themeName)).toEqual(['고백']);
+  });
+  it('원하는 사람 칩 — 나는 맨 앞에 "나"', () => {
+    expect(wanterChips(list[0], 'me').map((w) => `${w.name}${w.me ? '*' : ''}`)).toEqual(['나*', '닉u2', '닉u3']);
+    expect(wanterChips(list[1], 'me').some((w) => w.me)).toBe(false);
+  });
+});
+
+describe('그 테마가 든 다가오는 일정', () => {
+  const g = { themeKey: 'b1', themeName: '월야애담' };
+  it('키가 같거나(한쪽 키 없으면) 이름이 같은 구간, 오늘 이후 가장 이른 것', () => {
+    const evs = [
+      ev({ id: 1, date: '2026-10-10', segments: [seg('월야애담', 'b1')] }),    // 지남
+      ev({ id: 2, date: '2026-10-28', segments: [seg('월야 애담')] }),         // 키 없음 — 이름
+      ev({ id: 3, date: '2026-10-24', segments: [seg('다른 이름', 'b1')] }),   // 키 같음
+      ev({ id: 4, date: '2026-10-22', segments: [seg('월야애담', 'b9')] }),    // 키 다름
+    ];
+    expect(upcomingWith(g, evs, '2026-10-20')).toMatchObject({ date: '2026-10-24', ev: { id: 3 } });
+  });
+  it('날짜 미정 일정은 오늘 이후 가장 이른 후보 날짜로', () => {
+    const evs = [ev({ id: 5, date: null, candidates: [{ date: '2026-10-19', responses: [] }, { date: '2026-10-23', responses: [] }], segments: [seg('월야애담', 'b1')] })];
+    expect(upcomingWith(g, evs, '2026-10-20')).toMatchObject({ date: '2026-10-23', ev: { id: 5 } });
+    expect(upcomingWith(g, evs, '2026-10-24')).toBeNull();
+  });
+  it('없으면 null', () => {
+    expect(upcomingWith(g, [ev({ segments: [seg('고백')] })], '2026-10-20')).toBeNull();
+  });
+});
+
+describe('"이 사람들과 일정 만들기" 폼', () => {
+  it('제목 "{테마} 같이 가요", 테마 구간 하나(시각 비움, 지점은 "매장 지점"), 후보 날짜 모드, 참여자·후보 없음', () => {
+    const f = wishForm({ themeKey: 'b1', themeName: '월야애담', branchName: '홍대던전점', storeName: '비트포비아' }, '2026-10-20');
+    expect(f.title).toBe('월야애담 같이 가요');
+    expect(f.dateMode).toBe('candidates');
+    expect(f.candidates).toEqual([]);
+    expect(f.segs).toEqual([{ themeName: '월야애담', branchName: '비트포비아 홍대던전점', themeKey: 'b1', start: '', end: '' }]);
+    expect(f.allDay).toBe(false);
+  });
+  it('긴 이름은 계약 글자 수(제목 60·이름 40·지점 40)로 자른다', () => {
+    const long = '가'.repeat(45);
+    const f = wishForm({ themeKey: null, themeName: long, branchName: '나'.repeat(50), storeName: null }, '2026-10-20');
+    expect([...f.segs[0].themeName].length).toBe(40);
+    expect([...f.segs[0].branchName].length).toBe(40);
+    expect([...f.title].length).toBeLessThanOrEqual(60);
+  });
+  it('그대로는 저장되지 않는다 — 후보 날짜와 테마 시각을 채우라고 알린다(SegmentInput.startMin 필수, §4.7)', () => {
+    const f = wishForm({ themeKey: 'b1', themeName: '월야애담', branchName: null }, '2026-10-20');
+    expect(toInput(f)).toEqual({ error: '후보 날짜를 하나 이상 골라 주세요.' });
+    const r = toInput({ ...f, candidates: ['2026-10-24'] });
+    expect('error' in r && r.error).toMatch(/1번째 테마의 시작 시각/);
+    const ok = toInput({ ...f, candidates: ['2026-10-24'], segs: [{ ...f.segs[0], start: '14:00' }] });
+    expect('input' in ok && ok.input).toMatchObject({ title: '월야애담 같이 가요', date: null, candidates: ['2026-10-24'],
+      segments: [{ themeName: '월야애담', themeKey: 'b1', startMin: 840 }] });
+  });
+});

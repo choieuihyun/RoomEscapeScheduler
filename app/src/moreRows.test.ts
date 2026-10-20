@@ -29,6 +29,12 @@ describe('moreGroups', () => {
     expect(shape(moreGroups({ ...member, loggedIn: false, peopleOn: true, rankOn: true }))).toEqual(['settings:dark,tour']);
   });
 
+  it('위시 API(§4.12)를 알면 모임 그룹 맨 앞에 같이 가요 — 프로필 API 와 따로 본다', () => {
+    expect(shape(moreGroups({ ...member, togetherOn: true, peopleOn: true, rankOn: true }))[1]).toBe('club:together,people,ranking');
+    expect(shape(moreGroups({ ...member, togetherOn: true }))[1]).toBe('club:together');
+    expect(shape(moreGroups({ ...member, loggedIn: false, togetherOn: true }))).toEqual(['settings:dark,tour']);
+  });
+
   it('운영진이면 운영진 그룹에 멤버 관리', () => {
     const g = moreGroups({ ...member, isAdmin: true, member: { ...approved, kakaoLinked: true } });
     expect(shape(g)).toEqual([

@@ -21,6 +21,7 @@ const IcCal = () => <Icon><rect x="3" y="5" width="18" height="16" rx="2" /><pat
 const IcPeople = () => <Icon><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Icon>;
 const IcAdmin = () => <Icon><circle cx="10" cy="8" r="4" /><path d="M3 21c0-4 3-7 7-7 1.4 0 2.7.4 3.8 1M15 18.5l2 2 4-4" /></Icon>;
 const IcRank = () => <Icon><path d="M5 20v-8M12 20V5M19 20v-5" /></Icon>;
+const IcFlag = () => <Icon><path d="M5 21V4h11l-1.6 4L16 12H5" /></Icon>;
 const IcMe = () => <Icon><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7.5 8-7.5s8 3.1 8 7.5" /></Icon>;
 const IcBell = () => <Icon><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></Icon>;
 const IcHelp = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></Icon>;
@@ -34,7 +35,7 @@ const FOLD_KEY = 'flod.lnb.folded';
 const readFold = () => { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; } };
 
 export function SideNav({
-  view, onView, auth, homeOn, profileOn, peopleOn, rankOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, onEditProfile, children,
+  view, onView, auth, homeOn, profileOn, peopleOn, rankOn, togetherOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, onEditProfile, children,
 }: {
   view: View | null; onView: (v: View) => void; auth: UseAuthReturn;
   /* 승인 멤버(이고 일정 API 가 있을 때)만 "홈" 메뉴 */
@@ -43,6 +44,8 @@ export function SideNav({
   profileOn: boolean;
   /* 승인 멤버이고 서버가 프로필(§4.11)을 알 때 "멤버", 랭킹 API 도 있으면 "랭킹" */
   peopleOn: boolean; rankOn: boolean;
+  /* 승인 멤버이고 서버가 위시 API(§4.12)를 알 때 "같이 가요" */
+  togetherOn: boolean;
   watchCount: number; watchLimit: number; onWatches: () => void;
   onTour: () => void; dark: boolean; onToggleTheme: () => void;
   /* 운영진에게만 "멤버 관리" 메뉴와 승인 대기 숫자 */
@@ -119,6 +122,7 @@ export function SideNav({
           </button>
         )}
         {profileOn && menu('profile', '내 정보', <IcMe />)}
+        {togetherOn && menu('together', '같이 가요', <IcFlag />)}
         {peopleOn && menu('people', '멤버', <IcPeople />)}
         {rankOn && menu('ranking', '랭킹', <IcRank />)}
         {isAdmin && menu('members', '멤버 관리', <IcAdmin />,

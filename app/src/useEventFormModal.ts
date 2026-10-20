@@ -26,7 +26,8 @@ export function useEventFormModal() {
   const openFromSteps = useCallback((date: string, steps: PathStep[], keys?: (string | null)[]) => show(formFromSteps(date, steps, keys), null), [show]);
   const close = useCallback(() => setOpen(false), []);
 
-  return { open, initial, editing, seq, openNew, openEdit, openFromSteps, close };
+  /* show(form, null) — 같이 가요의 "이 사람들과 일정 만들기"처럼 지연 청크가 만든 폼으로 연다 */
+  return { open, initial, editing, seq, openNew, openEdit, openFromSteps, close, show };
 }
 
 export type UseEventFormModal = ReturnType<typeof useEventFormModal>;

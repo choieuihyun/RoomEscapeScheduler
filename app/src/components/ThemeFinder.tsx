@@ -9,6 +9,7 @@ import {
   ago, branches as fetchBranches, freshThemes, say, schedule as fetchSchedule,
   type Branch, type PlayedDto, type ServerSession, type ServerTheme,
 } from '../server';
+import { WishToggle } from '../clubStore';
 
 /* 일정 만들기 창의 "테마 찾아서 넣기" — 시간표 계산의 회차 불러오기(useLoadModal)와 같은 데이터(/api/branches·/api/schedule).
    지점을 고르면 그날 테마와 회차가 보이고, 회차를 눌러 여러 개 고른 뒤 한 번에 구간으로 넣는다.
@@ -234,6 +235,7 @@ export function ThemeFinder({ date: date0, formDate, candidates, placedOn, room,
                             <span className="tf-th-n">{th.name}</span>
                             <span className="tf-th-m">{th.dur ? `${th.dur}분` : '소요 시간 모름'}{allSold ? ' · 모두 매진' : ''}</span>
                             {n > 0 && <span className="chip-info warn">해 봄 {n}</span>}
+                            <WishToggle theme={{ themeKey: th.id || null, themeName: th.name, branchName: branch.branch }} />
                           </div>
                           <div className="tf-ss">
                             {ss.map((s) => {

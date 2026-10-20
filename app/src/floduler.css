@@ -2223,3 +2223,77 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
   .pfm-modal.modal{padding:0}
   .pfm-modal .pfm-body{padding:14px 18px 18px}
 }
+
+/* ── 같이 가요(§4.12) — 내가 하고 싶은 테마 칩 + 멤버들이 하고 싶은 테마 카드. 색은 "나"·눌러 둔 단추에만 청록 ── */
+/* "하고 싶어요" 글 단추 — 테마 도우미·테마 찾기·해 본 테마 찾기·같이 가요 찾기 결과의 테마 줄 */
+.wish-t{flex:none;display:inline-flex;align-items:center;height:28px;padding:0 10px;box-sizing:border-box;border:1px solid var(--line2);
+  border-radius:var(--pill);background:var(--surface);color:var(--ink2);font-family:inherit;font-size:12.5px;white-space:nowrap;cursor:pointer}
+.wish-t:hover:not(:disabled){border-color:var(--tab-line-hover);color:var(--ink)}
+.wish-t.on{border-color:var(--blue-line);background:var(--blue-soft);color:var(--blue-text);font-weight:600}
+.wish-t:disabled{opacity:.5;cursor:default}
+.wish-t:focus-visible{outline:none;box-shadow:var(--ring)}
+.tf-th-top .wish-t{margin-left:auto}
+.evh-row .wish-t{align-self:flex-start;margin-top:1px}
+
+.tg{display:flex;flex-direction:column;gap:28px;padding-bottom:48px}
+.tg-sec-h{display:flex;align-items:center;gap:8px;margin:0 0 14px;min-height:32px}
+.tg-h{margin:0;font-size:17px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
+.tg-n{font-size:13px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.tg-add{margin-left:auto;height:32px;padding:0 12px;font-size:13px;border-radius:var(--r-sm)}
+.tg-note{margin:0;font-size:13.5px;color:var(--ink3);line-height:1.6}
+.tg-mine{padding:18px 20px}
+.tg-chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.tg-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;height:32px;padding:0 3px 0 12px;box-sizing:border-box;
+  border:1px solid var(--line2);border-radius:var(--pill);background:var(--surface);font-size:13.5px}
+.tg-chip-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--ink)}
+.tg-chip-b{flex:none;font-size:12px;color:var(--ink3);white-space:nowrap}
+.tg-chip button{flex:none;width:26px;height:26px;padding:0;border:none;border-radius:var(--pill);background:none;color:var(--ink3);
+  font-size:15px;line-height:1;cursor:pointer}
+.tg-chip button:hover:not(:disabled){background:var(--line);color:var(--ink)}
+.tg-addbox{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.tg-addbar{align-self:stretch;display:flex;align-items:center;gap:8px}
+.tg-q{position:relative;flex:1 1 auto;min-width:0}
+.tg .tg-q input[type=search]{width:100%;box-sizing:border-box;padding-left:36px;border-radius:10px}
+.tg-res{align-self:stretch;border:1px solid var(--line);border-radius:10px;max-height:320px;overflow-y:auto}
+.tg-res-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13.5px;min-width:0}
+.tg-res-row:last-child{border-bottom:0}
+.tg-res-n{display:inline-flex;align-items:center;gap:6px;min-width:0;font-weight:600;color:var(--ink);white-space:nowrap}
+.tg-res-n em{font-style:normal;font-size:11.5px;font-weight:400;color:var(--ink3)}
+.tg-res-b{flex:1;min-width:0;font-size:12px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tg-res-row.done .tg-res-n{color:var(--ink3);font-weight:500}
+.tg-manual{align-self:stretch;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);display:flex;flex-direction:column;gap:10px}
+.tg-manual .merr{margin:0;min-height:0}
+
+.tg-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 16px}
+.tg-picks,.tg-regions{display:flex;flex-wrap:wrap;gap:6px}
+.tg-pick-n{color:var(--ink3);font-weight:400;font-variant-numeric:tabular-nums}
+.tg-bar .tg-q{flex:0 1 280px;min-width:200px;margin-left:auto}
+.tg-regions{flex:1 1 100%;align-items:center}
+.tg-rl{margin-right:4px;font-size:12.5px;color:var(--ink3)}
+.chip-pick.sm{height:26px;padding:0 10px;font-size:12.5px}
+.tg-empty{padding:44px 16px;border:1px dashed var(--line2);border-radius:var(--r);background:var(--surface);text-align:center}
+.tg-empty p{margin:0;font-size:14px;color:var(--ink2);line-height:1.7}
+.tg-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.tg-card{display:flex;flex-direction:column;gap:10px;padding:18px 20px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.tg-card.mine{border-color:var(--blue-line)}
+.tg-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;min-width:0}
+.tg-name{font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--ink);overflow-wrap:anywhere}
+.tg-place{font-size:13px;color:var(--ink3)}
+.tg-want{margin:-4px 0 0;font-size:13.5px;color:var(--ink2)}
+.tg-want b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.tg-who{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:5px}
+.tg-p{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:var(--pill);background:var(--chip-bg);font-size:12.5px;color:var(--ink2)}
+.tg-p.me{background:var(--blue-soft);color:var(--blue-text);font-weight:600}
+.tg-meta{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;font-size:12.5px;color:var(--ink3)}
+.tg-ev{padding:0;border:none;background:none;font:inherit;font-weight:500;color:var(--blue-text);cursor:pointer}
+.tg-ev:hover{text-decoration:underline}
+.tg-acts{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+.tg-acts .chip-pick{height:36px;min-width:76px}
+.tg-acts .btn,.tg-acts .btn-go{margin-left:auto;height:36px;padding:0 18px;font-size:13.5px}
+@media(max-width:900px){
+  .tg{gap:22px}
+  .tg-grid{grid-template-columns:minmax(0,1fr)}
+  .tg-bar .tg-q{flex:1 1 100%;margin-left:0;order:-1}
+  .tg-mine{padding:16px}
+  .tg-acts .btn,.tg-acts .btn-go{flex:1}
+}

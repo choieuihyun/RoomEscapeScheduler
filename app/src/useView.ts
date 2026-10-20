@@ -6,13 +6,14 @@ import { useCallback, useEffect, useState } from 'react';
    pushState 라 브라우저 뒤로 가기로 계산 화면에 돌아오고, 새로고침해도 그 화면이다. */
 /* more: 좁은 화면의 더보기(§4.60) — 로그아웃이어도 열린다. 넓은 화면엔 없어서 SchedulerPage 가 내 정보(또는 계산)로 바꾼다 */
 /* people·ranking: 승인 멤버 누구나 보는 멤버 목록·달별 랭킹(§4.11) — 서버가 프로필을 알 때만(랭킹은 그 API 가 404 가 아닐 때) */
-export type View = 'home' | 'calc' | 'calendar' | 'profile' | 'members' | 'more' | 'people' | 'ranking';
+/* together: 같이 가요(§4.12) — 서버가 위시 API 를 알 때만 */
+export type View = 'home' | 'calc' | 'calendar' | 'profile' | 'members' | 'more' | 'people' | 'ranking' | 'together';
 
 /* decided: 기본 화면을 정할 정보(로그인 복원·승인 여부·일정 API 유무)가 다 왔는지. 안 왔으면 기본 경우는 null(아직 모름). */
 /* profileOn: 승인 멤버이고 서버가 해 본 테마 API(§4.9)를 알 때만 "내 정보" */
-type Opts = { calendarOn: boolean; isAdmin: boolean; homeOn: boolean; profileOn: boolean; decided: boolean; peopleOn?: boolean; rankOn?: boolean };
+type Opts = { calendarOn: boolean; isAdmin: boolean; homeOn: boolean; profileOn: boolean; decided: boolean; peopleOn?: boolean; rankOn?: boolean; togetherOn?: boolean };
 
-const VIEWS: readonly string[] = ['home', 'calc', 'calendar', 'profile', 'members', 'more', 'people', 'ranking'];
+const VIEWS: readonly string[] = ['home', 'calc', 'calendar', 'profile', 'members', 'more', 'people', 'ranking', 'together'];
 
 const paramView = (search: string): View | null => {
   const v = new URLSearchParams(search).get('view');
@@ -32,7 +33,7 @@ export function readView(search: string, hash: string, o: Opts): View | null {
   if (!o.calendarOn) return 'calc';
   if (v === 'members' && !o.isAdmin) return 'calc';
   if (v === 'profile' && !o.profileOn) return 'calc';
-  if ((v === 'people' && !o.peopleOn) || (v === 'ranking' && !o.rankOn)) return 'calc';
+  if ((v === 'people' && !o.peopleOn) || (v === 'ranking' && !o.rankOn) || (v === 'together' && !o.togetherOn)) return 'calc';
   return v;
 }
 
