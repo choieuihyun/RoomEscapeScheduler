@@ -61,8 +61,8 @@ describe('협의 도우미(§4.9 fresh-themes)', () => {
     const ev = { participants: [{ uid: 'a', nickname: '곰' }, { uid: 'b', nickname: '탈출왕' }] } as Pick<EventDto, 'participants'>;
     expect(noRecordNames(dto({ noRecord: ['b', 'zz', 'a'] }), ev)).toEqual(['탈출왕', '곰']);
     expect(noRecordNames(dto({}), ev)).toEqual([]);
-    expect(noRecordText(['탈출왕'])).toBe('탈출왕 님은 해 본 테마 기록이 없어요. "아무도 안 해 봄"이 틀릴 수 있어요.');
-    expect(noRecordText(['탈출왕', '곰'])).toBe('탈출왕, 곰 님은 해 본 테마 기록이 없어요. "아무도 안 해 봄"이 틀릴 수 있어요.');
+    expect(noRecordText(['탈출왕'])).toBe('탈출왕 님은 해 본 테마 기록이 없어서 "안 해 봄"으로 보여도 틀릴 수 있어요.');
+    expect(noRecordText(['탈출왕', '곰'])).toBe('탈출왕, 곰 님은 해 본 테마 기록이 없어서 "안 해 봄"으로 보여도 틀릴 수 있어요.');
   });
   it('playedPerPerson — 사람마다 이 일정 테마 중 몇 개를 해 봤나', () => {
     const m = playedPerPerson({ segments: [seg(['a', 'b']), seg(['a']), seg([])] } as never);

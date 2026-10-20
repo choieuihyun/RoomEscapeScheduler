@@ -9,7 +9,7 @@ import {
   weekday,
 } from '../clubEvents';
 import { nextMine, relDay, todayStrip, upcoming } from '../homeStrip';
-import { playedCount } from '../played';
+import { playedWho, playedWhoLabel, playedWhoTitle } from '../playedWho';
 import type { EventDto } from '../server';
 import type { UseClubEventsReturn } from '../useClubEvents';
 
@@ -210,13 +210,14 @@ export function HomePage({
               {shown.map((ev) => {
                 const st = eventStatus(ev);
                 const busy = club.busyIds.has(ev.id);
-                const played = playedCount(ev);
+                const who = playedWho(ev);
                 return (
                   <li key={ev.id} className="home-row">
                     <div className="home-row-main">
                       <div className="home-row-t">
                         <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
-                        {played > 0 && <span className="chip-info warn">해 봄 {played}</span>}
+                        {/* 좁은 줄이라 이름은 둘까지, 나머지는 title 로 */}
+                        {who.length > 0 && <span className="chip-info warn who" title={playedWhoTitle(who)}>{playedWhoLabel(who)}</span>}
                         {/* 제목 단추의 ::after 가 줄 전체를 덮어 줄 어디를 눌러도 연다. 참여 단추는 그 위에 따로 있다 */}
                         <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
                       </div>

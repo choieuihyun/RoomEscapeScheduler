@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { eventStatus, eventTitle, isUndecided, kakaoPost, longDayLabel, rangeLabel, STATUS_LABEL, timeLabel } from '../clubEvents';
 import { eventLink } from '../eventLink';
-import { playedCount, playedNames, playedPerPerson } from '../played';
+import { playedPerPerson } from '../played';
+import { playedDots } from '../playedWho';
 import { listClubMembers, sayClub, type ClubMemberDto, type EventDto } from '../server';
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
 import type { AddedTheme } from '../useLoadModal';
 import { EventHelper } from './EventHelper';
 import { EventTalk, EventTalkDone } from './EventTalk';
+import { PlayedDots } from './PlayedDots';
 
 /* 캘린더 오른쪽 패널의 동호회 일정 상세 (계획 Task E6, 목업 "캘린더 + 일정 상세").
    보이는 일정은 늘 목록(useClubEvents)에서 꺼낸 최신 값이다 — 정원 초과 뒤 다시 불러온 값,
@@ -19,13 +21,6 @@ async function loadMembers(): Promise<ClubMemberDto[]> {
   if (!t) throw Object.assign(new Error('로그인해 주세요.'), { body: { message: '로그인해 주세요.' } });
   return listClubMembers(t);
 }
-
-/* 경고 세모 — 해 본 테마 줄 */
-const WarnIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-    <path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
-  </svg>
-);
 
 export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onPicked, onCalcThemes }: {
   ev: EventDto; club: UseClubEventsReturn; meUid: string; onClose: () => void; onEdit: (ev: EventDto) => void;
@@ -49,7 +44,6 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
   /* 날짜 미정이면 한 날짜를 정해진 것처럼 보이지 않게 후보 수만 */
   const when = undecided ? `날짜 미정 · 후보 ${ev.candidates.length}개` : longDayLabel(ev.date as string);
   const left = ev.capacity === null ? '' : full ? '마감' : `${ev.capacity - ev.count}자리 남음`;
-  const played = playedCount(ev);
   const perPerson = playedPerPerson(ev);
   /* 협의 도우미 — 협의 중·예약 전 일정의 참여자만(예약 완료면 테마가 이미 정해졌다). 날짜 미정이면 "언제 될까요?" 바로 아래, 정해진 날이면 후보 기록 아래 */
   const helper = ev.joined && (undecided || !ev.booked) && onCalcThemes ? <EventHelper ev={ev} onCalcThemes={(items) => onCalcThemes(items, ev)} /> : null;
@@ -100,7 +94,6 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
     <div className="evp" ref={panelRef} tabIndex={-1} aria-labelledby="evp-title" onPointerDown={keepTimeFocus} onMouseDown={keepTimeFocus}>
       <div className="evp-head">
         <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
-        {played > 0 && <span className="chip-info warn">해 봄 {played}</span>}
         <span className="evp-tools">
           {ev.canManage && (
             <>
@@ -131,7 +124,8 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
             const prev = i > 0 ? ev.segments[i - 1] : null;
             /* 사이 이동 시간 = 다음 시작 − 이전 끝. 이전 끝을 모르면 적지 않는다 */
             const move = prev && prev.endMin !== null ? g.startMin - prev.endMin : null;
-            const by = playedNames(g, ev);
+            /* 구간(테마)마다 참여자 전원을 이름 + 색 점으로 — 안 해 봄 초록, 해 봄 빨강. 참여자가 없으면 카드만 */
+            const dots = playedDots(g.playedBy, ev.participants);
             const card = (
               <div className="evp-seg">
                 <b>{rangeLabel(g.startMin, g.endMin)}</b>
@@ -142,13 +136,10 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
             return (
               <div key={i} className="evp-segwrap">
                 {move !== null && move >= 0 && <div className="evp-move">이동 {move}분</div>}
-                {by.length === 0 ? card : (
-                  <div className="evp-seg-played">
+                {dots.length === 0 ? card : (
+                  <div className="evp-seg-who">
                     {card}
-                    <p className="evp-seg-warn">
-                      <WarnIcon />
-                      <span>이 테마는 {by.map((n, j) => <span key={j}>{j > 0 && ', '}<b>{n}</b></span>)} 님이 이미 해 봤어요</span>
-                    </p>
+                    <p className="evp-seg-ppl"><PlayedDots dots={dots} /></p>
                   </div>
                 )}
               </div>

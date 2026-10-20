@@ -13,7 +13,7 @@ import { EventPanel } from './EventPanel';
 import { dayLabel, eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
 import type { AddedTheme } from '../useLoadModal';
-import { playedCount } from '../played';
+import { playedWho, playedWhoLabel, playedWhoTitle } from '../playedWho';
 import { playedByDate } from '../playedView';
 import { withoutPending, type UseProfileReturn } from '../useProfile';
 
@@ -81,8 +81,8 @@ function chipText(ev: EventDto): string {
   return start === null ? label : `${label} ${fmt(start)}`;
 }
 const peopleText = (ev: EventDto) => (ev.capacity === null ? `${ev.count}` : `${ev.count}/${ev.capacity}`);
-/* 이 일정 테마를 이미 해 본 참여자 수 — 0 이면 아무것도 안 붙인다 */
-const playedText = (ev: EventDto) => { const n = playedCount(ev); return n > 0 ? `해 봄 ${n}` : ''; };
+/* 이 일정 테마를 이미 해 본 참여자(playedWho) — 고른 날 줄은 둘까지 이름(셋부터 "철수 외 2명 해 봄"),
+   달 칸 칩은 자리가 없어 "2명 해 봄". 이름은 다 title 로. 없으면 아무것도 안 붙인다 */
 
 /* 날짜 미정 일정은 후보 날짜마다 흐린 칩(cand)으로 — 누르면 그 후보 날짜를 고른 채 상세를 연다 */
 function ClubChip({ ev, iso, on, past, onOpen }: {
@@ -91,11 +91,12 @@ function ClubChip({ ev, iso, on, past, onOpen }: {
   const st = eventStatus(ev);
   const time = timeLabel(ev);
   const cand = isUndecided(ev);
-  const pl = playedText(ev);
+  const who = playedWho(ev);
+  const pl = who.length > 0 ? `${who.length}명 해 봄` : '';
   return (
     <button
       type="button" className={'cal-ev club ' + st + (cand ? ' cand' : '') + (on ? ' on' : '') + (past ? ' past' : '')}
-      title={`${STATUS_LABEL[st]}${cand ? ` · 후보 날짜(${ev.candidates.length}개 중)` : ''} · ${eventTitle(ev)}${time ? ' · ' + time : ''} · 참여 ${peopleText(ev)}${pl ? ' · ' + pl : ''}`}
+      title={`${STATUS_LABEL[st]}${cand ? ` · 후보 날짜(${ev.candidates.length}개 중)` : ''} · ${eventTitle(ev)}${time ? ' · ' + time : ''} · 참여 ${peopleText(ev)}${pl ? ' · ' + playedWhoTitle(who) : ''}`}
       aria-pressed={on}
       /* 칸(role=button)의 클릭·Enter·Space 처리로 번지지 않게 — 칸은 그 키에 preventDefault 를 건다.
          다른 키(←/→ 달 이동 등)는 그대로 둔다 */
@@ -109,7 +110,7 @@ function ClubChip({ ev, iso, on, past, onOpen }: {
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
             <path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
           </svg>
-          <span className="cal-ev-pt">{pl}</span>
+          <span className="cal-ev-pt">{pl}</span><span className="sr-only"> ({who.join(', ')})</span>
         </span>
       )}
       <span className="cal-ev-n">{peopleText(ev)}</span>
@@ -122,10 +123,11 @@ function ClubRow({ ev, iso, onOpen }: { ev: EventDto; iso: string; onOpen: (ev: 
   const st = eventStatus(ev);
   const time = timeLabel(ev);
   const when = isUndecided(ev) ? `날짜 미정 · 후보 ${ev.candidates.length}개${time ? ' · ' + time : ''}` : time || '하루 종일';
+  const who = playedWho(ev);
   return (
     <button type="button" className="cal-club-row" onClick={() => onOpen(ev, iso)}>
       <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
-      {playedText(ev) && <span className="chip-info warn">{playedText(ev)}</span>}
+      {who.length > 0 && <span className="chip-info warn who" title={playedWhoTitle(who)}>{playedWhoLabel(who)}</span>}
       <span className="ccr-t">{eventTitle(ev)}</span>
       <span className="ccr-m">{when} · 참여 {peopleText(ev)}</span>
     </button>

@@ -76,13 +76,13 @@ export function freshMessage(dto: Pick<FreshDto, 'collected' | 'themes'>): strin
 export const FRESH_STALE_MS = 5 * 60_000;
 export const freshStale = (fetchedAt: number, now: number): boolean => now - fetchedAt > FRESH_STALE_MS;
 
-/* 해 본 테마 기록이 하나도 없는 참여자 닉네임 — 이 사람들 때문에 "아무도 안 해 봄"이 틀릴 수 있다 */
+/* 해 본 테마 기록이 하나도 없는 참여자 닉네임 — 이 사람들의 초록 점("안 해 봄")은 틀릴 수 있다 */
 export function noRecordNames(dto: Pick<FreshDto, 'noRecord'>, ev: Pick<EventDto, 'participants'>): string[] {
   return playedNames({ playedBy: dto.noRecord }, ev);
 }
 
 export const noRecordText = (names: string[]): string =>
-  `${names.join(', ')} 님은 해 본 테마 기록이 없어요. "아무도 안 해 봄"이 틀릴 수 있어요.`;
+  `${names.join(', ')} 님은 해 본 테마 기록이 없어서 "안 해 봄"으로 보여도 틀릴 수 있어요.`;
 
 /* 도우미가 볼 날짜. 정해진 날이면 그 날짜 하나, 날짜 미정이면 오늘 이후 후보(날짜 순) 중에서 고르고
    처음엔 "언제 될까요?" 맨 위 줄(candidateSummary 순서)의 날짜. 볼 날짜가 다 지났으면 null — 지난 날을

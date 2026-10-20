@@ -1,14 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clockLabel, dayLabel, todayKst } from '../clubEvents';
-import { freshMessage, freshStale, helperDates, noRecordNames, noRecordText, playedNames } from '../played';
+import { freshMessage, freshStale, helperDates, noRecordNames, noRecordText } from '../played';
+import { playedDots } from '../playedWho';
+import { REGIONS, inRegion, pageFor, pageOf, regionCounts, type PageAt, type RegionPick } from '../regions';
 import { ago, freshThemes, isMissingApi, sayClub, toSessions, type EventDto, type FreshDto, type FreshTheme } from '../server';
 import type { AddedTheme } from '../useLoadModal';
+import { PlayedDots } from './PlayedDots';
 
 /* 일정 상세의 협의 도우미 "어떤 테마가 좋을까요?"(§4.9, 계획 Task 8, 목업 ② 왼쪽 아래).
-   그날 열린 회차가 있는 테마를 "아무도 안 해 봄" 먼저 보이고, 고른 테마로 조합 계산을 연다.
+   그날 열린 회차가 있는 테마를 "아무도 안 해 봄" 먼저(서버가 세운 순서) 보이고, 고른 테마로 조합 계산을 연다.
+   지역으로 거르고 20개씩 쪽을 나눈다(2026-10-20).
    목록은 펼칠 때 받는다(참여자만, 동호회 API 가 켜져 있을 때만 그려진다). */
 
-const PAGE = 10; // 처음 보이는 줄 수 — 모으는 매장이 40곳 남짓이라 한 날 테마가 수백 개일 수 있다
+/* 고른 지역은 이 기기에 기억한다 — 모으는 매장이 40곳 남짓이라 한 날 테마가 수백 개일 수 있어 지역으로 먼저 줄인다 */
+const REGION_KEY = 'flod.helper.region';
+const readRegion = (): RegionPick => {
+  try {
+    const v = localStorage.getItem(REGION_KEY);
+    return (REGIONS as readonly string[]).includes(v ?? '') ? (v as RegionPick) : '전체';
+  } catch { return '전체'; }
+};
+const saveRegion = (r: RegionPick) => { try { localStorage.setItem(REGION_KEY, r); } catch { /* 시크릿 창 등 — 이번에만 안 남는다 */ } };
 
 /* 서버가 이 API 를 아직 모르면(본문 없는 404) 이 창이 살아 있는 동안 다시 묻지 않고 숨긴다 */
 let apiMissing = false;
@@ -41,7 +53,11 @@ export function EventHelper({ ev, onCalcThemes }: {
   const [picked, setPicked] = useState<string | null>(null); // 사람이 날짜 칩으로 고른 날짜
   const [slots, setSlots] = useState<Map<string, Slot>>(new Map());
   const [ids, setIds] = useState<Set<string>>(new Set());
-  const [more, setMore] = useState(false);
+  const [region, setRegion] = useState<RegionPick>(readRegion);
+  const [pg, setPg] = useState<PageAt>({ at: '', page: 0 });
+  /* 쪽을 넘긴 뒤 한 번만 목록 머리로 옮긴다 */
+  const jump = useRef(false);
+  const headRef = useRef<HTMLParagraphElement>(null);
   /* 키마다 마지막 요청 번호 — 늦게 온 옛 응답이 새 결과를 덮지 않게. 받는 중인 키도 여기서 안다 */
   const seq = useRef(0);
   const latest = useRef(new Map<string, number>());
@@ -51,12 +67,12 @@ export function EventHelper({ ev, onCalcThemes }: {
   const date = !plan ? null : picked && plan.dates.includes(picked) ? picked : plan.first;
   const who = ev.participants.map((p) => p.uid).sort().join(',');
   const key = date ? `${date}|${who}` : '';
-  /* 날짜가 바뀌면(직접 고르든 기준 날짜가 옮겨 가든) 고른 테마·더 보기를 비운다 — 렌더 중에 앞 값과 견줘 맞춘다 */
+  /* 날짜가 바뀌면(직접 고르든 기준 날짜가 옮겨 가든) 고른 테마를 비운다 — 렌더 중에 앞 값과 견줘 맞춘다.
+     쪽은 pageFor 가 목록 키로 1쪽에 돌려놓는다 */
   const [shownDate, setShownDate] = useState(date);
   if (date !== shownDate) {
     setShownDate(date);
     setIds(new Set());
-    setMore(false);
   }
 
   const fetchKey = useCallback((d: string, k: string) => {
@@ -79,6 +95,14 @@ export function EventHelper({ ev, onCalcThemes }: {
     fetchKey(date, key);
   }, [open, hidden, date, key, have, fetchKey]);
 
+  const page = pageFor(pg, `${key}|${region}`);
+  useEffect(() => {
+    if (!jump.current) return;
+    jump.current = false;
+    headRef.current?.focus({ preventScroll: true });
+    headRef.current?.scrollIntoView({ block: 'start' });
+  }, [page]);
+
   if (hidden || !plan || !date) return null;
   const slot = slots.get(key);
 
@@ -100,7 +124,20 @@ export function EventHelper({ ev, onCalcThemes }: {
   const dto = slot?.err ? null : slot?.dto ?? null;
   const msg = dto ? freshMessage(dto) : null;
   const themes = dto && !msg ? dto.themes : [];
-  const shown = more ? themes : themes.slice(0, PAGE);
+  /* 지역 거르기 → (서버가 세운 순서 그대로) → 20개씩. 기억한 지역이 이 날 결과에 없으면 전체를 보인다(기억은 그대로) */
+  const regions = regionCounts(themes);
+  const shownRegion: RegionPick = regions.some((r) => r.region === region) ? region : '전체';
+  const inR = inRegion(themes, shownRegion);
+  const view = pageOf(inR, page);
+  const listAt = `${key}|${region}`;
+  function pickRegion(r: RegionPick) {
+    setRegion(r);
+    saveRegion(r);
+  }
+  function goPage(n: number) {
+    jump.current = true;
+    setPg({ at: listAt, page: n });
+  }
   const noRec = dto && themes.length > 0 ? noRecordNames(dto, ev) : [];
   const pickedThemes = themes.filter((t) => ids.has(t.id));
   const toggle = (id: string, on: boolean) => {
@@ -135,12 +172,25 @@ export function EventHelper({ ev, onCalcThemes }: {
         )}
         {msg && <p className="evh-msg">{msg}</p>}
         {noRec.length > 0 && <p className="evh-norec">{noRecordText(noRec)}</p>}
+        {regions.length > 1 && (
+          <div className="evh-regions" role="group" aria-label="지역">
+            <button type="button" className="chip-pick" aria-pressed={shownRegion === '전체'} onClick={() => pickRegion('전체')}>전체 <span>{themes.length}</span></button>
+            {regions.map(({ region: r, n }) => (
+              <button key={r} type="button" className="chip-pick" aria-pressed={shownRegion === r} onClick={() => pickRegion(r)}>{r} <span>{n}</span></button>
+            ))}
+          </div>
+        )}
+        {themes.length > 0 && (
+          <p className="evh-cnt" ref={headRef} tabIndex={-1}>
+            {shownRegion === '전체' ? '' : `${shownRegion} `}{inR.length}개{view.pages > 1 && ` 중 ${view.from + 1}–${view.from + view.items.length}`}
+          </p>
+        )}
         {themes.length > 0 && (
           <ul className="evh-list">
-            {shown.map((t) => {
-              const by = playedNames(t, ev);
+            {view.items.map((t) => {
+              const dots = playedDots(t.playedBy, ev.participants);
               return (
-                <li key={t.id} className={'evh-row' + (by.length > 0 ? ' played' : '')}>
+                <li key={t.id} className={'evh-row' + (dots.some((d) => d.played) ? ' played' : '')}>
                   <input
                     type="checkbox" id={`evh-${ev.id}-${t.id}`} checked={ids.has(t.id)}
                     onChange={(e) => toggle(t.id, e.target.checked)}
@@ -152,18 +202,19 @@ export function EventHelper({ ev, onCalcThemes }: {
                         <span key={s.id ?? i}>{i > 0 && ' · '}{s.soldout ? <><s>{clockLabel(s.t)}</s><span className="sr-only"> 매진</span></> : clockLabel(s.t)}</span>
                       ))}
                     </span>
-                    {by.length > 0 && <span className="evh-by">{by.join(', ')} 님이 해 봤어요</span>}
+                    <PlayedDots dots={dots} />
                   </label>
-                  {by.length > 0
-                    ? <span className="chip-info warn">해 봄 {by.length}</span>
-                    : <span className="chip-info ok">아무도 안 해 봄</span>}
                 </li>
               );
             })}
           </ul>
         )}
-        {themes.length > shown.length && (
-          <button type="button" className="evh-more" onClick={() => setMore(true)}>{themes.length - shown.length}개 더 보기</button>
+        {view.pages > 1 && (
+          <nav className="evh-pager" aria-label="테마 목록 쪽">
+            <button type="button" className="btn evp-sm" disabled={view.page === 0} onClick={() => goPage(view.page - 1)}>‹ 이전</button>
+            <span className="evh-pg">{view.page + 1} / {view.pages}<span className="sr-only">쪽</span></span>
+            <button type="button" className="btn evp-sm" disabled={view.page >= view.pages - 1} onClick={() => goPage(view.page + 1)}>다음 ›</button>
+          </nav>
         )}
         {dto && dto.collected && dto.missing.length > 0 && (
           <details className="evh-missing">
