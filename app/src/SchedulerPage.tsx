@@ -477,8 +477,9 @@ export function SchedulerPage() {
               watchCount={watches.watches.length} watchLimit={watches.limit} pendingCount={pendingCount}
               month={homeMonth} onMonth={stepHomeMonth}
               onWatches={watches.openModal} onMembers={() => goView('members')}
-              onNewEvent={() => eventForm.openNew()} onCalc={() => goView('calc')}
+              onNewEvent={() => eventForm.openNew()}
               onOpenEvent={openFromHome} onPickDay={pickFromHome}
+              profile={profileOn ? profile : null} peopleOn={peopleOn} rankOn={rankOn} onView={goView}
             /></LazyBoundary>
           </div>
         )}

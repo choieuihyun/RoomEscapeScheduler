@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { showToast } from '../toast';
+import type { UseProfileReturn } from '../useProfile';
+import type { View } from '../useView';
 import { Avatar } from './Avatar';
 import { monthGrid, toISO, WEEKDAYS } from '../core';
 import {
@@ -25,6 +28,11 @@ const TABS: { id: Tab; label: string; empty: string }[] = [
   { id: 'open', label: '자리 있음', empty: '2주 안에 자리가 남은 일정이 없어요.' },
 ];
 
+/* 해 본 테마 한꺼번에 넣기 창 — 바로가기를 누를 때 받는다(내 정보 화면과 같은 지연 청크). 안 받아지면 한 번 더 */
+type BulkComp = typeof import('./BulkModal').BulkModal;
+const loadBulk = () => import('./BulkModal')
+  .catch(() => new Promise((r) => setTimeout(r, 400)).then(() => import('./BulkModal')));
+
 const full = (ev: EventDto) => ev.capacity !== null && ev.count >= ev.capacity;
 const people = (ev: EventDto) => (ev.capacity === null ? `${ev.count}명` : `${ev.count}/${ev.capacity}명`);
 /* 토 파랑·일 빨강 — 캘린더와 같은 토큰 */
@@ -32,7 +40,7 @@ const dowClass = (dow: number) => (dow === 0 ? 'sun' : dow === 6 ? 'sat' : '');
 
 export function HomePage({
   club, today, nickname, photo, isAdmin, watchCount, watchLimit, pendingCount, month,
-  onMonth, onWatches, onMembers, onNewEvent, onCalc, onOpenEvent, onPickDay,
+  onMonth, onWatches, onMembers, onNewEvent, onOpenEvent, onPickDay, profile, peopleOn, rankOn, onView,
 }: {
   club: UseClubEventsReturn;
   today: string;
@@ -49,11 +57,36 @@ export function HomePage({
   onWatches: () => void;
   onMembers: () => void;
   onNewEvent: () => void;
-  onCalc: () => void;
+  /* 바로가기 — 해 본 테마 기록(해 본 테마 API 가 있을 때 profile), 멤버·랭킹(6단계 서버일 때) */
+  profile: UseProfileReturn | null;
+  peopleOn: boolean;
+  rankOn: boolean;
+  onView: (v: View) => void;
   onOpenEvent: (ev: EventDto) => void;
   onPickDay: (iso: string) => void;
 }) {
   const events = club.events;
+  const [Bulk, setBulk] = useState<BulkComp | null>(null);
+  const [bulkOn, setBulkOn] = useState(false);
+  const openBulk = async () => {
+    try {
+      const m = await loadBulk();
+      setBulk(() => m.BulkModal);
+      setBulkOn(true);
+    } catch {
+      showToast('새 버전이 나왔거나 연결이 끊겼어요. 새로 고침해 주세요.');
+    }
+  };
+  /* 바로가기 — 아래 탭에 있는 시간표 계산·빈자리 알림 대신 자주 쓰는 곳으로. 쓸 수 없는 칸은 뺀다 */
+  const tiles = [
+    { key: 'new', label: '일정 만들기', on: true, go: onNewEvent,
+      ic: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5" /></> },
+    { key: 'played', label: '해 본 테마 기록', on: !!profile, go: () => void openBulk(),
+      ic: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 9.5l2.2 2.2L15 7M8 16h8" /></> },
+    { key: 'people', label: '멤버', on: peopleOn, go: () => onView('people'),
+      ic: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></> },
+    { key: 'ranking', label: '랭킹', on: rankOn, go: () => onView('ranking'), ic: <path d="M5 20v-8M12 20V5M19 20v-5" /> },
+  ].filter((t) => t.on);
   const [tab, setTab] = useState<Tab>('all');
   const [page, setPage] = useState(0);
   /* 지금 시각 — 1분마다(탭이 보일 때만, 다시 보이면 바로) 갱신해 끝난 일정·자정 넘긴 '내일'이 띠와 다음 일정에 반영되게 한다 */
@@ -255,23 +288,19 @@ export function HomePage({
 
         <section className="home-card home-quick" aria-label="바로가기">
           <h2 className="home-h">바로가기</h2>
-          <div className="home-tiles">
-            <button type="button" className="home-tile" onClick={onNewEvent}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5" /></svg>
-              일정 만들기
-            </button>
-            <button type="button" className="home-tile" onClick={onCalc}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" /></svg>
-              시간표 계산
-            </button>
-            <button type="button" className="home-tile" onClick={onWatches}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
-              빈자리 알림
-            </button>
+          {/* 네 칸이면 2×2, 그보다 적으면 한 줄 */}
+          <div className="home-tiles" style={{ gridTemplateColumns: `repeat(${tiles.length === 4 ? 2 : tiles.length}, minmax(0, 1fr))` }}>
+            {tiles.map((t) => (
+              <button key={t.key} type="button" className="home-tile" onClick={t.go}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{t.ic}</svg>
+                {t.label}
+              </button>
+            ))}
           </div>
         </section>
       </div>
     </div>
+    {bulkOn && Bulk && profile && <Bulk profile={profile} onClose={() => setBulkOn(false)} />}
     </>
   );
 }
