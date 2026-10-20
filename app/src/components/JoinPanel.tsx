@@ -2,7 +2,7 @@ import { useEffect, useState, type MutableRefObject } from 'react';
 import type { UseAuthReturn } from '../useAuth';
 import { ProfileForm } from './MemberViews';
 
-/* 로그인 창 안에서 이어지는 동호회 단계 — 가입 신청 / 승인 대기 / 나간 계정.
+/* 로그인 창 안에서 이어지는 동호회 단계 — 가입 신청(가입 전·거절·내보낸 계정) / 승인 대기.
    어느 것을 보일지는 AuthModal 이 member.status 로 가른다. */
 
 /* 가입 신청 — 오픈채팅 닉네임과 프로필 전부(§4.11, 전부 필수). 거절된 뒤 다시 신청하면 지난 값으로 채워 둔다.
@@ -13,13 +13,15 @@ export function JoinPanel({ auth, dirtyRef, onClose }: {
   dirtyRef: MutableRefObject<boolean>;
   onClose: () => void;
 }) {
-  const rejected = auth.member?.status === 'REJECTED';
+  const st = auth.member?.status;
   useEffect(() => () => { dirtyRef.current = false; }, [dirtyRef]);
 
   return (
     <>
       <h3>가입 신청</h3>
-      {rejected && <p className="auth-box warn">지난 신청이 거절됐어요. 운영진과 이야기한 뒤 다시 신청해 주세요.</p>}
+      {st === 'REJECTED' && <p className="auth-box warn">지난 신청이 거절됐어요. 운영진과 이야기한 뒤 다시 신청해 주세요.</p>}
+      {/* 내보낸 계정도 다시 신청할 수 있다(2026-10-20). 옛 서버면 신청에 403 JOIN_BLOCKED 문구가 폼 위에 뜬다 */}
+      {st === 'REMOVED' && <p className="auth-box warn">내보내진 계정이에요. 다시 가입 신청하면 운영진이 확인해요.</p>}
       <p className="msub">
         로그인됐어요. 오픈채팅방에서 쓰는 닉네임과 프로필을 적어 주세요. 운영진이 닉네임을 보고 승인하면
         일정과 빈자리 알림을 쓸 수 있어요. 프로필은 승인된 멤버들에게 보여요.
@@ -60,16 +62,6 @@ export function PendingPanel({ auth }: { auth: UseAuthReturn }) {
         </button>
         <button className="btn" type="button" onClick={auth.closeAuth}>닫기</button>
       </div>
-    </>
-  );
-}
-
-export function RemovedPanel({ auth }: { auth: UseAuthReturn }) {
-  return (
-    <>
-      <h3>나간 계정</h3>
-      <p className="msub">멤버에서 빠진 계정이에요. 이 계정으로는 다시 가입할 수 없어요.</p>
-      <div className="mbtns"><button className="btn" type="button" onClick={auth.closeAuth}>닫기</button></div>
     </>
   );
 }

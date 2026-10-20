@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UseAuthReturn } from '../useAuth';
 import { GoogleMark, KakaoMark } from './SsoMarks';
-import { JoinPanel, PendingPanel, RemovedPanel } from './JoinPanel';
+import { needJoin } from '../profileGate';
+import { JoinPanel, PendingPanel } from './JoinPanel';
 
 /* 로그인 화면. 다우오피스 로그인처럼 화면 전체를 덮고 가운데 한 줄로 놓는다(§4.55).
    로그인 전에는 카카오·구글·(접힌) 기존 아이디 로그인,
@@ -37,16 +38,14 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
 
   const status = auth.member?.status;
   let body;
-  const joining = !!auth.me && !auth.memberLoading && (status === 'NONE' || status === 'REJECTED');
+  const joining = !!auth.me && !auth.memberLoading && needJoin(status);
   if (auth.me && auth.memberLoading) {
     body = <><h3>확인하는 중…</h3><p className="msub">가입 상태를 불러오고 있어요.</p>
       <div className="mbtns"><button className="btn" type="button" onClick={auth.closeAuth}>닫기</button></div></>;
-  } else if (auth.me && (status === 'NONE' || status === 'REJECTED')) {
-    body = <JoinPanel key={status + joinGen} auth={auth} dirtyRef={joinDirty} onClose={close} />;
+  } else if (auth.me && needJoin(status)) {
+    body = <JoinPanel key={`${status}${joinGen}`} auth={auth} dirtyRef={joinDirty} onClose={close} />;
   } else if (auth.me && status === 'PENDING') {
     body = <PendingPanel auth={auth} />;
-  } else if (auth.me && status === 'REMOVED') {
-    body = <RemovedPanel auth={auth} />;
   } else if (auth.me) {
     body = (
       <>

@@ -4,7 +4,7 @@ import {
   lifeLabel, maskBirth, matchPerson, mergeMonths, monthLabel, monthsBetween, olderRange, personLine, searchLife, sortPeople,
   toProfile, toggleGenre, topRanks, type Draft,
 } from './memberProfile';
-import { canEditProfile, needsProfile, profileApiOn } from './profileGate';
+import { canEditProfile, needJoin, needsProfile, profileApiOn } from './profileGate';
 import type { ClubMemberDto, ProfileDto, ThemeRef } from './server';
 
 const TODAY = '2026-10-20';
@@ -218,6 +218,11 @@ describe('랭킹 달 범위', () => {
 });
 
 describe('프로필을 묻고 보일 조건(profileGate — 진입 청크)', () => {
+  it('needJoin — 가입 전·거절·내보낸 계정은 가입 신청, 대기·승인·모름은 아니다', () => {
+    expect(['NONE', 'REJECTED', 'REMOVED'].map(needJoin)).toEqual([true, true, true]);
+    expect(['PENDING', 'APPROVED', null, undefined].map(needJoin)).toEqual([false, false, false, false]);
+  });
+
   const me = (status: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'REMOVED', profile?: ProfileDto | null) => ({ status, profile });
   it('옛 서버(profile 필드 없음)면 묻지도, 열지도 않는다', () => {
     expect(profileApiOn(me('APPROVED'))).toBe(false);

@@ -7,6 +7,10 @@ type M = Pick<MeDto, 'status' | 'profile'> | null;
 
 const joined = (m: M): m is Pick<MeDto, 'status' | 'profile'> => !!m && (m.status === 'PENDING' || m.status === 'APPROVED');
 
+/* 가입 신청을 보일 사람 — 가입 전·거절·내보낸 계정. 내보낸 계정도 다시 신청하면 PENDING(2026-10-20 사용자 결정, §4.6).
+   옛 서버는 내보낸 계정의 신청에 403 JOIN_BLOCKED 를 주고, 폼이 그 문구를 그대로 보인다 */
+export const needJoin = (status: string | null | undefined): boolean => status === 'NONE' || status === 'REJECTED' || status === 'REMOVED';
+
 export const profileApiOn = (m: M): boolean => !!m && m.profile !== undefined;
 
 /* 고칠 수 있다 — 서버가 PUT /api/me/profile 을 받는 상태(가입 신청한 사람·승인 멤버) */

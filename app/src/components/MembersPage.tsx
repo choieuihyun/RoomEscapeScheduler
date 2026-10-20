@@ -27,7 +27,7 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
 
   /* 되돌릴 수 없는 처리는 한 번 더 묻는다 */
   const remove = (m: MemberDto) => {
-    if (confirm(`${memberName(m)} 님을 내보낼까요?\n내보낸 계정은 다시 가입할 수 없어요.`)) void act(m, 'remove');
+    if (confirm(`${memberName(m)} 님을 내보낼까요?\n본인이 다시 가입 신청하면 승인 대기로 돌아와요.`)) void act(m, 'remove');
   };
   const demote = (m: MemberDto) => {
     if (confirm(`${memberName(m)} 님의 운영진을 해제할까요?\n멤버는 그대로 남아요.`)) void setRole(m, 'MEMBER');
@@ -96,7 +96,7 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
               </table>
             </div>
           )}
-          <p className="mem-note">거절한 신청과 내보낸 계정은 아래 "지난 신청"에 남아요. 내보낸 계정은 다시 가입할 수 없어요.</p>
+          <p className="mem-note">거절한 신청과 내보낸 계정은 아래 "지난 신청"에 남아요. 내보낸 계정도 본인이 다시 신청하면 승인 대기로 와요.</p>
         </section>
 
         <section className="mem-sec">
@@ -114,7 +114,7 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
                   <span className="mem-btns">
                     {m.status === 'REJECTED'
                       ? <button className="btn mem-ok" type="button" disabled={busy.has(m.uid)} onClick={() => void act(m, 'approve')}>승인</button>
-                      : <span className="mem-sub">다시 가입할 수 없어요</span>}
+                      : <span className="mem-sub">다시 신청하면 승인 대기로 와요</span>}
                   </span>
                 </div>
               ))}

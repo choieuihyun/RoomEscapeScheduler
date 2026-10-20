@@ -7,6 +7,7 @@
    - 계정: 로그인했을 때. 연결 행은 왼쪽 메뉴 계정 자리(AcctWidget)와 같은 규칙 — 연결 동작은 아이디 계정만,
      소셜 로그인 계정이면 붙은 것만 "연결됨"으로 보인다. 카카오 연결은 서버 일이라 member 가 null 이면 뺀다.
    - 로그아웃: 맨 아래 따로 떨어진 그룹(제목 없음) */
+import { needJoin } from './profileGate';
 export type MoreRowId = 'played' | 'past' | 'people' | 'ranking' | 'push' | 'members' | 'dark' | 'tour' | 'kakao' | 'google' | 'join' | 'logout';
 export type MoreGroupId = 'records' | 'club' | 'alerts' | 'admin' | 'settings' | 'account' | 'out';
 export interface MoreRow {
@@ -44,7 +45,7 @@ export function moreGroups(o: {
   };
   if (o.member !== null) linkRow('kakao', '카카오', o.member.kakaoLinked);
   linkRow('google', '구글', o.providerIds.includes('google.com'));
-  if (o.member?.status === 'NONE' || o.member?.status === 'REJECTED') account.push({ id: 'join', label: '가입 신청' });
+  if (needJoin(o.member?.status)) account.push({ id: 'join', label: '가입 신청' });
   if (account.length) groups.push({ id: 'account', title: '계정', rows: account });
   groups.push({ id: 'out', title: '', rows: [{ id: 'logout', label: '로그아웃' }] });
   return groups;

@@ -48,8 +48,8 @@ describe('moreGroups', () => {
     expect(shape(g)).toEqual(['settings:dark,tour', 'account:google/link', 'out:logout']);
   });
 
-  it('가입 전·거절이면 가입 신청 행', () => {
-    for (const status of ['NONE', 'REJECTED']) {
+  it('가입 전·거절·내보낸 계정이면 가입 신청 행(내보낸 계정도 다시 신청, 2026-10-20)', () => {
+    for (const status of ['NONE', 'REJECTED', 'REMOVED']) {
       const g = moreGroups({ ...member, profileOn: false, clubOn: false, member: { status, kakaoLinked: false } });
       expect(g.find(x => x.id === 'account')?.rows.map(r => r.id)).toEqual(['google', 'join']);
     }

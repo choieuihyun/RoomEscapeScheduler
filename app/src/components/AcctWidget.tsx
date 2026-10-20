@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { needJoin } from '../profileGate';
 import type { UseAuthReturn } from '../useAuth';
 import { Avatar } from './Avatar';
 import { GoogleMark, KakaoMark } from './SsoMarks';
@@ -39,7 +40,6 @@ export function AcctWidget({ auth, onEditProfile }: { auth: UseAuthReturn; onEdi
   const chip = m?.status === 'PENDING' ? { cls: 'warn', text: '승인 대기' }
     : m?.status === 'APPROVED' && role === 'ADMIN' ? { cls: 'role', text: '운영진' }
     : null;
-  const needJoin = m?.status === 'NONE' || m?.status === 'REJECTED';
 
   const isPassword = auth.providerIds.includes('password');
   const googleLinked = auth.providerIds.includes('google.com');
@@ -60,7 +60,7 @@ export function AcctWidget({ auth, onEditProfile }: { auth: UseAuthReturn; onEdi
       {onEditProfile && (
         <button className="acct-prof" type="button" onClick={onEditProfile}>{m?.profile ? '프로필 고치기' : '프로필 채우기'}</button>
       )}
-      {needJoin && (
+      {needJoin(m?.status) && (
         <button className="btn acct-join" type="button" onClick={() => auth.openAuth()}>가입 신청</button>
       )}
       {showLink && (
