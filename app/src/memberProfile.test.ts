@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GENRES, MBTI_ROWS, addMonths, ageKst, checkBirth, cleanRooms, draftFrom, draftIssues, emptyDraft, firstRange, lifeFromRef,
+  GENRES, MBTI_ROWS, addMonths, ageKst, birthLabel, checkBirth, cleanRooms, draftFrom, draftIssues, emptyDraft, firstRange, lifeFromRef,
   lifeLabel, maskBirth, matchPerson, mergeMonths, monthLabel, monthsBetween, olderRange, personLine, searchLife, sortPeople,
   toProfile, toggleGenre, topRanks, type Draft,
 } from './memberProfile';
@@ -59,6 +59,10 @@ describe('만 나이(한국 날짜)', () => {
     expect(ageKst('1997-06-28', '2026-06-28')).toBe(29);
     expect(ageKst('1997-06-28', '2026-10-20')).toBe(29);
     expect(ageKst('1997-12-31', '2026-01-01')).toBe(28);
+  });
+  it('생일 표시는 월.일(입력 칸과 같은 두 자리)', () => {
+    expect(birthLabel('1997-06-28')).toBe('06.28');
+    expect(birthLabel('2000-02-29')).toBe('02.29');
   });
   it('2월 29일생은 평년엔 3월 1일부터 한 살 더(2월 28일은 아직)', () => {
     expect(ageKst('2000-02-29', '2025-02-28')).toBe(24);

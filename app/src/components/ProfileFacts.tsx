@@ -18,7 +18,7 @@ export function ProfileFacts({ p, onEdit }: { p: ProfileDto | null | undefined; 
     <div className="pfx">
       <dl className="pfx-dl">
         <div><dt>이름</dt><dd>{p.realName}</dd></div>
-        <div><dt>나이</dt><dd>만 {ageKst(p.birthDate, today)}세 <span className="pfx-sub">· {birthLabel(p.birthDate)}</span></dd></div>
+        <div><dt>나이</dt><dd>만 {ageKst(p.birthDate, today)}세 <span className="pfx-sub">· 생일 {birthLabel(p.birthDate)}</span></dd></div>
         <div><dt>MBTI</dt><dd>{mbtiLabel(p.mbti)}</dd></div>
         <div><dt>방 수</dt><dd>{p.roomCount.toLocaleString('ko-KR')}개</dd></div>
         <div className="wide"><dt>장르</dt><dd className="pfx-genres">{p.genres.map((g) => <span key={g} className="pfx-g">{g}</span>)}</dd></div>

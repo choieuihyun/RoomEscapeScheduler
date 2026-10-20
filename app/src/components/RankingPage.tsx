@@ -19,10 +19,13 @@ export function RankingPage({ active, today, meUid, onBack, onMissing }: {
   useEffect(() => { missingRef.current = onMissing; }, [onMissing]);
 
   const inflight = useRef('');
+  /* 마지막으로 물은 범위 — "다시 시도"는 이 범위만 다시 묻는다(받아 둔 전체를 다시 물으면 12달을 넘어 BAD_RANGE 가 된다) */
+  const lastRange = useRef<{ from: string; to: string } | null>(null);
   const load = useCallback(async (range: { from: string; to: string }) => {
     const key = range.from + range.to;
     if (inflight.current === key) return; // 같은 범위를 이미 묻는 중(들어오자마자 두 번 불려도 한 번만)
     inflight.current = key;
+    lastRange.current = range;
     const my = ++seq.current;
     setBusy(true);
     try {
@@ -58,7 +61,7 @@ export function RankingPage({ active, today, meUid, onBack, onMissing }: {
       <p>달마다 해 본 테마를 많이 기록한 멤버 5등까지예요. 날짜를 적은 기록만 세고, 같은 수면 같은 순위예요.</p>
     </header>
     <div className="rk">
-      {err && <div className="home-empty rk-err"><p>{err}</p><button type="button" className="btn" disabled={busy} onClick={() => void load(months && oldest ? { from: oldest, to: first.to } : first)}>다시 시도</button></div>}
+      {err && <div className="home-empty rk-err"><p>{err}</p><button type="button" className="btn" disabled={busy} onClick={() => void load(lastRange.current ?? first)}>다시 시도</button></div>}
       {!err && months === null && <p className="mem-empty">불러오는 중이에요…</p>}
       {months && (
         <div className="rk-grid">

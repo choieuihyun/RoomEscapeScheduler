@@ -68,8 +68,8 @@ export function ageKst(birth: string, today: string): number {
   return ty - by - (tmd < bmd ? 1 : 0);
 }
 
-/* 생일 표시 "6월 28일" */
-export const birthLabel = (iso: string): string => `${+iso.slice(5, 7)}월 ${+iso.slice(8, 10)}일`;
+/* 생일 표시 — 계약의 "월.일", 입력 칸(1997.06.28)과 같은 모양으로 "06.28" */
+export const birthLabel = (iso: string): string => `${iso.slice(5, 7)}.${iso.slice(8, 10)}`;
 
 /* ── 장르 ── */
 
