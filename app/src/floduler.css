@@ -38,7 +38,12 @@
   --green:#00AF52; --green-text:#0D7738; --green-soft:#E0F4E2;
   --red:#FF502A;   --red-text:#C92208;  --red-soft:#FFE4DC;  --red-line:#FFBCAF;
   --amber:#E47B37; --amber-text:#99562C; --amber-soft:#FFEDDC; --amber-line:#FFD9B0;
-  --played:#6F918B;   /* 캘린더 "해 본 테마" 점 — 지난 기록이라 차분한 회색-청록(§4.62) */
+  /* 캘린더 층(2026-10-20) — 모임 일정 상태 점(보라·주황·초록·회색)과 겹치지 않게 색과 모양을 같이 나눈다.
+     하고 싶은 일정: 파랑 점선 · 다녀온 일정: 옅은 회녹 채움 · 빈자리 알림: 진한 주황 테두리·종 · 해 본 테마: 회색 체크 */
+  --wish:#2F6BCF;                       /* surface 대비 5.1:1 */
+  --done:#5E8B6D; --done-soft:#E8F0EA;  /* 점 3.9:1(옅은 채움 위 3.4:1) */
+  --watch:#C8661F;                      /* 3.9:1 */
+  --played:#7A7B7D;                     /* 4.2:1 — 지난 기록이라 회색으로 가장 조용하게(§4.62) */
   /* 동호회 일정 상태 색 — 협의 중 · 예약 전 · 예약 완료 (글자/바탕) */
   --st-talk-fg:#5B3CC4;   /* 협의 중 — 회색이면 흰 바탕에 묻혀 보라로 (2026-10-19) */
   --st-before-fg:#99562C;
@@ -105,7 +110,7 @@
     --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
     --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
     --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
-    --played:#8FB3AD;
+    --wish:#86AEF2; --done:#8DB89A; --done-soft:#2F3B33; --watch:#E08A4E; --played:#9A9B9D;
     --st-talk-fg:#CDB8FF;
     --st-before-fg:#FFA45E;
     --st-done-fg:#6ED688;
@@ -149,7 +154,7 @@
   --green:#00AF52; --green-text:#6ED688; --green-soft:#194C28;
   --red:#FF502A;   --red-text:#FF8271;  --red-soft:#3A1E1B;  --red-line:#7A2512;
   --amber:#E47B37; --amber-text:#FFA45E; --amber-soft:#64371A; --amber-line:#99562C;
-  --played:#8FB3AD;
+  --wish:#86AEF2; --done:#8DB89A; --done-soft:#2F3B33; --watch:#E08A4E; --played:#9A9B9D;
   --st-talk-fg:#CDB8FF;
   --st-before-fg:#FFA45E;
   --st-done-fg:#6ED688;
@@ -565,8 +570,10 @@ button:active{transform:scale(.97)}
 .tag{display:inline-flex;align-items:center;gap:5px;height:22px;font-size:11.5px;font-weight:500;padding:0 9px;
   border-radius:var(--pill);border:1px solid var(--line2);background:var(--surface);color:var(--ink2);flex:none;align-self:flex-start}
 .tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--tag-dot,var(--ink3))}
-.tag.done{--tag-dot:var(--st-done-dot)}
-.tag.wish{--tag-dot:var(--blue)}
+/* 캘린더 층과 같은 표시 — 하고 싶음: 파랑 빈 네모, 다녀옴: 회녹 채운 네모 */
+.tag.done{--tag-dot:var(--done)}
+.tag.wish::before{background:transparent;box-shadow:inset 0 0 0 1.5px var(--wish)}
+.tag.done::before,.tag.wish::before{width:7px;height:7px;border-radius:2px}
 .plan .pspan{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;
   color:var(--ink3)}
 .plan .pmemo{font-size:13px;color:var(--ink3);flex:1 1 100%;margin:0}
@@ -851,9 +858,10 @@ button:active{transform:scale(.97)}
 .cal-legend{display:none;gap:6px;flex-wrap:wrap;margin:0 0 12px}
 .chip-pick.cal-legend-item{height:28px;padding:0 10px;font-size:12.5px}
 .cal-legend-item.off{opacity:.55}
-.cal-legend-item.off .cal-key{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ev)}
+.cal-legend-item.off .cal-key{opacity:.45}
 @media(max-width:900px){.cal-legend{display:flex}}
-.cal-key{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--ev)}
+/* 층 표시 — 칩 앞 표시와 같은 모양(모임: 흰 칸+점, 하고 싶은: 점선 네모, 다녀온: 채운 네모, 알림: 종, 해 본 테마: 체크) */
+.cal-key{flex:none;display:inline-block;box-sizing:border-box;width:10px;height:10px;border-radius:3px;background:var(--ev)}
 .cal-note{margin:0 0 12px;font-size:13px;color:var(--ink2)}
 
 .cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
@@ -883,12 +891,29 @@ button:active{transform:scale(.97)}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);
   background:var(--surface);border:1px solid var(--line)}
 .cal-ev:not(.club)::before{content:"";display:inline-block;width:7px;height:7px;border-radius:999px;background:var(--ev);margin-right:5px;vertical-align:1px}
-.cal-ev.wish,.cal-key.wish{--ev:var(--blue)}
-.cal-ev.done,.cal-key.done{--ev:var(--green)}
-.cal-ev.watch,.cal-key.watch{--ev:var(--amber)}
-/* 해 본 테마(§4.62) — 지난 기록이라 보조 글자색으로 차분하게 */
+:root{--bell:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a6.5 6.5 0 0 0-6.5 6.5c0 5.5-2.5 7.5-3 8.5h19c-.5-1-3-3-3-8.5A6.5 6.5 0 0 0 12 2zM9.5 19.5a2.5 2.5 0 0 0 5 0z'/%3E%3C/svg%3E")}
+.cal-ev.wish,.cal-key.wish,.cal-blk.wish{--ev:var(--wish)}
+.cal-ev.done,.cal-key.done,.cal-blk.done{--ev:var(--done)}
+.cal-ev.watch,.cal-key.watch,.cal-blk.watch{--ev:var(--watch)}
 .cal-ev.played,.cal-key.played{--ev:var(--played)}
-.cal-ev.played{color:var(--ink2)}
+/* 하고 싶은 일정 — 파랑 점선 테두리 + 속 빈 네모 */
+.cal-ev.wish{border:1px dashed var(--wish)}
+.cal-ev.wish::before{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ev);border-radius:2px}
+/* 다녀온 일정 — 옅은 회녹 채움 + 채운 네모 */
+.cal-ev.done{background:var(--done-soft);border-color:var(--done-soft)}
+.cal-ev.done::before{border-radius:2px}
+/* 빈자리 알림 — 진한 주황 테두리 + 종 */
+.cal-ev.watch{border-color:var(--watch)}
+.cal-ev.watch::before{width:9px;height:9px;margin-right:4px;vertical-align:0}
+/* 해 본 테마(§4.62) — 지난 기록이라 가장 조용하게: 테두리·바탕 없이 회색 글자 + 체크 */
+.cal-ev.played{color:var(--ink2);background:transparent;border-color:transparent}
+.cal-key.club{background:radial-gradient(circle,var(--ink2) 2px,transparent 2.5px),var(--surface);box-shadow:inset 0 0 0 1.5px var(--ink3)}
+.cal-key.wish{background:transparent;border:1.5px dashed var(--ev)}
+.cal-key.watch,.cal-ev.watch::before{border-radius:0;-webkit-mask:var(--bell) center/contain no-repeat;mask:var(--bell) center/contain no-repeat}
+.cal-key.watch{width:11px;height:11px}
+.cal-key.played,.cal-ev.played::before{width:4px;height:8px;border-radius:0;background:transparent;border:solid var(--ev);border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+.cal-ev.played::before{margin:0 7px 0 3px;vertical-align:2px}
+.cal-key.played{margin:0 3px 2px}
 .cal-more{align-self:flex-start;font-size:11.5px;font-weight:600;color:var(--ink2);background:none;border:none;
   padding:0 6px;height:18px;border-radius:4px;font-family:inherit}
 .cal-more:hover{background:var(--chip-bg);color:var(--ink)}
@@ -914,10 +939,10 @@ button:active{transform:scale(.97)}
 .cal-blk.right{left:calc(60% + 4px);right:4px}
 .cal-blk b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal-blk span{font-size:11px;color:var(--ink2);font-variant-numeric:tabular-nums}
-.cal-blk.wish{--ev:var(--blue)} .cal-blk.done{--ev:var(--green)} .cal-blk.watch{--ev:var(--amber)}
+.cal-blk.wish{background:var(--surface);border:1px dashed var(--ev);border-left:3px dashed var(--ev)}
+.cal-blk.done{background:var(--done-soft)}
 
 /* ── 동호회 일정(계획 Task E6) — 칩·상태 배지·상세 패널. 상태 색은 --st-* 토큰 세 쌍 ── */
-.cal-key.club{--ev:var(--blue-text)}
 :is(.chip-st,.chip-info,.cal-ev.club,.cal-dot).talk{--st-fg:var(--st-talk-fg);--st-line:var(--st-talk-line);--st-dot:var(--st-talk-dot)}
 :is(.chip-st,.chip-info,.cal-ev.club,.cal-dot).before{--st-fg:var(--st-before-fg);--st-line:var(--st-before-line);--st-dot:var(--st-before-dot)}
 :is(.chip-st,.chip-info,.cal-ev.club,.cal-dot).done{--st-fg:var(--st-done-fg);--st-line:var(--st-done-line);--st-dot:var(--st-done-dot)}
@@ -965,7 +990,7 @@ button:active{transform:scale(.97)}
 .cal-played .cal-side-h span{font-weight:400;color:var(--ink3);font-variant-numeric:tabular-nums}
 .cal-played ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
 .cal-played li{display:flex;align-items:baseline;gap:6px;min-width:0;font-size:13.5px;color:var(--ink)}
-.cal-played li .cal-key{flex:none;align-self:center;width:7px;height:7px;border-radius:999px}
+.cal-played li .cal-key{align-self:center}
 .cal-played li b{flex:0 1 auto;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cal-played li span{flex:1 1 0;min-width:0;font-size:12px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cal-played-all{margin-top:8px;padding:2px 0;border:none;background:none;font-family:inherit;font-size:12.5px;color:var(--blue-text);cursor:pointer}
@@ -1344,12 +1369,24 @@ button:active{transform:scale(.97)}
   .cal-evs{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:3px}
   .cal-ev{width:6px;height:6px;padding:0;border:0;border-radius:999px;font-size:0;background:var(--ev)}
   .cal-ev:not(.club)::before{display:none}
+  /* 점도 층마다 모양을 나눈다 — 모임: 채운 원(후보 날짜는 빈 원), 하고 싶은: 빈 네모, 다녀온: 채운 네모, 알림: 마름모, 해 본 테마: 체크 */
+  .cal-ev.wish,.cal-ev.done,.cal-ev.watch{border:0;border-radius:1px}
+  .cal-ev.wish{width:7px;height:7px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--ev)}
+  .cal-ev.done{background:var(--ev)}
+  .cal-ev.watch{transform:rotate(45deg) scale(.9)}
+  .cal-ev.played{width:4px;height:7px;background:transparent;border:solid var(--ev);border-width:0 1.5px 1.5px 0;border-radius:0;transform:translateY(-1px) rotate(45deg)}
   .cal-more{font-size:10px;padding:0;height:auto;line-height:6px}
   .cal-modes{margin-left:0}
   .cal-cell.col{min-height:160px;padding:4px 2px;align-items:stretch}
   .cal-weekview .cal-ev{width:auto;height:18px;font-size:10.5px;padding:0 3px;border:1px solid var(--line);
-    border-radius:3px;background:var(--surface);line-height:16px}
+    border-radius:3px;background:var(--surface);line-height:16px;box-shadow:none;transform:none}
   .cal-weekview .cal-ev:not(.club)::before{display:inline-block;width:6px;height:6px;margin-right:3px}
+  .cal-weekview .cal-ev.wish{border:1px dashed var(--wish)}
+  .cal-weekview .cal-ev.done{background:var(--done-soft);border-color:var(--done-soft)}
+  .cal-weekview .cal-ev.watch{border-color:var(--watch)}
+  .cal-weekview .cal-ev.watch::before{width:8px;height:8px;margin-right:2px}
+  .cal-weekview .cal-ev.played{border-color:transparent;background:transparent}
+  .cal-weekview .cal-ev.played::before{width:3px;height:6px;margin:0 5px 0 2px}
   .cal-weekview .cal-evs{flex-direction:column;flex-wrap:nowrap}
   .cal-col-h{flex-direction:column;gap:0}
   .cal-day-tl{margin-left:52px}
@@ -1362,7 +1399,7 @@ button:active{transform:scale(.97)}
   .cal-day-club .cal-ev.club{height:26px;padding:0 8px;font-size:13px;gap:5px;border:1px solid var(--line)}
   .cal-day-club .cal-ev.club>.cal-dot{display:inline-block}
   .cal-day-club .cal-ev.played{width:auto;height:26px;line-height:24px;padding:0 8px;font-size:13px;
-    border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+    border:1px solid transparent;border-radius:4px;background:transparent;transform:none}
   .cal-day-club .cal-ev.played::before{display:inline-block}
   /* 후보 날짜 칩은 속 빈 점 */
   .cal-ev.club.cand{background:transparent;border:0;box-shadow:inset 0 0 0 1.5px var(--st-dot)}
