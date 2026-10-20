@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Me } from './cloud';
-import { appRedirectUri, isKakaoInApp, kakaoAuthUrl, readKakaoReturn, stripKakaoParams } from './kakao';
+import { handleKakaoReturn } from './authFlow';
+import { appRedirectUri, isKakaoInApp, kakaoAuthUrl, readKakaoReturn } from './kakao';
 import { beginKakaoTrip, endKakaoTrip } from './kakaoTrip';
 import { getMe, joinClub, kakaoLink, kakaoLogin, type MeDto } from './server';
 
@@ -92,17 +93,8 @@ export function useAuth() {
     if (!kakaoBack || kakaoHandled.current) return;
     kakaoHandled.current = true;
     (async () => {
-      /* handleKakaoReturn 을 먼저 부른다 — 주소 정리가 SDK 로드·실패와 상관없이 끝나게.
-         Firebase 가 필요한 의존성은 지연해서 넘긴다. 이 흐름은 돌아왔을 때만 쓰여서 코드도 그때 받는다(진입 크기). */
-      let handleKakaoReturn: typeof import('./authFlow').handleKakaoReturn;
-      try {
-        ({ handleKakaoReturn } = await import('./authFlow'));
-      } catch (e) {
-        console.warn('카카오 돌아오기 처리 실패:', e);
-        history.replaceState(null, '', stripKakaoParams(location.href));
-        setErr('카카오 로그인을 마무리하지 못했어요. 다시 눌러 주세요.'); setOpen(true); setAuthLoading(false);
-        return;
-      }
+      /* handleKakaoReturn 을 먼저(동기로) 부른다 — 주소 정리가 SDK 로드·실패와 상관없이 끝나게.
+         Firebase 가 필요한 의존성은 지연해서 넘긴다. */
       const r = await handleKakaoReturn({
         search: location.search,
         href: location.href,

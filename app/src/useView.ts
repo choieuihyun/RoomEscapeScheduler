@@ -53,10 +53,13 @@ export function decideFirstScreen(o: {
   return o.clubApi !== 'unknown' || o.clubError !== '';
 }
 
-/* 화면을 옮길 때 기록을 어떻게 다룰지. 주소가 달라지면 쌓고, 같은 주소로 가는 이동(더보기 하위 화면에서 강조된 더보기 칸을 누름)은
-   쌓지 않고 지금 기록의 상태만 비운다(replace) — 쌓으면 뒤로 가기가 하위 화면으로 되돌아온다. */
-export function moveMode(replace: boolean, urlChanged: boolean): 'pushState' | 'replaceState' {
-  return !replace && urlChanged ? 'pushState' : 'replaceState';
+/* 화면을 옮길 때 기록을 어떻게 다룰지. 주소가 달라지면 쌓는다.
+   같은 주소로 가는 이동은 더보기 하위 화면에서 더보기 칸을 누른 경우다 — 하위 화면이 쌓아 둔 기록이 있으니(subState)
+   한 칸 뒤로 가서 목록 기록 하나만 남게 한다(popstate 가 화면을 바꾼다). 그 밖의 같은 주소는 상태만 비운다. */
+export function moveMode(replace: boolean, urlChanged: boolean, subState = false): 'pushState' | 'replaceState' | 'back' {
+  if (replace) return 'replaceState';
+  if (urlChanged) return 'pushState';
+  return subState ? 'back' : 'replaceState';
 }
 
 export function useView(o: Opts) {
@@ -78,7 +81,9 @@ export function useView(o: Opts) {
     else q.set('view', next);
     const search = q.toString();
     const url = location.pathname + (search ? '?' + search : '') + location.hash;
-    history[moveMode(replace, url !== location.pathname + location.search + location.hash)](null, '', url);
+    const how = moveMode(replace, url !== location.pathname + location.search + location.hash, history.state !== null);
+    if (how === 'back') { history.back(); return; }
+    history[how](null, '', url);
     setRaw({ v: next, hash: '' });
   }, []);
 

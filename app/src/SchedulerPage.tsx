@@ -60,7 +60,7 @@ function useStaleStrip(): boolean {
 
 /* 넓은 화면(왼쪽 메뉴, >900px)인지 — 더보기(§4.60)는 좁은 화면 전용이라 넓어지면 내 정보로 바꾼다 */
 /* CSS 의 max-width:900px 와 정확히 반대 — min-width:901px 는 900~901 사이 소수 폭이 양쪽에서 빠진다 */
-const WIDE = 'not (max-width: 900px)';
+const WIDE = 'not all and (max-width: 900px)';
 function useWide(): boolean {
   const [wide, setWide] = useState(() => matchMedia(WIDE).matches);
   useEffect(() => {

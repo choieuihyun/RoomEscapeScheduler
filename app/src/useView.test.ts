@@ -113,7 +113,10 @@ describe('moveMode', () => {
   it('주소가 달라지면 기록을 쌓는다', () => {
     expect(moveMode(false, true)).toBe('pushState');
   });
-  it('같은 주소로 가면(더보기 하위 화면 → 더보기) 쌓지 않고 바꾼다', () => {
+  it('같은 주소인데 하위 화면 기록이 있으면(더보기 하위 화면 → 더보기) 한 칸 뒤로 — 목록 기록이 하나만 남는다', () => {
+    expect(moveMode(false, false, true)).toBe('back');
+  });
+  it('같은 주소에 하위 화면 기록이 없으면 쌓지 않고 바꾼다', () => {
     expect(moveMode(false, false)).toBe('replaceState');
   });
   it('replace 요청이면 늘 바꾼다', () => {
