@@ -719,13 +719,14 @@ button:active{transform:scale(.97)}
 
 /* ── 아래 탭(§4.59) — 좁은 화면(≤900px)에서만. 화면 메뉴는 아래로 내려가고 위쪽 막대엔 로고와
    도구(사용법·다크 모드·계정)만 남는다. 칸이 2개 미만이면 탭 없이 위쪽 막대에 메뉴를 그대로 둔다.
-   --bnav-h 는 탭에 가리면 안 되는 것들(본문 끝·토스트·실패 띠·투어 말풍선)이 같이 쓴다. ── */
+   --bnav-h 는 탭에 가리면 안 되는 것들(본문 끝·토스트·실패 띠)이 같이 쓴다. 투어 말풍선은 .bnav 를 잰다. ── */
 :root{--bnav-h:0px}
 .bnav{display:none}
 /* 아이폰 가로 모드 — viewport-fit=cover 라 노치 밑으로 들어가지 않게 좌우를 띄운다(없으면 0) */
 .shell{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 @media(max-width:900px){
-  :root:has(.bnav){--bnav-h:calc(56px + env(safe-area-inset-bottom))}
+  /* :has 없이도 되게 — 탭·본문·토스트·실패 띠는 모두 .lnb 뒤 형제다(투어는 .bnav 를 직접 잰다) */
+  .lnb.has-bnav ~ *{--bnav-h:calc(56px + env(safe-area-inset-bottom))}
   .lnb,.lnb.folded{padding-top:calc(8px + env(safe-area-inset-top))}
   /* 접기는 넓은 화면 설정이다 — 좁은 화면 막대에선 로고 줄을 가운데 맞춤 그대로 둔다 */
   .lnb.folded .lnb-top{flex-direction:row;padding:0 8px 0 4px}
