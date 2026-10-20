@@ -81,7 +81,7 @@ export function useView(o: Opts) {
     else q.set('view', next);
     const search = q.toString();
     const url = location.pathname + (search ? '?' + search : '') + location.hash;
-    const how = moveMode(replace, url !== location.pathname + location.search + location.hash, history.state !== null);
+    const how = moveMode(replace, url !== location.pathname + location.search + location.hash, !!(history.state as { moreSub?: string } | null)?.moreSub);
     if (how === 'back') { history.back(); return; }
     history[how](null, '', url);
     setRaw({ v: next, hash: '' });
