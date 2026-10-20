@@ -22,14 +22,14 @@ describe('regionOf — 지역 표', () => {
     expect(regionOf(store, branch)).toBe(r);
   });
 
-  it('EXTRA 표 — 키이스케이프 에버랜드는 용인(공백·대소문자 무시)', () => {
+  it('EXTRA 표 — 키이스케이프 에버랜드는 용인, 다이아에그 다이아에그는 부산(공백·대소문자 무시)', () => {
     expect(regionOf('키이스케이프', '에버랜드')).toBe('용인');
     expect(regionOf('키이스케이프 ', ' 에버 랜드')).toBe('용인');
+    expect(regionOf('다이아에그', '다이아에그')).toBe('부산'); // 서면(id diaegg-seomyeon)
   });
 
   it('아직 지역을 못 받은 지점·표에 없는 지점은 기타', () => {
     for (const b of ['LOG_IN 1', 'LOG_IN 2', 'STATION', '더오름', '메모리컴퍼니', '우주라이크', '후즈데어']) expect(regionOf('키이스케이프', b)).toBe('기타');
-    expect(regionOf('다이아에그', '다이아에그')).toBe('기타');
     expect(regionOf('다이아에그', '미스테리인')).toBe('기타');
     expect(regionOf('비트포비아', '던전101')).toBe('기타');
     expect(regionOf('', '')).toBe('기타');
