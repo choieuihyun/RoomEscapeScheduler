@@ -1,9 +1,9 @@
 import type { View } from './useView';
 
-/* 좁은 화면(≤900px)의 아래 탭(§4.59) — 홈 · 계산 · 캘린더 · 빈자리 · 내 정보.
-   칸마다 왼쪽 메뉴와 같은 조건으로만 보이고, 멤버 관리는 내 정보 화면 안으로 들어간다.
-   운영진인데 내 정보가 없으면(서버가 해 본 테마 API 를 모름) 그 자리에 '멤버' 칸을 둬
-   멤버 관리로 가는 길을 남긴다. 칸이 2개 미만이면 빈 배열 — 위쪽 막대에 메뉴를 그대로 둔다. */
+/* 좁은 화면(≤900px)의 아래 탭(§4.59·§4.60) — 홈 · 계산 · 캘린더 · 빈자리 · 더보기.
+   앞 네 칸은 왼쪽 메뉴와 같은 조건으로만 보이고, 맨 오른쪽 더보기는 로그아웃이어도 늘 있다
+   (로그인·다크 모드·사용법이 그 안에 있다). 내 정보·멤버 관리는 더보기 안으로 들어가서
+   그 화면들에 있을 때도 더보기 칸이 강조된다. 칸이 2개 미만이면 빈 배열 — 더보기가 늘 있어 실제로는 생기지 않는다. */
 export type BottomTabId = View | 'watches';
 export interface BottomTab {
   id: BottomTabId;
@@ -19,7 +19,7 @@ export interface BottomTab {
 }
 
 export function bottomTabs(o: {
-  homeOn: boolean; cloudOn: boolean; profileOn: boolean; isAdmin: boolean; gated: boolean;
+  homeOn: boolean; cloudOn: boolean; isAdmin: boolean; gated: boolean;
   pendingCount: number; watchCount: number; view: View | null;
 }): BottomTab[] {
   const tabs: BottomTab[] = [];
@@ -30,7 +30,6 @@ export function bottomTabs(o: {
     tabs.push({ id: 'calendar', label: '캘린더', on: o.view === 'calendar', gated: o.gated });
     tabs.push({ id: 'watches', label: '빈자리', on: false, count: o.watchCount, gated: o.gated });
   }
-  if (o.profileOn) tabs.push({ id: 'profile', label: '내 정보', on: o.view === 'profile' || o.view === 'members', pending });
-  else if (o.isAdmin) tabs.push({ id: 'members', label: '멤버', on: o.view === 'members', pending });
+  tabs.push({ id: 'more', label: '더보기', on: o.view === 'more' || o.view === 'profile' || o.view === 'members', pending });
   return tabs.length < 2 ? [] : tabs;
 }

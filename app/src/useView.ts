@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
    해시(#s=·#z= 공유 링크)는 이미 쓰고 있어서 건드리지 않고, 주소를 바꿀 때마다
    pathname + search + hash 를 그대로 다시 붙여 공유 링크가 날아가지 않게 한다.
    pushState 라 브라우저 뒤로 가기로 계산 화면에 돌아오고, 새로고침해도 그 화면이다. */
-export type View = 'home' | 'calc' | 'calendar' | 'profile' | 'members';
+/* more: 좁은 화면의 더보기(§4.60) — 로그아웃이어도 열린다. 넓은 화면엔 없어서 SchedulerPage 가 내 정보(또는 계산)로 바꾼다 */
+export type View = 'home' | 'calc' | 'calendar' | 'profile' | 'members' | 'more';
 
 /* decided: 기본 화면을 정할 정보(로그인 복원·승인 여부·일정 API 유무)가 다 왔는지. 안 왔으면 기본 경우는 null(아직 모름). */
 /* profileOn: 승인 멤버이고 서버가 해 본 테마 API(§4.9)를 알 때만 "내 정보" */
@@ -12,7 +13,7 @@ type Opts = { calendarOn: boolean; isAdmin: boolean; homeOn: boolean; profileOn:
 
 const paramView = (search: string): View | null => {
   const v = new URLSearchParams(search).get('view');
-  return v === 'home' || v === 'calc' || v === 'calendar' || v === 'profile' || v === 'members' ? v : null;
+  return v === 'home' || v === 'calc' || v === 'calendar' || v === 'profile' || v === 'members' || v === 'more' ? v : null;
 };
 
 /* 주소에 적힌 화면을 지금 쓸 수 있는 화면으로 바꾼다. 계정 기능이 꺼진 배포엔 캘린더도
@@ -24,6 +25,7 @@ export function readView(search: string, hash: string, o: Opts): View | null {
     ?? (/^#[sz]=/.test(hash) ? 'calc' : hash.startsWith('#e=') ? 'calendar' : o.decided ? 'home' : null);
   if (v === null) return null;
   if (v === 'home') return o.homeOn ? 'home' : 'calc';
+  if (v === 'more') return 'more';
   if (!o.calendarOn) return 'calc';
   if (v === 'members' && !o.isAdmin) return 'calc';
   if (v === 'profile' && !o.profileOn) return 'calc';
@@ -63,13 +65,15 @@ export function useView(o: Opts) {
     return () => removeEventListener('popstate', onPop);
   }, []);
 
-  const go = useCallback((next: View) => {
+  /* replace: 기록을 쌓지 않고 바꾼다 — 넓어진 화면에서 더보기를 내 정보로 바꿀 때 */
+  const go = useCallback((next: View, replace = false) => {
     const q = new URLSearchParams(location.search);
     if (next === 'home') q.delete('view');
     else q.set('view', next);
     const search = q.toString();
     const url = location.pathname + (search ? '?' + search : '') + location.hash;
-    if (url !== location.pathname + location.search + location.hash) history.pushState(null, '', url);
+    if (replace) history.replaceState(null, '', url);
+    else if (url !== location.pathname + location.search + location.hash) history.pushState(null, '', url);
     setRaw({ v: next, hash: '' });
   }, []);
 

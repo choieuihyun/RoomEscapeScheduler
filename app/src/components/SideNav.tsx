@@ -3,10 +3,13 @@ import { bottomTabs, type BottomTabId } from '../bottomTabs';
 import type { UseAuthReturn } from '../useAuth';
 import type { View } from '../useView';
 import { AcctWidget } from './AcctWidget';
+import { Avatar } from './Avatar';
 
 /* 왼쪽 메뉴(§4.49) — 그룹웨어식 LNB. 위는 로고와 화면 메뉴, 아래는 도구(사용법·
    다크 모드·계정). 좁은 화면에선 CSS 가 위쪽 가로 막대로 접고, 화면 메뉴는 아래 탭(§4.59)으로
-   옮긴다 — 두 마크업을 같이 그리고 폭에 따라 CSS 가 한쪽을 display:none 한다. 아이콘은 직접 그린
+   옮긴다 — 두 마크업을 같이 그리고 폭에 따라 CSS 가 한쪽을 display:none 한다.
+   좁은 화면 위쪽 막대엔 로고와 내 이름 단추(아바타 + "○○ 님", 누르면 더보기)만 남고
+   도구(사용법·다크 모드·연결·로그아웃)는 더보기 안으로 옮긴다(§4.60). 아이콘은 직접 그린
    24px 선 아이콘이다(참고 사이트의 아이콘은 가져오지 않는다). */
 const Icon = ({ children }: { children: ReactNode }) => (
   <svg className="lnb-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -21,6 +24,7 @@ const IcBell = () => <Icon><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9
 const IcHelp = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></Icon>;
 const IcMoon = () => <Icon><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></Icon>;
 const IcFold = ({ open }: { open: boolean }) => <Icon>{open ? <path d="M15 6l-6 6 6 6" /> : <path d="M9 6l6 6-6 6" />}</Icon>;
+const IcMore = () => <Icon><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" /></Icon>;
 const IcSun = () => <Icon><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></Icon>;
 
 /* 접기(§4.50) — 아이콘만 남는 좁은 막대. 이 기기에서만 기억하는 편의 설정이다. */
@@ -50,10 +54,25 @@ export function SideNav({
   /* 로그인했지만 아직 승인 전이면 동호회 메뉴에 "승인 후" 꼬리표를 단다 */
   const gated = !!auth.me && auth.member !== null && auth.member.status !== 'APPROVED';
   const item = (v: View) => 'lnb-item' + (view === v ? ' on' : '');
-  const tabs = bottomTabs({ homeOn, cloudOn: auth.cloudOn, profileOn, isAdmin, gated, pendingCount, watchCount, view });
-  const tabIcon: Record<BottomTabId, ReactNode> = {
-    home: <IcHome />, calc: <IcCalc />, calendar: <IcCal />, watches: <IcBell />, profile: <IcMe />, members: <IcPeople />,
+  const tabs = bottomTabs({ homeOn, cloudOn: auth.cloudOn, isAdmin, gated, pendingCount, watchCount, view });
+  const tabIcon: Partial<Record<BottomTabId, ReactNode>> = {
+    home: <IcHome />, calc: <IcCalc />, calendar: <IcCal />, watches: <IcBell />, more: <IcMore />,
   };
+  /* 좁은 화면 위쪽 막대 오른쪽 — 로그인 복원 중엔 "로그인"을 잠깐 보였다 되돌리지 않는다(AcctWidget 과 같게) */
+  const m = auth.member;
+  const myName = m?.nickname || auth.me?.id || '가입 전';
+  const myChip = m?.status === 'PENDING' ? { cls: 'warn', text: '승인 대기' }
+    : m?.status === 'APPROVED' && m.role === 'ADMIN' ? { cls: 'role', text: '운영진' } : null;
+  const meSlot = !auth.cloudOn ? null
+    : auth.authLoading ? <span className="lnb-me-wait">확인 중…</span>
+    : !auth.me ? <button className="btn lnb-login" type="button" onClick={() => auth.openAuth()}>로그인</button>
+    : (
+      <button className={'lnb-me' + (view === 'more' ? ' on' : '')} type="button" onClick={() => onView('more')} title="더보기">
+        <Avatar name={myName} photo={auth.me.photo} />
+        <span className="lnb-me-n">{myName}{m?.nickname || auth.me.id ? ' 님' : ''}</span>
+        {myChip && <span className={'chip-info lnb-me-chip ' + myChip.cls}>{myChip.text}</span>}
+      </button>
+    );
   return (<>
     <aside className={'lnb' + (folded ? ' folded' : '') + (tabs.length ? ' has-bnav' : '')}>
       <div className="lnb-top">
@@ -63,6 +82,7 @@ export function SideNav({
           <IcFold open={!folded} />
         </button>
       </div>
+      {meSlot && <div className="lnb-me-slot">{meSlot}</div>}
       <nav className="lnb-menu" aria-label="메뉴">
         {homeOn && (
           <button className={item('home')} type="button" onClick={() => onView('home')} title="홈"

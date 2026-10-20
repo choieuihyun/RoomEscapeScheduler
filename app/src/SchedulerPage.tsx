@@ -38,6 +38,7 @@ import { showPushBanner, showToast } from './toast';
 const MembersPage = lazyRetry(() => import('./components/MembersPage').then(m => ({ default: m.MembersPage })));
 const HomePage = lazyRetry(() => import('./components/HomePage').then(m => ({ default: m.HomePage })));
 const ProfilePage = lazyRetry(() => import('./components/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const MorePage = lazyRetry(() => import('./components/MorePage').then(m => ({ default: m.MorePage })));
 const EventForm = lazyRetry(() => import('./components/EventForm').then(m => ({ default: m.EventForm })));
 const CalendarPage = lazyRetry(() => import('./components/CalendarPage').then(m => ({ default: m.CalendarPage })));
 const LoadModal = lazyRetry(() => import('./components/LoadModal').then(m => ({ default: m.LoadModal })));
@@ -55,6 +56,19 @@ function useStaleStrip(): boolean {
     return () => window.removeEventListener('vite:preloadError', on);
   }, []);
   return stale;
+}
+
+/* 넓은 화면(왼쪽 메뉴, >900px)인지 — 더보기(§4.60)는 좁은 화면 전용이라 넓어지면 내 정보로 바꾼다 */
+const WIDE = '(min-width: 901px)';
+function useWide(): boolean {
+  const [wide, setWide] = useState(() => matchMedia(WIDE).matches);
+  useEffect(() => {
+    const mq = matchMedia(WIDE);
+    const on = () => setWide(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return wide;
 }
 
 /* 한 번이라도 참이었으면 계속 참 — 화면을 처음 열 때 코드를 받고, 이후엔 지우지 않고 숨기기만 해 안의 상태를 지킨다 */
@@ -153,14 +167,16 @@ export function SchedulerPage() {
   });
   /* 내 정보(§4.9) — 해 본 테마 API 는 4단계라 일정 API 와 따로 본다. 승인 멤버면 바로 목록을 한 번 받아
      서버가 모르면(본문 없는 404) 메뉴·화면을 숨긴다. 화면 안 데이터는 그 화면에 들어올 때 받는다. */
+  /* 좁은 화면 더보기도 같은 숫자(해 본 테마·지난 일정)를 보여서 그 화면에서도 받는다 */
   const [profileActive, setProfileActive] = useState(false);
   const profile = useProfile(homeOn, profileActive, today);
   const profileOn = homeOn && profile.api === 'on';
   const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided });
-  if (profileActive !== (nav.view === 'profile')) setProfileActive(nav.view === 'profile');
+  const onProfile = nav.view === 'profile' || nav.view === 'more';
+  if (profileActive !== onProfile) setProfileActive(onProfile);
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
   /* 이 기기 알림(§4.10) — 내 정보 카드와 알림 켜기 안내가 같이 쓴다 */
-  const push = usePushDevice(clubOn, nav.view === 'profile');
+  const push = usePushDevice(clubOn, onProfile);
 
   /* ── 일정 상세 패널과 `#e=<id>` 링크 (계획 Task E6) ── */
   const { setOpenEvent, select: calSelect } = cal;
@@ -180,6 +196,13 @@ export function SchedulerPage() {
   /* 캘린더 밖 화면으로 옮길 때는 #e= 를 지운다 — 남으면 `?view=calc#e=12` 를 새로고침(iOS 탭 되살림)했을 때 캘린더로 끌려간다 */
   const { go } = nav;
   const goView = useCallback((v: View) => { if (v !== 'calendar') dropLink(); go(v); }, [dropLink, go]);
+  /* 더보기는 좁은 화면 전용 — 넓은 화면에서 열리면(주소·창 넓히기) 기록을 쌓지 않고 내 정보(없으면 계산)로.
+     내 정보를 쓸 수 있는지(로그인 복원·승인·해 본 테마 API) 알기 전엔 기다린다 — 먼저 계산으로 떨어지지 않게 */
+  const wide = useWide();
+  const profileKnown = decided && (!homeOn || profile.api !== 'unknown' || profile.error !== '');
+  useEffect(() => {
+    if (wide && nav.view === 'more' && profileKnown) go(profileOn ? 'profile' : 'calc', true);
+  }, [wide, nav.view, profileKnown, profileOn, go]);
   /* 홈에서 줄·"일정 자세히 보기"를 누르면 캘린더 화면으로 넘어가 그 일정 상세를 연다 */
   const openFromHome = (ev: EventDto) => { goView('calendar'); openEvent(ev); };
   /* 내 정보의 지난 일정 → 캘린더 상세. 지난 일정은 받아 둔 목록 범위 밖일 수 있어 먼저 목록에 넣는다
@@ -336,6 +359,7 @@ export function SchedulerPage() {
   const calMounted = useEver(nav.view === 'calendar');
   const profileMounted = useEver(nav.view === 'profile');
   const membersMounted = useEver(nav.view === 'members');
+  const moreMounted = useEver(nav.view === 'more' && !wide);
   const formMounted = useEver(eventForm.open);
   const authMounted = useEver(auth.open);
   const loadMounted = useEver(loadModal.open);
@@ -417,6 +441,7 @@ export function SchedulerPage() {
         {profileOn && profileMounted && (
           <div className={'view home-view' + (nav.view === 'profile' ? '' : ' off')}>
             <header className="page-head">
+              <button type="button" className="page-back" onClick={() => goView('more')}><span aria-hidden="true">‹</span> 더보기</button>
               <h1>내 정보</h1>
             </header>
             <LazyBoundary><ProfilePage
@@ -430,10 +455,21 @@ export function SchedulerPage() {
         {isAdmin && membersMounted && (
           <div className={'view' + (nav.view === 'members' ? '' : ' off')}>
             <header className="page-head">
+              <button type="button" className="page-back" onClick={() => goView('more')}><span aria-hidden="true">‹</span> 더보기</button>
               <h1>멤버 관리</h1>
               <p>가입 신청을 오픈채팅 닉네임과 맞춰 보고 승인해 주세요. 한 사람이 계정을 여러 개 만들었으면 하나만 승인하면 돼요.</p>
             </header>
             <LazyBoundary><MembersPage ctl={members} meUid={auth.member?.uid ?? ''} /></LazyBoundary>
+          </div>
+        )}
+        {moreMounted && (
+          <div className={'view more-view' + (nav.view === 'more' ? '' : ' off')}>
+            <LazyBoundary><MorePage
+              active={nav.view === 'more'} auth={auth} profile={profile} profileOn={profileOn} clubOn={clubOn}
+              isAdmin={isAdmin} pendingCount={pendingCount} push={push}
+              dark={theme.dark} onToggleTheme={theme.toggle} onTour={startTour}
+              onMembers={() => goView('members')} onOpenEvent={openFromProfile}
+            /></LazyBoundary>
           </div>
         )}
       </main>

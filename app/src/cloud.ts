@@ -34,7 +34,15 @@ export function configured(): boolean {
   return !!(c && c.apiKey && c.projectId && c.appId);
 }
 
-export interface Me { uid: string; id: string }
+/* photo: 구글 프로필 사진 주소(없으면 없음) — 좁은 화면 위쪽 막대·더보기의 아바타(§4.60) */
+export interface Me { uid: string; id: string; photo?: string }
+
+/* 아이디 계정에 구글을 붙이면 currentUser.photoURL 은 비어 있고 구글 쪽 providerData 에만 사진이 있다 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const photoOf = (u: any): string | undefined =>
+  u?.photoURL || u?.providerData?.find((p: { providerId: string; photoURL?: string | null }) => p.providerId === 'google.com')?.photoURL || undefined;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const meOf = (u: any, id: string): Me => ({ uid: u.uid, id, photo: photoOf(u) });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let A: any = null, F: any = null, M: any = null, app: any = null, auth: any = null, db: any = null;
@@ -107,19 +115,19 @@ export async function onForegroundMessage(cb: (payload: unknown) => void): Promi
 export async function watch(cb: (me: Me | null) => void) {
   await boot();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return A.onAuthStateChanged(auth, (u: any) => cb(u ? { uid: u.uid, id: toId(u.email) } : null));
+  return A.onAuthStateChanged(auth, (u: any) => cb(u ? meOf(u, toId(u.email)) : null));
 }
 
 export async function signUp(id: string, pw: string): Promise<Me> {
   await boot();
   const c = await A.createUserWithEmailAndPassword(auth, toEmail(id), pw);
-  return { uid: c.user.uid, id };
+  return meOf(c.user, id);
 }
 
 export async function signIn(id: string, pw: string): Promise<Me> {
   await boot();
   const c = await A.signInWithEmailAndPassword(auth, toEmail(id), pw);
-  return { uid: c.user.uid, id };
+  return meOf(c.user, id);
 }
 
 /* ── 소셜 로그인 ── 구글은 서버를 거치지 않고 Firebase 가 처리한다(작업명세서 §4.6). */
@@ -132,7 +140,7 @@ export async function signInWithGoogle(): Promise<Me> {
   /* 이미 준비됐으면 await 없이 바로 팝업을 연다(클릭의 사용자 활성화 안에서 부르려고) */
   if (!auth) await boot();
   const c = await A.signInWithPopup(auth, new A.GoogleAuthProvider());
-  return { uid: c.user.uid, id: toId(c.user.email) };
+  return meOf(c.user, toId(c.user.email));
 }
 
 /* 로그인한 기존 계정에 구글을 붙인다 — uid 가 그대로라 일정·알림이 끊기지 않는다 */
@@ -146,7 +154,7 @@ export async function linkGoogle(): Promise<void> {
 export async function signInWithCustom(token: string): Promise<Me> {
   await boot();
   const c = await A.signInWithCustomToken(auth, token);
-  return { uid: c.user.uid, id: toId(c.user.email) };
+  return meOf(c.user, toId(c.user.email));
 }
 
 /* 현재 사용자에게 붙은 로그인 수단('password'·'google.com' 등) */

@@ -3,7 +3,10 @@
    액센트는 청록 하나. 값은 참고 디자인 시스템의 토큰 값을 역할에 맞춰 옮겨 왔다
    (이름이 아니라 깊이 순서로 — 바닥 < 카드 < 안으로 파인 면).
    색은 역할로만 부르고 값은 여기서만 정한다. */
+/* color-scheme(§4.60) — 앱이 라이트일 땐 "only light". 그냥 light 면 폰이 다크일 때 크롬 Auto Dark 가 앱 위에
+   다시 어둡게 칠한다(헤드리스 강제 다크로 재현: light → 어두움, only light → 흰색). 다크 두 블록은 dark. */
 :root{
+  color-scheme:only light;
   --bg:#F8F8F8;          /* 페이지 바닥 */
   --surface:#FFFFFF;     /* 카드 */
   --surface2:#F8F8F8;    /* 입력칸처럼 안으로 파인 면 */
@@ -80,6 +83,7 @@
    반대라 깊이 순서로 맞췄다. 소프트 바탕 위 청록 글자는 #002831 바탕이어야 7:1 이 나온다. */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
+    color-scheme:dark;
     --bg:#1C1C1C; --surface:#2A2B2C; --surface2:#323333;
     --line:#424343; --line2:#525253;
     --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --ink-past:#9D9EA0; --placeholder:#7A7B7D;
@@ -118,7 +122,9 @@
     --ring:0 0 0 3px rgba(var(--blue-rgb),.3);
   }
 }
+:root[data-theme="light"]{color-scheme:only light}
 :root[data-theme="dark"]{
+  color-scheme:dark;
   --bg:#1C1C1C; --surface:#2A2B2C; --surface2:#323333;
   --line:#424343; --line2:#525253;
   --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --ink-past:#9D9EA0; --placeholder:#7A7B7D;
@@ -1650,3 +1656,93 @@ input.pf-q:not([type=checkbox]):not([type=radio]):not([type=file]){padding-left:
 .pushbanner-x:hover{color:var(--ink);background:var(--btn-bg-hover)}
 .pushbanner-open:focus-visible,.pushbanner-x:focus-visible{outline:none;box-shadow:var(--ring)}
 @media(prefers-reduced-motion:reduce){.pushbanner{animation:none}}
+
+/* ── 좁은 화면 위쪽 막대 · 더보기(§4.60) ─────────────────────
+   ≤900px 위쪽 막대는 높이 60(+ 위 안전 영역): 왼쪽 로고, 오른쪽 아바타 36 + "○○ 님"(누르면 더보기).
+   사용법·다크 모드·연결·로그아웃은 더보기 목록으로 옮겼다. 넓은 화면은 손대지 않는다. */
+.ava{flex:none;width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--blue-soft);color:var(--blue-text);font-size:15px;font-weight:700;line-height:1;object-fit:cover}
+img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
+.ava-lg{width:64px;height:64px;font-size:26px}
+.lnb-me-slot,.page-back{display:none}
+@media(max-width:900px){
+  .lnb.has-bnav,.lnb.folded.has-bnav{flex-wrap:nowrap;gap:12px;min-height:calc(60px + env(safe-area-inset-top));
+    padding:env(safe-area-inset-top) 12px 0 20px}
+  .lnb.has-bnav .lnb-top,.lnb.folded.has-bnav .lnb-top{padding:0}
+  .lnb.has-bnav .lnb-logo{font-size:21px}
+  .lnb.has-bnav .lnb-foot{display:none}
+  .lnb.has-bnav .lnb-me-slot{display:flex;align-items:center;margin-left:auto;min-width:0}
+  .lnb-me{display:flex;align-items:center;gap:9px;min-width:0;height:44px;padding:0 10px 0 4px;border:none;
+    background:none;color:var(--ink);border-radius:var(--pill)}
+  .lnb-me:active{transform:none;background:var(--btn-bg-hover)}
+  .lnb-me:focus-visible{outline:none;box-shadow:var(--ring)}
+  .lnb-me-n{min-width:0;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:15px;font-weight:700;letter-spacing:-.02em}
+  .lnb-me-chip{height:20px;padding:0 7px;font-size:11px}
+  .lnb-login{height:36px;padding:0 16px;font-size:14px;font-weight:600}
+  .lnb-me-wait{padding-right:8px;font-size:13px;color:var(--ink3)}
+  /* 멤버 관리·내 정보·더보기 하위 화면 위 "‹ 더보기" */
+  .page-back{display:inline-flex;align-items:center;gap:2px;height:32px;margin:0 0 4px -8px;padding:0 8px;border:none;
+    background:none;color:var(--blue-text);font-size:14.5px;font-weight:600;border-radius:var(--r-sm)}
+  .page-back>span{font-size:22px;line-height:1;margin-top:-3px}
+  .page-back:active{transform:none;background:var(--btn-bg-hover)}
+  .page-back:focus-visible{outline:none;box-shadow:var(--ring)}
+}
+@media(max-width:900px) and (hover:hover){
+  .lnb-me:hover{background:var(--btn-bg-hover)}
+}
+
+.more{max-width:640px;margin:0 auto;padding-bottom:36px}
+.more-head{padding-bottom:16px}
+.more-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.more-me{padding:20px 18px 0}
+.more-me-top{display:flex;align-items:center;gap:14px;min-width:0;padding-bottom:18px}
+.more-me-who{display:flex;flex-direction:column;gap:3px;min-width:0}
+.more-me-n{display:flex;align-items:center;gap:8px;min-width:0}
+.more-me-n b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:19px;font-weight:700;letter-spacing:-.025em;color:var(--ink)}
+.more-me-sub{font-size:13px;color:var(--ink3)}
+.more-stats{display:grid;grid-template-columns:1fr 1fr;margin:0 -18px;border-top:1px solid var(--line)}
+.more-stats>div{display:flex;flex-direction:column;align-items:center;gap:1px;padding:12px 0 14px}
+.more-stats>div+div{border-left:1px solid var(--line)}
+.more-stats b{font-size:19px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3}
+.more-stats span{font-size:12.5px;color:var(--ink3)}
+.more-login{padding:20px 18px;display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.more-login p{margin:0;font-size:15px;line-height:1.5;color:var(--ink)}
+.more-login .btn-go{height:42px;padding:0 22px;font-size:14.5px;font-weight:600;border-radius:var(--r)}
+.more-group{margin-top:22px}
+.more-group.out{margin-top:26px}
+.more-gt{margin:0 0 8px 6px;font-size:13px;font-weight:600;color:var(--ink3)}
+.more-row{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:0 14px 0 16px;
+  border:none;border-radius:0;background:none;color:var(--ink);font-size:15px;font-weight:400;text-align:left}
+/* 행 사이 1px 선은 아이콘 오른쪽(글자 시작)부터 — 설정 앱의 들여 쓴 구분선 */
+.more-row+.more-row::before{content:'';position:absolute;top:0;left:46px;right:0;height:1px;background:var(--line)}
+.more-row:active{transform:none;background:var(--btn-bg-hover)}
+.more-row:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+.more-row.static{cursor:default}
+.more-row.static:active{background:none}
+.more-ic{flex:none;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink2)}
+.more-kakao{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:#FEE500}
+.more-kakao svg{width:13px;height:13px}
+.more-l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.more-r{flex:none;display:inline-flex;align-items:center}
+.more-r:empty{display:none}
+.more-v{font-size:14px;color:var(--ink3)}
+.more-v.num{font-variant-numeric:tabular-nums}
+.more-v.strong{color:var(--blue-text);font-weight:600}
+.more-chev{flex:none;margin-left:-4px;color:var(--ink3)}
+.more-switch{position:relative;width:44px;height:26px;border-radius:999px;background:var(--line2);transition:background .15s}
+.more-switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#FFFFFF;
+  box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.more-switch.on{background:var(--blue)}
+.more-switch.on::after{transform:translateX(18px)}
+.more-out{justify-content:center;padding:0 16px;color:var(--red-text);font-weight:600}
+.more-err{margin:8px 6px 0}
+.more-sub-h{padding:14px 0 16px}
+.more-sub-h h1{display:flex;align-items:baseline;gap:8px;margin:0;font-size:21px;font-weight:700;letter-spacing:-.03em;color:var(--ink);outline:none}
+.more-sub-n{font-size:14px;font-weight:600;color:var(--blue-text);font-variant-numeric:tabular-nums}
+/* 하위 화면은 위 제목이 같은 이름이라 카드 안 제목을 숨긴다(카드의 aria-label 은 그대로) */
+.more-sub .pf-h,.more-sub .pf-past>.home-h,.more-sub .pf-push-h .home-h{display:none}
+@media(hover:hover){
+  .more-row:not(.static):hover{background:var(--btn-bg-hover)}
+}
+@media(prefers-reduced-motion:reduce){.more-switch,.more-switch::after{transition:none}}

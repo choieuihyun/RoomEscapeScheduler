@@ -38,7 +38,7 @@ export function ProfilePage({
   onMembers: () => void;
   onOpenEvent: (ev: EventDto) => void;
 }) {
-  const { played, past } = profile;
+  const { played } = profile;
   const kept = played === null ? null : withoutPending(played, profile.pendingIds);
   const nickname = member?.nickname?.trim() || '';
   const initial = [...nickname][0] ?? '?';
@@ -81,49 +81,57 @@ export function ProfilePage({
 
       <PlayedCard profile={profile} />
 
-      <section className="home-card pf-past" aria-label="지난 동호회 일정">
-        <h2 className="home-h">지난 동호회 일정</h2>
-        {past === null ? (
-          profile.pastError ? (
-            <div className="home-empty">
-              <p>{profile.pastError}</p>
-              <button type="button" className="btn" onClick={() => void profile.retryPast()}>다시 시도</button>
-            </div>
-          ) : <p className="home-empty-p pf-loading">불러오는 중…</p>
-        ) : past.length === 0 ? (
-          <p className="home-empty-p pf-loading">지난 동호회 일정이 아직 없어요.</p>
-        ) : (
-          <>
-            <ul className="home-list">
-              {past.map((ev) => {
-                const st = eventStatus(ev);
-                return (
-                  <li key={ev.id} className="home-row pf-past-row">
-                    <div className="home-row-main">
-                      <div className="home-row-t">
-                        <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
-                        {/* 제목 단추의 ::after 가 줄 전체를 덮어 줄 어디를 눌러도 캘린더 상세로 간다 */}
-                        <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
-                      </div>
-                      <span className="home-row-m">
-                        {ev.date && <span className={dowClass(weekday(ev.date))}>{dayLabel(ev.date)}</span>}
-                        {' · '}{ev.count}명 · {ev.createdBy.nickname}
-                      </span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-            {profile.pastError && <p className="merr" role="alert">{profile.pastError}</p>}
-            {profile.hasMorePast && (
-              <button type="button" className="pf-more" disabled={profile.pastBusy} onClick={() => void profile.morePast()}>
-                {profile.pastBusy ? '불러오는 중…' : '더 보기'}
-              </button>
-            )}
-          </>
-        )}
-      </section>
+      <PastCard profile={profile} onOpenEvent={onOpenEvent} />
     </div>
+  );
+}
+
+/* 지난 동호회 일정 카드 — 내 정보 세 번째 칸, 좁은 화면 더보기의 하위 화면(§4.60)이 같이 쓴다 */
+export function PastCard({ profile, onOpenEvent }: { profile: UseProfileReturn; onOpenEvent: (ev: EventDto) => void }) {
+  const { past } = profile;
+  return (
+    <section className="home-card pf-past" aria-label="지난 동호회 일정">
+      <h2 className="home-h">지난 동호회 일정</h2>
+      {past === null ? (
+        profile.pastError ? (
+          <div className="home-empty">
+            <p>{profile.pastError}</p>
+            <button type="button" className="btn" onClick={() => void profile.retryPast()}>다시 시도</button>
+          </div>
+        ) : <p className="home-empty-p pf-loading">불러오는 중…</p>
+      ) : past.length === 0 ? (
+        <p className="home-empty-p pf-loading">지난 동호회 일정이 아직 없어요.</p>
+      ) : (
+        <>
+          <ul className="home-list">
+            {past.map((ev) => {
+              const st = eventStatus(ev);
+              return (
+                <li key={ev.id} className="home-row pf-past-row">
+                  <div className="home-row-main">
+                    <div className="home-row-t">
+                      <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>
+                      {/* 제목 단추의 ::after 가 줄 전체를 덮어 줄 어디를 눌러도 캘린더 상세로 간다 */}
+                      <button type="button" className="home-row-open" onClick={() => onOpenEvent(ev)}>{eventTitle(ev)}</button>
+                    </div>
+                    <span className="home-row-m">
+                      {ev.date && <span className={dowClass(weekday(ev.date))}>{dayLabel(ev.date)}</span>}
+                      {' · '}{ev.count}명 · {ev.createdBy.nickname}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {profile.pastError && <p className="merr" role="alert">{profile.pastError}</p>}
+          {profile.hasMorePast && (
+            <button type="button" className="pf-more" disabled={profile.pastBusy} onClick={() => void profile.morePast()}>
+              {profile.pastBusy ? '불러오는 중…' : '더 보기'}
+            </button>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -143,7 +151,7 @@ const CARD_NOTE: Partial<Record<NonNullable<UsePushDeviceReturn['card']>, string
   'unsupported': '이 브라우저에선 알림을 받을 수 없어요. 크롬이나 사파리로 열어 주세요.',
 };
 
-function PushCard({ push }: { push: UsePushDeviceReturn }) {
+export function PushCard({ push }: { push: UsePushDeviceReturn }) {
   const { card, busy } = push;
   /* 테스트 알림 쉬는 시간 — 1초마다 남은 시간을 다시 센다(끝나면 멈춘다) */
   const [now, setNow] = useState(() => Date.now());
@@ -196,7 +204,7 @@ function PushCard({ push }: { push: UsePushDeviceReturn }) {
 }
 
 /* 해 본 테마 카드 — 찾기(서버 테마 목록) · 직접 적기 · 탭 · 쪽 넘김 */
-function PlayedCard({ profile }: { profile: UseProfileReturn }) {
+export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
   const { played, pendingIds } = profile;
   /* 지운 줄(되돌리기 자리)은 수·찾기 판정에서 뺀다 — 찾기에서 다시 "해 봤어요"를 누르면 지우기를 거둔다 */
   const kept = useMemo(() => (played === null ? null : withoutPending(played, pendingIds)), [played, pendingIds]);

@@ -60,6 +60,10 @@ describe('readView', () => {
     expect(readView('?view=profile', '', { ...on, homeOn: false, profileOn: false })).toBe('calc');
     expect(readView('?view=profile', '', { ...on, profileOn: false })).toBe('calc');
   });
+  it('?view=more 는 로그아웃·계정 기능 꺼짐이어도 더보기', () => {
+    expect(readView('?view=more', '', { ...on, homeOn: false, profileOn: false })).toBe('more');
+    expect(readView('?view=more', '', { calendarOn: false, isAdmin: false, homeOn: false, profileOn: false, decided: false })).toBe('more');
+  });
   it('계정 기능이 꺼져 있으면 ?view=profile 도 계산', () => {
     expect(readView('?view=profile', '', { calendarOn: false, isAdmin: false, homeOn: false, profileOn: true, decided: true })).toBe('calc');
   });
