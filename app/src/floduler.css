@@ -1543,13 +1543,92 @@ button:active{transform:scale(.97)}
 .evf-check{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--ink)}
 .evf-time-ro{min-height:38px;display:flex;align-items:center;font-size:14px;color:var(--ink2)}
 .evf-past{margin:0;font-size:12.5px;color:var(--ink3);word-break:keep-all}
-.evf-seg{display:flex;gap:6px;align-items:center}
-.evf-seg input{min-width:0}
-.evf-s-time{flex:0 0 72px;width:72px!important;text-align:center}
-.evf-s-name{flex:1 1 0}
-.evf-s-branch{flex:0 1 110px}
-.evf-s-del{flex:0 0 36px;height:36px;padding:0}
-.evf-add{align-self:flex-start;height:34px;padding:0 12px;font-size:13px}
+/* 테마(구간) — 카드 한 장에 1행 이름·지점, 2행 시작–끝(한 칸으로 붙임)·다음날·소요·빼기 (2026-10-20) */
+.evf-th-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-height:32px}
+.evf-th-l{font-size:14px;color:var(--ink);font-weight:500}
+.evf-th-l .dim{color:var(--ink3);font-weight:400}
+.evf-th-btns{display:flex;gap:6px;flex-wrap:wrap}
+.evf-th-btns .btn{height:32px;padding:0 12px;font-size:13px;font-weight:500}
+.evf-th-btns .btn:disabled{opacity:.45;cursor:default}
+.evf-find{color:var(--blue-text);border-color:var(--blue-line)}
+.evf-find:hover:not(:disabled){color:var(--blue-text);border-color:var(--blue)}
+.evf-empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px 16px;
+  border:1px dashed var(--line2);border-radius:10px;text-align:center}
+.evf-empty p{margin:0;font-size:13.5px;color:var(--ink3)}
+.evf-segs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.evf-seg{display:flex;gap:8px;align-items:flex-start;padding:10px 10px 10px 8px;
+  border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.evf-seg-no{flex:none;width:18px;padding-top:12px;text-align:center;font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.evf-seg-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.evf-seg-r1{display:flex;gap:8px}
+.evf .evf-seg-r1 input{min-width:0}
+.evf .evf-seg-r1 .evf-s-name{flex:1 1 0;width:auto;font-weight:500}
+.evf .evf-seg-r1 .evf-s-branch{flex:0 0 40%;width:auto}
+.evf-seg-r2{display:flex;align-items:center;gap:10px;min-width:0}
+.evf-span{flex:none;display:inline-flex;align-items:center;gap:4px;height:40px;padding:0 4px 0 12px;box-sizing:border-box;
+  border:1px solid var(--field-line);border-radius:var(--r);background:var(--field-bg);transition:border-color .13s}
+.evf-span:hover{border-color:var(--field-line-hover)}
+.evf-span:focus-within{border-color:var(--field-focus)}
+.evf .evf-span label{display:inline-flex;align-items:baseline;gap:2px;font-size:12px;font-weight:400;color:var(--ink3)}
+.evf-span input.evf-s-time:not([type=checkbox]):not([type=radio]){width:54px;height:32px;padding:0;border:0;border-radius:6px;
+  background:transparent;text-align:center;font-size:14px;font-variant-numeric:tabular-nums}
+.evf-span input.evf-s-time:focus{background:transparent}
+.evf-span-dash{color:var(--ink3);padding:0 2px}
+.evf-next{flex:none;font-size:11.5px;color:var(--ink2);border:1px solid var(--line2);border-radius:var(--pill);height:20px;padding:0 7px;display:inline-flex;align-items:center}
+.evf-dur{flex:none;font-size:12.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.evf-s-del{flex:none;margin-left:auto;width:32px;height:32px;padding:0;border:0;border-radius:var(--r-sm);background:none;
+  color:var(--ink3);font-size:17px;line-height:1;cursor:pointer}
+.evf-s-del:hover{background:var(--surface2);color:var(--ink)}
+.evf-s-del:focus-visible{outline:none;box-shadow:var(--ring)}
+
+/* 테마 찾아서 넣기 — 일정 창 위에 뜨는 창. 넓으면 왼쪽 지점·오른쪽 테마, 좁으면 전체 화면에서 지점 → 테마 */
+.tf-modal{z-index:60}
+.mbox.tf{max-width:780px;height:min(700px,calc(100vh - 36px));max-height:none;display:flex;flex-direction:column;overflow:hidden;padding:24px 24px 20px}
+.tf .msub{margin-bottom:14px;word-break:keep-all}
+.tf:focus{outline:none}
+.tf-date{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tf-date label{font-size:14px;font-weight:500;color:var(--ink)}
+.tf-date input{width:auto;height:36px!important}
+.tf-cands{display:flex;gap:6px;flex-wrap:wrap}
+.tf-cands .chip-pick{height:28px;padding:0 10px;font-size:12.5px}
+.tf-datehint{margin:-4px 0 12px;font-size:12.5px;color:var(--chip-warn-fg);line-height:1.5}
+.tf-body{flex:1;min-height:0;display:grid;grid-template-columns:240px minmax(0,1fr);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tf-brs{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:var(--surface2)}
+input.tf-q:not([type=checkbox]){margin:10px;width:calc(100% - 20px);height:36px;flex:none;font-size:13.5px}
+.tf-brlist{list-style:none;margin:0;padding:0 0 8px;overflow:auto;flex:1;min-height:0}
+.tf-br{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;padding:9px 14px;border:0;background:none;
+  text-align:left;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer}
+.tf-br:hover{background:var(--surface)}
+.tf-br[aria-pressed="true"]{background:var(--surface);font-weight:600;box-shadow:inset 2px 0 0 var(--ink)}
+.tf-br:focus-visible{outline:none;box-shadow:inset 0 0 0 2px rgba(var(--blue-rgb),.35)}
+.tf-br.no{color:var(--ink3)}
+.tf-br-no{flex:none;font-size:11.5px;font-weight:400;color:var(--ink3)}
+.tf-ths{display:flex;flex-direction:column;min-height:0;min-width:0}
+.tf-ths-h{flex:none;display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink)}
+.tf-fresh{margin-left:auto;font-size:12px;color:var(--ink3);white-space:nowrap}
+.tf-back{display:none;width:30px;height:30px;margin:-4px 0 -4px -8px;padding:0;border:0;border-radius:var(--r-sm);background:none;color:var(--ink2);font-size:20px;line-height:1;cursor:pointer}
+.tf-msg{margin:0;padding:32px 16px;text-align:center;color:var(--ink3);font-size:13.5px;line-height:1.6}
+.tf-thlist{list-style:none;margin:0;padding:0;overflow:auto;flex:1;min-height:0}
+.tf-th{padding:12px 16px 14px;border-bottom:1px solid var(--line)}
+.tf-th:last-child{border-bottom:none}
+.tf-th-top{display:flex;align-items:center;gap:8px;margin-bottom:9px;min-width:0}
+.tf-th-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600;color:var(--ink)}
+.tf-th-m{flex:none;font-size:12px;color:var(--ink3)}
+.tf-ss{display:flex;flex-wrap:wrap;gap:6px}
+.tf-s{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;box-sizing:border-box;border:1px solid var(--line2);border-radius:var(--r-xs);
+  background:var(--surface);color:var(--ink);font:inherit;font-size:13px;font-variant-numeric:tabular-nums;cursor:pointer}
+.tf-s:hover:not(:disabled){border-color:var(--tab-line-hover)}
+.tf-s:focus-visible{outline:none;box-shadow:var(--ring)}
+.tf-s small{font-size:11px;color:var(--ink3)}
+.tf-s small.ov{color:var(--chip-warn-fg)}
+.tf-s[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:600}
+.tf-s[aria-pressed="true"] small{color:inherit;opacity:.8}
+.tf-s:disabled{cursor:default;opacity:.45}
+.tf-s.sold:disabled{opacity:1;background:var(--surface2);border-color:var(--line);color:var(--ink-past);text-decoration:line-through}
+.tf-foot{flex:none;padding-top:12px}
+.tf-picked{display:flex;flex-wrap:wrap;gap:6px;max-height:64px;overflow:auto;margin-bottom:8px}
+.tf-room{margin:0 0 4px;font-size:12.5px;color:var(--ink3);line-height:1.5}
+.tf-room.full{color:var(--chip-warn-fg)}
 .evf-chips{display:flex;flex-wrap:wrap;gap:6px}
 .evf-cand{display:flex;flex-direction:column;gap:8px}
 .evf-cal{border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -1574,9 +1653,16 @@ button:active{transform:scale(.97)}
   .evf-modal{padding:0}
   .evf-modal .mbox{max-width:none;height:100%;max-height:none;border-radius:0;border:none}
   .evf .mrow2{flex-direction:column;gap:0}
-  .evf-seg{flex-wrap:wrap}
-  .evf-s-name{flex:1 1 calc(100% - 80px)}
-  .evf-s-branch{flex:1 1 0}
+  .evf-seg-r1{flex-direction:column}
+  .evf .evf-seg-r1 .evf-s-name,.evf .evf-seg-r1 .evf-s-branch{flex:none}
+  .evf-seg-r2{gap:8px}
+  .evf-span input.evf-s-time:not([type=checkbox]):not([type=radio]){width:48px}
+  .tf-modal{padding:0}
+  .mbox.tf{max-width:none;height:100%;border-radius:0;border:none;padding:18px 16px 14px}
+  .tf-body{grid-template-columns:minmax(0,1fr);border-radius:10px}
+  .tf-body.has-br .tf-brs,.tf-body:not(.has-br) .tf-ths{display:none}
+  .tf-brs{border-right:0}
+  .tf-back{display:inline-flex;align-items:center;justify-content:center}
 }
 
 /* ── 내 정보(계획 Task 7, §4.9) — 홈과 같은 카드(.home-card·.home-h·.home-avatar…)에 이 화면 것만 더한다.

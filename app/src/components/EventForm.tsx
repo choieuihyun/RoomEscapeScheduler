@@ -1,11 +1,13 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { dayLabel, todayKst } from '../clubEvents';
 import { applyPaste, parseKakaoTitle, shouldApplyOnBlur } from '../kakaoTitle';
 import { monthGrid } from '../core';
 import { emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, switchDateMode, toggleCandidate, toInput, type FormSeg, type FormState } from '../eventForm';
-import { conflictOf, sayClub, type EventDto, type EventInput } from '../server';
+import { mergePicks, roomLeft, segMeta, type PickedSession } from '../eventPick';
+import { conflictOf, sayClub, type EventDto, type EventInput, type PlayedDto } from '../server';
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
+import { ThemeFinder } from './ThemeFinder';
 
 interface Props {
   m: UseEventFormModal;
@@ -14,18 +16,20 @@ interface Props {
   update: (id: number, input: EventInput, version: number) => Promise<EventDto>;
   /* 충돌로 받은 최신 일정을 공유 목록에 넣는다(useClubEvents.adopt) — 상세 패널이 낡은 채로 남지 않게 */
   adopt: (ev: EventDto) => void;
+  /* 내 해 본 테마(받아 둔 것) — 테마 찾기 창의 "해 봄" 표시. 없으면 표시만 빠진다 */
+  played?: PlayedDto[] | null;
 }
 
 /* 일정 만들기·수정 창 (계획 Task E5). 열릴 때마다 안쪽 본문이 새로 시작한다. */
-export function EventForm({ m, create, update, adopt }: Props) {
+export function EventForm({ m, create, update, adopt, played }: Props) {
   return (
     <div className={'modal evf-modal' + (m.open ? ' on' : '')}>
-      {m.open && <Body key={m.seq} m={m} create={create} update={update} adopt={adopt} />}
+      {m.open && <Body key={m.seq} m={m} create={create} update={update} adopt={adopt} played={played} />}
     </div>
   );
 }
 
-function Body({ m, create, update, adopt }: Props) {
+function Body({ m, create, update, adopt, played }: Props) {
   const editing = m.editing;
   const [f, setF] = useState<FormState>(m.initial);
   /* 고치는 기준 판 — 충돌 뒤 "새로 불러온 내용 보기"를 누르면 최신 판으로 바뀐다 */
@@ -36,6 +40,10 @@ function Body({ m, create, update, adopt }: Props) {
   const [busy, setBusy] = useState(false);
   /* 날짜 칸을 직접 고쳤나 — 안 고쳤으면 미정에서 넘어올 때 채운 가장 이른 후보 안내를 보인다 */
   const [dateEdited, setDateEdited] = useState(false);
+
+  /* 테마 찾기 창 — 열려 있는 동안 Esc 는 그 창만 닫는다 */
+  const [finding, setFinding] = useState(false);
+  const [themeNote, setThemeNote] = useState('');
 
   const set = (patch: Partial<FormState>) => setF((cur) => ({ ...cur, ...patch }));
   const setSeg = (i: number, patch: Partial<FormSeg>) =>
@@ -74,6 +82,29 @@ function Body({ m, create, update, adopt }: Props) {
     candRef.current = r.list;
     setF((cur) => ({ ...cur, candidatesTouched: true, candidates: r.list }));
   };
+
+  /* 찾아서 고른 회차를 구간으로 — 날짜를 바꿨으면 날짜 칸 안내(가장 이른 후보로 채움)는 끈다 */
+  function addFound(picks: PickedSession[], date: string) {
+    const r = mergePicks(f, picks, date);
+    if (r.form.date !== f.date) setDateEdited(true);
+    setF(r.form);
+    setThemeNote(r.note);
+    setFinding(false);
+  }
+  const closeFinder = useCallback(() => setFinding(false), []);
+  const removeSeg = (i: number) => setF((cur) => ({ ...cur, segs: cur.segs.filter((_, j) => j !== i) }));
+  const addManual = () => setF((cur) => (cur.segs.length < MAX_SEGS ? { ...cur, segs: [...cur.segs, emptySeg()] } : cur));
+  const room = roomLeft(f.segs);
+  const metas = segMeta(f.segs);
+  const themeBtns = (
+    <div className="evf-th-btns">
+      <button type="button" className="btn evf-find" disabled={room <= 0} onClick={() => setFinding(true)}>
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M10.4 10.4 14 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+        테마 찾아서 넣기
+      </button>
+      <button type="button" className="btn" disabled={f.segs.length >= MAX_SEGS} onClick={addManual}>직접 입력</button>
+    </div>
+  );
 
   async function submit() {
     const r = toInput(f);
@@ -145,7 +176,7 @@ function Body({ m, create, update, adopt }: Props) {
           {candMode ? (
             <CandidatePicker picked={f.candidates} full={f.candidates.length >= MAX_CANDIDATES} capHit={capHit} onToggle={toggleCand} today={today} />
           ) : (
-            <input id="evf-date" type="date" value={f.date} onChange={(e) => { setDateEdited(true); set({ date: e.target.value, dateMoved: false }); }} />
+            <input id="evf-date" type="date" value={f.date} onChange={(e) => { setDateEdited(true); setThemeNote(''); set({ date: e.target.value, dateMoved: false }); }} />
           )}
           {!candMode && !dateEdited && fillEarliest && !f.dateMoved && f.candidates.length > 0 && f.date === f.candidates[0] && (
             <p className="evf-past">가장 이른 후보 {+f.date.slice(5, 7)}/{+f.date.slice(8, 10)} 로 채웠어요.</p>
@@ -177,27 +208,55 @@ function Body({ m, create, update, adopt }: Props) {
         </div>
       </div>
 
-      <div className="mrow">
-        <label>테마 <span className="dim">(선택 · 최대 {MAX_SEGS}개)</span></label>
-        {f.segs.map((g, i) => (
-          <div className="evf-seg" key={i}>
-            <input className="evf-s-time" aria-label={`테마 ${i + 1} 시작`} inputMode="numeric" placeholder="13:40"
-              value={g.start} onChange={(e) => setSeg(i, { start: e.target.value })} />
-            <input className="evf-s-name" aria-label={`테마 ${i + 1} 이름`} placeholder="테마 이름"
-              value={g.themeName} onChange={(e) => setSeg(i, { themeName: e.target.value })} />
-            <input className="evf-s-branch" aria-label={`테마 ${i + 1} 지점`} placeholder="지점"
-              value={g.branchName} onChange={(e) => setSeg(i, { branchName: e.target.value })} />
-            <input className="evf-s-time" aria-label={`테마 ${i + 1} 끝`} inputMode="numeric" placeholder="끝"
-              value={g.end} onChange={(e) => setSeg(i, { end: e.target.value })} />
-            <button type="button" className="btn evf-s-del" aria-label={`테마 ${i + 1} 빼기`}
-              onClick={() => setF((cur) => ({ ...cur, segs: cur.segs.filter((_, j) => j !== i) }))}>×</button>
+      <div className="mrow evf-themes">
+        <div className="evf-th-h">
+          <span className="evf-th-l" id="evf-th-l">테마 <span className="dim">(선택 · 최대 {MAX_SEGS}개)</span></span>
+          {hasSegs && themeBtns}
+        </div>
+        {themeNote && <p className="evf-past">{themeNote}</p>}
+        {hasSegs ? (
+          <ol className="evf-segs" aria-labelledby="evf-th-l">
+            {f.segs.map((g, i) => {
+              const n = i + 1;
+              const meta = metas[i];
+              return (
+                <li className="evf-seg" key={i}>
+                  <span className="evf-seg-no" aria-hidden="true">{n}</span>
+                  <div className="evf-seg-main">
+                    <div className="evf-seg-r1">
+                      <input className="evf-s-name" aria-label={`테마 ${n} 이름`} placeholder="테마 이름"
+                        value={g.themeName} onChange={(e) => setSeg(i, { themeName: e.target.value })} />
+                      <input className="evf-s-branch" aria-label={`테마 ${n} 지점`} placeholder="지점 (선택)"
+                        value={g.branchName} onChange={(e) => setSeg(i, { branchName: e.target.value })} />
+                    </div>
+                    <div className="evf-seg-r2">
+                      <div className="evf-span">
+                        <label>시작
+                          <input className="evf-s-time" aria-label={`테마 ${n} 시작`} inputMode="numeric" placeholder="--:--"
+                            value={g.start} onChange={(e) => setSeg(i, { start: e.target.value })} />
+                        </label>
+                        <span className="evf-span-dash" aria-hidden="true">–</span>
+                        <label>끝
+                          <input className="evf-s-time" aria-label={`테마 ${n} 끝`} inputMode="numeric" placeholder="--:--"
+                            value={g.end} onChange={(e) => setSeg(i, { end: e.target.value })} />
+                        </label>
+                      </div>
+                      {meta.next && <span className="evf-next">다음날</span>}
+                      {meta.dur !== null && meta.dur > 0 && <span className="evf-dur">{meta.dur}분</span>}
+                      <button type="button" className="evf-s-del" aria-label={`테마 ${n} 빼기`} onClick={() => removeSeg(i)}>×</button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <div className="evf-empty">
+            <p>테마를 찾아서 넣거나 직접 입력해 주세요.</p>
+            {themeBtns}
           </div>
-        ))}
-        {f.segs.length < MAX_SEGS && (
-          <button type="button" className="btn evf-add" onClick={() => setF((cur) => ({ ...cur, segs: [...cur.segs, emptySeg()] }))}>
-            + 테마 추가
-          </button>
         )}
+        {f.segs.length >= MAX_SEGS && <p className="evf-past">테마는 {MAX_SEGS}개까지예요.</p>}
       </div>
 
       <div className="mrow">
@@ -238,6 +297,15 @@ function Body({ m, create, update, adopt }: Props) {
         </button>
         <button className="btn" type="button" onClick={m.close}>취소</button>
       </div>
+      {finding && (
+        <ThemeFinder
+          date={candMode ? f.candidates[0] ?? f.date ?? today : f.date || today}
+          formDate={candMode ? null : f.date || null}
+          candidates={candMode ? f.candidates : []}
+          segs={f.segs} room={room} eventId={editing?.id ?? null} mine={played ?? null}
+          onAdd={addFound} onClose={closeFinder}
+        />
+      )}
     </div>
   );
 }

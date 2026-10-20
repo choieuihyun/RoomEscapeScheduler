@@ -492,7 +492,7 @@ export function SchedulerPage() {
       {authMounted && <LazyBoundary><AuthModal auth={auth} /></LazyBoundary>}
       {loadMounted && <LazyBoundary><LoadModal m={loadModal} /></LazyBoundary>}
       {saveMounted && <LazyBoundary><SaveModal m={saveModal} /></LazyBoundary>}
-      {clubOn && formMounted && <LazyBoundary><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} /></LazyBoundary>}
+      {clubOn && formMounted && <LazyBoundary><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} played={profile.played} /></LazyBoundary>}
       {auth.cloudOn && watchMounted && <LazyBoundary><WatchListModal w={watches} /></LazyBoundary>}
       {clubOn && guideMounted && <LazyBoundary><PushGuide push={push} /></LazyBoundary>}
       <PushBanner onOpen={openFromBanner} />
