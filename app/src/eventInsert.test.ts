@@ -82,6 +82,19 @@ describe('planInsert — 계산 결과를 그 일정의 구간으로(일정 수�
     expect([late.confirm, late.input.date, late.input.segments[0].startMin]).toEqual(['', '2026-10-26', 30]);
   });
 
+  it('후보 비교는 절대 시각 — 다음날 시간표의 00:30 회차(t=30)는 후보 날 밤이라 묻지 않고, 그날 낮 회차는 묻는다', () => {
+    const e = ev({ candidates: [{ date: '2026-10-25', responses: [] }] });
+    const early = plan(e, '2026-10-26', [step('심야 병동', '키이스케이프 홍대점', 30, 110)], ['key-hd:1']);
+    expect([early.confirm, early.input.date, early.input.segments[0].startMin]).toEqual(['', '2026-10-26', 30]);
+    expect(plan(e, '2026-10-26', [step('비밀의 화원', '제로월드 강남점', 780, 850)], [null]).confirm)
+      .toBe(`후보에 없는 날짜예요. ${dayLabel('2026-10-26')}로 정할까요?`);
+    /* 06:00 부터는 그 날 낮 — 묻는다. 후보 날 당일 이른 새벽(10/25 00:30)은 후보 날 안 */
+    expect(plan(e, '2026-10-26', [step('새벽', '홍대', 360, 420)], [null]).confirm).not.toBe('');
+    expect(plan(e, '2026-10-25', [step('새벽', '홍대', 30, 100)], [null]).confirm).toBe('');
+    /* 후보 날 밤 24:30(1470) 은 그대로 묻지 않는다 */
+    expect(plan(e, '2026-10-25', [step('심야 병동', '홍대', 1470, 1540)], [null]).confirm).toBe('');
+  });
+
   it('구간 없이 일정 시각만 있던 정해진 일정은 그 시각이 바뀐다고 묻는다', () => {
     const p = plan(ev({ date: '2026-10-25', startMin: 1140, endMin: 1380 }));
     expect([p.input.startMin, p.input.endMin]).toEqual([null, null]);

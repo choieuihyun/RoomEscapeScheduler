@@ -1,6 +1,6 @@
 /* 결과 카드의 "이 일정에 넣기" — 일정 상세에서 시작한 계산의 결과를 그 일정의 구간으로 바꾼다.
    누를 때 받는다(진입 청크 크기). 저장은 일정 수정(§4.7, version 비교) 한 번이다. */
-import { dayLabel, eventTitle, isUndecided, rangeLabel } from './clubEvents';
+import { addDays, dayLabel, eventTitle, isUndecided, rangeLabel } from './clubEvents';
 import type { PathStep } from './core';
 import { formFromEvent, formFromSteps, toInput } from './eventForm';
 import { stepCards, type EventCtx } from './eventFlow';
@@ -32,10 +32,13 @@ export function planInsert(ev: EventDto, steps: PathStep[], keys: (string | null
   if ('error' in r) return r;
   const n = ev.segments.length;
   const lines: string[] = [];
-  /* 미정 일정인데 결과 날짜가 후보에 없으면 — 아무도 되는지 답하지 않은 날로 정해진다.
-     자정 뒤 첫 회차로 날짜를 하루 옮겼으면 옮기기 전 날(그 밤)로 본다 — 후보 날 밤의 24:30 은 후보 안이다 */
+  /* 미정 일정인데 결과 시각이 어느 후보 날에도 들지 않으면 — 아무도 되는지 답하지 않은 날로 정해진다.
+     절대 시각으로 본다: 후보 날 c 는 c 00:00 부터 다음날 06:00 전까지(그 밤). 그래서 후보 날 밤의 24:30(옮긴 날 00:30)도,
+     다음날 시간표의 00:30 회차도 후보 안이다 */
+  const at = r.input.segments[0]?.startMin ?? 0;
+  const inCand = ev.candidates.some((c) => c.date === s.date || (at < 360 && addDays(c.date, 1) === s.date));
   const night = s.origDate ?? s.date;
-  if (isUndecided(ev) && !ev.candidates.some((c) => c.date === night)) lines.push(`후보에 없는 날짜예요. ${dayLabel(night)}로 정할까요?`);
+  if (isUndecided(ev) && !inCand) lines.push(`후보에 없는 날짜예요. ${dayLabel(night)}로 정할까요?`);
   if (n > 0) lines.push(`지금 테마 ${n}개를 이 결과로 바꿔요.`);
   /* 구간 없이 일정 시각만 있던 일정 — 시각은 이제 테마에서 읽는다(일정 시각은 비워 보낸다) */
   if (n === 0 && ev.startMin !== null) lines.push(`일정 시각(${rangeLabel(ev.startMin, ev.endMin)})은 테마 시각으로 바뀌어요.`);
