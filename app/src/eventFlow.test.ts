@@ -99,6 +99,19 @@ describe('일정 문맥이 바뀌면 앞 일정 테마 카드 정리 (§5)', () 
     expect(countOtherCtx(ts, 30)).toBe(0);
     expect(dropOtherCtx(ts, 30)).toEqual(ts);
   });
+
+  it('같은 키 카드를 바꾸면 문맥 표시도 새 값으로 — 문맥 없이 다시 넣으면 지우고, 다른 문맥이면 그 문맥으로', () => {
+    let n = 1;
+    const id = () => n++;
+    const plain = mergeServerThemes([manual(9)], [added('zero-gn:1', 600)], id);       // 회차 불러오기(문맥 없음)
+    const tagged = mergeServerThemes(plain, [added('zero-gn:1', 600)], id, 7);          // 일정 7 도우미가 같은 키
+    expect(tagged.map((t) => t.ctx)).toEqual([undefined, 7]);
+    const reloaded = mergeServerThemes(tagged, [added('zero-gn:1', 660)], id);         // 문맥 카드를 문맥 없이 다시
+    expect(reloaded.map((t) => t.ctx)).toEqual([undefined, undefined]);
+    expect(dropOtherCtx(reloaded, 8)).toHaveLength(2);                                   // 다른 일정 문맥으로 와도 남는다
+    expect(mergeServerThemes(tagged, [added('zero-gn:1', 600)], id, 8)[1].ctx).toBe(8);
+    expect(reloaded.map((t) => t.id)).toEqual(tagged.map((t) => t.id));                 // 자리·id 는 그대로
+  });
 });
 
 describe('일정에 넣기 — 문맥을 세운 뒤 계산한 결과에만 (§6)', () => {
