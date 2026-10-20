@@ -14,6 +14,12 @@ import type { UsePushDeviceReturn } from '../usePushDevice';
 
 const PER_PAGE = 10;
 
+/* 여러 개 한꺼번에 넣기 창 — 처음 열 때 받는다(지연 청크). 안 받아지면 한 번 더.
+   lazyRetry·LazyBoundary 를 쓰지 않는 까닭: 그 둘을 이 청크로 끌어오면 진입 청크의 내보내기가 늘어난다(진입 크기 한도) */
+type BulkComp = typeof import('./BulkModal').BulkModal;
+const loadBulk = () => import('./BulkModal')
+  .catch(() => new Promise((r) => setTimeout(r, 400)).then(() => import('./BulkModal')));
+
 type Tab = 'all' | 'manual' | 'auto';
 const TABS: { id: Tab; label: string; empty: string }[] = [
   { id: 'all', label: '전체', empty: '아직 기록한 테마가 없어요. 위에서 찾아 "해 봤어요"를 눌러 보세요.' },
@@ -223,6 +229,17 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
   const [mBranch, setMBranch] = useState('');
   const [mErr, setMErr] = useState('');
   const [mBusy, setMBusy] = useState(false);
+  const [Bulk, setBulk] = useState<BulkComp | null>(null);
+  const [bulkOn, setBulkOn] = useState(false);
+  const openBulk = async () => {
+    try {
+      const m = await loadBulk();
+      setBulk(() => m.BulkModal);
+      setBulkOn(true);
+    } catch {
+      showToast('새 버전이 나왔거나 연결이 끊겼어요. 새로 고침해 주세요.');
+    }
+  };
 
   const needle = q.trim();
   /* 찾기는 타자가 멈추고 150ms 뒤에 — 테마 목록이 수백 개라 글자마다 다시 거르지 않는다 */
@@ -344,9 +361,7 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
             ))}
           </section>
         )}
-        {!manualOpen ? (
-          <button type="button" className="pf-manual-link" onClick={openManual}>찾는 테마가 없으면 직접 적기</button>
-        ) : (
+        {manualOpen && (
           <form className="pf-manual" onSubmit={(e) => void submitManual(e)} noValidate>
             <label className="pf-field">
               <span>테마 이름</span>
@@ -365,7 +380,13 @@ export function PlayedCard({ profile }: { profile: UseProfileReturn }) {
             </div>
           </form>
         )}
+        {/* 한 개는 직접 적기, 여러 개(수백 개)는 한꺼번에 넣기 창으로 */}
+        <div className="pf-links">
+          {!manualOpen && <button type="button" className="pf-manual-link" onClick={openManual}>찾는 테마가 없으면 직접 적기</button>}
+          <button type="button" className="pf-manual-link" onClick={() => void openBulk()}>여러 개 한꺼번에 넣기</button>
+        </div>
       </div>
+      {bulkOn && Bulk && <Bulk profile={profile} onClose={() => setBulkOn(false)} />}
 
       <div role="tablist" className="home-tabs pf-tabs" ref={tabsRef}>
         {TABS.map((t) => (

@@ -36,7 +36,8 @@ function isRecorded(ref: ThemeRef, mine: PlayedDto[]): boolean {
     p.themeKey ? p.themeKey === ref.themeKey : normalizeName(p.themeName) === name);
 }
 
-const normalizeName = (name: string) => name.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+/* 서버와 같은 이름 정규화(NFKC → 소문자 → 글자·숫자만) — 한꺼번에 넣기(bulkPlayed.ts)도 쓴다 */
+export const normalizeName = (name: string) => name.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 
 /* 서버가 이름을 맞출 때 쓰는 규칙 — 글자·숫자만 남겨 비면 400 BAD_PLAYED. 직접 입력을 미리 막는 데 쓴다. */
 export function isPlayableName(name: string): boolean {
