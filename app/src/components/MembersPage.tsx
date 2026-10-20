@@ -27,7 +27,7 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
 
   /* 되돌릴 수 없는 처리는 한 번 더 묻는다 */
   const remove = (m: MemberDto) => {
-    if (confirm(`${memberName(m)} 님을 내보낼까요?\n본인이 다시 가입 신청하면 승인 대기로 돌아와요.`)) void act(m, 'remove');
+    if (confirm(`${memberName(m)} 님을 내보낼까요?\n걸어 둔 빈자리 알림도 지워져요. 다시 가입 신청은 할 수 있어요.`)) void act(m, 'remove');
   };
   const demote = (m: MemberDto) => {
     if (confirm(`${memberName(m)} 님의 운영진을 해제할까요?\n멤버는 그대로 남아요.`)) void setRole(m, 'MEMBER');
@@ -96,7 +96,7 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
               </table>
             </div>
           )}
-          <p className="mem-note">거절한 신청과 내보낸 계정은 아래 "지난 신청"에 남아요. 내보낸 계정도 본인이 다시 신청하면 승인 대기로 와요.</p>
+          <p className="mem-note">거절한 신청과 내보낸 계정은 아래 "지난 신청"에 남아요. 내보내면 걸어 둔 빈자리 알림도 지워져요. 다시 가입 신청은 할 수 있어요.</p>
         </section>
 
         <section className="mem-sec">
