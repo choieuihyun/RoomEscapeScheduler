@@ -68,8 +68,8 @@ for (const [col, words] of [
 ] as const) for (const w of words.split(' ')) HEAD.set(w, col);
 const headCol = (c: string): HeadCol | null => (c === '#' ? 'skip' : HEAD.get(normalizeName(c)) ?? null);
 
-/* 머리줄에서 칸 순서 — 테마 칸이 없으면 null(그 머리줄은 건너뛰기만) */
-interface Cols { theme: number; store: number[]; date: number }
+/* 머리줄에서 칸 순서 — 테마 칸이 없으면 null(그 머리줄은 건너뛰기만). n = 머리줄 칸 수 */
+interface Cols { theme: number; store: number[]; date: number; n: number }
 function colsOf(cells: string[]): Cols | null {
   let theme = -1, date = -1;
   const store: number[] = [];
@@ -79,7 +79,7 @@ function colsOf(cells: string[]): Cols | null {
     else if (h === 'store') store.push(k);
     else if (h === 'date' && date < 0) date = k;
   });
-  return theme < 0 ? null : { theme, store, date };
+  return theme < 0 ? null : { theme, store, date, n: cells.length };
 }
 
 /* 날짜 — 2024-03-15 · 2024.03.15 · 2024/3/15 · 24.03.15 · 2024년 3월 15일 · 2024. 3. 15. · 20240315,
@@ -168,7 +168,9 @@ export function parseBulk(text: string, today: string = todayKst()): BulkParse {
   const byKey = new Map<string, BulkLine>();
   let merged = 0;
   for (const f of found) {
-    const c = f.cols && f.sep ? f.cols : null;
+    /* 머리줄 칸 순서는 칸 수가 같은 줄에만. 칸 수가 다른 줄(표 뒤에 직접 적은 줄 등)은 머리줄 없이 읽고 '형식이 달라요' */
+    const c = f.cols && f.sep && f.cells.length === f.cols.n ? f.cols : null;
+    const odd = !!f.cols && f.sep && !c;
     const at = (k: number) => f.cells[k] ?? '';
     let { theme, store, date } = c
       ? { theme: at(c.theme), store: c.store.map(at).filter(Boolean).join(' '), date: c.date < 0 ? '' : at(c.date) }
@@ -184,7 +186,7 @@ export function parseBulk(text: string, today: string = todayKst()): BulkParse {
     /* 문장이면 '설명 문장 같아요' 하나만(형식이 달라요까지 겹쳐 적지 않게) */
     const words = [theme, store].filter(Boolean).join(' | ');
     if (TALK_END.test(words) || TALK_WORD.test(words)) issues.push('talk');
-    else if (strict && !f.sep) issues.push('format');
+    else if ((strict && !f.sep) || odd) issues.push('format');
     const line: BulkLine = { no: f.no, theme, store, date: pd.iso, rawDate: date, issues };
     if (issues.some((x) => ODD.includes(x))) { lines.push(line); continue; }
     const key = normalizeName(theme) + '|' + normalizeName(store);
