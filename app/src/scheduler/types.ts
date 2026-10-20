@@ -19,6 +19,9 @@ export interface Theme {
      이미지 인식은 날짜 개념이 없어 undefined. 테마 카드끼리 날짜가 섞이면
      "같은 날 3연방"이 실제로는 불가능한 조합이 계산될 수 있어(§4.41) 경고에 쓴다. */
   date?: string;
+  /* 서버 테마 키(/api/schedule 의 테마 id — 매장·지점이 들어 있다). 서버에서 불러온 카드만 있다.
+     같은 날짜·같은 키 카드를 또 넣으면 새로 더하지 않고 그 카드를 바꾼다(eventFlow.mergeServerThemes) */
+  themeKey?: string;
 }
 
 export function blankTheme(id: number, name = ''): Theme {

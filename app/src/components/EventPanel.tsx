@@ -29,12 +29,12 @@ const WarnIcon = () => (
 
 export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onPicked, onCalcThemes }: {
   ev: EventDto; club: UseClubEventsReturn; meUid: string; onClose: () => void; onEdit: (ev: EventDto) => void;
-  /* 정해진 날짜에 다 같이 되는 시간으로 조합 계산 조건을 채우고 계산 화면으로 */
-  onCalcWindow?: (w: { start: number; end: number }) => void;
+  /* 정해진 날짜에 다 같이 되는 시간으로 조합 계산 조건을 채우고 계산 화면으로(계산 화면이 이 일정을 기억한다) */
+  onCalcWindow?: (w: { start: number; end: number }, ev: EventDto) => void;
   /* 정하기·다시 미정으로 뒤 캘린더에서 그 날짜를 고른다 */
   onPicked?: (date: string) => void;
-  /* 협의 도우미에서 고른 테마를 계산 화면에 넣고 그리로 */
-  onCalcThemes?: (items: AddedTheme[]) => void;
+  /* 협의 도우미에서 고른 테마를 계산 화면에 넣고 그리로(계산 화면이 이 일정을 기억한다) */
+  onCalcThemes?: (items: AddedTheme[], ev: EventDto) => void;
 }) {
   const st = eventStatus(ev);
   const busy = club.busyIds.has(ev.id);
@@ -52,7 +52,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
   const played = playedCount(ev);
   const perPerson = playedPerPerson(ev);
   /* 협의 도우미 — 협의 중·예약 전 일정의 참여자만(예약 완료면 테마가 이미 정해졌다). 날짜 미정이면 "언제 될까요?" 바로 아래, 정해진 날이면 후보 기록 아래 */
-  const helper = ev.joined && (undecided || !ev.booked) && onCalcThemes ? <EventHelper ev={ev} onCalcThemes={onCalcThemes} /> : null;
+  const helper = ev.joined && (undecided || !ev.booked) && onCalcThemes ? <EventHelper ev={ev} onCalcThemes={(items) => onCalcThemes(items, ev)} /> : null;
 
   /* 내 응답 시간 칸에 적는 중에 패널의 다른 단추(정하기·참여 취소·예약 등)를 누르면, 칸의 blur 커밋이 먼저 요청을 보내
      단추가 busy 로 잠기고 누른 동작이 사라진다. 그때만 누르는 순간 포커스를 옮기지 않는다(터치도 pointerdown 으로).
@@ -218,7 +218,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
         </div>
       )}
 
-      {!undecided && ev.candidates.length > 0 && <EventTalkDone ev={ev} club={club} onCalcWindow={onCalcWindow} onPicked={onPicked} />}
+      {!undecided && ev.candidates.length > 0 && <EventTalkDone ev={ev} club={club} onCalcWindow={onCalcWindow && ((w) => onCalcWindow(w, ev))} onPicked={onPicked} />}
       {!undecided && helper}
 
       {ev.location && (

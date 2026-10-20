@@ -170,6 +170,12 @@ describe('serialize()↔restore() — 서버에서 불러온 회차의 slotId·�
     const back = restore(serialize(state([serverTheme]))).themes[0];
     expect(back.date).toBeUndefined();
   });
+
+  it('서버 테마 키(themeKey)도 살아남는다 — 새로 고친 뒤 같은 테마를 또 넣어도 카드가 늘지 않게', () => {
+    const keyed = { ...serverTheme, date: '2026-10-25', themeKey: 'zero-gn:1' };
+    expect(restore(serialize(state([keyed]))).themes[0].themeKey).toBe('zero-gn:1');
+    expect(restore(serialize(state([serverTheme]))).themes[0].themeKey).toBeUndefined();
+  });
 });
 
 /* ══ #z= 공유 링크 압축 (1차: 읽기만) ═══════════════════════════════════

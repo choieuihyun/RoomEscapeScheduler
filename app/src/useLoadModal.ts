@@ -43,6 +43,8 @@ export interface AddedTheme {
   sessions: Session[];
   fresh: string;
   date?: string;
+  /* 서버 테마 키 — 같은 테마를 또 넣으면 카드를 바꾸는 데 쓴다 */
+  themeKey?: string;
 }
 
 interface PickedEntry {
@@ -151,7 +153,7 @@ export function useLoadModal(onAdd: (items: AddedTheme[]) => void) {
   const addPicked = useCallback(() => {
     const items: AddedTheme[] = [...pickedItems.values()].map(p => ({
       name: p.theme.name, place: p.theme.place || '', dur: p.theme.dur || 70,
-      sessions: toSessions(p.theme.sessions), fresh: p.fresh, date: p.date,
+      sessions: toSessions(p.theme.sessions), fresh: p.fresh, date: p.date, themeKey: p.theme.id,
     }));
     onAdd(items);
     setPickedItems(new Map());

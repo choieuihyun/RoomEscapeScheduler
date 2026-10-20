@@ -13,7 +13,8 @@ import { useView, decideFirstScreen, type View } from './useView';
 import { useClubEvents } from './useClubEvents';
 import { useProfile } from './useProfile';
 import { useTodayKst } from './useToday';
-import { addDays, sortKeyDate, todayKst, windowLabel, windowToCalc } from './clubEvents';
+import { addDays, eventTitle, sortKeyDate, todayKst, windowLabel, windowToCalc } from './clubEvents';
+import { countSame, stepCards, type EventCtx } from './eventFlow';
 import { monthGrid, toISO, type SearchResultRow } from './core';
 import { readEventHash } from './eventLink';
 import { bannerOf, swOpenId } from './swLink';
@@ -159,10 +160,13 @@ export function SchedulerPage() {
   const eventForm = useEventFormModal();
   /* 결과 카드 → 일정 창. 날짜는 첫 스텝 테마를 불러올 때 고른 날짜, 없으면 오늘 */
   const postToClub = (r: SearchResultRow) => {
-    const id = s.themesReady[r.steps[0]?.i]?.id;
-    const date = s.themes.find((t) => t.id === id)?.date;
-    eventForm.openFromSteps(date ?? todayKst(), r.steps);
+    const c = stepCards(r.steps, s.themesReady, s.themes);
+    eventForm.openFromSteps(c.date ?? todayKst(), r.steps, c.keys);
   };
+  /* 일정 상세(도우미·"이 시간대로 시간표 계산")에서 온 계산이면 그 일정 — 결과 카드가 "이 일정에 넣기"를 보인다.
+     그만두기·다른 일정에서 다시 오기·넣기 성공·지워진 일정·로그아웃이면 놓는다(새로 고침해도 사라진다) */
+  const [evCtx, setEvCtx] = useState<EventCtx | null>(null);
+  const inserting = useRef(false);
   /* 첫 화면은 로그인 복원·승인 확인·일정 API 확인이 끝나야 정한다 — 그 전엔 화면을 비워 두어
      calc → 홈(또는 홈 → calc)으로 손 밑에서 바뀌지 않게 한다. */
   const decided = decideFirstScreen({
@@ -241,7 +245,8 @@ export function SchedulerPage() {
     if (cal.openEvent !== null) closeEvent();
   };
   /* 상세의 "이 시간대로 조합 계산" — 다 같이 되는 시간을 계산 조건(가장 이른 시작·가장 늦은 종료)에 넣고 계산 화면으로 */
-  const calcWindow = (w: { start: number; end: number }) => {
+  const calcWindow = (w: { start: number; end: number }, ev: EventDto) => {
+    setEvCtx({ id: ev.id, title: eventTitle(ev), date: ev.date });
     const o = windowToCalc(w);
     s.setOption('oStart', o.oStart);
     s.setOption('oEnd', o.oEnd);
@@ -249,10 +254,23 @@ export function SchedulerPage() {
     showToast(`시간대(${windowLabel(w)})를 조건에 넣었어요. 테마를 불러와 계산해 보세요.`);
   };
   /* 상세의 협의 도우미 "고른 테마 n개로 조합 계산" — 회차 불러오기처럼 카드로 넣고 계산 화면으로 */
-  const calcThemes = (items: AddedTheme[]) => {
+  /* 같은 날짜·같은 서버 테마는 더하지 않고 카드를 바꾼다(여러 번 보내도 카드 수가 늘지 않는다) */
+  const calcThemes = (items: AddedTheme[], ev: EventDto) => {
+    const same = countSame(s.themes, items);
     s.addServerThemes(items);
+    setEvCtx({ id: ev.id, title: eventTitle(ev), date: items[0]?.date ?? ev.date });
     goView('calc');
-    showToast(`테마 ${items.length}개를 넣었어요.`);
+    showToast(`테마 ${items.length}개를 넣었어요${same ? `(${same}개는 이미 있어서 바꿨어요)` : ''}.`);
+  };
+  if (evCtx && !homeOn) setEvCtx(null);
+  const ctxEv = evCtx ? club.events.find((e) => e.id === evCtx.id) : undefined;
+  /* "이 일정에 넣기" — 저장하면 그 일정 상세를 연다. 본문은 누를 때 받는다(못 받으면 위 옛 탭 띠가 알린다) */
+  const insertToEvent = (r: SearchResultRow) => {
+    if (!evCtx || inserting.current) return;
+    inserting.current = true;
+    void import('./eventInsert')
+      .then((m) => m.insertResult(evCtx, r.steps, s, club, setEvCtx, (ev) => { goView('calendar'); openEvent(ev); }))
+      .finally(() => { inserting.current = false; });
   };
   const pendingCount = members.list?.filter(m => m.status === 'PENDING').length ?? 0;
   /* 연 일정이 목록에서 사라지면(지움·로그아웃) 패널도 닫는다 */
@@ -436,9 +454,16 @@ export function SchedulerPage() {
             <h1>시간표 계산</h1>
             <p>테마별 예약 시간을 넣으면 겹치지 않게 이어서 갈 수 있는 조합을 다 찾아 드려요. 중간에 비는 시간도 같이 보여요.</p>
           </header>
+          {evCtx && (
+            <div className="evctx" role="status">
+              <span>'{ctxEv ? eventTitle(ctxEv) : evCtx.title}' 일정의 테마를 고르는 중이에요</span>
+              <button type="button" className="evctx-x" onClick={() => setEvCtx(null)}>그만두기</button>
+            </div>
+          )}
           <ThemeList s={s} onOpenLoad={loadModal.openModal} watchCtl={watchCtl} />
           <ConditionsPanel s={s} />
-          <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} onClubPost={homeOn ? postToClub : undefined} watchCtl={watchCtl} />
+          <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} onClubPost={homeOn ? postToClub : undefined}
+            onInsert={evCtx ? (ctxEv?.canManage === false ? null : insertToEvent) : undefined} watchCtl={watchCtl} />
           <PlanSection auth={auth} plans={plans} s={s} />
         </div>
 

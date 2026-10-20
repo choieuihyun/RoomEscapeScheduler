@@ -8,6 +8,8 @@ import {
   type AppState, type OptionsState, type TeamState,
 } from '../serialize';
 import { blankTheme, type Theme } from './types';
+import { mergeServerThemes } from '../eventFlow';
+import type { AddedTheme } from '../useLoadModal';
 import type { OcrError } from '../ocr';
 
 export const SHOW = 12;
@@ -50,7 +52,7 @@ export function useScheduler() {
      아니라 AppState 를 받아야 압축할 수 있기 때문. 조립 규칙이 두 벌이 되면
      둘이 어긋나므로 한 곳에 둔다. */
   const stateNow = useCallback((): AppState => ({
-    themes: themes.map(t => ({ id: t.id, name: t.name, dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source, date: t.date })),
+    themes: themes.map(t => ({ id: t.id, name: t.name, dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source, date: t.date, themeKey: t.themeKey })),
     moveMap, options, sortKey, teams, nextId: nextId.current,
   }), [themes, moveMap, options, sortKey, teams]);
 
@@ -60,7 +62,7 @@ export function useScheduler() {
     const state = restore(hash);
     setThemes(state.themes.map(t => ({
       ...blankTheme(t.id, t.name),
-      dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source, date: t.date,
+      dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source, date: t.date, themeKey: t.themeKey,
     })));
     nextId.current = state.nextId;
     setMoveMap(state.moveMap);
@@ -145,25 +147,14 @@ export function useScheduler() {
     setThemes(ts => [...ts, blankTheme(nextId.current++)]);
   }, []);
 
-  /* F-15 "회차 불러오기"로 고른 항목들을 카드로 추가한다. index.html의 ldAddPicked() 이식.
+  /* F-15 "회차 불러오기"·협의 도우미로 고른 항목들을 카드로 넣는다. index.html의 ldAddPicked() 이식.
      매진 회차도 그대로 담는다 — 계산에서 빼는 건 excludeSoldout이 이미 한다(기획 §4.30),
      카드에 남아야 "왜 이 시간대가 후보에 없지"가 조건 탓인지 매진 탓인지 갈린다.
      fresh는 항목마다 다르다 — 매장 A·B·C에서 하나씩 골랐다면 지점마다 서버가
-     확인한 시각이 다르므로, 공통 값 하나로 뭉뚱그리지 않는다. */
-  const addServerThemes = useCallback((
-    items: { name: string; place: string; dur: number; sessions: Session[]; fresh: string; date?: string }[],
-  ) => {
-    setThemes(ts => [
-      ...ts,
-      ...items.map(it => {
-        const sessions = it.sessions;
-        return {
-          ...blankTheme(nextId.current++, it.name),
-          place: it.place, dur: it.dur || 70, sessions,
-          raw: sessionsToText(sessions), source: 'server', fresh: it.fresh, date: it.date,
-        };
-      }),
-    ]);
+     확인한 시각이 다르므로, 공통 값 하나로 뭉뚱그리지 않는다.
+     같은 날짜·같은 서버 테마 키의 카드가 이미 있으면 더하지 않고 그 카드를 바꾼다(회차 갱신, mergeServerThemes). */
+  const addServerThemes = useCallback((items: AddedTheme[]) => {
+    setThemes(ts => mergeServerThemes(ts, items, () => nextId.current++));
   }, []);
 
   const updateTheme = useCallback((id: number, patch: Partial<Theme>) => {

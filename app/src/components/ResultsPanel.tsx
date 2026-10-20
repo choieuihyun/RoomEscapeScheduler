@@ -65,7 +65,10 @@ function SortBar({ s }: { s: Scheduler }) {
   );
 }
 
-export function ResultsPanel({ s, onSave, onClubPost, watchCtl }: { s: Scheduler; onSave?: (r: Scheduler['found'][number]) => void; onClubPost?: (r: Scheduler['found'][number]) => void; watchCtl?: WatchControl }) {
+type Row = Scheduler['found'][number];
+export function ResultsPanel({ s, onSave, onClubPost, onInsert, watchCtl }: {
+  s: Scheduler; onSave?: (r: Row) => void; onClubPost?: (r: Row) => void; onInsert?: ((r: Row) => void) | null; watchCtl?: WatchControl;
+}) {
   const resRef = useRef<HTMLDivElement>(null);
 
   const pool = s.currentList;
@@ -175,7 +178,7 @@ export function ResultsPanel({ s, onSave, onClubPost, watchCtl }: { s: Scheduler
           <ResultCard
             key={ri} r={r} rank={ri} lo={lo} hi={hi} span={span}
             themeCount={s.themesReady.length} teamModeOn={s.options.oTeam}
-            onConfirmTeam={s.confirmTeam} onSave={onSave} onClubPost={onClubPost} watchCtl={watchCtl}
+            onConfirmTeam={s.confirmTeam} onSave={onSave} onClubPost={onClubPost} onInsert={onInsert} watchCtl={watchCtl}
           />
         ))}
         {pool.length > list.length && (

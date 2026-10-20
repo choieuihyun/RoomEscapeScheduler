@@ -23,7 +23,7 @@ export function useEventFormModal() {
   /* 날짜를 안 주면 한국 날짜 오늘 */
   const openNew = useCallback((date?: string) => show(emptyForm(date ?? todayKst()), null), [show]);
   const openEdit = useCallback((ev: EventDto) => show(formFromEvent(ev), ev), [show]);
-  const openFromSteps = useCallback((date: string, steps: PathStep[]) => show(formFromSteps(date, steps), null), [show]);
+  const openFromSteps = useCallback((date: string, steps: PathStep[], keys?: (string | null)[]) => show(formFromSteps(date, steps, keys), null), [show]);
   const close = useCallback(() => setOpen(false), []);
 
   return { open, initial, editing, seq, openNew, openEdit, openFromSteps, close };

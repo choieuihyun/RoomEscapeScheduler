@@ -250,8 +250,8 @@ export function CalendarPage({
   onNewEvent: (date: string) => void; onEditEvent: (ev: EventDto) => void; onCloseEvent: () => void;
   /* 일정을 패널에 연다(그 날짜도 고른다 — 날짜 미정 일정은 누른 후보 날짜). 링크(#e=) 일정이 아니면 주소의 #e= 를 지운다 */
   onOpenEvent: (ev: EventDto, date?: string) => void;
-  onCalcWindow: (w: { start: number; end: number }) => void;
-  onCalcThemes: (items: AddedTheme[]) => void;
+  onCalcWindow: (w: { start: number; end: number }, ev: EventDto) => void;
+  onCalcThemes: (items: AddedTheme[], ev: EventDto) => void;
   /* 해 본 테마 — 승인 멤버이고 해 본 테마 API 가 있을 때만(아니면 null). 내 정보가 이미 받아 둔 목록을 그대로 쓴다 */
   profile: UseProfileReturn | null;
   /* 그날 패널의 "해 본 테마 모두 보기" */

@@ -20,6 +20,7 @@ export interface ThemeState {
   sessions: Session[];
   source: string;
   date?: string;
+  themeKey?: string;
 }
 
 export interface TeamStep {
@@ -106,17 +107,20 @@ interface ThemeExtra {
   i?: [number, number][];   // [회차 시각(분), 서버 slotId]
   s?: string;               // source — 'manual'/'' 은 복원이 알아서 채우므로 안 싣는다
   d?: string;                // 회차가 속한 캘린더 날짜("YYYY-MM-DD") — §4.41, 날짜 불일치 경고용
+  k?: string;                // 서버 테마 키 — 새로 고친 뒤에도 같은 테마를 또 넣으면 카드를 바꾸게
 }
 
 function themeExtra(t: ThemeState): ThemeExtra | null {
   const i = t.sessions.filter(s => s.id != null).map(s => [s.t, s.id as number] as [number, number]);
   const s = t.source && t.source !== 'manual' ? t.source : undefined;
   const d = t.date || undefined;
-  if (!i.length && !s && !d) return null;
+  const k = t.themeKey || undefined;
+  if (!i.length && !s && !d && !k) return null;
   const ex: ThemeExtra = {};
   if (i.length) ex.i = i;
   if (s) ex.s = s;
   if (d) ex.d = d;
+  if (k) ex.k = k;
   return ex;
 }
 
@@ -238,6 +242,7 @@ export function restore(hash: string, startId = 1): AppState {
         sessions,
         source: (ex && ex.s) || (raw ? 'manual' : ''),
         date: ex?.d,
+        themeKey: ex?.k,
       };
       // _lock 은 옛 "자리 고정" 값 — §4.14 후기로 없어진 개념이라 읽지 않고 버린다
       return th;

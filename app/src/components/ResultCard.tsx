@@ -37,13 +37,15 @@ export interface ResultCardProps {
   onConfirmTeam: (r: SearchResultRow) => void;
   onSave?: (r: SearchResultRow) => void;
   onClubPost?: (r: SearchResultRow) => void;
+  /* 일정 상세에서 시작한 계산 — "이 일정에 넣기". null 이면 그 일정을 고칠 수 없다(안내만), 없으면 일정 문맥이 없다 */
+  onInsert?: ((r: SearchResultRow) => void) | null;
   watchCtl?: WatchControl;
   /* 팀 확정 박스용 — 타임라인 시각화 대신 "시각 테마명" 세로 목록만 보여준다.
      상단 통계·복사 버튼은 그대로 둔다(사용자 요청). */
   simple?: boolean;
 }
 
-export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave, onClubPost, watchCtl, simple }: ResultCardProps) {
+export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onConfirmTeam, onSave, onClubPost, onInsert, watchCtl, simple }: ResultCardProps) {
   const pct = (m: number) => ((m - lo) / span) * 100;
   const tight = r.minWait < 10;
 
@@ -74,8 +76,10 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
           setTimeout(() => { btn.textContent = '복사'; }, 1500);
         }}>복사</button>
         {onSave && <button className="btn-copy btn-save" type="button" onClick={() => onSave(r)}>저장</button>}
-        {onClubPost && <button className="btn-copy btn-save" type="button" onClick={() => onClubPost(r)}>동호회 일정으로 올리기</button>}
+        {onInsert && <button className="btn-copy btn-ins" type="button" onClick={() => onInsert(r)}>이 일정에 넣기</button>}
+        {onClubPost && <button className="btn-copy btn-save" type="button" onClick={() => onClubPost(r)}>{onInsert === undefined ? '일정 등록' : '새 일정으로 등록'}</button>}
         {teamModeOn && <button className="btn-copy btn-team" type="button" onClick={() => onConfirmTeam(r)}>팀 확정</button>}
+        {onInsert === null && <span className="res-note">만든 사람이나 운영진만 테마를 바꿀 수 있어요</span>}
       </div>
       <div className="res-body">
         {simple ? (
