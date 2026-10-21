@@ -17,6 +17,7 @@ import {
   search,
   sessionsToText,
   SORTS,
+  sortKeyOf,
   toISO,
   type SearchTheme,
 } from './core';
@@ -115,7 +116,7 @@ describe('[2] 인수 기준 (§7 검증 케이스)', () => {
     expect(capped).toBe(false);
   });
 
-  it('"비는 시간 적은 순" 1위 = §7 수기 최적해 (순서까지 도구가 찾아낸다)', () => {
+  it('"대기 시간 적은 순" 1위 = §7 수기 최적해 (순서까지 도구가 찾아낸다)', () => {
     // requirements.md §7 의 최적해는 카드 배치 순서(범계, 왓 어 트립, 몽)가 아니라
     // 범계→몽→왓 어 트립 순서에서 나온다. §4.14 후기(카드 순서 고정)로 한동안
     // 도달 불가능했다가, §4.46 으로 순서 탐색이 기본값이 되면서 다시 1위로 돌아왔다.
@@ -376,8 +377,16 @@ describe('[4] 비기능 요구 (§2.4)', () => {
 });
 
 describe('[5] 정렬 기준 (§2.3)', () => {
-  it('정렬 기준 5종', () => {
-    expect(SORTS.map(s => s.k)).toEqual(['gap', 'end', 'even', 'late', 'safe']);
+  it('정렬 기준 4종 — "고른 순"(even)은 뺐다', () => {
+    expect(SORTS.map(s => s.k)).toEqual(['gap', 'end', 'late', 'safe']);
+    expect(SORTS.map(s => s.label)).toEqual(['대기 시간 적은 순', '빨리 끝나는 순', '늦게 시작 순', '여유 있는 순']);
+  });
+
+  it('없는 정렬 키(옛 상태의 even·빈 값)는 기본 정렬로', () => {
+    expect(sortKeyOf('even')).toBe('gap');
+    expect(sortKeyOf('')).toBe('gap');
+    expect(sortKeyOf('zzz')).toBe('gap');
+    expect(sortKeyOf('safe')).toBe('safe');
   });
 
   it.each(SORTS)('"$label" 1위는 3개 테마 전부 포함', (s) => {
@@ -385,7 +394,7 @@ describe('[5] 정렬 기준 (§2.3)', () => {
     expect(top && top.count === 3).toBe(true);
   });
 
-  it('"빨리 끝나는 순" 1위 종료 ≤ "비는 시간 적은 순" 1위 종료', () => {
+  it('"빨리 끝나는 순" 1위 종료 ≤ "대기 시간 적은 순" 1위 종료', () => {
     const byEnd = [...out].sort(SORTS.find(s => s.k === 'end')!.f)[0];
     expect(byEnd.end).toBeLessThanOrEqual(best.end);
   });

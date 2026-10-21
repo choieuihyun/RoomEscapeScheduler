@@ -80,7 +80,7 @@ export function ResultsPanel({ s, onSave, onClubPost, onInsert, watchCtl }: {
   if (seen !== s.found) { setSeen(s.found); setAllRows(false); }
   const pool = s.currentList;
   const list = useMemo(
-    () => [...pool].sort(SORTS.find(d => d.k === s.sortKey)!.f).slice(0, s.showCount),
+    () => [...pool].sort((SORTS.find(d => d.k === s.sortKey) ?? SORTS[0]).f).slice(0, s.showCount),
     [pool, s.sortKey, s.showCount],
   );
   const lo = list.length ? Math.min(...list.map(r => r.start)) : 0;

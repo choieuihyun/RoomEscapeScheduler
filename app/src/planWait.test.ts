@@ -45,9 +45,9 @@ describe('planMove · planWaitText — 저장한 일정의 대기(결과 카드�
     const p = { total: 50, steps: [{ ...steps[0], name: '테마 1' }, steps[1], steps[2]], snapshot: snap([{ ...themes[0], name: '' }, themes[1], themes[2]]) };
     expect(planMove(p)).toBe(30);
   });
-  it('모르면 "비는 시간" — snapshot 없음·깨짐·맞는 테마 없음·같은 이름이 매장 둘·이동이 비는 시간보다 김', () => {
-    expect(planWaitText({ total: 60, steps, snapshot: '' })).toBe('비는 시간 60분');
-    expect(planWaitText({ total: 60, steps, snapshot: '!!깨진값' })).toBe('비는 시간 60분');
+  it('모르면 "대기 시간" — snapshot 없음·깨짐·맞는 테마 없음·같은 이름이 매장 둘·이동이 비는 시간보다 김', () => {
+    expect(planWaitText({ total: 60, steps, snapshot: '' })).toBe('대기 시간 60분');
+    expect(planWaitText({ total: 60, steps, snapshot: '!!깨진값' })).toBe('대기 시간 60분');
     expect(planMove({ total: 50, steps, snapshot: snap(themes.slice(0, 2)) })).toBeNull();
     expect(planMove({ total: 50, steps, snapshot: snap([...themes, T(4, '셜록의 서재', 60, '14:40', '신촌점')]) })).toBeNull();
     expect(planMove({ total: 50, steps, snapshot: snap(themes, '40') })).toBeNull();

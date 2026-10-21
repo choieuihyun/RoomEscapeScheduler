@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  fmt, pairKey, parseClock, parseSessions, search, sessionsToText,
+  fmt, pairKey, parseClock, parseSessions, search, sessionsToText, sortKeyOf,
   type SearchOutcome, type SearchResultRow, type SearchTheme, type Session, type SortDef,
 } from '../core';
 import {
@@ -66,7 +66,7 @@ export function useScheduler() {
     nextId.current = state.nextId;
     setMoveMap(state.moveMap);
     setOptions(state.options);
-    setSortKey(state.sortKey);
+    setSortKey(sortKeyOf(state.sortKey));   // 뺀 정렬('even')이 남은 옛 상태·링크는 기본 정렬로
     setTeams(state.teams);
   }, []);
 

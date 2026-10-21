@@ -112,8 +112,8 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
               <input className="mono" value={s.options.oMove} onChange={e => s.setOption('oMove', e.target.value)} />
             </div>
           </div>
-          {/* 계산(core.ts search)은 최소 대기를 이동을 뺀 값으로, 최대 대기를 이동을 포함한 빈 시간으로 본다 */}
-          {gapInfo && <p className="cz-note cz-gapinfo" id="czGapInfo">최대 대기는 이동 시간을 포함한 빈 시간이에요. 최소 대기는 이동 시간을 뺀 대기예요.</p>}
+          {/* 계산(core.ts search)은 최소 대기를 이동을 뺀 값으로, 최대 대기를 이동을 포함한 값으로 본다 */}
+          {gapInfo && <p className="cz-note cz-gapinfo" id="czGapInfo">최대 대기는 이동 시간까지 넣은 대기 시간이에요. 최소 대기는 이동 시간을 뺀 대기 시간이에요.</p>}
           <p className={hint.className}>{hint.content}</p>
           <MoveTimeGrid s={s} />
           <div className="checks">
