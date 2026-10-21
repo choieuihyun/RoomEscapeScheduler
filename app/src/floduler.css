@@ -2319,7 +2319,14 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
 .stl-item{width:100%;display:flex;flex-direction:column;gap:3px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--r-sm);
   background:var(--surface);color:var(--ink);font-family:inherit;text-align:left;cursor:pointer}
 .stl-item:hover{border-color:var(--line2);background:var(--btn-bg-hover)}
-.stl-item:focus-visible{outline:none;box-shadow:var(--ring)}
+.stl-item:has(.stl-item-open:focus-visible){box-shadow:var(--ring)}
+/* 항목 줄 — 고치기 단추의 ::after 가 줄을 덮는다. 결제한 사람 이름(멤버 카드)은 그 위 */
+.stl-item{position:relative}
+.stl-item-open{display:block;width:100%;padding:0;border:none;border-radius:inherit;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.stl-item-open:active{transform:none}
+.stl-item-open:focus-visible{outline:none}
+.stl-item-open::after{content:'';position:absolute;inset:0;border-radius:inherit}
+.stl-item-sub .mlink{position:relative;z-index:1}
 .stl-item-top{display:flex;align-items:baseline;gap:10px;min-width:0}
 .stl-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600}
 .stl-amt{margin-left:auto;flex:none;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
@@ -2389,3 +2396,67 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
 .more-pay{display:inline-block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 /* 홈 보낼 돈 띠 — 오늘·내일 띠와 붙어 있을 때 사이를 좁힌다 */
 .home-strip+.home-strip{margin-top:-14px}
+
+/* ── 이름 단추 · 멤버 카드 (어디서든 이름을 누르면) ─────────────
+   이름 단추는 자리의 글자 모양 그대로(색·굵기·크기 물려받음), 마우스를 올리면 밑줄. 줄·카드 전체가 눌리는 자리는 ::after 로 덮는다. */
+.mlink{display:inline;padding:0;margin:0;border:none;border-radius:3px;background:none;font:inherit;color:inherit;letter-spacing:inherit;text-align:inherit;cursor:pointer}
+.mlink:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+.mlink:active{transform:none}
+.mlink:focus-visible{outline:none;box-shadow:var(--ring)}
+/* 참여자 칩의 × 단추 규칙(.evp-chip button)이 이름 단추에 붙지 않게 */
+.evp-chip .mlink,.evp-chip .mlink:hover{width:auto;height:auto;margin:0;padding:0;background:none;color:inherit;font-size:inherit}
+/* 홈·지난 일정 줄은 제목 단추의 ::after 가 줄을 덮는다 — 만든 사람 이름은 그 위 */
+.home-row-m .mlink{position:relative;z-index:1}
+/* 랭킹 줄·멤버 목록 카드 — 어디를 눌러도 그 사람 카드 */
+.rk-row,.ppl-card{position:relative}
+.rk-row .mlink::after,.ppl-open::after{content:'';position:absolute;inset:0;border-radius:inherit}
+.rk-row .mlink:focus-visible,.ppl-open:focus-visible{box-shadow:none}
+.rk-row:has(.mlink:focus-visible),.ppl-card:has(.ppl-open:focus-visible){box-shadow:var(--ring)}
+.rk-row:has(.mlink:hover){background:var(--surface2)}
+.ppl-card:has(.ppl-open:hover){border-color:var(--line2)}
+.ppl-open{max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+
+.mcard.mbox{position:relative;max-width:420px;padding:22px 22px 20px;display:flex;flex-direction:column;gap:16px}
+.mcard:focus{outline:none}
+.mcard-x{position:absolute;top:12px;right:12px}
+.mcard-head{display:flex;align-items:center;gap:14px;min-width:0;padding-right:36px}
+.mcard-ava.ava{width:52px;height:52px;font-size:21px}
+.mcard-who{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mcard-n1{display:flex;align-items:center;gap:6px;min-width:0}
+.mcard-n1 b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.mcard-n1 .chip-info{height:20px;padding:0 7px;font-size:11px}
+.mcard-real{font-size:12.5px;color:var(--ink3)}
+.mcard-prof{display:flex;flex-direction:column;gap:8px}
+.mcard-line{margin:0;font-size:13.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.mcard-line span{color:var(--ink3)}
+.mcard-life{margin:0;font-size:13px;color:var(--ink);line-height:1.5;word-break:keep-all}
+.mcard-life span{margin-right:2px;font-size:12px;color:var(--ink3)}
+.mcard-note{margin:0;font-size:13px;color:var(--ink3);line-height:1.6}
+.mcard-gone{margin:0 0 4px;font-size:14px;color:var(--ink2)}
+.mcard-sec{display:flex;flex-direction:column;gap:6px;padding-top:14px;border-top:1px solid var(--line)}
+.mcard-sh{display:flex;align-items:baseline;gap:8px}
+.mbox .mcard-sh h3{margin:0;font-size:13.5px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.mcard-sh span{margin-left:auto;font-size:12.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.mcard-rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.mcard-row{display:flex;align-items:baseline;gap:10px;min-width:0;padding:4px 0;font-size:13.5px;color:var(--ink)}
+.mcard-rn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcard-rn em{margin-left:6px;font-style:normal;font-size:12px;color:var(--ink3)}
+.mcard-rd{flex:none;font-size:12.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.mcard-ev{display:flex;align-items:center;gap:10px;width:calc(100% + 16px);min-height:36px;margin:0 -8px;padding:0 8px;border:none;
+  border-radius:var(--r-sm);background:none;font:inherit;color:var(--ink);text-align:left}
+.mcard-ev:hover{background:var(--surface2)}
+.mcard-ev:active{transform:none}
+.mcard-ev:focus-visible{outline:none;box-shadow:var(--ring)}
+.mcard-ev .mcard-rd{min-width:64px}
+.mcard-et{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px}
+.mcard-ev i{font-style:normal;color:var(--ink3)}
+.mcard-wish{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.mcard-w{display:inline-flex;align-items:center;gap:5px;max-width:100%;height:26px;padding:0 10px;box-sizing:border-box;border-radius:var(--pill);
+  background:var(--chip-bg);font-size:12.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcard-w.also{background:var(--blue-soft);color:var(--blue-text)}
+.mcard-w em{font-style:normal;font-size:11px;font-weight:600}
+.mcard-w.more{padding:0 4px;background:none;color:var(--ink3)}
+@media(max-width:640px){
+  .mcard-modal.modal{padding:0;align-items:flex-end}
+  .mcard-modal .mbox{max-width:none;max-height:88vh;border-radius:16px 16px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom))}
+}

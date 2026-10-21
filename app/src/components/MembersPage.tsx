@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { MemberLink } from '../clubStore';
 import { todayKst } from '../clubEvents';
 import { lifeLabel, personLine } from '../memberProfile';
 import type { MemberDto, ProfileDto } from '../server';
@@ -77,7 +78,7 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
                     const off = busy.has(m.uid);
                     return (
                       <tr key={m.uid}>
-                        <td><b>{memberName(m)}</b><ProfLine p={m.profile} today={today} /></td>
+                        <td><b><MemberLink uid={m.uid} name={memberName(m)} /></b><ProfLine p={m.profile} today={today} /></td>
                         <td>{admin ? <span className="chip-info role">운영진</span> : '멤버'}</td>
                         <td className={m.hasDevice ? 'mem-yes' : 'mem-no'}>{m.hasDevice ? '있음' : '없음'}</td>
                         <td className="mem-sub">{formatKst(m.decidedAt).split(' ').slice(0, 2).join(' ') || '—'}</td>

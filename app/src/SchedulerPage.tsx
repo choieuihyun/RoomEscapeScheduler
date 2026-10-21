@@ -9,7 +9,7 @@ import { usePlans } from './usePlans';
 import { useSaveModal } from './useSaveModal';
 import { useWatches, buildWatchControl } from './useWatches';
 import { useCalendar } from './useCalendar';
-import { useView, decideFirstScreen, type View } from './useView';
+import { useView, decideFirstScreen, myProfileView, type View } from './useView';
 import { useClubEvents } from './useClubEvents';
 import { useProfile } from './useProfile';
 import { useTodayKst } from './useToday';
@@ -194,9 +194,9 @@ export function SchedulerPage() {
   useEffect(() => {
     if (!homeOn) return;
     let live = true;
-    import('./clubStore').then((m) => m.startClub(meUid, (f) => { if (live) setClub7(f); }), () => {});
+    import('./clubStore').then((m) => m.startClub(meUid, (f) => { if (live) setClub7(f); }, peopleOn), () => {});
     return () => { live = false; };
-  }, [homeOn, meUid]);
+  }, [homeOn, meUid, peopleOn]);
   const togetherOn = homeOn && (club7 & 1) > 0;
   const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided, peopleOn, rankOn, togetherOn });
   const onProfile = nav.view === 'profile' || nav.view === 'more';
@@ -230,6 +230,16 @@ export function SchedulerPage() {
   useEffect(() => {
     if (wide && nav.view === 'more' && profileKnown) go(profileOn ? 'profile' : 'calc', true);
   }, [wide, nav.view, profileKnown, profileOn, go]);
+  /* 멤버 카드 — 어디서든 이름을 누르면(clubStore.openMember 의 'flod:member'). 내 이름이면 내 프로필 화면으로 */
+  const [card, setCard] = useState<{ uid: string; name: string; from: HTMLElement | null } | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<{ uid: string; name: string; from: HTMLElement | null }>).detail;
+      if (d.uid === meUid) goView(myProfileView(wide, profileOn)); else setCard(d);
+    };
+    addEventListener('flod:member', on);
+    return () => removeEventListener('flod:member', on);
+  }, [meUid, wide, profileOn, goView]);
   /* 카카오 연결 왕복에서 돌아오면 떠날 때 보던 화면으로(성공·실패 모두) — 실패 문구가 보이는 화면에 닿게 */
   const { returnView } = auth;
   useEffect(() => { if (returnView) go(returnView.view as View, true); }, [returnView, go]);
@@ -564,6 +574,10 @@ export function SchedulerPage() {
         part="modal" fill={asking} auth={auth} profile={profileOn ? profile : null}
         onClose={() => { if (asking) setAskedOff(meUid); setEditOpen(false); }}
         onMissing={() => { setEditGone(true); setEditOpen(false); }}
+      /></LazyBoundary>}
+      {peopleOn && card && <LazyBoundary><MemberViews
+        part="card" uid={card.uid} name={card.name} from={card.from} meUid={meUid} today={today} events={club.events} past={profile.past}
+        onClose={() => setCard(null)} onOpenEvent={(ev) => { setCard(null); openFromProfile(ev); }}
       /></LazyBoundary>}
       <PushBanner onOpen={openFromBanner} />
       <Toaster />

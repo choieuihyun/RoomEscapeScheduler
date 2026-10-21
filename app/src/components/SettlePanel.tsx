@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { keepSettle, PayForm, settleMissing, useClubStore } from '../clubStore';
+import { keepSettle, MemberLink, PayForm, settleMissing, useClubStore } from '../clubStore';
 import {
   errorCode, getSettlement, isMissingApi, markTransfer, putSettlement, sayClub, settleConflictOf,
   type EventDto, type SettlementDto, type SettlementItemInput, type TransferDto,
 } from '../server';
 import {
-  canMark, commas, draftFrom, editBody, isAdjusted, draftInput, draftIssue, draftShares, gapText, headCount, itemLine, LABEL_MAX, LABELS, MAX_ITEMS,
+  canMark, commas, draftFrom, editBody, isAdjusted, draftInput, draftIssue, draftShares, gapText, headCount, itemRest, LABEL_MAX, LABELS, MAX_ITEMS,
   orderTransfers, parseWon, payInfoMissing, progress, settlePeople, settleText, won, type ItemDraft,
 } from '../settle';
 import { showToast } from '../toast';
@@ -175,8 +175,9 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
   const d = dto as SettlementDto;
   const pr = progress(d);
   const ordered = orderTransfers(d.transfers, meUid);
+  /* 이름은 눌러 멤버 카드(내 이름이면 내 프로필) */
   const nameOf = (u: { uid: string; nickname: string }) => (
-    <span className={u.uid === meUid ? 'stl-me' : undefined}>{u.nickname}{u.uid === meUid && <em> (나)</em>}</span>
+    <MemberLink uid={u.uid} name={u.nickname} className={u.uid === meUid ? 'stl-me' : undefined}>{u.nickname}{u.uid === meUid && <em> (나)</em>}</MemberLink>
   );
 
   return (
@@ -203,11 +204,12 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
 
       <ul className="stl-items">
         {items.map((it, i) => (
-          <li key={it.id}>
-            <button type="button" className="stl-item" onClick={() => setEdit({ at: i, base: d })} aria-label={`${it.label} ${won(it.amount)} 고치기`}>
+          /* 고치기 단추의 ::after 가 줄 전체를 덮어 어디를 눌러도 고치기. 결제한 사람 이름은 그 위에 따로(멤버 카드) */
+          <li key={it.id} className="stl-item">
+            <button type="button" className="stl-item-open" onClick={() => setEdit({ at: i, base: d })} aria-label={`${it.label} ${won(it.amount)} 고치기`}>
               <span className="stl-item-top"><b className="stl-label">{it.label}</b><b className="stl-amt">{won(it.amount)}</b></span>
-              <span className="stl-item-sub">{itemLine(it)}</span>
             </button>
+            <span className="stl-item-sub"><MemberLink uid={it.payer.uid} name={it.payer.nickname} />{itemRest(it)}</span>
           </li>
         ))}
       </ul>

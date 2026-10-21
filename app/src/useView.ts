@@ -9,6 +9,9 @@ import { useCallback, useEffect, useState } from 'react';
 /* together: 같이 가요(§4.12) — 서버가 위시 API 를 알 때만 */
 export type View = 'home' | 'calc' | 'calendar' | 'profile' | 'members' | 'more' | 'people' | 'ranking' | 'together';
 
+/* 어디서든 내 이름을 누르면 가는 내 프로필 화면 — 넓은 화면은 내 정보(없으면 더보기 → 넓은 화면에선 다시 바뀐다), 좁은 화면은 더보기 */
+export const myProfileView = (wide: boolean, profileOn: boolean): View => (wide && profileOn ? 'profile' : 'more');
+
 /* decided: 기본 화면을 정할 정보(로그인 복원·승인 여부·일정 API 유무)가 다 왔는지. 안 왔으면 기본 경우는 null(아직 모름). */
 /* profileOn: 승인 멤버이고 서버가 해 본 테마 API(§4.9)를 알 때만 "내 정보" */
 type Opts = { calendarOn: boolean; isAdmin: boolean; homeOn: boolean; profileOn: boolean; decided: boolean; peopleOn?: boolean; rankOn?: boolean; togetherOn?: boolean };

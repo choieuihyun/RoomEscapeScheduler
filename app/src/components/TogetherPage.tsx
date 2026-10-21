@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
-import { addWishFor, removeWishFor, reloadWishes, useClubStore, WishToggle } from '../clubStore';
+import { addWishFor, keepGroups, MemberLink, removeWishFor, reloadWishes, useClubStore, WishToggle } from '../clubStore';
 import { cpLen } from '../clubEvents';
 import type { FormState } from '../eventForm';
 import { isPlayableName, searchThemes } from '../played';
@@ -43,7 +43,7 @@ export function TogetherPage({ active, meUid, today, events, played, onBack, onM
       const t = await (await import('../cloud')).idToken();
       if (!t) throw new Error('로그인해 주세요.');
       const r = await listClubWishes(t);
-      if (my === seq.current) { setGroups(r); setErr(''); }
+      if (my === seq.current) { setGroups(r); setErr(''); keepGroups(r); } // 멤버 카드의 하고 싶은 테마도 이것을 쓴다
     } catch (e) {
       if (my === seq.current) setErr(sayClub(e));
     }
@@ -130,7 +130,7 @@ export function TogetherPage({ active, meUid, today, events, played, onBack, onM
                   </div>
                   <p className="tg-want"><b>{n}명</b>이 하고 싶어해요</p>
                   <ul className="tg-who" aria-label="하고 싶은 사람">
-                    {wanterChips(g, meUid).map((w) => <li key={w.uid} className={'tg-p' + (w.me ? ' me' : '')}>{w.name}</li>)}
+                    {wanterChips(g, meUid).map((w) => <li key={w.uid} className={'tg-p' + (w.me ? ' me' : '')}><MemberLink uid={w.uid} name={w.name} /></li>)}
                   </ul>
                   {(g.playedBy.length > 0 || up) && (
                     <p className="tg-meta">

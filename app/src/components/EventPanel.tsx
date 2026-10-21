@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { eventStatus, eventTitle, isUndecided, kakaoPost, longDayLabel, rangeLabel, STATUS_LABEL, timeLabel } from '../clubEvents';
 import { eventLink } from '../eventLink';
+import { MemberLink } from '../clubStore';
 import { playedPerPerson } from '../played';
 import { playedDots } from '../playedWho';
 import { listClubMembers, sayClub, type ClubMemberDto, type EventDto } from '../server';
@@ -112,7 +113,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
       <div>
         <h2 className="evp-title" id="evp-title">{eventTitle(ev)}</h2>
         <p className="evp-sub">
-          {when}{time && (undecided ? ` · ${time}` : ` ${time}`)} · 만든 사람 {ev.createdBy.nickname}
+          {when}{time && (undecided ? ` · ${time}` : ` ${time}`)} · 만든 사람 <MemberLink uid={ev.createdBy.uid} name={ev.createdBy.nickname} />
         </p>
       </div>
 
@@ -140,7 +141,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
                 {dots.length === 0 ? card : (
                   <div className="evp-seg-who">
                     {card}
-                    <p className="evp-seg-ppl"><PlayedDots dots={dots} /></p>
+                    <p className="evp-seg-ppl"><PlayedDots dots={dots} link /></p>
                   </div>
                 )}
               </div>
@@ -157,7 +158,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
         <div className="evp-chips">
           {ev.participants.map((p) => (
             <span key={p.uid} className={'evp-chip' + (perPerson.has(p.uid) ? ' played' : '')}>
-              {p.nickname}
+              <MemberLink uid={p.uid} name={p.nickname} />
               {p.uid === ev.createdBy.uid && <i>만든 사람</i>}
               {perPerson.has(p.uid) && <em>해 봄 {perPerson.get(p.uid)}</em>}
               {ev.canManage && (

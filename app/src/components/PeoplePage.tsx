@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { keepMembers, MemberLink } from '../clubStore';
 import { todayKst } from '../clubEvents';
 import { lifeLabel, matchPerson, personLine, sortPeople, type PeopleSort } from '../memberProfile';
 import { listClubMembers, sayClub, type ClubMemberDto } from '../server';
 import { Avatar } from './Avatar';
 
 /* 멤버 목록(§4.11) — 승인 멤버 누구나. 운영진의 멤버 관리(승인·역할)와는 따로다.
-   화면에 들어올 때마다 GET /api/club/members 를 새로 받는다(프로필을 고친 사람이 바로 보이게). */
+   화면에 들어올 때마다 GET /api/club/members 를 새로 받는다(프로필을 고친 사람이 바로 보이게 — 멤버 카드도 이것을 쓴다).
+   카드 어디를 눌러도 그 사람의 멤버 카드(별명 단추의 ::after 가 카드를 덮는다). 내 카드는 내 프로필 화면으로. */
 export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: string; onBack: () => void }) {
   const id = useId();
   const [list, setList] = useState<ClubMemberDto[] | null>(null);
@@ -20,7 +22,7 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
       const t = await (await import('../cloud')).idToken();
       if (!t) throw new Error('로그인해 주세요.');
       const r = await listClubMembers(t);
-      if (my === seq.current) { setList(r); setErr(''); }
+      if (my === seq.current) { setList(r); setErr(''); keepMembers(r); }
     } catch (e) {
       if (my === seq.current) setErr(sayClub(e));
     }
@@ -68,7 +70,7 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
                   <Avatar name={m.nickname} className="ppl-ava" />
                   <div className="ppl-who">
                     <div className="ppl-n1">
-                      <b>{m.nickname}</b>
+                      <b><MemberLink uid={m.uid} name={m.nickname} className="ppl-open" /></b>
                       {m.role === 'ADMIN' && <span className="chip-info role">운영진</span>}
                       {me && <span className="chip-info">나</span>}
                     </div>

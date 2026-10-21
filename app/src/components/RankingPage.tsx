@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { MemberLink } from '../clubStore';
 import { allEmpty, firstRange, mergeMonths, monthLabel, olderRange, topRanks } from '../memberProfile';
 import { isMissingApi, rankings, sayClub, type RankMonthDto } from '../server';
 import { showToast } from '../toast';
 
 /* 달별 랭킹(§4.11) — 이번 달부터 거꾸로 달마다 5등까지(별명·횟수). 처음엔 최근 3달, "이전 달 더 보기"로 3달씩.
    서버가 이 API 를 모르면(본문 없는 404) onMissing — 메뉴를 숨기고 더보기로 돌아간다.
-   차분하게: 메달·트로피·색 띠 없이 순위 숫자만 굵게(1등만 청록 글자), 내 줄은 옅은 바탕. */
+   차분하게: 메달·트로피·색 띠 없이 순위 숫자만 굵게(1등만 청록 글자), 내 줄은 옅은 바탕.
+   줄 어디를 눌러도 그 사람의 멤버 카드(이름 단추의 ::after 가 줄을 덮는다). */
 export function RankingPage({ active, today, meUid, onBack, onMissing }: {
   active: boolean; today: string; meUid: string; onBack: () => void; onMissing: () => void;
 }) {
@@ -80,7 +82,7 @@ export function RankingPage({ active, today, meUid, onBack, onMissing }: {
                       return (
                         <li key={r.uid} className={'rk-row' + (me ? ' me' : '') + (r.rank === 1 ? ' first' : '')}>
                           <span className="rk-no">{r.rank}</span>
-                          <span className="rk-nick">{r.nickname}{me && <span className="rk-me">나</span>}</span>
+                          <MemberLink uid={r.uid} name={r.nickname} className="rk-nick">{r.nickname}{me && <span className="rk-me">나</span>}</MemberLink>
                           <span className="rk-cnt">{r.count}개</span>
                         </li>
                       );

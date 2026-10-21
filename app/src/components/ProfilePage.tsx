@@ -9,7 +9,7 @@ import { ProfileFacts } from './MemberViews';
 import { showToast } from '../toast';
 import { pageRows, withoutPending, type UseProfileReturn } from '../useProfile';
 import type { UsePushDeviceReturn } from '../usePushDevice';
-import { PayCard, useClubStore, WishToggle } from '../clubStore';
+import { MemberLink, PayCard, useClubStore, WishToggle } from '../clubStore';
 
 /* 내 정보 — 계획 Task 7, 작업명세서 §4.9 "화면 쪽 약속". 홈과 같은 세 칸 카드:
    ① 프로필(닉네임·역할·로그인 수단·숫자 둘)과 그 아래 이 기기 알림(5단계, Task 11),
@@ -147,7 +147,7 @@ export function PastCard({ profile, onOpenEvent }: { profile: UseProfileReturn; 
                     </div>
                     <span className="home-row-m">
                       {ev.date && <span className={dowClass(weekday(ev.date))}>{dayLabel(ev.date)}</span>}
-                      {' · '}{ev.count}명 · {ev.createdBy.nickname}
+                      {' · '}{ev.count}명 · <MemberLink uid={ev.createdBy.uid} name={ev.createdBy.nickname} />
                     </span>
                   </div>
                 </li>

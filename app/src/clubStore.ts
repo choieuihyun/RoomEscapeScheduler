@@ -2,11 +2,13 @@
    정산(§4.13) — 내 송금 정보, 받아 둔 정산(일정 상세가 고치면 홈 "보낼 돈" 띠도 같이 바뀐다).
    지연 청크끼리 나눠 쓰는 모듈이라 진입 청크(SchedulerPage)는 동적 import 로 startClub 만 부른다 —
    서버가 이 API 를 아는지(본문 없는 404 면 모름) 알려 주면 메뉴를 켠다.
-   "하고 싶어요" 단추(WishToggle)도 여기서 다시 내보낸다. */
+   "하고 싶어요" 단추(WishToggle)도 여기서 다시 내보낸다.
+   멤버 카드(어디서든 이름을 누르면) — 승인 멤버 목록(§4.11)·멤버들의 위시 묶음(§4.12)을 받아 두고, 이름 단추(MemberLink)가
+   누를 수 있는지 여기서 본다. 카드는 SchedulerPage 가 window 이벤트(openMember)를 받아 띄운다(진입 청크에는 듣는 쪽만). */
 import { useSyncExternalStore } from 'react';
 import {
-  addWish, deleteWish, getPayInfo, getSettlement, isMissingApi, listMyWishes, myPastEvents, putPayInfo, sayClub,
-  type EventDto, type PayInfoDto, type SettlementDto, type WishDto,
+  addWish, deleteWish, getPayInfo, getSettlement, isMissingApi, listClubMembers, listClubWishes, listMyWishes, myPastEvents, putPayInfo, sayClub,
+  type ClubMemberDto, type EventDto, type PayInfoDto, type SettlementDto, type WishDto, type WishGroupDto,
 } from './server';
 import { myDue } from './settle';
 import { showToast } from './toast';
@@ -28,11 +30,19 @@ export interface ClubState {
   settles: ReadonlyMap<number, { key: string; dto: SettlementDto }>;
   /* 홈 "보낼 돈" 띠가 볼 일정(정산이 있는 내 일정, 최근 것 몇 개) */
   dueEvents: EventDto[];
+  /* 멤버 카드 — 6단계 서버(프로필)를 아는 승인 멤버면 'on'. 6단계를 모르거나 아직이면 'unknown', 멤버 목록이 본문 없는 404 면
+     'missing'(이 접속 동안). 'on' 이 아니면 이름은 그냥 글자 */
+  people: Api;
+  /* 승인 멤버(uid →). 못 받았으면 null — 그때는 이름을 다 누를 수 있게 두고 카드가 다시 받는다 */
+  members: ReadonlyMap<string, ClubMemberDto> | null;
+  /* 멤버들의 위시 묶음 — 같이 가요 화면이나 카드가 받은 것(받은 때와 함께) */
+  groups: { at: number; list: WishGroupDto[] } | null;
 }
 
 const blank = (uid: string): ClubState => ({
   uid, wishApi: 'unknown', wishes: null, wishErr: '', busy: new Set(),
   settleApi: 'unknown', pay: null, settles: new Map(), dueEvents: [],
+  people: 'unknown', members: null, groups: null,
 });
 let st: ClubState = blank('');
 const subs = new Set<() => void>();
@@ -71,13 +81,78 @@ export async function reloadWishes(): Promise<void> {
   }
 }
 
-/* 승인 멤버이고 일정 API 가 켜지면 SchedulerPage 가 부른다. 사람이 바뀌면 처음부터, 같은 사람이면 조용히 새로 받는다 */
-export function startClub(uid: string, flags: (f: number) => void): void {
+/* 승인 멤버이고 일정 API 가 켜지면 SchedulerPage 가 부른다. 사람이 바뀌면 처음부터, 같은 사람이면 조용히 새로 받는다.
+   people: 서버가 프로필(6단계)을 아는지 — 알면 멤버 목록을 받아 이름을 누를 수 있게 한다 */
+export function startClub(uid: string, flags: (f: number) => void, people = false): void {
   onFlags = flags;
-  if (st.uid !== uid) { st = blank(uid); dueAt = 0; }
+  if (st.uid !== uid) { st = blank(uid); dueAt = 0; membersAt = 0; }
   flags(flagsOf(st));
   if (st.wishApi !== 'missing') void reloadWishes();
   if (st.settleApi !== 'missing') void reloadPay();
+  if (people) void reloadMembers();
+  else if (st.people === 'on') set({ people: 'unknown', members: null }); // 'unknown' 이면 이름은 글자로 그린다
+}
+
+/* ── 멤버 카드 ── */
+
+/* 멤버 목록·위시 묶음·남의 해 본 테마는 5분 동안 받아 둔 것을 쓴다 */
+export const CARD_TTL_MS = 5 * 60_000;
+let membersAt = 0;
+let membersBusy: Promise<void> | null = null;
+
+/* 받은 승인 멤버 목록을 넣어 둔다(멤버 목록 화면이 새로 받을 때도) */
+export function keepMembers(list: ClubMemberDto[]) {
+  membersAt = Date.now();
+  set({ people: 'on', members: new Map(list.map((m) => [m.uid, m])) });
+}
+
+/* 승인 멤버 목록 — 5분 안에 받았으면 그대로(force 면 새로). 본문 없는 404 면 이 접속 동안 이름을 글자로 둔다 */
+export function reloadMembers(force = false): Promise<void> {
+  if (st.people === 'missing' || (!force && st.members && Date.now() - membersAt < CARD_TTL_MS)) return Promise.resolve();
+  if (membersBusy) return membersBusy;
+  const uid = st.uid;
+  membersBusy = (async () => {
+    try {
+      const list = await listClubMembers(await token());
+      if (same(uid)) keepMembers(list);
+    } catch (e) {
+      if (!same(uid)) return;
+      if (isMissingApi(e)) set({ people: 'missing', members: null });
+      else if (st.people === 'unknown') set({ people: 'on' }); // 잠깐의 오류 — 이름은 누를 수 있게 두고 카드가 다시 받는다
+    } finally {
+      membersBusy = null;
+    }
+  })();
+  return membersBusy;
+}
+
+/* 이름을 어떻게 그릴지 — 글자만 / 남의 카드 / 내 프로필로 */
+export function nameState(s: Pick<ClubState, 'uid' | 'people' | 'members'>, uid: string): 'text' | 'card' | 'me' {
+  if (s.people !== 'on' || !uid) return 'text';
+  if (uid === s.uid) return 'me';
+  return s.members && !s.members.has(uid) ? 'text' : 'card';
+}
+
+/* 이름을 누르면 — SchedulerPage 가 듣고 카드를 띄운다(내 이름이면 내 프로필로). name: 받기 전에 머리에 보일 별명,
+   from: 닫을 때 포커스를 돌려줄 단추. 이벤트 이름은 SchedulerPage 에 글자로 한 번 더 적혀 있다(진입 청크가 이 모듈을 가져오지 않게) */
+export type MemberOpen = { uid: string; name: string; from: HTMLElement | null };
+export const openMember = (d: MemberOpen) => dispatchEvent(new CustomEvent<MemberOpen>('flod:member', { detail: d }));
+
+/* 멤버들의 위시 묶음 — 같이 가요 화면이 받을 때 넣어 둔다 */
+export const keepGroups = (list: WishGroupDto[]) => set({ groups: { at: Date.now(), list } });
+
+/* 카드가 쓸 위시 묶음 — 5분 안에 받은 게 있으면 그대로. 서버가 모르면(본문 없는 404) 같이 가요처럼 숨긴다. 그 밖의 오류는 던진다 */
+export async function loadGroups(): Promise<void> {
+  if (st.wishApi === 'missing' || (st.groups && Date.now() - st.groups.at < CARD_TTL_MS)) return;
+  const uid = st.uid;
+  try {
+    const list = await listClubWishes(await token());
+    if (same(uid)) keepGroups(list);
+  } catch (e) {
+    if (!same(uid)) return;
+    if (isMissingApi(e)) set({ wishApi: 'missing', wishes: null });
+    else throw e;
+  }
 }
 
 /* 내 송금 정보 — 정산 API 를 아는지도 이것으로 안다(본문 없는 404 면 정산 칸·송금 정보 행을 숨긴다) */
@@ -209,4 +284,5 @@ export const toggleWishFor = (r: WishRef): Promise<boolean> => (myWish(st.wishes
 
 /* "하고 싶어요" 단추도 이 모듈을 거쳐 가져간다 — 따로 가져가면 청크가 하나 더 생겨 진입 청크의 미리 받기 목록이 길어진다(진입 크기 한도) */
 export { WishToggle } from './components/WishToggle';
+export { MemberLink } from './components/MemberLink';
 export { PayCard, PayForm } from './components/PayInfo';

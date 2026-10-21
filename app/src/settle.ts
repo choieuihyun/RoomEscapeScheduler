@@ -57,9 +57,12 @@ export function gapText(amount: number, shares: Share[]): string {
 }
 
 /* 항목 카드 아래 줄 — "방탈출러버 결제 · 5명 · 1인 26,400원", 고친 것이면 "… · 조정됨" */
-export function itemLine(it: SettlementItemDto): string {
+export const itemLine = (it: SettlementItemDto): string => it.payer.nickname + itemRest(it);
+
+/* 결제한 사람 이름 뒤 " 결제 · 5명 · 1인 26,400원" — 정산 칸은 이름을 단추(멤버 카드)로 따로 그린다 */
+export function itemRest(it: SettlementItemDto): string {
   const n = it.shares.length;
-  const head = `${it.payer.nickname} 결제 · ${n}명`;
+  const head = ` 결제 · ${n}명`;
   return isEven(it.amount, it.shares, it.payer.uid) ? `${head} · 1인 ${won(perHead(it.amount, n))}` : `${head} · 조정됨`;
 }
 

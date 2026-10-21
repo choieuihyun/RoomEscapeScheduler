@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { duesOf, refreshDues, useClubStore } from '../clubStore';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { duesOf, MemberLink, refreshDues, useClubStore } from '../clubStore';
 import { won } from '../settle';
 import { showToast } from '../toast';
 import type { UseProfileReturn } from '../useProfile';
@@ -260,7 +260,7 @@ export function HomePage({
                         {/* 날짜 미정은 기준 후보 날짜 자리에 놓이지만 날짜를 정해진 것처럼 적지 않는다 */}
                         {ev.date === null ? `날짜 미정 · 후보 ${ev.candidates.length}개`
                           : <span className={dowClass(weekday(ev.date))}>{dayLabel(ev.date)}</span>}
-                        {' · '}{ev.createdBy.nickname} · {people(ev)}
+                        {' · '}<MemberLink uid={ev.createdBy.uid} name={ev.createdBy.nickname} /> · {people(ev)}
                       </span>
                     </div>
                     {ev.joined ? (
@@ -313,7 +313,7 @@ export function HomePage({
                 )}
               </div>
               <div className="home-next-ppl">
-                참여 {next.capacity === null ? `${next.count}명` : `${next.count}/${next.capacity}`} · {next.participants.map((p) => p.nickname).join(', ')}
+                참여 {next.capacity === null ? `${next.count}명` : `${next.count}/${next.capacity}`} · {next.participants.map((p, i) => <Fragment key={p.uid}>{i > 0 && ', '}<MemberLink uid={p.uid} name={p.nickname} /></Fragment>)}
               </div>
               <button type="button" className="home-next-go" onClick={() => onOpenEvent(next)}>일정 자세히 보기</button>
             </>

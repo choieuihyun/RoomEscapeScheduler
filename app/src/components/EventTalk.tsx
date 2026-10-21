@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
+import { MemberLink } from '../clubStore';
 import {
   availText, candidateSummary, dayLabel, parseAvailText, sortKeyDate, todayKst, windowLabel, type AvailTime, type CandidateRow,
 } from '../clubEvents';
@@ -34,18 +35,22 @@ async function save(ev: EventDto, club: UseClubEventsReturn, form: FormState, do
   }
 }
 
-function names(ev: EventDto, uids: string[]): string {
+/* 이름마다 눌러 멤버 카드를 연다 — 쉼표로 잇는다 */
+function names(ev: EventDto, uids: string[]): ReactNode {
   const by = new Map(ev.participants.map((p) => [p.uid, p.nickname]));
-  return uids.map((u) => by.get(u) ?? '알 수 없음').join(', ');
+  return uids.map((u, i) => {
+    const n = by.get(u);
+    return <Fragment key={u}>{i > 0 && ', '}{n === undefined ? '알 수 없음' : <MemberLink uid={u} name={n} />}</Fragment>;
+  });
 }
 
 /* 겹치는 시간 앞말 — 모두 될 때만 "다 같이", 일부면 된다는 사람끼리, 한 명이면 그 사람 이름으로 */
-function windowLead(ev: EventDto, row: CandidateRow): string {
+function windowLead(ev: EventDto, row: CandidateRow): ReactNode {
   if (row.all) return '다 같이 되는 시간';
   if (row.yes === 1) {
     const out = new Set([...row.noUids, ...row.noneUids]);
     const one = ev.participants.find((p) => !out.has(p.uid));
-    return `${one?.nickname ?? '한 명'} 님이 되는 시간`;
+    return <>{one ? <MemberLink uid={one.uid} name={one.nickname} /> : '한 명'} 님이 되는 시간</>;
   }
   return '된다는 사람끼리 겹치는 시간';
 }
@@ -56,10 +61,11 @@ function CandRow({ ev, row, action }: { ev: EventDto; row: CandidateRow; action?
   const time = row.window ? null
     : row.yes === 0 ? ''
     : row.all ? '모두 되지만 겹치는 시간이 없어요' : '된다는 사람끼리 겹치는 시간이 없어요';
-  const who = [
-    row.noUids.length > 0 && `안 돼요: ${names(ev, row.noUids)}`,
-    row.noneUids.length > 0 && `응답 안 함: ${names(ev, row.noneUids)}`,
-  ].filter(Boolean).join(' · ');
+  const who = row.noUids.length > 0 || row.noneUids.length > 0 ? (<>
+    {row.noUids.length > 0 && <>안 돼요: {names(ev, row.noUids)}</>}
+    {row.noUids.length > 0 && row.noneUids.length > 0 && ' · '}
+    {row.noneUids.length > 0 && <>응답 안 함: {names(ev, row.noneUids)}</>}
+  </>) : null;
   return (
     <div className={'evt-cand' + (row.all && row.window ? ' all' : '')}>
       <div className="evt-cand-h">
