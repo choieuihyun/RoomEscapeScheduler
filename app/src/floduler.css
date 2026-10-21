@@ -352,6 +352,8 @@ button:active{transform:scale(.97)}
 .teamrow.on{display:flex}
 .teamhint{color:var(--ink3);font-size:12.5px;line-height:1.5}
 .teamempty{color:var(--ink3);font-size:12.5px}
+/* 칸 안 안내 글은 칸의 gap(10px)만으로 띄운다 — p 기본 여백(14px)이 위아래에 붙어 위가 들뜨던 것(2026-10-21) */
+.teamhint,.teamempty,.teamnext{margin:0}
 .teamcard{margin-bottom:10px}
 .teamcard:last-child{margin-bottom:0}
 .teamlabelrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
@@ -364,6 +366,22 @@ button:active{transform:scale(.97)}
 .teamctl{display:flex;gap:8px}
 .teamctl .btn{height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-xs)}
 .teamctl .btn:disabled{opacity:.4;cursor:default}
+/* 좁은 화면 조건 칸(2026-10-21 "가지런하게") — 숫자 칸은 2열 격자(360 폭에서도 1열로 무너지지 않게, 라벨 높이 같게),
+   체크 옵션은 카드 안에 한 줄에 하나씩(체크 상자 왼쪽 선 하나·줄 높이 같게·긴 글자는 첫 줄에 상자를 맞춰 줄바꿈),
+   식사 시간은 "11:30 ~ 14:00 사이에" / "40 분 이상 비워 두기" 두 줄. 넓은 화면 배치는 그대로 */
+@media(max-width:640px){
+  .opts{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;padding:16px 14px}
+  .opt label{min-height:22px;white-space:nowrap}
+  .checks{flex-direction:column;gap:0;margin-top:12px;padding:2px 14px;background:var(--surface);
+    border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+  .checks .chk{align-items:flex-start;padding:10px 0;line-height:20px}
+  .checks .chk+.chk{border-top:1px solid var(--line)}
+  .checks .chk input{flex:none;margin-top:2px}
+  .mealrow.on{display:grid;grid-template-columns:82px auto 82px minmax(0,1fr);gap:8px;padding:14px}
+  .mealrow>input{grid-column:1}
+  .mealrow>.lb:last-child{grid-column:2 / -1}
+  .teamrow{padding:14px}
+}
 
 /* 드래그 손잡이 겸 순서 번호. 이 번호 순서가 곧 조합 순서다 (§4.14 후기) */
 .idx{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;
@@ -679,6 +697,10 @@ button:active{transform:scale(.97)}
 @media(max-width:560px){
   .pair .pn{font-size:13px}
   .pair .pv{width:64px}
+  /* 매장 이름이 길면 이름 안에서 줄을 바꾸고, 분 칸·"분"은 늘 오른쪽 한 줄에(2026-10-21) */
+  .pair{flex-wrap:nowrap}
+  .pair .pn{min-width:0;word-break:keep-all;line-height:1.4}
+  .pair .pv,.pair .unit{flex:none}
 }
 
 /* .mini(배지 알약)와 클래스가 겹쳐 옅은 청록 알약이 씌워지던 것을 걷어 낸다 — 그냥 작은 체크박스 */
