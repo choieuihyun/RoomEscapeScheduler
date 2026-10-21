@@ -10,6 +10,7 @@ import {
 import { blankTheme, type AddedTheme, type Theme } from './types';
 import { dropOtherCtx, mergeServerThemes } from '../eventFlow';
 import type { OcrError } from '../ocr';
+import { posterLookup, rememberPosters } from '../posterMemo';
 
 export const SHOW = 12;
 const AUTOSAVE_KEY = 'resched.laststate';
@@ -59,9 +60,12 @@ export function useScheduler() {
 
   const hydrate = useCallback((hash: string) => {
     const state = restore(hash);
+    /* 사진은 저장값에 없다 — 이 기기에 따로 기억한 지도(posterMemo)에서 테마 키로 찾는다 */
+    const poster = posterLookup();
     setThemes(state.themes.map(t => ({
       ...blankTheme(t.id, t.name),
       dur: t.dur, raw: t.raw, place: t.place, sessions: t.sessions, source: t.source, date: t.date, themeKey: t.themeKey,
+      posterUrl: poster(t.themeKey),
     })));
     nextId.current = state.nextId;
     setMoveMap(state.moveMap);
@@ -155,6 +159,7 @@ export function useScheduler() {
      같은 날짜·같은 서버 테마 키의 카드가 이미 있으면 더하지 않고 그 카드를 바꾼다(회차 갱신, mergeServerThemes). */
   /* ctx: 일정 문맥(일정 id)에서 넣는다 — 다른 일정 문맥에서 넣은 카드는 먼저 뺀다(eventFlow.dropOtherCtx) */
   const addServerThemes = useCallback((items: AddedTheme[], ctx?: number) => {
+    rememberPosters(items);
     setThemes(ts => mergeServerThemes(ctx === undefined ? ts : dropOtherCtx(ts, ctx), items, () => nextId.current++, ctx));
   }, []);
 
