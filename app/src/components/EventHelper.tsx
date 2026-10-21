@@ -153,12 +153,16 @@ export function EventHelper({ ev, onCalcThemes }: {
 
   return (
     <details
-      className="evh" open={open}
+      className="evh evp-fold" open={open}
       onToggle={(e) => onToggle(e.currentTarget.open)}
     >
       <summary>
         <span className="evh-t">어떤 테마가 좋을까요?</span>
-        <span className="evh-d">{dayLabel(date)} 열린 회차{dto?.checkedAt ? ` · ${ago(dto.checkedAt)}` : ''}</span>
+        {/* 접힌 줄 요약(2026-10-21) — 받은 뒤엔 테마 수(고른 지역이 있으면 그 지역 수) */}
+        <span className="evh-d">
+          {dayLabel(date)} {themes.length > 0 ? `${shownRegion === '전체' ? '' : shownRegion + ' '}테마 ${inR.length}개` : '열린 회차'}{dto?.checkedAt ? ` · ${ago(dto.checkedAt)}` : ''}
+        </span>
+        <svg className="evp-fold-c" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
       </summary>
       <div className="evh-b">
         {plan.dates.length > 1 && (
