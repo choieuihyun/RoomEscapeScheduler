@@ -88,7 +88,9 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
   }, [want, ev.settlementTotal, load]);
 
   if (s.settleApi !== 'on' || hidden || (!member && !has)) return null;
-  const isOpen = open ?? owesMoney(dto, meUid);
+  /* 내가 보낼 돈이 남아 처음 펼친 것은 붙잡아 둔다 — "보냈어요"를 체크하는 순간 접히지 않게(렌더 중에 맞춘다) */
+  if (open === null && owesMoney(dto, meUid)) setOpen(true);
+  const isOpen = open ?? false;
   const fold = (body: ReactNode) => (
     <Fold name="정산" sum={settleSummary(ev.settlementTotal, member ? dto : null)} open={isOpen} onOpen={setOpen} className="stl-fold">{body}</Fold>
   );

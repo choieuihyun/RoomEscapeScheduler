@@ -350,9 +350,9 @@ export function HomePage({
             )}
             {pages > 1 && (
               <nav className="hm-pager" aria-label="쪽 넘기기">
-                <button type="button" aria-label="이전 쪽" disabled={cur === 0} onClick={() => setPage(cur - 1)}><Ic size={16}><path d="m15 6-6 6 6 6" /></Ic></button>
+                <button type="button" aria-label="이전 쪽" title="이전 쪽" disabled={cur === 0} onClick={() => setPage(cur - 1)}><Ic size={16}><path d="m15 6-6 6 6 6" /></Ic></button>
                 <span>{cur + 1} / {pages}</span>
-                <button type="button" aria-label="다음 쪽" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}><Chev /></button>
+                <button type="button" aria-label="다음 쪽" title="다음 쪽" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}><Chev /></button>
               </nav>
             )}
           </div>
@@ -375,8 +375,8 @@ export function HomePage({
             <div className="hm-month-h">
               <b>{month.y}.{String(month.m + 1).padStart(2, '0')}</b>
               <span>
-                <button type="button" className="hm-nav" aria-label="이전 달" onClick={() => onMonth(-1)}><Ic size={16}><path d="m15 6-6 6 6 6" /></Ic></button>
-                <button type="button" className="hm-nav" aria-label="다음 달" onClick={() => onMonth(1)}><Chev /></button>
+                <button type="button" className="hm-nav" aria-label="이전 달" title="이전 달" onClick={() => onMonth(-1)}><Ic size={16}><path d="m15 6-6 6 6 6" /></Ic></button>
+                <button type="button" className="hm-nav" aria-label="다음 달" title="다음 달" onClick={() => onMonth(1)}><Chev /></button>
               </span>
             </div>
             <div className="hm-month-g">
