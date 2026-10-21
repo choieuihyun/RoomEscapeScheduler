@@ -382,6 +382,17 @@ describe('[5] 정렬 기준 (§2.3)', () => {
     expect(SORTS.map(s => s.label)).toEqual(['대기 시간 적은 순', '빨리 끝나는 순', '늦게 시작 순', '여유 있는 순']);
   });
 
+  it('"대기 시간 적은 순"은 이동을 뺀 대기로 — 대기 45분+이동 15분이 대기 50분(이동 0)보다 위', () => {
+    const row = (total: number, moveTotal: number, end: number) =>
+      ({ steps: [], count: 3, start: 600, end, total, gaps: [], varc: 0, minGap: 0, moveTotal, minWait: 0 });
+    const noMove = row(50, 0, 900), withMove = row(60, 15, 950);
+    const gap = SORTS.find(s => s.k === 'gap')!.f;
+    expect([noMove, withMove].sort(gap)).toEqual([withMove, noMove]);
+    expect([withMove, noMove].sort(gap)[0]).toBe(withMove);
+    /* 대기가 같으면 이동이 짧은 쪽 */
+    expect([row(60, 15, 900), row(45, 0, 950)].sort(gap)[0].total).toBe(45);
+  });
+
   it('없는 정렬 키(옛 상태의 even·빈 값)는 기본 정렬로', () => {
     expect(sortKeyOf('even')).toBe('gap');
     expect(sortKeyOf('')).toBe('gap');
