@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { courseLine, dDay, monthDayLabel, owesMoney, peopleLabel, placeLabel, settleSummary, talkSummary, weekDays, weekTitle } from './eventView';
+import { courseLine, dDay, monthDayLabel, namesLine, owesMoney, peopleLabel, placeLabel, settleSummary, talkSummary, weekDays, weekTitle } from './eventView';
 import type { CandidateDto, SegmentDto, TransferDto } from './server';
 
 const seg = (themeName: string, branchName: string | null): SegmentDto =>
@@ -77,5 +77,14 @@ describe('weekDays · weekTitle', () => {
     expect(weekTitle('2026-10-01')).toBe('10월 첫째 주');
     expect(weekTitle('2026-10-04')).toBe('10월 둘째 주');
     expect(weekTitle('2026-11-30')).toBe('11월 다섯째 주');
+  });
+});
+
+describe('namesLine — 홈 다음 일정 참여자 이름 한 줄', () => {
+  it('"열쇠 외 3명" · 한 명이면 이름만 · 없으면 빈 글', () => {
+    expect(namesLine(['열쇠', '미로', '단서', '자물쇠'])).toBe('열쇠 외 3명');
+    expect(namesLine(['열쇠', '미로'])).toBe('열쇠 외 1명');
+    expect(namesLine(['열쇠'])).toBe('열쇠');
+    expect(namesLine([])).toBe('');
   });
 });

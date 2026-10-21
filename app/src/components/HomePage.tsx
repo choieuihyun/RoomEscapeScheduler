@@ -8,7 +8,7 @@ import { monthGrid, toISO, WEEKDAYS } from '../core';
 import {
   addDays, clockLabel, eventStatus, eventTitle, sortKeyDate, STATUS_LABEL, timeLabel, weekday,
 } from '../clubEvents';
-import { courseLine, dDay, monthDayLabel, peopleLabel, placeLabel, weekDays, weekTitle } from '../eventView';
+import { courseLine, dDay, monthDayLabel, namesLine, peopleLabel, placeLabel, weekDays, weekTitle } from '../eventView';
 import { nextMine, todayStrip, upcoming } from '../homeStrip';
 import { playedWho, playedWhoLabel, playedWhoTitle } from '../playedWho';
 import type { EventDto } from '../server';
@@ -214,15 +214,21 @@ export function HomePage({
                 )}
               </div>
               <div className="hm-foot">
-                <div className="hm-ppl">
-                  <span className="hm-avas">
-                    {next.participants.slice(0, 4).map((p) => (
-                      <MemberLink key={p.uid} uid={p.uid} name={p.nickname} className="hm-ava">{[...p.nickname][0] ?? '?'}</MemberLink>
-                    ))}
-                    {next.participants.length > 4 && <span className="hm-ava more" aria-hidden="true">+{next.participants.length - 4}</span>}
-                  </span>
-                  <b className="hm-n">{nextPpl!.n}</b>
-                  {nextPpl!.left && <span className="hm-left">{nextPpl!.left}</span>}
+                <div className="hm-pplw">
+                  <div className="hm-ppl">
+                    <span className="hm-avas">
+                      {/* 머리글자만 보이므로 별명은 title(마우스)과 화면 읽기용 글로 */}
+                      {next.participants.slice(0, 4).map((p) => (
+                        <MemberLink key={p.uid} uid={p.uid} name={p.nickname} className="hm-ava" title={p.nickname}>
+                          <span aria-hidden="true">{[...p.nickname][0] ?? '?'}</span><span className="sr-only">{p.nickname}</span>
+                        </MemberLink>
+                      ))}
+                      {next.participants.length > 4 && <span className="hm-ava more" aria-hidden="true">+{next.participants.length - 4}</span>}
+                    </span>
+                    <b className="hm-n">{nextPpl!.n}</b>
+                    {nextPpl!.left && <span className="hm-left">{nextPpl!.left}</span>}
+                  </div>
+                  {next.participants.length > 0 && <p className="hm-names">{namesLine(next.participants.map((p) => p.nickname))}</p>}
                 </div>
                 <button type="button" className="hm-go" onClick={() => onOpenEvent(next)}>일정 보기<Chev /></button>
               </div>

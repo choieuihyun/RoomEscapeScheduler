@@ -34,6 +34,12 @@ export function peopleLabel(ev: Pick<EventDto, 'count' | 'capacity'>): { n: stri
   return { n: `${ev.count}/${ev.capacity}명`, left: rest > 0 ? `${rest}자리 남음` : '마감' };
 }
 
+/* 홈 다음 일정 동그라미 옆 이름 한 줄 — "열쇠 외 3명"(한 명이면 이름만, 없으면 빈 글) */
+export function namesLine(names: readonly string[]): string {
+  if (!names.length) return '';
+  return names.length === 1 ? names[0] : `${names[0]} 외 ${names.length - 1}명`;
+}
+
 /* 날짜 협의 접힌 줄 — `후보 3개 · 응답 2명`(응답한 사람은 후보 어디에든 한 번이라도 답한 사람) */
 export function talkSummary(ev: Pick<EventDto, 'candidates'>): string {
   const who = new Set(ev.candidates.flatMap((c) => c.responses.map((r) => r.uid)));
