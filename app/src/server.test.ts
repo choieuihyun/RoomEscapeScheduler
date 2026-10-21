@@ -5,7 +5,7 @@ import {
   setMemberRole, updateEvent, listPlayed, addPlayed, deletePlayed, memberPlayed, listThemes, myPastEvents, freshThemes, joinEvent, setAvailability, clearAvailability,
   pushTest, deviceStatus, pushTestMessage, updateProfile, rankings, addWatch, sayWatch,
   listMyWishes, addWish, deleteWish, listClubWishes,
-  getSettlement, putSettlement, markTransfer, getPayInfo, putPayInfo, settleConflictOf,
+  getSettlement, putSettlement, markTransfer, getPayInfo, putPayInfo, settleConflictOf, profileBody,
 } from './server';
 import type { EventInput, ProfileDto } from './server';
 
@@ -68,7 +68,12 @@ describe('멤버 프로필·랭킹 (§4.11)', () => {
   it('가입 신청에 프로필을 함께 싣는다', async () => {
     const fn = stubFetch(200, { uid: 'u', nickname: '곰', role: null, status: 'PENDING', kakaoLinked: false, profile: PROFILE });
     const me = await joinClub('곰', PROFILE, 'T');
-    expect(JSON.parse(call(fn).init.body as string)).toEqual({ nickname: '곰', profile: PROFILE });
+    /* 서버가 residence 를 안다고 확인되기 전(첫 가입)에는 그 칸을 빼고 보낸다 — 나머지는 그대로 */
+    const sent = JSON.parse(call(fn).init.body as string);
+    const { residence: _r, ...rest } = PROFILE as typeof PROFILE & { residence?: string | null };
+    void _r;
+    expect(sent.nickname).toBe('곰');
+    expect(sent.profile).toEqual(expect.objectContaining(rest));
     expect(me.profile).toEqual(PROFILE);
   });
 
@@ -522,4 +527,10 @@ describe('정산 API (§4.13)', () => {
     const evs = await listEvents('2026-10-01', '2026-10-31', 'T');
     expect(evs.map((e) => e.settlementTotal)).toEqual([null, 212000]);
   });
+});
+
+describe('profileBody — 서버가 residence 를 알 때만 보낸다', () => {
+  const p = { realName: '홍길동', birthDate: '1997-06-28', mbti: 'ENFP', roomCount: 3, genres: ['공포'], lifeTheme: { themeName: '월야애담', branchName: null, themeKey: null }, residence: '서울 마포구' } as unknown as Parameters<typeof profileBody>[0];
+  it('모르면 residence 를 뺀다', () => { expect('residence' in profileBody(p, false)).toBe(false); });
+  it('알면 그대로', () => { expect(profileBody(p, true).residence).toBe('서울 마포구'); });
 });

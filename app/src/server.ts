@@ -253,7 +253,21 @@ export interface ProfileDto {
 }
 /* 옛 서버는 residence 칸 없이 보낸다 — 화면은 null(아직 안 적음)로 본다 */
 export const normProfile = <T extends ProfileDto | null | undefined>(p: T): T => (p ? { ...p, residence: p.residence ?? null } : p);
-const normMe = (m: MeDto): MeDto => (m.profile ? { ...m, profile: normProfile(m.profile), residenceOn: 'residence' in m.profile } : m);
+/* 서버가 residence 칸을 아는지 — 받은 프로필에 그 키가 있었으면 안다. 모르면 보낼 때 빼서 옛 서버가 모르는 칸으로 막지 않게 한다 */
+let residenceKnown = false;
+const normMe = (m: MeDto): MeDto => {
+  if (!m.profile) return m;
+  const on = 'residence' in m.profile;
+  if (on) residenceKnown = true;
+  return { ...m, profile: normProfile(m.profile), residenceOn: on };
+};
+/* 보낼 프로필 — 서버가 residence 를 안다고 확인되기 전에는 그 칸을 뺀다 */
+export const profileBody = (p: ProfileDto, known = residenceKnown): Omit<ProfileDto, 'residence'> & { residence?: string | null } => {
+  if (known) return p;
+  const { residence: _drop, ...rest } = p;
+  void _drop;
+  return rest;
+};
 export interface RankMonthDto { month: string; ranks: { rank: number; uid: string; nickname: string; count: number }[] }
 
 /* 로그인 전이라 토큰이 없다 — 받은 customToken 으로 Firebase 에 로그인하는 건 호출부 몫. */
@@ -267,11 +281,11 @@ export const getMe = async (token: string): Promise<MeDto> => normMe(await authe
 
 /* profile 은 서버가 선택으로 받는다(옛 서버는 무시) — 화면이 필수로 받아 함께 보낸다 */
 export const joinClub = async (nickname: string, profile: ProfileDto | null, token: string): Promise<MeDto> =>
-  normMe(await authed('/api/me/join', token, 'POST', profile ? { nickname, profile } : { nickname }));
+  normMe(await authed('/api/me/join', token, 'POST', profile ? { nickname, profile: profileBody(profile) } : { nickname }));
 
 /* 별명·프로필을 통째로 바꾼다(PENDING·APPROVED). 서버가 모르면 본문 없는 404 */
 export const updateProfile = async (nickname: string, profile: ProfileDto, token: string): Promise<MeDto> =>
-  normMe(await authed('/api/me/profile', token, 'PUT', { nickname, profile }));
+  normMe(await authed('/api/me/profile', token, 'PUT', { nickname, profile: profileBody(profile) }));
 
 /* from·to 는 YYYY-MM, 둘 다 포함, 12달까지. 최신 달 먼저 */
 export const rankings = async (from: string, to: string, token: string): Promise<RankMonthDto[]> =>
