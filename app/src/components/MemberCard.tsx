@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CARD_TTL_MS, loadGroups, reloadMembers, useClubStore } from '../clubStore';
+import { CARD_TTL_MS, loadGroups, playedCache, reloadMembers, useClubStore, type PlayedV } from '../clubStore';
 import { dayLabel, eventTitle } from '../clubEvents';
 import { cardLine, playedDate, togetherWith, wishesOf } from '../memberCard';
 import { birthLabel, lifeLabel } from '../memberProfile';
-import { errorCode, isMissingApi, memberPlayed, sayClub, type EventDto, type PlayedDto } from '../server';
+import { errorCode, isMissingApi, memberPlayed, sayClub, type EventDto } from '../server';
 import { placeLabel } from '../wish';
 import { Avatar } from './Avatar';
 import { useBackClose } from '../backStack';
@@ -28,9 +28,8 @@ export interface MemberCardProps {
   onOpenEvent: (ev: EventDto) => void;
 }
 
-/* 남의 해 본 테마 — 같은 사람을 다시 열면 받아 둔 것(5분 지나면 다시). 로그인한 사람이 바뀌면 열쇠가 달라 쓰지 않는다 */
-type PlayedV = PlayedDto[] | 'gone' | 'missing';
-const playedCache = new Map<string, { at: number; v: PlayedV }>();
+/* 남의 해 본 테마 — 같은 사람을 다시 열면 받아 둔 것(5분 지나면 다시). 로그인한 사람이 바뀌면 열쇠가 달라 쓰지 않고,
+   로그아웃하면 clubStore 가 통째로 버린다 */
 
 function usePlayed(meUid: string, uid: string) {
   const k = meUid + '|' + uid;
@@ -50,7 +49,7 @@ function usePlayed(meUid: string, uid: string) {
     } catch (e) {
       /* 승인 멤버가 아니거나 없는 uid(본문 있는 404) — 카드 전체를 "볼 수 없는 멤버예요"로 */
       if (errorCode(e) === 'NO_SUCH_MEMBER') { playedCache.set(k, { at: Date.now(), v: 'gone' }); setV('gone'); }
-      else if (isMissingApi(e)) setV('missing'); // 서버가 모름 — 이 칸만 숨긴다
+      else if (isMissingApi(e)) { playedCache.set(k, { at: Date.now(), v: 'missing' }); setV('missing'); } // 서버가 모름 — 이 칸만 숨기고 5분 동안 다시 묻지 않는다
       else setErr(sayClub(e));
     }
   }, [k, uid]);

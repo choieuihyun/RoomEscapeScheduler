@@ -194,8 +194,11 @@ export function SchedulerPage() {
   /* 7단계(§4.12) — 서버가 위시 API 를 아는지는 공유 상태(지연 모듈)가 첫 목록을 받아 알려 준다. 1: 같이 가요 */
   const [club7, setClub7] = useState(0);
   const meUid = auth.me?.uid ?? '';
+  const clubUsed = useRef(false);
   useEffect(() => {
-    if (!homeOn) return;
+    /* 로그아웃·승인 멤버가 아니게 되면 받아 둔 멤버 목록(실명·생일)·위시 묶음·남의 해 본 테마를 버린다 — 모듈을 받은 적이 있을 때만 */
+    if (!homeOn) { if (clubUsed.current) import('./clubStore').then((m) => m.stopClub(), () => {}); return; }
+    clubUsed.current = true;
     let live = true;
     import('./clubStore').then((m) => m.startClub(meUid, (f) => { if (live) setClub7(f); }, peopleOn), () => {});
     return () => { live = false; };

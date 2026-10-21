@@ -8,7 +8,7 @@
 import { useSyncExternalStore } from 'react';
 import {
   addWish, deleteWish, getPayInfo, getSettlement, isMissingApi, listClubMembers, listClubWishes, listMyWishes, myPastEvents, putPayInfo, sayClub,
-  type ClubMemberDto, type EventDto, type PayInfoDto, type SettlementDto, type WishDto, type WishGroupDto,
+  type ClubMemberDto, type EventDto, type PayInfoDto, type PlayedDto, type SettlementDto, type WishDto, type WishGroupDto,
 } from './server';
 import { myDue } from './settle';
 import { showToast } from './toast';
@@ -81,11 +81,17 @@ export async function reloadWishes(): Promise<void> {
   }
 }
 
+/* 받아 둔 것을 다 버린다 — 멤버 목록(실명·생일)·위시 묶음·남의 해 본 테마·정산. 진행 중인 요청은 돌아와도 uid 가 달라 버려진다 */
+function reset(uid: string) {
+  st = blank(uid); dueAt = 0; membersAt = 0; membersBusy = null; groupsBusy = null;
+  playedCache.clear();
+}
+
 /* 승인 멤버이고 일정 API 가 켜지면 SchedulerPage 가 부른다. 사람이 바뀌면 처음부터, 같은 사람이면 조용히 새로 받는다.
    people: 서버가 프로필(6단계)을 아는지 — 알면 멤버 목록을 받아 이름을 누를 수 있게 한다 */
 export function startClub(uid: string, flags: (f: number) => void, people = false): void {
   onFlags = flags;
-  if (st.uid !== uid) { st = blank(uid); dueAt = 0; membersAt = 0; }
+  if (st.uid !== uid) reset(uid);
   flags(flagsOf(st));
   if (st.wishApi !== 'missing') void reloadWishes();
   if (st.settleApi !== 'missing') void reloadPay();
@@ -93,12 +99,27 @@ export function startClub(uid: string, flags: (f: number) => void, people = fals
   else if (st.people === 'on') set({ people: 'unknown', members: null }); // 'unknown' 이면 이름은 글자로 그린다
 }
 
+/* 로그아웃·승인 멤버가 아니게 됨(SchedulerPage 의 homeOn 이 꺼짐) — 메모리에 실명·생일이 남지 않게, 다음 사람에게
+   옛 사람 이름이 "내 프로필"로 뜨지 않게 버린다 */
+export function stopClub(): void {
+  onFlags = null;
+  reset('');
+  subs.forEach((f) => f());
+}
+
 /* ── 멤버 카드 ── */
 
 /* 멤버 목록·위시 묶음·남의 해 본 테마는 5분 동안 받아 둔 것을 쓴다 */
 export const CARD_TTL_MS = 5 * 60_000;
 let membersAt = 0;
-let membersBusy: Promise<void> | null = null;
+/* 진행 중인 요청 — 누구 것인지 같이 둔다(사람이 바뀌면 새 사람이 옛 요청을 기다리지 않게) */
+let membersBusy: { uid: string; p: Promise<void> } | null = null;
+let groupsBusy: { uid: string; p: Promise<void> } | null = null;
+
+/* 남의 해 본 테마 — 카드가 받은 것(로그인 uid|대상 uid 열쇠, 5분). 'gone' 은 볼 수 없는 멤버(NO_SUCH_MEMBER),
+   'missing' 은 서버가 모름(본문 없는 404) — 둘 다 5분 동안 다시 묻지 않는다. 여기 두어 로그아웃 때 같이 버린다 */
+export type PlayedV = PlayedDto[] | 'gone' | 'missing';
+export const playedCache = new Map<string, { at: number; v: PlayedV }>();
 
 /* 받은 승인 멤버 목록을 넣어 둔다(멤버 목록 화면이 새로 받을 때도) */
 export function keepMembers(list: ClubMemberDto[]) {
@@ -109,9 +130,10 @@ export function keepMembers(list: ClubMemberDto[]) {
 /* 승인 멤버 목록 — 5분 안에 받았으면 그대로(force 면 새로). 본문 없는 404 면 이 접속 동안 이름을 글자로 둔다 */
 export function reloadMembers(force = false): Promise<void> {
   if (st.people === 'missing' || (!force && st.members && Date.now() - membersAt < CARD_TTL_MS)) return Promise.resolve();
-  if (membersBusy) return membersBusy;
   const uid = st.uid;
-  membersBusy = (async () => {
+  if (membersBusy?.uid === uid) return membersBusy.p;
+  const job = { uid, p: Promise.resolve() };
+  job.p = (async () => {
     try {
       const list = await listClubMembers(await token());
       if (same(uid)) keepMembers(list);
@@ -120,10 +142,11 @@ export function reloadMembers(force = false): Promise<void> {
       if (isMissingApi(e)) set({ people: 'missing', members: null });
       else if (st.people === 'unknown') set({ people: 'on' }); // 잠깐의 오류 — 이름은 누를 수 있게 두고 카드가 다시 받는다
     } finally {
-      membersBusy = null;
+      if (membersBusy === job) membersBusy = null;
     }
   })();
-  return membersBusy;
+  membersBusy = job;
+  return job.p;
 }
 
 /* 이름을 어떻게 그릴지 — 글자만 / 남의 카드 / 내 프로필로 */
@@ -141,19 +164,31 @@ export const openMember = (d: MemberOpen) => dispatchEvent(new CustomEvent<Membe
 /* 멤버들의 위시 묶음 — 같이 가요 화면이 받을 때 넣어 둔다 */
 export const keepGroups = (list: WishGroupDto[]) => set({ groups: { at: Date.now(), list } });
 
-/* 카드가 쓸 위시 묶음 — 5분 안에 받은 게 있으면 그대로. 서버가 모르면(본문 없는 404) 같이 가요처럼 숨긴다. 그 밖의 오류는 던진다 */
-export async function loadGroups(): Promise<void> {
-  if (st.wishApi === 'missing' || (st.groups && Date.now() - st.groups.at < CARD_TTL_MS)) return;
+/* 카드가 쓸 위시 묶음 — 5분 안에 받은 게 있으면 그대로. 받는 중이면 그 요청을 같이 기다린다(같은 사람일 때만).
+   서버가 모르면(본문 없는 404) 같이 가요처럼 숨긴다. 그 밖의 오류는 던진다 */
+export function loadGroups(): Promise<void> {
+  if (st.wishApi === 'missing' || (st.groups && Date.now() - st.groups.at < CARD_TTL_MS)) return Promise.resolve();
   const uid = st.uid;
-  try {
-    const list = await listClubWishes(await token());
-    if (same(uid)) keepGroups(list);
-  } catch (e) {
-    if (!same(uid)) return;
-    if (isMissingApi(e)) set({ wishApi: 'missing', wishes: null });
-    else throw e;
-  }
+  if (groupsBusy?.uid === uid) return groupsBusy.p;
+  const job = { uid, p: Promise.resolve() };
+  job.p = (async () => {
+    try {
+      const list = await listClubWishes(await token());
+      if (same(uid)) keepGroups(list);
+    } catch (e) {
+      if (!same(uid)) return;
+      if (isMissingApi(e)) set({ wishApi: 'missing', wishes: null });
+      else throw e;
+    } finally {
+      if (groupsBusy === job) groupsBusy = null;
+    }
+  })();
+  groupsBusy = job;
+  return job.p;
 }
+
+/* 내 위시가 바뀌면 받아 둔 묶음은 낡았다 — 값은 두고(열린 화면이 "불러오는 중"으로 바뀌지 않게) 받은 때만 지워 다음에 새로 받게 */
+const staleGroups = () => { if (st.groups) set({ groups: { ...st.groups, at: 0 } }); };
 
 /* 내 송금 정보 — 정산 API 를 아는지도 이것으로 안다(본문 없는 404 면 정산 칸·송금 정보 행을 숨긴다) */
 export async function reloadPay(): Promise<void> {
@@ -249,7 +284,7 @@ export async function addWishFor(r: WishRef): Promise<boolean> {
   busyWith(k, true);
   try {
     const w = await addWish({ themeKey: r.themeKey, themeName: r.themeName.trim(), branchName: r.branchName?.trim() || null }, await token());
-    if (same(uid)) set({ wishes: [w, ...(st.wishes ?? []).filter((x) => x.id !== w.id)] });
+    if (same(uid)) { set({ wishes: [w, ...(st.wishes ?? []).filter((x) => x.id !== w.id)] }); staleGroups(); }
     return true;
   } catch (e) {
     if (same(uid)) fail(e);
@@ -270,7 +305,7 @@ export async function removeWishFor(r: WishRef): Promise<boolean> {
     if (!w) return true;
     const id = w.id;
     await deleteWish(id, await token());
-    if (same(uid)) set({ wishes: (st.wishes ?? []).filter((x) => x.id !== id) });
+    if (same(uid)) { set({ wishes: (st.wishes ?? []).filter((x) => x.id !== id) }); staleGroups(); }
     return true;
   } catch (e) {
     if (same(uid)) fail(e);

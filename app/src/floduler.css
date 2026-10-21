@@ -2462,7 +2462,10 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
 
 /* ── 이름 단추 · 멤버 카드 (어디서든 이름을 누르면) ─────────────
    이름 단추는 자리의 글자 모양 그대로(색·굵기·크기 물려받음), 마우스를 올리면 밑줄. 줄·카드 전체가 눌리는 자리는 ::after 로 덮는다. */
-.mlink{display:inline;padding:0;margin:0;border:none;border-radius:3px;background:none;font:inherit;color:inherit;letter-spacing:inherit;text-align:inherit;cursor:pointer}
+/* 글자 모양(크기·굵기·색·정렬)은 :where 로 0 특정성 — 자리의 클래스(.rk-nick 의 14px 등)가 정한 값이 이긴다(2026-10-21).
+   단추 기본값 걷기는 클래스 특정성 그대로(전역 button 규칙보다 앞서야 해서) */
+:where(.mlink){font:inherit;color:inherit;text-align:inherit}
+.mlink{display:inline;padding:0;margin:0;border:none;border-radius:3px;background:none;letter-spacing:inherit;cursor:pointer}
 .mlink:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
 .mlink:active{transform:none}
 .mlink:focus-visible{outline:none;box-shadow:var(--ring)}
