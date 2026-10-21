@@ -9,6 +9,7 @@ import type { CalFilter, CalKind, CalMode, UseCalendarReturn } from '../useCalen
 import { useDaySchedule } from '../useDaySchedule';
 import type { Scheduler } from '../scheduler/useScheduler';
 import { DayBranches } from './DayBranches';
+import { Fold } from './Fold';
 import { EventPanel } from './EventPanel';
 import { dayLabel, eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
@@ -266,9 +267,11 @@ export function CalendarPage({
   /* 칸의 오늘 표시와 동호회 일정의 '지난 날짜'는 모두 한국 날짜(clubToday, 자정에 갱신)로 본다 */
   const today = clubToday;
   const day = useDaySchedule(active);
+  /* "그날 열려 있는 회차" 는 처음엔 접어 둔다(2026-10-21 사용자 요청) — 펼쳤을 때만 서버에 묻는다. 펼친 상태는 날짜를 바꿔도 유지 */
+  const [dayOpen, setDayOpen] = useState(false);
   useEffect(() => {
-    if (active) day.load(ctl.selected, ctl.branches);
-  }, [active, ctl.selected, ctl.branches, day.load]);
+    if (active && dayOpen) day.load(ctl.selected, ctl.branches);
+  }, [active, dayOpen, ctl.selected, ctl.branches, day.load]);
   const byDate = useMemo(() => {
     const m = new Map<string, DayEntry>();
     const get = (k: string) => m.get(k) ?? (m.set(k, { plans: [], watches: [] }), m.get(k)!);
@@ -535,7 +538,11 @@ export function CalendarPage({
                 <button type="button" className="cal-played-all" onClick={onAllPlayed}>해 본 테마 모두 보기 ›</button>
               </section>
             )}
-            <DayBranches iso={sel} day={day} picked={ctl.branches} onToggle={ctl.toggleBranch} onClear={ctl.clearBranches} />
+            <div className="evp-folds cal-day-fold">
+              <Fold name="그날 열려 있는 회차" sum={ctl.branches.length ? `지점 ${ctl.branches.length}곳` : '지점을 골라 보기'} open={dayOpen} onOpen={setDayOpen}>
+                <DayBranches iso={sel} day={day} picked={ctl.branches} onToggle={ctl.toggleBranch} onClear={ctl.clearBranches} />
+              </Fold>
+            </div>
           </div>
           </>
           )}
