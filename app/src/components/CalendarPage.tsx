@@ -45,7 +45,7 @@ function eventsOf(entry: DayEntry | undefined, filter: CalFilter): Ev[] {
     evs.push({
       key: 'p' + p.id, kind, start: p.start, end: p.end,
       text: `${fmt(p.start)} ${p.count}연방`,
-      title: `${kind === 'wish' ? '하고 싶은 일정' : '다녀온 일정'} · ${fmt(p.start)}–${fmt(p.end)} · ${p.count}연방 · 공백 ${p.total}분`
+      title: `${kind === 'wish' ? '하고 싶은 일정' : '다녀온 일정'} · ${fmt(p.start)}–${fmt(p.end)} · ${p.count}연방 · 대기 ${p.total}분`
         + route + (p.memo ? '\n' + p.memo : ''),
     });
   }
@@ -149,7 +149,7 @@ function PlanDetailRow({ p, s, plans, onLoaded }: { p: Plan; s: Scheduler; plans
     <div className="loaditem">
       <div className="li-t">
         <strong>{fmt(p.start)} → {fmt(p.end)}</strong>
-        <span className="li-m">{p.count}연방 · 공백 {p.total}분</span>
+        <span className="li-m">{p.count}연방 · 대기 {p.total}분</span>
         <span className={'tag ' + (wish ? 'wish' : 'done')}>{wish ? '하고 싶음' : '다녀옴'}</span>
       </div>
       <span className="pbtns">

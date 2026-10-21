@@ -2554,3 +2554,326 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
   100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}
 }
 @media(prefers-reduced-motion:reduce){.mcard-confetti{display:none}}
+
+/* ── 개편: 시간표 계산 (2026-10-21) ──────────────────────────
+   승인된 2차 목업(MobileCalc·DesktopCalc)의 값과 위계. 단계 머리 ① 테마 넣기 → ② 조건 → ③ 조합 계산하기,
+   테마 카드는 머리 한 줄("01 · 이름 · 매장 · 70분 · ⋯") + 회차 칩 두 줄, 좁은 화면 조건은 두 줄 요약, 계산 단추는 좁은 화면에서
+   아래 탭 위에 고정, 결과는 1위 큰 카드 + 짧은 줄. 청록은 계산 단추(와 빈 상태의 불러오기·"이 일정에 넣기")에만.
+   공용 규칙(.btn·.sec·.page-head·.opts 등)은 고치지 않고 이 화면 선택자(.cz-*)로 여기서 덮는다. */
+
+/* 선 아이콘(components/Ic.tsx) — CSS 마스크라 진입 JS 를 늘리지 않는다. 색은 글자색 */
+.ic{display:inline-block;flex:none;width:18px;height:18px;background:currentColor;
+  -webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.ic-plus{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E")}
+.ic-dl{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11M7 10l5 5 5-5M5 20h14'/%3E%3C/svg%3E")}
+.ic-cam{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='6' width='18' height='14' rx='2'/%3E%3Ccircle cx='12' cy='13' r='3.5'/%3E%3Cpath d='M8 6l1.5-2h5L16 6'/%3E%3C/svg%3E")}
+.ic-chat{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4c4.97 0 9 3.13 9 7s-4.03 7-9 7c-.9 0-1.77-.1-2.6-.3L5 20l1-3.6C4.15 15.1 3 13.15 3 11c0-3.87 4.03-7 9-7z'/%3E%3C/svg%3E")}
+.ic-more{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000' stroke='none'%3E%3Ccircle cx='5' cy='12' r='1.6'/%3E%3Ccircle cx='12' cy='12' r='1.6'/%3E%3Ccircle cx='19' cy='12' r='1.6'/%3E%3C/svg%3E")}
+.ic-pen{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4'/%3E%3C/svg%3E")}
+.ic-up{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5M6 11l6-6 6 6'/%3E%3C/svg%3E")}
+.ic-down{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M6 13l6 6 6-6'/%3E%3C/svg%3E")}
+.ic-trash{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'/%3E%3C/svg%3E")}
+.ic-check{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 5 5 9-10'/%3E%3C/svg%3E")}
+.ic-info{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 8h.01'/%3E%3C/svg%3E")}
+.ic-link{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1'/%3E%3C/svg%3E")}
+.ic-copy{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='8' width='12' height='12' rx='2'/%3E%3Cpath d='M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2'/%3E%3C/svg%3E")}
+.ic-save{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h12v18l-6-4-6 4z'/%3E%3C/svg%3E")}
+.ic-calplus{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5'/%3E%3C/svg%3E")}
+.ic-cright{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E")}
+.ic-cup{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 15 6-6 6 6'/%3E%3C/svg%3E")}
+.ic-cdown{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")}
+.ic-calc{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='3' width='16' height='18' rx='2'/%3E%3Cpath d='M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2'/%3E%3C/svg%3E")}
+
+/* 제목 줄 — 설명은 ⓘ 안으로 */
+.cz-view .page-head.cz-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:24px 0 8px}
+.cz-view .cz-top h1{margin:0;font-size:22px;line-height:32px}
+.cz-info{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 12px;margin-right:-12px;border:0;background:none;
+  color:var(--ink2);font-size:14px;border-radius:10px}
+.cz-info:hover,.cz-info[aria-expanded="true"]{background:var(--btn-bg-hover);color:var(--ink)}
+.cz-info:focus-visible{outline:none;box-shadow:var(--ring)}
+.cz-info .ic{width:20px;height:20px}
+.cz-help{margin:0 0 12px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  font-size:13.5px;line-height:1.65;color:var(--ink2)}
+.cz-help p{margin:0 0 6px}
+.cz-help b{color:var(--ink);font-weight:600}
+.cz-help .btn{margin-top:4px}
+
+/* 단계 머리 — "1단계" 작은 회색 + 이름 17/700 + 수, 오른쪽 작은 글 */
+.cz-sec{margin-bottom:24px}
+.cz-step{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;padding:0 4px;margin-bottom:8px}
+.cz-step h2{margin:0;flex:none;display:flex;align-items:baseline;font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--ink);white-space:nowrap}
+.cz-stepn{margin-right:6px;font-size:12px;font-weight:500;color:var(--ink2);letter-spacing:0}
+.cz-cnt{margin-left:5px;font-weight:500;color:var(--ink2)}
+.cz-step-r{min-width:0;font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 테마 카드 */
+.cz-list{display:flex;flex-direction:column;gap:8px}
+.cz-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:0 2px 12px 12px;
+  transition:border-color .15s,opacity .15s,transform .22s cubic-bezier(.34,1.56,.64,1)}
+.cz-card:hover{border-color:var(--line2)}
+.cz-card.drag{border-color:var(--blue)}
+.cz-card.over{border-color:var(--blue);box-shadow:inset 0 3px 0 var(--blue)}
+.cz-card.dragging{opacity:.5;transform:scale(1.02) rotate(-.4deg);box-shadow:0 14px 32px rgba(0,0,0,.22),0 0 0 1px var(--blue-line)}
+.cz-card.editing{border-color:var(--line2);padding:10px 12px 12px}
+.cz-head{display:flex;align-items:center;gap:8px;min-height:44px}
+.cz-idx{width:22px;height:22px;flex:none;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--pill);
+  background:var(--surface2);border:1px solid var(--line);font-size:11px;font-weight:700;color:var(--ink2);
+  font-variant-numeric:tabular-nums;letter-spacing:0;cursor:grab;user-select:none}
+.cz-idx:active{cursor:grabbing}
+.cz-name{flex:1;min-width:0;height:44px;padding:0;border:0;background:none;display:flex;align-items:center;gap:5px;
+  text-align:left;font-size:13px;color:var(--ink);border-radius:var(--r-xs)}
+.cz-name:active{transform:none;box-shadow:none}
+.cz-name:focus-visible{outline:none;box-shadow:var(--ring)}
+.cz-nm{flex:none;max-width:62%;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cz-nm.none{color:var(--ink3);font-weight:500}
+.cz-pl{min-width:0;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cz-du{flex:none;color:var(--ink2);font-variant-numeric:tabular-nums}
+.cz-more{width:44px;height:44px;flex:none;padding:0;border:0;background:none;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--ink2);border-radius:10px}
+.cz-more:hover,.cz-more[aria-expanded="true"]{background:var(--btn-bg-hover);color:var(--ink)}
+.cz-more:focus-visible{outline:none;box-shadow:var(--ring)}
+.cz-more .ic{width:20px;height:20px}
+/* 그 자리에서 고치기 — 이름(굵게)·매장·분·완료 */
+.cz-edit{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
+.cz-edit input:not([type=checkbox]):not([type=radio]):not([type=file]){min-width:0;padding:0 10px;border-color:var(--line2);border-radius:var(--r-sm)}
+.cz-edit .cz-in-name{flex:1.1;font-weight:700}
+.cz-edit .cz-in-place{flex:1.3}
+.cz-in-durw{flex:none;display:inline-flex;align-items:center;gap:3px}
+.cz-edit input.cz-in-dur:not([type=checkbox]):not([type=radio]):not([type=file]){width:46px;padding:0 4px;text-align:center}
+.cz-in-durw .unit{margin:0}
+.cz-done{flex:none;height:40px;min-width:44px;padding:0 10px;border:0;background:var(--ink);color:var(--surface);border-radius:var(--r-sm);
+  display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:700}
+.cz-done .ic{width:18px;height:18px}
+.cz-done-t{display:none}
+.cz-done:focus-visible{outline:none;box-shadow:var(--ring)}
+/* 회차 칩 — 시작 시각만, 두 줄을 넘으면 "+n개". 매진은 흐림·취소선·종, 다음날은 +1, 오후로 바꿔 읽은 칸은 옅은 파랑 */
+.cz-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px;padding-right:10px}
+.cz-chips:empty{display:none}
+.cz-card.editing .cz-chips{margin-top:8px;padding-right:0}
+.cz-chip{height:30px;min-width:0;padding:0 2px;display:flex;align-items:center;justify-content:center;gap:1px;
+  background:var(--surface);border:1px solid var(--line2);border-radius:var(--r-sm);
+  font-size:13px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:0;white-space:nowrap;overflow:hidden}
+.cz-chip.fix{background:var(--chip-info);border-color:transparent}
+.cz-chip.so{background:var(--surface2);border-color:var(--line);color:var(--ink-past);font-weight:400}
+.cz-chip.so .cz-t{text-decoration:line-through}
+.cz-p1{font-size:10.5px;font-weight:700;color:var(--ink2);line-height:1}
+.cz-chip .watch-toggle{width:16px;height:16px;margin-left:0;color:inherit}
+.cz-chip .watch-toggle.on{color:var(--blue-text)}
+button.cz-chip{font-family:inherit;cursor:pointer}
+.cz-fold{border-style:dashed;color:var(--ink2)}
+.cz-fold:hover{border-color:var(--tab-line-hover);color:var(--ink)}
+.cz-addt{grid-column:span 2}
+.cz-note{margin:8px 10px 0 0;font-size:12.5px;line-height:1.5;color:var(--ink2)}
+.cz-note.warn,.cz-note.warn b{color:var(--chip-bad-fg)}
+.cz-note b{font-weight:600}
+.cz-card .cz-msg{margin:6px 10px 0 0}
+/* 시간 직접 고치기(⋯) */
+.cz-time{margin:10px 10px 0 0}
+.cz-time textarea{display:block;min-height:76px}
+.cz-time-foot{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:8px}
+.btn.cz-sm{gap:5px}
+.cz-sm .ic{width:16px;height:16px}
+.cz-time-x{margin-left:auto}
+/* ⋯ 메뉴 */
+.cz-menu{position:absolute;right:6px;top:44px;z-index:25;min-width:200px;padding:6px 0;display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--line2);border-radius:var(--r);box-shadow:var(--sh-up)}
+.cz-menu [role=menuitem]{height:44px;padding:0 16px;border:0;border-radius:0;background:none;display:flex;align-items:center;gap:10px;
+  font-size:14px;color:var(--ink);text-align:left;white-space:nowrap}
+.cz-menu [role=menuitem] .ic{color:var(--ink2)}
+.cz-menu [role=menuitem]:hover:not(:disabled),.cz-menu [role=menuitem]:focus-visible{outline:none;background:var(--btn-bg-hover)}
+.cz-menu [role=menuitem]:active{transform:none}
+.cz-menu [role=menuitem]:disabled{color:var(--ink3);cursor:default}
+.cz-menu [role=menuitem]:disabled .ic{color:var(--ink3)}
+.cz-menu .bad,.cz-menu .bad .ic{color:var(--red-text)}
+.cz-menu-hr{height:1px;margin:6px 0;background:var(--line)}
+/* 테마 넣는 길 한 상자 — 아이콘 + 짧은 글 */
+.cz-ways{margin-top:8px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.cz-ways button{height:56px;padding:0 2px;border:0;border-radius:0;background:none;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;font-size:12px;color:var(--ink2);white-space:nowrap}
+.cz-ways button+button{border-left:1px solid var(--line)}
+.cz-ways button:hover{background:var(--btn-bg-hover);color:var(--ink)}
+.cz-ways button:active{transform:none}
+.cz-ways button:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+/* 빈 상태 — 다음 행동 단추 */
+.cz-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 20px 14px;text-align:center;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.cz-empty>.ic{width:28px;height:28px;color:var(--ink-past)}
+.cz-empty-t{margin:4px 0 0;font-size:16px;font-weight:700;color:var(--ink);word-break:keep-all}
+.cz-empty-s{margin:0;font-size:13px;color:var(--ink2);word-break:keep-all}
+.cz-empty-b{margin-top:12px;display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.cz-empty-b .cz-btn{height:44px;padding:0 18px;gap:6px;font-size:15px;border-radius:10px}
+.cz-empty-b .btn-go.cz-btn{font-weight:700;background:var(--blue-hover);border-color:var(--blue-hover)}
+.cz-empty-b .btn.cz-btn{font-weight:500;border-color:var(--line2)}
+.cz-btn .ic{width:16px;height:16px}
+.cz-empty-x{margin-top:4px;display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
+.cz-link{height:44px;padding:0 10px;border:0;background:none;display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--ink2);border-radius:var(--r-sm)}
+.cz-link:hover{background:var(--btn-bg-hover);color:var(--ink)}
+.cz-link .ic{width:16px;height:16px}
+
+/* 조건 — 접힌 두 줄 요약(내 일정 줄도 같은 모양) / 펼친 칸 */
+.cz-sum{width:100%;min-height:60px;padding:8px 14px 8px 16px;display:flex;align-items:center;gap:12px;text-align:left;color:var(--ink);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.cz-sum:hover{border-color:var(--line2)}
+.cz-sum:active{transform:none}
+.cz-sum:focus-visible{outline:none;box-shadow:var(--ring)}
+.cz-sum-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cz-sum-1{font-size:15px;font-weight:500;line-height:1.4}
+.cz-sum-2{font-size:13px;color:var(--ink2);line-height:1.4}
+.cz-sum>.ic:last-child{width:16px;height:16px;color:var(--ink-past)}
+.cz-sum>.ic:first-child{color:var(--ink2)}
+.cz-fold-btn{height:44px;margin:-4px 0;padding:0 4px;border:0;background:none;display:inline-flex;align-items:center;gap:4px;font-size:14px;color:var(--ink2)}
+.cz-fold-btn:hover{color:var(--ink)}
+.cz-fold-btn .ic{width:16px;height:16px}
+.cz-cond{padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.cz-cond .opts{padding:0;background:none;border:0;box-shadow:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 12px}
+.cz-cond .opt label{margin-bottom:4px;font-size:13px;font-weight:400;color:var(--ink2);white-space:nowrap}
+.cz-cond .pairs,.cz-cond .mealrow,.cz-cond .teamrow{background:var(--surface2);border-color:transparent;box-shadow:none}
+.cz-cond .checks{margin-top:16px;padding-top:4px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.cz-cond .checks .chk{min-height:44px}
+.cz-sec .datewarn{margin:8px 0 0}
+/* ③ 계산 — 링크 복사 + 진한 "조합 계산하기"(동사). 안내(runNote)는 단추 바로 위 */
+.cz-run{margin-top:16px}
+.cz-runnote{margin:0 0 8px;font-size:13px;line-height:1.5;color:var(--ink2)}
+.cz-run-b{display:flex;gap:8px}
+.cz-run .cz-share{flex:none;height:52px;padding:0 14px;gap:6px;font-size:14px;font-weight:500;border-color:var(--line2);border-radius:10px}
+.cz-run .cz-go{flex:1;min-width:0;height:52px;padding:0 16px;font-size:17px;font-weight:700;border-radius:10px;
+  background:var(--blue-hover);border-color:var(--blue-hover)}
+.cz-run .cz-go:hover{filter:brightness(.92)}
+.cz-go .cz-stepn{color:inherit;font-size:13px}
+
+/* 결과 */
+.cz-res .tabrow{margin-bottom:8px}
+.cz-res .sorts{margin:0 0 8px;gap:6px}
+.cz-res :is(.tab,.sortbtn){height:34px;padding:0 12px;font-size:13px;font-weight:500;border-color:var(--line2);color:var(--ink2)}
+.cz-res :is(.tab,.sortbtn).on{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:700}
+.cz-res .tab.on b{color:var(--surface)}
+.cz-res .tabrow.sets .tab{height:30px;font-size:12.5px}
+.cz-best{display:flex;flex-direction:column;padding:20px;background:var(--surface);border:1px solid var(--line2);border-radius:var(--r);
+  animation:resultIn .32s cubic-bezier(.34,1.56,.64,1) both}
+.cz-best-top{display:flex;align-items:center;gap:6px}
+.cz-rank1{height:24px;padding:0 9px;display:inline-flex;align-items:center;border-radius:var(--pill);background:var(--ink);color:var(--surface);font-size:12px;font-weight:700}
+.cz-best .cz-big{margin-top:10px;font-size:32px;font-weight:700;line-height:1.2;letter-spacing:-.5px;color:var(--ink)}
+/* 좁은 화면은 한두 줄 글 — 줄이 바뀌어도 앞에 점이 남지 않게 사이는 틈으로 */
+.cz-kv{margin:6px 0 0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px;font-size:14px;color:var(--ink2)}
+.cz-kv>div{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+.cz-kv dd{margin:0;font-weight:700;color:var(--ink)}
+.cz-kv .good dd{color:var(--green-text)}
+.cz-kv .warn dd{color:var(--red-text)}
+.cz-best .tlwrap,.cz-rowbody .tlwrap{margin-top:16px}
+.cz-steps{margin:12px 0 0;padding:0;list-style:none}
+.cz-stepli{min-height:40px;display:flex;align-items:center;gap:12px;font-size:15px}
+.cz-stepli>b{width:48px;flex:none;font-weight:700}
+.cz-sn{flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;font-weight:500;line-height:1.35}
+.cz-sp{max-width:45%;min-width:0;font-size:13px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cz-endli .cz-sn{font-weight:400;color:var(--ink2)}
+.cz-gapli{min-height:20px;display:flex;align-items:stretch;gap:12px;font-size:12px;line-height:20px;color:var(--ink-past)}
+.cz-rail{width:48px;flex:none;display:flex;justify-content:center}
+.cz-rail::before{content:'';width:1px;background:var(--line2)}
+.cz-acts{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+.cz-acts .cz-act{height:44px;padding:0 12px;gap:4px;font-size:14px;font-weight:500;border-color:var(--line2);border-radius:10px}
+.cz-acts .cz-main{flex:1 1 auto}
+.cz-acts .cz-ins{background:var(--blue-hover);border-color:var(--blue-hover);color:#fff;font-weight:700}
+.cz-acts .cz-ins:hover{background:var(--blue-hover);color:#fff;filter:brightness(.92)}
+.cz-part{height:22px}
+/* 2위부터 — 짧은 줄, 누르면 그 자리에서 펼친다 */
+.cz-rows{margin-top:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.cz-rows ul{margin:0;padding:0;list-style:none}
+.cz-row{animation:resultIn .32s cubic-bezier(.34,1.56,.64,1) both}
+.cz-row+.cz-row{border-top:1px solid var(--line)}
+.cz-rowbtn{width:100%;min-height:52px;padding:0 14px;border:0;border-radius:0;background:none;display:flex;align-items:center;gap:12px;text-align:left;color:var(--ink)}
+.cz-rowbtn:hover{background:var(--btn-bg-hover)}
+.cz-rowbtn:active{transform:none}
+.cz-rowbtn:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+.cz-rk{width:24px;flex:none;text-align:center;font-size:13px;font-weight:700;color:var(--ink2)}
+.cz-span{flex:1;min-width:0;font-size:15px;font-weight:500}
+.cz-rowm{font-size:13px;color:var(--ink2)}
+.cz-rowbtn>.ic{width:16px;height:16px;color:var(--ink-past)}
+.cz-rowbody{padding:0 14px 16px}
+.cz-morerows{width:100%;height:44px;border:0;border-top:1px solid var(--line);border-radius:0;background:none;font-size:14px;font-weight:500;color:var(--ink2)}
+.cz-morerows:hover{background:var(--btn-bg-hover);color:var(--ink)}
+.cz-morerows:active{transform:none}
+/* 확정한 팀(여러 팀) */
+.cz-simple{padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.cz-simple-h{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-bottom:6px;font-size:13px;color:var(--ink2)}
+.cz-simple-h b{font-size:14px;color:var(--ink)}
+.cz-simple-h .cz-act{margin-left:auto;height:28px;padding:0 8px;font-size:13px}
+/* 내 일정 — 접힌 줄 */
+.cz-plans{margin-top:16px}
+.cz-plans .plans{margin-top:8px}
+.cz-noresult{display:none}
+@media(prefers-reduced-motion:reduce){.cz-best,.cz-row{animation:none}}
+
+/* 넓은 화면(왼쪽 메뉴) — 머리 48, 이름 16, 테마 카드는 한 상자 안에 줄로, 넣는 길은 그 아래에 붙인다. 결과 숫자 칸은 표 */
+@media not all and (max-width:900px){
+  .cz-head{min-height:48px;gap:10px}
+  .cz-idx{width:24px;height:24px}
+  .cz-nm{font-size:16px}
+  .cz-done-t{display:inline}
+  .cz-list{gap:0;background:var(--surface);border:1px solid var(--line);border-bottom:0;border-radius:var(--r) var(--r) 0 0}
+  .cz-card{border:0;border-radius:0;padding:0 8px 14px 20px;background:none}
+  .cz-card:first-child{border-radius:var(--r) var(--r) 0 0}
+  .cz-card+.cz-card{border-top:1px solid var(--line)}
+  .cz-card.drag{box-shadow:inset 0 0 0 2px var(--blue)}
+  .cz-card.editing{padding:12px 20px 14px;background:var(--surface2)}
+  .cz-card.editing .cz-chips{padding-left:34px}
+  .cz-edit input:not([type=checkbox]):not([type=radio]):not([type=file]){background:var(--surface)}
+  .cz-chips{padding-right:12px}
+  .cz-ways{margin-top:0;border-radius:0 0 var(--r) var(--r)}
+  .cz-ways button{height:48px;flex-direction:row;gap:6px;font-size:14px}
+  .cz-ways .ic{width:16px;height:16px}
+  .cz-run{margin-top:20px}
+  .cz-run .cz-share{padding:0 16px}
+  .cz-best{padding:24px}
+  .cz-best .cz-big{margin-top:12px;font-size:36px;line-height:1.15;letter-spacing:-.6px}
+  /* 칸 사이 선은 1px 틈으로(2×2·4칸 어느 배치에서도 맞는다) */
+  .cz-kv{margin-top:16px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .cz-kv>div{flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:10px 12px;background:var(--surface)}
+  .cz-kv dt{font-size:12px}
+  .cz-kv dd{font-size:17px}
+}
+/* 두 칸(1200px 이상) — 왼쪽 입력 · 오른쪽 결과. 결과 전엔 오른쪽에 빈 안내 */
+@media(min-width:1200px){
+  .cz-grid{display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:24px;align-items:start}
+  .cz-out .cz-sec{margin-bottom:0}
+  .cz-noresult{margin-top:44px;padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
+    border:1px dashed var(--line2);border-radius:var(--r);font-size:14px;color:var(--ink2)}
+  .cz-noresult .ic{width:28px;height:28px;color:var(--ink-past)}
+  .cz-noresult p{margin:0;word-break:keep-all}
+  .cz-noresult b{color:var(--ink);font-weight:600}
+  .cz-kv{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* 좁은 화면 — 계산 단추는 아래 탭 위에 고정(아래 탭이 없으면 맨 아래), 키보드가 올라오면 숨긴다. 정렬 칩은 한 줄로 옆으로 넘긴다 */
+@media(max-width:900px){
+  .cz-view .page-head.cz-top{padding:8px 0 4px}
+  .cz-info-t{display:none}
+  .cz-sec{margin-bottom:16px}
+  .cz-view{padding-bottom:40px}
+  .cz-run{position:fixed;left:0;right:0;bottom:var(--bnav-h);z-index:44;margin:0;
+    padding:12px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));
+    background:var(--surface);border-top:1px solid var(--line)}
+  .cz-runnote{font-size:12.5px}
+  :root:has(:is(input:not([type=checkbox],[type=radio],[type=button],[type=submit],[type=reset],[type=range],[type=file],[type=color]),
+    textarea,select,[contenteditable]:not([contenteditable=false])):focus) .cz-run{display:none}
+  /* 토스트가 고정 단추에 가리지 않게 — 시간표 화면이 보일 때만 위로 */
+  .shell:has(.cz-view:not(.off)) .toasts{bottom:calc(100px + var(--bnav-h))}
+  #resultsSec{scroll-margin-top:72px}
+  .cz-res .sorts{flex-wrap:nowrap;overflow-x:auto;margin:0 -16px 8px;padding:0 16px;scrollbar-width:none}
+  .cz-res .sorts::-webkit-scrollbar{display:none}
+  .cz-res .sortbtn{flex:none}
+}
+@media(max-width:640px){
+  .cz-cond{padding:16px 14px}
+  .cz-cond .opts{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;padding:0}
+  .cz-cond .checks{display:flex;flex-direction:column;margin-top:14px;padding:0;background:none;border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none}
+  .cz-cond .checks .chk{min-height:0}
+}
+@media(max-width:340px){.cz-cond .opts{grid-template-columns:minmax(0,1fr)}}
+/* 아주 좁은 폭(≤380) — 고치는 줄의 이름 칸이 너무 좁아진다: 이름은 첫 줄 전체, 매장·분·완료는 둘째 줄 */
+@media(max-width:380px){
+  .cz-card.editing .cz-head{align-items:flex-start}
+  .cz-card.editing .cz-idx{margin-top:9px}
+  .cz-edit{flex-wrap:wrap}
+  .cz-edit .cz-in-name{flex:1 1 100%}
+}

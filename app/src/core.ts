@@ -299,9 +299,9 @@ export interface SortDef {
 }
 
 export const SORTS: SortDef[] = [
-  { k: 'gap', label: '공백 적은 순', f: (a, b) => b.count - a.count || a.total - b.total || a.end - b.end },
+  { k: 'gap', label: '대기 적은 순', f: (a, b) => b.count - a.count || a.total - b.total || a.end - b.end },
   { k: 'end', label: '빨리 끝나는 순', f: (a, b) => b.count - a.count || a.end - b.end || a.total - b.total },
-  { k: 'even', label: '공백 고른 순', f: (a, b) => b.count - a.count || a.varc - b.varc || a.total - b.total },
+  { k: 'even', label: '대기 고른 순', f: (a, b) => b.count - a.count || a.varc - b.varc || a.total - b.total },
   { k: 'late', label: '늦게 시작 순', f: (a, b) => b.count - a.count || b.start - a.start || a.total - b.total },
   { k: 'safe', label: '여유 있는 순', f: (a, b) => b.count - a.count || b.minGap - a.minGap || a.total - b.total },
 ];

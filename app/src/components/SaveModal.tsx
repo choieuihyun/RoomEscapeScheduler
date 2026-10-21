@@ -13,7 +13,7 @@ export function SaveModal({ m }: { m: UseSaveModalReturn }) {
     >
       <div className="mbox">
         <h3>일정 저장</h3>
-        <p className="msub">{r ? `${r.count}연방 · ${fmt(r.start)} → ${fmt(r.end)} · 공백 ${r.total}분` : ''}</p>
+        <p className="msub">{r ? `${r.count}연방 · ${fmt(r.start)} → ${fmt(r.end)} · 대기 ${r.total}분` : ''}</p>
         <div className="mrow">
           <label>날짜</label>
           <input type="date" value={m.date} onChange={e => m.setDate(e.target.value)} />

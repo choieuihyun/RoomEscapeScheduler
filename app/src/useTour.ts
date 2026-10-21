@@ -6,10 +6,10 @@ import { useEffect, useRef, useState } from 'react';
 const TOUR_KEY = 'resched.tour_v1';
 const TOUR_STEPS = [
   { sel: '#loadBtn', title: '처음이라면', body: '먼저 테마를 불러와 보세요. 예약 사이트 시간표가 그대로 채워져요.' },
-  { sel: '#addTheme', title: '테마 추가', body: '갈 방(테마)마다 하나씩 추가하세요.' },
-  { sel: '#themes', title: '시간표 넣기', body: '예약 가능한 회차를 직접 넣거나, 예약 화면 캡처를 붙여넣으면(Ctrl+V) 알아서 읽어요. 매장 이름을 적어 두면 매장 사이 이동시간도 같이 계산해요.' },
-  { sel: '.opts', title: '조건 정하기', body: '몇 시부터 몇 시까지, 방 사이를 얼마나 비울지 정해요.' },
-  { sel: '#go', title: '시간표 계산', body: '조건에 맞게 겹치지 않는 조합을 다 찾아 줘요.' },
+  { sel: '#addTheme', title: '직접 넣기', body: '갈 방(테마)마다 하나씩 넣으세요. 사진 읽기·카톡 붙여넣기로도 넣을 수 있어요.' },
+  { sel: '#themes', title: '시간표 넣기', body: '카드 이름 줄을 누르면 이름·매장·분을 고쳐요. ⋯ 에서 시간을 직접 고치거나 예약 화면 캡처를 읽어요. 매장 이름을 적어 두면 매장 사이 이동시간도 같이 계산해요.' },
+  { sel: '#conds', title: '조건 정하기', body: '몇 시부터 몇 시까지, 방 사이 대기 시간을 얼마나 둘지 정해요.' },
+  { sel: '#go', title: '조합 계산하기', body: '조건에 맞게 겹치지 않는 조합을 다 찾아 줘요.' },
   { sel: '#results', title: '결과 확인', body: '정렬을 바꿔 가며 보고, 마음에 드는 조합은 저장해 두세요.' },
   { sel: '#shareBtn', title: '공유하기', body: '지금 넣은 내용을 그대로 담은 링크를 복사해요. 로그인 안 해도 바로 보낼 수 있어요.' },
 ];

@@ -25,9 +25,8 @@ import { isClubAdmin, memberName, useMembers } from './useMembers';
 import { canEditProfile, needsProfile, profileApiOn } from './profileGate';
 import { ThemeList } from './components/ThemeList';
 import { ConditionsPanel } from './components/ConditionsPanel';
-import { ResultsPanel } from './components/ResultsPanel';
 import { useEventFormModal } from './useEventFormModal';
-import { PlanSection } from './components/PlanSection';
+import { Ic } from './components/Ic';
 import { SideNav } from './components/SideNav';
 import { CalendarSide } from './components/CalendarSide';
 import { Toaster } from './components/Toaster';
@@ -52,6 +51,10 @@ const WatchListModal = lazyRetry(() => import('./components/WatchListModal').the
 const PushGuide = lazyRetry(() => import('./components/PushGuide').then(m => ({ default: m.PushGuide })));
 /* 멤버 목록·랭킹 화면과 프로필 창(§4.11)은 한 청크 — 진입 청크에 늘어나는 것을 줄인다 */
 const MemberViews = lazyRetry(() => import('./components/MemberViews').then(m => ({ default: m.MemberViews })));
+/* 시간표 계산의 결과·내 일정(2026-10-21 개편) — 계산을 누른 뒤·로그인했을 때만 보여서 늦게 받는다(진입 청크 크기, §4.64).
+   테마를 넣으면 미리 받아 둔다(아래 effect) */
+const ResultsPanel = lazyRetry(() => import('./components/ResultsPanel').then(m => ({ default: m.ResultsPanel })));
+const PlanSection = lazyRetry(() => import('./components/PlanSection').then(m => ({ default: m.PlanSection })));
 
 /* 배포 뒤 옛 탭에서 청크를 못 찾으면(vite:preloadError) 맨 위 띠로 한 번 알린다 */
 function useStaleStrip(): boolean {
@@ -455,6 +458,11 @@ export function SchedulerPage() {
   };
 
   const onCalc = nav.view === 'calc';
+  /* 시간표 계산 — 제목 옆 ⓘ 로 여는 설명, 계산을 한 번이라도 눌렀는지(결과 자리), 결과 코드 미리 받기 */
+  const [calcHelp, setCalcHelp] = useState(false);
+  const searched = s.themesReady.length >= 2;
+  const hasThemes = s.themes.length > 0;
+  useEffect(() => { if (hasThemes) void import('./components/ResultsPanel').catch(() => {}); }, [hasThemes]);
   const staleStrip = useStaleStrip();
   /* 승인 멤버로 확인되면 홈 코드를 미리 받아 둔다 — 홈 본문이 비는 시간을 줄인다(실패해도 홈이 열릴 때 다시 시도한다) */
   useEffect(() => { if (clubOn) void import('./components/HomePage').catch(() => {}); }, [clubOn]);
@@ -496,24 +504,44 @@ export function SchedulerPage() {
         {staleStrip && <StaleNotice />}
         {/* 계산 화면은 캘린더로 넘어가도 지우지 않고 숨기기만 한다 — 입력·결과·"더 보기"
             같은 컴포넌트 안 상태가 그대로 남아 돌아왔을 때 이어서 볼 수 있다. */}
-        <div className={'view' + (onCalc ? '' : ' off')}>
+        <div className={'view cz-view' + (onCalc ? '' : ' off')}>
           {failStrip}
-          <header className="page-head">
+          {/* 2026-10-21 개편 — 제목 아래 설명 줄은 ⓘ 안으로. 단계: ① 테마 넣기 → ② 조건 → ③ 조합 계산하기 */}
+          <header className="page-head cz-top">
             <h1>시간표 계산</h1>
-            <p>테마별 예약 시간을 넣으면 겹치지 않게 이어서 갈 수 있는 조합을 다 찾아 드려요. 중간에 비는 시간도 같이 보여요.</p>
+            <button type="button" className="cz-info" aria-label="사용법" title="사용법" aria-expanded={calcHelp} aria-controls="czHelp"
+              onClick={() => setCalcHelp(v => !v)}><Ic n="info" /><span className="cz-info-t" aria-hidden="true">사용법</span></button>
           </header>
+          {calcHelp && (
+            <div className="cz-help" id="czHelp">
+              <p>테마별 예약 시간을 넣으면 겹치지 않게 이어서 갈 수 있는 조합을 다 찾아 드려요. 중간에 기다리는 대기 시간도 같이 보여요.</p>
+              <p><b>순서는 알아서 찾아 줘요.</b> 아무 순서로 넣어도 돼요. 조건의 '순서 그대로 계산'을 켜면 카드 순서대로 가요 — 번호를 끌거나 ⋯ 의 위로·아래로 옮기기로 바꿔요.</p>
+              <p>직접 넣을 때는 <b>매진된 회차는 빼고</b> 넣어 주세요. 불러온 매진 회차는 줄을 그어 두고 계산에서 빼요(조건에서 '매진 회차도 포함해서 계산'을 켜면 넣어요).</p>
+              <button type="button" className="btn" onClick={() => { setCalcHelp(false); startTour(); }}>화면을 따라가며 사용법 보기</button>
+            </div>
+          )}
           {evCtx && (
             <div className="evctx" role="status">
               <span>'{ctxEv ? eventTitle(ctxEv) : evCtx.title}' 일정의 테마를 고르는 중이에요
-                {insMode === 'stale' && <em> · 테마를 고른 뒤 '시간표 계산'을 눌러 주세요</em>}</span>
+                {insMode === 'stale' && <em> · 테마를 고른 뒤 '조합 계산하기'를 눌러 주세요</em>}</span>
               <button type="button" className="evctx-x" onClick={() => setEvCtx(null)}>그만두기</button>
             </div>
           )}
-          <ThemeList s={s} onOpenLoad={() => setLoadOpen(true)} watchCtl={watchCtl} />
-          <ConditionsPanel s={s} />
-          <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} onClubPost={homeOn ? postToClub : undefined}
-            onInsert={insMode === 'insert' ? insertToEvent : insMode === 'blocked' ? null : undefined} watchCtl={watchCtl} />
-          <PlanSection auth={auth} plans={plans} s={s} />
+          <div className="cz-grid">
+            <div className="cz-in">
+              <ThemeList s={s} onOpenLoad={() => setLoadOpen(true)} watchCtl={watchCtl} />
+              <ConditionsPanel s={s} />
+            </div>
+            <div className="cz-out" id="resultsSec">
+              {searched ? (
+                <LazyBoundary><ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} onClubPost={homeOn ? postToClub : undefined}
+                  onInsert={insMode === 'insert' ? insertToEvent : insMode === 'blocked' ? null : undefined} watchCtl={watchCtl} /></LazyBoundary>
+              ) : (
+                <div className="cz-noresult"><Ic n="calc" /><p>테마를 넣고 <b>조합 계산하기</b>를 누르면 여기에 갈 수 있는 순서가 나와요</p></div>
+              )}
+              {auth.me && <LazyBoundary><PlanSection auth={auth} plans={plans} s={s} /></LazyBoundary>}
+            </div>
+          </div>
         </div>
 
         {homeOn && (

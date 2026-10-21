@@ -1,44 +1,68 @@
+import { useRef } from 'react';
+import { themesInfo } from '../calcView';
 import type { Scheduler } from '../scheduler/useScheduler';
 import type { WatchControl } from '../useWatches';
+import { Ic } from './Ic';
 import { ThemeCard } from './ThemeCard';
 
+/* 1단계 테마 넣기(2026-10-21 개편) — 카드 목록 + 넣는 길 한 상자(직접 넣기·불러오기·사진 읽기·카톡 붙여넣기).
+   비었으면 다음 행동 단추. 사용법 투어가 #loadBtn·#addTheme·#themes 를 가리킨다(빈 상태와 상자가 같이 그려지지 않는다) */
 export function ThemeList({ s, onOpenLoad, watchCtl }: { s: Scheduler; onOpenLoad: () => void; watchCtl?: WatchControl }) {
   const n = s.themes.length;
+  const imgRef = useRef<HTMLInputElement>(null);
+  const photo = () => imgRef.current?.click();
+  const paste = () => s.addTheme('paste');
   return (
-    <section className="sec">
-      <div className="sec-head">
-        <h2>테마</h2>
-        <b className="count">{n >= 2 ? n + '연방' : n + '개'}</b>
-        <span>직접 넣을 때는 <b className="hi">매진된 회차는 빼고 넣어 주세요</b></span>
+    <section className="sec cz-sec" aria-labelledby="czH1">
+      <div className="cz-step">
+        <h2 id="czH1"><span className="cz-stepn">1단계</span>테마 넣기{n > 0 && <span className="cz-cnt">{n}개</span>}</h2>
+        {n > 0 && <span className="cz-step-r">{themesInfo(s.themes, s.options.oFixedOrder)}</span>}
       </div>
-      <div className="themes" id="themes">
-        {n === 0 ? (
-          <div className="empty">아직 테마가 없어요. 아래 ＋ 테마 추가를 눌러 주세요.</div>
-        ) : (
-          s.themes.map((th, i) => (
-            <ThemeCard
-              key={th.id} theme={th} index={i}
-              onChange={s.updateTheme} onRawChange={s.updateRaw}
-              onDelete={s.deleteTheme} onReorder={s.reorderTheme}
-              onAttachImages={s.attachImages}
-              watchCtl={watchCtl}
-              soldIncluded={s.options.oIncludeSoldout}
-              total={n}
-            />
-          ))
-        )}
-      </div>
-      <div className="addrow">
-        <button className="btn" id="addTheme" type="button" onClick={s.addTheme}>＋ 테마 추가</button>
-        <button className="btn" id="loadBtn" type="button" onClick={onOpenLoad}>테마 불러오기</button>
-        {/* 화면이 전제를 말해 주지 않으면 카드 순서가 곧 진행 순서로 읽힌다 — §4.14 가
-            드러낸 문제라, 이제 모드마다 다른 문장을 띄운다(§4.46). */}
-        <span className="addhint">
-          {s.options.oFixedOrder
-            ? <><b>카드 순서대로 가요.</b> 번호를 끌어서 순서를 바꾸세요 · <b>×</b> 로 삭제</>
-            : <><b>순서는 알아서 찾아 줘요.</b> 아무 순서로 넣어도 돼요 · <b>×</b> 로 삭제</>}
-        </span>
-      </div>
+      {n === 0 ? (
+        <div className="cz-empty">
+          <Ic n="calc" />
+          <p className="cz-empty-t">테마를 넣으면 갈 수 있는 순서를 찾아 드려요</p>
+          <p className="cz-empty-s">예약 사이트에서 회차를 불러오거나, 이름과 시간을 직접 넣어요</p>
+          <div className="cz-empty-b">
+            <button className="btn-go cz-btn" id="loadBtn" type="button" onClick={onOpenLoad}><Ic n="dl" />테마 불러오기</button>
+            <button className="btn cz-btn" id="addTheme" type="button" onClick={() => s.addTheme('edit')}><Ic n="plus" />직접 넣기</button>
+          </div>
+          <div className="cz-empty-x">
+            <button className="cz-link" type="button" onClick={photo}><Ic n="cam" />사진 읽기</button>
+            <button className="cz-link" type="button" onClick={paste}><Ic n="chat" />카톡 붙여넣기</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="cz-list" id="themes">
+            {s.themes.map((th, i) => (
+              <ThemeCard
+                key={th.id} theme={th} index={i}
+                onChange={s.updateTheme} onRawChange={s.updateRaw}
+                onDelete={s.deleteTheme} onReorder={s.reorderTheme}
+                onAttachImages={s.attachImages}
+                watchCtl={watchCtl}
+                soldIncluded={s.options.oIncludeSoldout}
+                total={n}
+              />
+            ))}
+          </div>
+          <div className="cz-ways" role="group" aria-label="테마 넣기">
+            <button id="addTheme" type="button" onClick={() => s.addTheme('edit')}><Ic n="plus" />직접 넣기</button>
+            <button id="loadBtn" type="button" onClick={onOpenLoad}><Ic n="dl" />불러오기</button>
+            <button type="button" onClick={photo}><Ic n="cam" />사진 읽기</button>
+            <button type="button" onClick={paste}><Ic n="chat" />카톡 붙여넣기</button>
+          </div>
+        </>
+      )}
+      <input
+        ref={imgRef} type="file" accept="image/*" multiple hidden
+        onChange={e => {
+          const files = [...(e.target.files || [])];
+          e.target.value = '';
+          if (files.length) s.addThemeFromImages(files);
+        }}
+      />
     </section>
   );
 }

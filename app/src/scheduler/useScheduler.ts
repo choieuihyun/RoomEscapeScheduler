@@ -78,7 +78,7 @@ export function useScheduler() {
       hydrate(snapshot);
       setFound([]); setThemesReady([]); lastSnapshot.current = null;
       setTabCount(null); setTabSet(null); setShowCount(SHOW);
-      setRunNote(`${date} 일정을 불러왔어요. 시간표 계산을 누르면 다시 짤 수 있어요.`);
+      setRunNote(`${date} 일정을 불러왔어요. 조합 계산하기를 누르면 다시 짤 수 있어요.`);
       return true;
     } catch {
       setRunNote('이 일정은 불러올 수 없어요.');
@@ -142,8 +142,9 @@ export function useScheduler() {
     return () => clearTimeout(t);
   }, [serializeNow]);
 
-  const addTheme = useCallback(() => {
-    setThemes(ts => [...ts, blankTheme(nextId.current++)]);
+  /* ui: 새 카드를 연 채로 둘 칸(types.ts) — 직접 넣기는 'edit', 카톡 붙여넣기는 'paste' */
+  const addTheme = useCallback((ui?: Theme['ui']) => {
+    setThemes(ts => [...ts, { ...blankTheme(nextId.current++), ui }]);
   }, []);
 
   /* F-15 "회차 불러오기"·협의 도우미로 고른 항목들을 카드로 넣는다. index.html의 ldAddPicked() 이식.
@@ -233,6 +234,13 @@ export function useScheduler() {
     for (const file of files) await processImage(id, file);
   }, [processImage]);
 
+  /* 테마 넣기 상자의 "사진 읽기" — 새 카드를 만들고 그 카드에 사진을 읽힌다(카드의 사진 넣기와 같은 길) */
+  const addThemeFromImages = useCallback((files: File[]) => {
+    const id = nextId.current++;
+    setThemes(ts => [...ts, blankTheme(id)]);
+    void attachImages(id, files);
+  }, [attachImages]);
+
   const reorderTheme = useCallback((from: number, to: number) => {
     if (from === to) return;
     setThemes(ts => {
@@ -289,7 +297,7 @@ export function useScheduler() {
       : null;
 
     if (meal && maxGap != null && maxGap < meal.min) {
-      setRunNote(`최대 공백(${maxGap}분)이 식사 시간(${meal.min}분)보다 짧아서 조합이 안 나와요.`);
+      setRunNote(`최대 대기(${maxGap}분)가 식사 시간(${meal.min}분)보다 짧아서 조합이 안 나와요.`);
       setFound([]); setShowCount(SHOW);
       return;
     }
@@ -366,7 +374,7 @@ export function useScheduler() {
   }, [stateNow]);
 
   return {
-    themes, addTheme, addServerThemes, updateTheme, updateRaw, deleteTheme, reorderTheme, attachImages,
+    themes, addTheme, addThemeFromImages, addServerThemes, updateTheme, updateRaw, deleteTheme, reorderTheme, attachImages,
     moveMap, placeList, setMoveMapValue,
     options, setOption,
     sortKey, selectSort,
