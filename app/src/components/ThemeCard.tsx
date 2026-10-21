@@ -56,7 +56,9 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
   /* 메뉴 — 열리면 첫 항목으로, 바깥을 누르면 닫는다 */
   useEffect(() => {
     if (!menu) return;
-    menuRef.current?.querySelector<HTMLElement>('[role=menuitem]:not(:disabled)')?.focus();
+    menuRef.current?.querySelector<HTMLElement>('[role=menuitem]:not(:disabled)')?.focus({ preventScroll: true });
+    /* 아래쪽 카드의 메뉴가 고정 계산 막대·아래 탭에 가리지 않게 보이는 데까지 올린다(CSS scroll-margin) — 스크롤로는 바깥 누르기가 안 생겨 메뉴가 닫히지 않는다 */
+    menuRef.current?.scrollIntoView({ block: 'nearest' });
     const off = (e: PointerEvent) => {
       const t = e.target as Node;
       if (!menuRef.current?.contains(t) && !moreRef.current?.contains(t)) setMenu(false);

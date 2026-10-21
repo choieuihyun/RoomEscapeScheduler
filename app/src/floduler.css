@@ -2859,6 +2859,7 @@ button.cz-chip{font-family:inherit;cursor:pointer}
   /* 토스트가 고정 단추에 가리지 않게 — 시간표 화면이 보일 때만 위로 */
   .shell:has(.cz-view:not(.off)) .toasts{bottom:calc(100px + var(--bnav-h))}
   #resultsSec{scroll-margin-top:72px}
+  .cz-menu{scroll-margin-bottom:calc(var(--bnav-h) + 96px)}
   .cz-res .sorts{flex-wrap:nowrap;overflow-x:auto;margin:0 -16px 8px;padding:0 16px;scrollbar-width:none}
   .cz-res .sorts::-webkit-scrollbar{display:none}
   .cz-res .sortbtn{flex:none}

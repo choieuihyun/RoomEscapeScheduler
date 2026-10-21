@@ -514,7 +514,7 @@ export function SchedulerPage() {
           </header>
           {calcHelp && (
             <div className="cz-help" id="czHelp">
-              <p>테마별 예약 시간을 넣으면 겹치지 않게 이어서 갈 수 있는 조합을 다 찾아 드려요. 중간에 기다리는 대기 시간도 같이 보여요.</p>
+              <p>테마별 예약 시간을 넣으면 겹치지 않게 이어서 갈 수 있는 조합을 다 찾아 드려요. 중간 대기 시간도 같이 보여요.</p>
               <p><b>순서는 알아서 찾아 줘요.</b> 아무 순서로 넣어도 돼요. 조건의 '순서 그대로 계산'을 켜면 카드 순서대로 가요 — 번호를 끌거나 ⋯ 의 위로·아래로 옮기기로 바꿔요.</p>
               <p>직접 넣을 때는 <b>매진된 회차는 빼고</b> 넣어 주세요. 불러온 매진 회차는 줄을 그어 두고 계산에서 빼요(조건에서 '매진 회차도 포함해서 계산'을 켜면 넣어요).</p>
               <button type="button" className="btn" onClick={() => { setCalcHelp(false); startTour(); }}>화면을 따라가며 사용법 보기</button>
