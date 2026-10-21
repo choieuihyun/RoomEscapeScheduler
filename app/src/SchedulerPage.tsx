@@ -24,7 +24,7 @@ import { errorCode, getEvent, isMissingApi, sayClub, type EventDto } from './ser
 import { isClubAdmin, memberName, useMembers } from './useMembers';
 import { canEditProfile, needsProfile, profileApiOn } from './profileGate';
 import { ThemeList } from './components/ThemeList';
-import { ConditionsPanel } from './components/ConditionsPanel';
+import { ConditionsPanel, TimeBar } from './components/ConditionsPanel';
 import { useEventFormModal } from './useEventFormModal';
 import { Ic } from './components/Ic';
 import { SideNav } from './components/SideNav';
@@ -534,6 +534,7 @@ export function SchedulerPage() {
           )}
           <div className="cz-grid">
             <div className="cz-in">
+              <TimeBar s={s} />
               <ThemeList s={s} onOpenLoad={() => setLoadOpen(true)} watchCtl={watchCtl} />
               <ConditionsPanel s={s} />
             </div>

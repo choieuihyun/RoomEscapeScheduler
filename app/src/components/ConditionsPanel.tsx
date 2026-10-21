@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { mdWeekday, pad } from '../core';
-import { condSummary } from '../calcView';
+import { condSummary, timeText } from '../calcView';
 import { lazyRetry } from '../lazyRetry';
 import type { Scheduler } from '../scheduler/useScheduler';
 import { Ic } from './Ic';
@@ -12,6 +12,42 @@ import { TimePicker } from './TimePicker';
 const TeamPanel = lazyRetry(() => import('./TeamPanel').then(m => ({ default: m.TeamPanel })));
 /* 넓은 화면(왼쪽 메뉴)인지 — SchedulerPage 의 WIDE 와 같은 기준. 좁으면 조건을 접어 두고 계산 단추를 아래 탭 위에 고정한다 */
 const WIDE = 'not all and (max-width: 900px)';
+
+/* 맨 위 "가능한 시간" 한 줄(2026-10-21 사용자 결정) — 동호회가 가장 먼저 정하는 시간 범위만 1단계 앞에 둔다.
+   누르면 그 자리에서 시작·끝을 고친다. 나머지 조건(대기·이동·옵션)은 2단계에 그대로 */
+export function TimeBar({ s }: { s: Scheduler }) {
+  const [edit, setEdit] = useState(false);
+  return (
+    <section className="cz-time" aria-label="가능한 시간">
+      {!edit ? (
+        <button className="cz-time-sum" type="button" aria-expanded="false" onClick={() => setEdit(true)}>
+          <span className="cz-time-l">가능한 시간</span>
+          <b className="cz-time-v mono">{timeText(s.options)}</b>
+          <Ic n="pen" />
+          <span className="sr-only">고치기</span>
+        </button>
+      ) : (
+        <div className="cz-time-edit">
+          <div className="opt">
+            <label>
+              시작
+              <button className="mini" type="button" onClick={() => { const d = new Date(); s.setOption('oStart', pad(d.getHours()) + ':' + pad(d.getMinutes())); }}>지금부터</button>
+            </label>
+            <TimePicker placeholder="13:00" clearable value={s.options.oStart} onChange={v => s.setOption('oStart', v)} />
+          </div>
+          <div className="opt">
+            <label>
+              끝
+              <button className="mini" type="button" onClick={() => s.setOption('oEnd', '23:59')}>자정</button>
+            </label>
+            <TimePicker placeholder="22:00" clearable value={s.options.oEnd} onChange={v => s.setOption('oEnd', v)} />
+          </div>
+          <button className="btn cz-time-done" type="button" onClick={() => setEdit(false)}><Ic n="check" />완료</button>
+        </div>
+      )}
+    </section>
+  );
+}
 
 /* 2단계 조건 · 3단계 계산(2026-10-21 개편) — 좁은 화면은 두 줄 요약으로 접고, 누르면 지금까지의 칸이 전부 펼쳐진다.
    날짜가 섞였다는 경고와 계산 안내(runNote)는 접혀 있어도 보이는 자리에 둔다 */
@@ -59,29 +95,6 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
       ) : (
         <div className="cz-cond" id="czCond">
           <div className="opts">
-            <div className="opt">
-              <label>
-                가장 이른 시작
-                <button
-                  className="mini" type="button"
-                  onClick={() => {
-                    const d = new Date();
-                    s.setOption('oStart', pad(d.getHours()) + ':' + pad(d.getMinutes()));
-                  }}
-                >지금부터</button>
-              </label>
-              <TimePicker placeholder="13:00" clearable value={s.options.oStart} onChange={v => s.setOption('oStart', v)} />
-            </div>
-            <div className="opt">
-              <label>
-                가장 늦은 종료
-                <button
-                  className="mini" type="button"
-                  onClick={() => s.setOption('oEnd', '23:59')}
-                >자정</button>
-              </label>
-              <TimePicker placeholder="22:00" clearable value={s.options.oEnd} onChange={v => s.setOption('oEnd', v)} />
-            </div>
             <div className="opt">
               <label>최소 대기 (분)</label>
               <input className="mono" value={s.options.oMinGap} onChange={e => s.setOption('oMinGap', e.target.value)} />

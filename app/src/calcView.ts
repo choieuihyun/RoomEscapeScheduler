@@ -11,19 +11,23 @@ export function foldChips(total: number, cols: number, rows = 2): { shown: numbe
   return { shown: cap - 1, more: total - cap + 1 };
 }
 
-/* 접힌 조건 두 줄 — "10:00–22:00 · 이동 15분" / "대기 10–120분 · 옵션 1개 켬".
+/* 맨 위 "가능한 시간" 한 줄(2026-10-21 사용자 결정 — 시간 범위만 1단계 앞으로) */
+export function timeText(o: Pick<OptionsState, 'oStart' | 'oEnd'>): string {
+  const s = o.oStart.trim(), e = o.oEnd.trim();
+  return s && e ? `${s} ~ ${e}` : s ? `${s}부터` : e ? `${e}까지` : '시간 제한 없음';
+}
+
+/* 접힌 조건 두 줄 — "대기 10–120분 · 이동 15분" / "옵션 1개 켬"(시간 범위는 맨 위 줄이 맡는다).
    빈 칸은 계산(useScheduler.runSearch)이 읽는 대로 읽는다: 최소 대기는 숫자가 아니면 0, 최대 대기는 비우면 제한 없음 */
 export function condSummary(o: OptionsState, teams = 0): [string, string] {
-  const s = o.oStart.trim(), e = o.oEnd.trim();
-  const when = s && e ? `${s}–${e}` : s ? `${s}부터` : e ? `${e}까지` : '시간 제한 없음';
   const mv = parseInt(o.oMove) || 0;
   const lo = parseInt(o.oMinGap) || 0;
   const hi = o.oMaxGap.trim() === '' ? null : (parseInt(o.oMaxGap) || null);
   const wait = hi != null ? (lo ? `대기 ${lo}–${hi}분` : `대기 ${hi}분까지`) : lo ? `대기 ${lo}분 이상` : '대기 제한 없음';
   const on = [o.oFixedOrder, o.oPartial, o.oMeal, o.oTeam, o.oIncludeSoldout].filter(Boolean).length;
   return [
-    `${when} · ${mv ? `이동 ${mv}분` : '이동 없음'}`,
-    [wait, on ? `옵션 ${on}개 켬` : '', o.oTeam && teams ? `팀 ${teams}개 확정` : ''].filter(Boolean).join(' · '),
+    `${wait} · ${mv ? `이동 ${mv}분` : '이동 없음'}`,
+    [on ? `옵션 ${on}개 켬` : '추가 옵션 없음', o.oTeam && teams ? `팀 ${teams}개 확정` : ''].filter(Boolean).join(' · '),
   ];
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { condSummary, endsNextDay, foldChips, sessionCounts, themesInfo } from './calcView';
+import { condSummary, endsNextDay, foldChips, sessionCounts, themesInfo, timeText } from './calcView';
 import { gapText, hm, resultToText, waitOf } from './resultText';
 import type { OptionsState } from './serialize';
 import type { PathStep, SearchResultRow } from './core';
@@ -24,23 +24,22 @@ describe('foldChips — 회차 칩 두 줄 접기', () => {
   });
 });
 
-describe('condSummary — 접힌 조건 두 줄', () => {
-  it('목업 예: 10:00–22:00 · 이동 15분 / 대기 10–120분 · 옵션 1개 켬', () => {
+describe('condSummary — 접힌 조건 두 줄(시간 범위는 맨 위 줄이 맡는다)', () => {
+  it('목업 예: 대기 10–120분 · 이동 15분 / 옵션 1개 켬', () => {
     expect(condSummary(O({ oStart: '10:00', oEnd: '22:00', oMove: '15', oMaxGap: '120', oPartial: true })))
-      .toEqual(['10:00–22:00 · 이동 15분', '대기 10–120분 · 옵션 1개 켬']);
+      .toEqual(['대기 10–120분 · 이동 15분', '옵션 1개 켬']);
   });
-  it('비운 칸 — 시간 제한 없음, 최대 대기 없음은 "n분 이상"', () => {
-    expect(condSummary(O())).toEqual(['시간 제한 없음 · 이동 10분', '대기 10분 이상']);
-    expect(condSummary(O({ oStart: '13:00' }))[0]).toBe('13:00부터 · 이동 10분');
-    expect(condSummary(O({ oEnd: '23:59', oMove: '0' }))[0]).toBe('23:59까지 · 이동 없음');
+  it('비운 칸 — 최대 대기 없음은 "n분 이상", 옵션 없으면 "추가 옵션 없음"', () => {
+    expect(condSummary(O())).toEqual(['대기 10분 이상 · 이동 10분', '추가 옵션 없음']);
+    expect(condSummary(O({ oMove: '0' }))[0]).toBe('대기 10분 이상 · 이동 없음');
   });
   it('최소 대기 0·빈 칸 — 최대만 있으면 "n분까지", 둘 다 없으면 제한 없음', () => {
-    expect(condSummary(O({ oMinGap: '', oMaxGap: '90' }))[1]).toBe('대기 90분까지');
-    expect(condSummary(O({ oMinGap: '0' }))[1]).toBe('대기 제한 없음');
+    expect(condSummary(O({ oMinGap: '', oMaxGap: '90' }))[0]).toBe('대기 90분까지 · 이동 10분');
+    expect(condSummary(O({ oMinGap: '0' }))[0]).toBe('대기 제한 없음 · 이동 10분');
   });
   it('여러 팀이 켜져 있으면 확정한 팀 수', () => {
-    expect(condSummary(O({ oTeam: true, oMeal: true }), 2)[1]).toBe('대기 10분 이상 · 옵션 2개 켬 · 팀 2개 확정');
-    expect(condSummary(O({ oTeam: true }), 0)[1]).toBe('대기 10분 이상 · 옵션 1개 켬');
+    expect(condSummary(O({ oTeam: true, oMeal: true }), 2)[1]).toBe('옵션 2개 켬 · 팀 2개 확정');
+    expect(condSummary(O({ oTeam: true }), 0)[1]).toBe('옵션 1개 켬');
   });
   it('"공백" 이라고 하지 않는다', () => {
     expect(condSummary(O({ oMaxGap: '60' })).join(' ')).not.toMatch(/공백/);
@@ -104,5 +103,14 @@ describe('sessionCounts · endsNextDay — 테마 카드 회차 표시', () => {
     expect(endsNextDay(23 * 60, 60)).toBe(false);
     expect(endsNextDay(22 * 60, 70)).toBe(false);
     expect(endsNextDay(24 * 60 + 30, 70)).toBe(false);
+  });
+});
+
+describe('timeText — 맨 위 가능한 시간 한 줄', () => {
+  it('시작·끝', () => {
+    expect(timeText({ oStart: '10:00', oEnd: '22:00' })).toBe('10:00 ~ 22:00');
+    expect(timeText({ oStart: '13:00', oEnd: '' })).toBe('13:00부터');
+    expect(timeText({ oStart: '', oEnd: '23:59' })).toBe('23:59까지');
+    expect(timeText({ oStart: ' ', oEnd: '' })).toBe('시간 제한 없음');
   });
 });

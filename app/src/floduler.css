@@ -3273,3 +3273,15 @@ button.hm-me-c:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-
   .cz-head .cz-cnts{display:none}
   .cz-sonote .cz-cnts-n{display:inline}
 }
+
+/* ── 시간표 맨 위 "가능한 시간" 한 줄 (2026-10-21) ── */
+.cz-time{margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.cz-time-sum{width:100%;min-height:52px;padding:8px 14px 8px 16px;display:flex;align-items:center;gap:10px;text-align:left;
+  background:none;border:0;border-radius:inherit;color:var(--ink);font:inherit}
+.cz-time-sum:active{transform:none}
+.cz-time-l{flex:none;font-size:13px;color:var(--ink2)}
+.cz-time-v{flex:1;min-width:0;font-size:17px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.cz-time-sum .ic{color:var(--ink2)}
+.cz-time-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:10px;align-items:end;padding:12px 14px}
+.cz-time-done{display:inline-flex;align-items:center;gap:4px;height:40px}
+@media(max-width:560px){.cz-time-edit{grid-template-columns:repeat(2,minmax(0,1fr))}.cz-time-done{grid-column:1/-1;justify-content:center}}
