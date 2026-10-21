@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { fmt } from '../core';
-import { foldChips } from '../calcView';
+import { endsNextDay, foldChips, sessionCounts } from '../calcView';
 import type { Theme } from '../scheduler/types';
 import type { WatchControl } from '../useWatches';
 import { Ic } from './Ic';
@@ -89,6 +89,8 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
   const over = th.sessions.some(s => s.t >= 24 * 60);
   const fixed = th.sessions.some(s => s.fixed);
   const soTitle = soldIncluded ? '매진 — 계산에 넣고 있어요' : '매진 — 계산에서 빠져요';
+  const counts = sessionCounts(th.sessions);
+  const hasSo = th.sessions.some(s => s.soldout);
   /* 자정 넘김 안내는 손으로 넣은 회차만 — 예약 사이트에서 불러온 회차는 날짜를 넘긴 시각이 맞다(+1 칩으로 충분) */
   const note = over && th.source !== 'server'
     ? <p className="cz-note warn">자정을 넘긴 회차(+1)가 있어요. 순서가 섞였으면 <b>오전</b>/<b>오후</b>를 붙여 주세요.</p>
@@ -151,6 +153,7 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
               <span className="cz-du">· {th.dur}분</span>
               <span className="sr-only"> 고치기</span>
             </button>
+            {counts && <span className="cz-cnts mono">{counts}</span>}
             <button type="button" className="cz-more" ref={moreRef} aria-label={`${label} 메뉴`} title="더 보기"
               aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(m => !m)}><Ic n="more" /></button>
           </>
@@ -172,9 +175,12 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
       <div className="cz-chips" ref={gridRef}>
         {th.sessions.slice(0, f.shown).map((s, k) => (
           <span key={k} className={'cz-chip' + (s.fixed ? ' fix' : '') + (s.soldout ? ' so' : '')}
-            title={s.fixed ? '오전/오후가 없어서 오후로 바꿔 읽은 시간이에요' : s.soldout ? soTitle : undefined}>
+            title={s.fixed ? '오전/오후가 없어서 오후로 바꿔 읽은 시간이에요' : s.soldout ? soTitle
+              : endsNextDay(s.t, th.dur) ? `다음날 ${fmt(s.t + th.dur)}에 끝나요` : undefined}>
             <span className="cz-t">{fmt(s.t)}</span>
             {s.t >= 24 * 60 && <><span className="cz-p1" aria-hidden="true">+1</span><span className="sr-only"> 다음날</span></>}
+            {/* 자정을 걸치는 회차 — 끝 시각 쪽(칩 오른쪽 위) 작은 +1 */}
+            {endsNextDay(s.t, th.dur) && <><span className="cz-p1 cz-p1e" aria-hidden="true">+1</span><span className="sr-only"> 다음날 {fmt(s.t + th.dur)}에 끝나요</span></>}
             {s.soldout && <span className="sr-only"> 매진</span>}
             {s.soldout && s.id != null && watchCtl && <WatchBell slotId={s.id} ctl={watchCtl} />}
           </span>
@@ -183,6 +189,8 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
         {all && fold.more > 0 && <button type="button" className="cz-chip cz-fold" onClick={() => setAll(false)}>접기</button>}
         {!n && !timeOpen && <button type="button" className="cz-chip cz-fold cz-addt" onClick={() => setTimeOpen(true)}>+ 시간 넣기</button>}
       </div>
+      {/* 매진 회차가 계산에서 빠지는지 — 휴대폰엔 칩 title 이 안 보여서 카드에 매진이 있을 때 회차 아래 한 줄 */}
+      {hasSo && <p className="cz-note cz-sonote"><span className="cz-cnts-n">{counts} · </span>{soldIncluded ? '매진도 계산에 넣고 있어요.' : '매진은 계산에서 빠져요.'}</p>}
       {note}
       {th.source.startsWith('image') && <p className="cz-note warn">사진에서 읽은 시간이에요. 잘못 읽었을 수 있으니 한 번 확인해 주세요.</p>}
 

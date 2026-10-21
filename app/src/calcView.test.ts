@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { condSummary, foldChips, themesInfo } from './calcView';
+import { condSummary, endsNextDay, foldChips, sessionCounts, themesInfo } from './calcView';
 import { gapText, hm, resultToText, waitOf } from './resultText';
 import type { OptionsState } from './serialize';
 import type { PathStep, SearchResultRow } from './core';
@@ -88,5 +88,21 @@ describe('결과 글 — 대기', () => {
     expect(moved).toContain('(2시간 50분, 이동 15분 · 대기 15분)');
     expect(moved).toContain('↓ 이동 15분  대기 15분');
     expect(plain + moved).not.toMatch(/공백/);
+  });
+});
+
+describe('sessionCounts · endsNextDay — 테마 카드 회차 표시', () => {
+  it('"예약 가능 n · 매진 m" — 매진이 없으면 앞만, 회차가 없으면 빈 글', () => {
+    const ss = (so: boolean[]) => so.map((soldout) => ({ soldout }));
+    expect(sessionCounts(ss([false, true, false, true, false]))).toBe('예약 가능 3 · 매진 2');
+    expect(sessionCounts(ss([false, false]))).toBe('예약 가능 2');
+    expect(sessionCounts(ss([true]))).toBe('예약 가능 0 · 매진 1');
+    expect(sessionCounts([])).toBe('');
+  });
+  it('자정을 걸치는 회차만 — 딱 자정에 끝나거나 자정 뒤에 시작하면 아니다', () => {
+    expect(endsNextDay(23 * 60 + 30, 70)).toBe(true);
+    expect(endsNextDay(23 * 60, 60)).toBe(false);
+    expect(endsNextDay(22 * 60, 70)).toBe(false);
+    expect(endsNextDay(24 * 60 + 30, 70)).toBe(false);
   });
 });

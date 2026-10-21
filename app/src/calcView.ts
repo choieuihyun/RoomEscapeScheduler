@@ -34,3 +34,13 @@ export function themesInfo(ts: readonly { date?: string; fresh?: string }[], fix
   const parts = [fixedOrder ? '넣은 순서대로' : '', date ? `${mdWeekday(date)} 회차` : '', fresh ?? ''].filter(Boolean);
   return parts.length ? parts.join(' · ') : '순서는 알아서 찾아요';
 }
+
+/* 테마 카드 머리 줄 작은 글 — "예약 가능 5 · 매진 2"(매진이 없으면 앞만, 회차가 없으면 빈 글) */
+export function sessionCounts(ss: readonly { soldout: boolean }[]): string {
+  if (!ss.length) return '';
+  const so = ss.filter((s) => s.soldout).length;
+  return `예약 가능 ${ss.length - so}` + (so ? ` · 매진 ${so}` : '');
+}
+
+/* 자정 전에 시작해 다음날 끝나는 회차(예 23:30 시작 70분) — 끝 시각 쪽 "+1". 자정 이후 시작(t ≥ 1440)은 시작 쪽 +1 이 따로 있다 */
+export const endsNextDay = (t: number, dur: number): boolean => t < 24 * 60 && t + dur > 24 * 60;
