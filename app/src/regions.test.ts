@@ -151,3 +151,13 @@ describe('서버가 준 지역(§4.4 region) — 이름 추측보다 먼저', ()
     expect(inRegion(list, '강남')).toHaveLength(1);
   });
 });
+
+describe('지점 id 로 찾기 — 테마 키 앞부분', () => {
+  afterEach(() => setServerRegions([{ id: 'bitphobia-dungeon101', store: '비트포비아', branch: '던전101', region: null }]));
+  it('이름이 서버 목록과 달라도 테마 키의 지점 id 로 지역을 찾는다', () => {
+    setServerRegions([{ id: 'bitphobia-dungeon101', store: '비트포비아', branch: '던전101', region: '강남' }]);
+    expect(regionOf('비트포비아', '던전101 (새 이름)', 'bitphobia-dungeon101:7')).toBe('강남');
+    expect(regionOf('비트포비아', '던전101 (새 이름)')).toBe('기타'); // 키 없으면 이름으로 — 못 찾아 추측
+    expect(regionCounts([{ storeName: '?', branchName: '?', themeKey: 'bitphobia-dungeon101:1' }])).toEqual([{ region: '강남', n: 1 }]);
+  });
+});

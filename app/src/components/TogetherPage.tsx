@@ -55,7 +55,7 @@ export function TogetherPage({ active, meUid, today, events, played, onBack, onM
   }, [active, load]);
 
   const regionVer = useServerRegions(); // 서버가 준 지점 지역(§4.4) — 받으면 지역을 다시 센다
-  const regions = useMemo(() => regionCounts((groups ?? []).map((g) => ({ storeName: g.storeName ?? '', branchName: g.branchName ?? '' }))), [groups, regionVer]); // eslint-disable-line react-hooks/exhaustive-deps
+  const regions = useMemo(() => regionCounts((groups ?? []).map((g) => ({ storeName: g.storeName ?? '', branchName: g.branchName ?? '', themeKey: g.themeKey }))), [groups, regionVer]); // eslint-disable-line react-hooks/exhaustive-deps
   const shownRegion: RegionPick = regions.some((r) => r.region === region) ? region : '전체';
   const shown = useMemo(() => (groups ? filterGroups(groups, { pick, q, region: shownRegion, meUid }) : []), [groups, pick, q, shownRegion, meUid, regionVer]); // eslint-disable-line react-hooks/exhaustive-deps
 

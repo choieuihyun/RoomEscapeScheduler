@@ -29,7 +29,7 @@ export const WISH_PICKS: { id: WishPick; label: string }[] = [
 ];
 
 const squash = (s: string) => s.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
-const regionOfGroup = (g: WishGroupDto) => regionOf(g.storeName ?? '', g.branchName ?? '');
+const regionOfGroup = (g: WishGroupDto) => regionOf(g.storeName ?? '', g.branchName ?? '', g.themeKey);
 
 export const isMine = (g: WishGroupDto, meUid: string): boolean => g.wanters.some((w) => w.uid === meUid);
 

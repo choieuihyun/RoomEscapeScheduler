@@ -37,21 +37,26 @@ const EXTRA: Record<string, Region> = {
 /* 서버가 지점마다 준 지역(/api/branches 의 region, 작업명세서 §4.4) — 있으면 이름 추측보다 먼저 쓴다.
    지점 목록을 받는 곳마다 setServerRegions 로 채운다. 목록 밖 값·null 은 모르는 것으로 보고 이름 추측으로 넘긴다 */
 const fromServer = new Map<string, Region>();
+/* 같은 값을 지점 id 로도 — 테마 키(`지점id:번호`) 앞부분으로 찾으면 지점 이름이 바뀌는 사이에도 맞는다(서버 D19) */
+const fromServerId = new Map<string, Region>();
 let serverVer = 0;
 const isRegion = (r: unknown): r is Region => typeof r === 'string' && (REGIONS as readonly string[]).includes(r);
 
-export function setServerRegions(list: readonly { store: string; branch: string; region?: string | null }[]): void {
+export function setServerRegions(list: readonly { id?: string; store: string; branch: string; region?: string | null }[]): void {
   for (const b of list) {
     const k = squash(b.store ?? '') + squash(b.branch ?? '');
-    if (isRegion(b.region)) fromServer.set(k, b.region);
-    else fromServer.delete(k);
+    if (isRegion(b.region)) { fromServer.set(k, b.region); if (b.id) fromServerId.set(b.id, b.region); }
+    else { fromServer.delete(k); if (b.id) fromServerId.delete(b.id); }
   }
   serverVer += 1;
 }
 /* 받은 지역이 바뀌면 오르는 번호 — 화면이 다시 계산할 때 쓴다 */
 export const serverRegionsVersion = (): number => serverVer;
 
-export function regionOf(storeName: string, branchName: string): Region {
+/* themeKey 가 있으면(`지점id:번호`) 지점 id 로 먼저 찾고, 없으면 매장·지점 이름으로 */
+export function regionOf(storeName: string, branchName: string, themeKey?: string | null): Region {
+  const byId = themeKey ? fromServerId.get(themeKey.split(':')[0]) : undefined;
+  if (byId) return byId;
   const branch = squash(branchName ?? '');
   const key = squash(storeName ?? '') + branch;
   const server = fromServer.get(key);
@@ -65,13 +70,13 @@ export function regionOf(storeName: string, branchName: string): Region {
   return '기타';
 }
 
-type Placed = { storeName: string; branchName: string };
+type Placed = { storeName: string; branchName: string; themeKey?: string | null };
 
 /* 결과에 실제로 있는 지역만, 지역 순서대로 개수와 함께 */
 export function regionCounts(list: readonly Placed[]): { region: Region; n: number }[] {
   const m = new Map<Region, number>();
   for (const t of list) {
-    const r = regionOf(t.storeName, t.branchName);
+    const r = regionOf(t.storeName, t.branchName, t.themeKey);
     m.set(r, (m.get(r) ?? 0) + 1);
   }
   return REGIONS.filter((r) => m.has(r)).map((r) => ({ region: r, n: m.get(r) as number }));
@@ -81,7 +86,7 @@ export type RegionPick = Region | '전체';
 
 /* 고른 지역의 테마만 — 받은 순서("아무도 안 해 봄" 먼저)는 그대로 */
 export const inRegion = <T extends Placed>(list: readonly T[], r: RegionPick): T[] =>
-  r === '전체' ? [...list] : list.filter((t) => regionOf(t.storeName, t.branchName) === r);
+  r === '전체' ? [...list] : list.filter((t) => regionOf(t.storeName, t.branchName, t.themeKey) === r);
 
 export const PAGE_SIZE = 20;
 
