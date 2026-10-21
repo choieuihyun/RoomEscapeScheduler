@@ -190,7 +190,6 @@ body{
   font-family:var(--sans);
   font-size:14px; line-height:1.6; letter-spacing:-.01em;
   -webkit-font-smoothing:antialiased;
-  padding:0 0 96px;
 }
 /* 숫자가 세로로 안 흔들리게. 시각은 표처럼 읽히는 게 맞다 */
 .mono{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:0}
@@ -763,7 +762,9 @@ button:active{transform:scale(.97)}
   box-shadow:var(--sh-up);animation:toastIn .18s ease-out both;max-width:calc(100vw - 32px)}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-.main{flex:1;min-width:0;padding:0 40px}
+/* 본문 끝 여백 96px 은 body 가 아니라 여기(셸 안)에 둔다 — body 에 두면 문서가 셸보다 96px 길어져, 끝까지 내렸을 때
+   sticky 왼쪽 메뉴(높이 100vh)가 셸 바닥에 걸려 96px 밀려 올라가고 그 아래가 비었다(2026-10-21) */
+.main{flex:1;min-width:0;padding:0 40px 96px}
 .view{max-width:1080px;margin:0 auto}
 .view.off{display:none}
 .page-head{padding:32px 0 24px}
@@ -795,7 +796,7 @@ button:active{transform:scale(.97)}
   .lnb-tool .lnb-txt{display:none}
   .lnb-acct{padding:0 0 0 4px;flex-wrap:nowrap}
   .lnb-acct>span{display:none}
-  .main{padding:0 16px}
+  .main{padding:0 16px 96px}
   .page-head{padding:22px 0 18px}
   .page-head h1{font-size:21px}
 }
@@ -814,7 +815,7 @@ button:active{transform:scale(.97)}
   /* 접기는 넓은 화면 설정이다 — 좁은 화면 막대에선 로고 줄을 가운데 맞춤 그대로 둔다 */
   .lnb.folded .lnb-top{flex-direction:row;padding:0 8px 0 4px}
   .lnb.has-bnav .lnb-menu{display:none}
-  .main{padding-bottom:var(--bnav-h)}
+  .main{padding-bottom:calc(96px + var(--bnav-h))}
   .bnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;box-sizing:border-box;height:var(--bnav-h);
     padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     background:var(--surface);border-top:1px solid var(--line)}
