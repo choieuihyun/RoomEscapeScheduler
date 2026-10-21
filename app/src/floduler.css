@@ -3245,3 +3245,9 @@ button.hm-me-c:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-
 .cz-cond .opt label .cz-ii:focus-visible{outline:none;box-shadow:var(--ring)}
 .cz-cond .opt label .cz-ii .ic{width:15px;height:15px}
 .cz-cond .cz-gapinfo{margin:10px 0 0}
+/* 팀 확정 칸 — 통계 한 줄(전체·이동·대기·최소 대기)을 시작→끝 아래에 */
+.cz-simple-kv{order:3;flex-basis:100%;display:flex;flex-wrap:wrap;gap:2px 0;font-size:12.5px;color:var(--ink2)}
+.cz-simple-kv>span{white-space:nowrap}
+.cz-simple-kv>span+span::before{content:'·';margin:0 6px;color:var(--ink3)}
+.cz-simple-kv .good{color:var(--green-text)}
+.cz-simple-kv .warn{color:var(--red-text)}

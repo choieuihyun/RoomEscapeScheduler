@@ -95,14 +95,19 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
   };
   const part = r.count < themeCount && <span className="chip-info cz-part">테마 {r.count}/{themeCount}</span>;
 
-  /* 팀 확정 박스 — 한 줄 요약 + 시각 테마명 목록 */
+  /* 팀 확정 박스 — 시작→끝 + 통계 한 줄(전체 시간·이동·대기·최소 대기, 큰 카드와 같은 값) + 복사, 아래 시각 테마명 목록 */
   if (simple) {
     return (
       <div className="cz-simple">
         <div className="cz-simple-h">
           <b className="mono">{fmt(r.start)} → {fmt(r.end)}</b>
-          <span className="mono">대기 {wait}분</span>
-          <button className="btn cz-act cz-sm" type="button" onClick={copy}><Ic n="copy" />{copied || '복사'}</button>
+          <button className="btn cz-act cz-sm" type="button" onClick={copy}><Ic n="copy" /><span aria-live="polite">{copied || '복사'}</span></button>
+          <span className="cz-simple-kv mono">
+            <span>전체 {hm(r.end - r.start)}</span>
+            <span>이동 {moves ? `${moves}번 · ${r.moveTotal}분` : '없음'}</span>
+            <span className={wait <= 30 ? 'good' : ''}>대기 {wait}분</span>
+            <span className={tight ? 'warn' : ''}>최소 대기 {r.minWait === Infinity ? '—' : r.minWait + '분'}</span>
+          </span>
         </div>
         <div className="seqcol">
           {r.steps.map((s, i) => (

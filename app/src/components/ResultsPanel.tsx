@@ -75,6 +75,9 @@ export function ResultsPanel({ s, onSave, onClubPost, onInsert, watchCtl }: {
   s: Scheduler; onSave?: (r: Row) => void; onClubPost?: (r: Row) => void; onInsert?: ((r: Row) => void) | null; watchCtl?: WatchControl;
 }) {
   const [allRows, setAllRows] = useState(false);
+  /* 다시 계산하면(found 가 새 배열) "나머지 n개 보기"를 다시 접는다 — 정렬·탭·더 보기는 found 를 안 바꾼다 */
+  const [seen, setSeen] = useState(s.found);
+  if (seen !== s.found) { setSeen(s.found); setAllRows(false); }
   const pool = s.currentList;
   const list = useMemo(
     () => [...pool].sort(SORTS.find(d => d.k === s.sortKey)!.f).slice(0, s.showCount),
