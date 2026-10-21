@@ -5,7 +5,9 @@ import { defineConfig } from 'vite'
 export default defineConfig(({ command }) => ({
   // GitHub Pages 프로젝트 페이지는 도메인 루트가 아니라 /RoomEscapeScheduler/
   // 서브패스에서 서빙된다. dev 서버는 그대로 루트에서 돌아야 하니 build 때만 적용.
-  base: command === 'build' ? '/RoomEscapeScheduler/' : '/',
+  // Firebase Hosting(roomescapescheduler.web.app)은 도메인 루트라 APP_BASE=/ 로 빌드한다
+  // (배포.md "Firebase Hosting"). 기본값은 Pages 그대로 — deploy.yml 은 손대지 않는다.
+  base: command === 'build' ? (process.env.APP_BASE ?? '/RoomEscapeScheduler/') : '/',
   plugins: [react()],
   optimizeDeps: {
     exclude: ['onnxruntime-web'],
