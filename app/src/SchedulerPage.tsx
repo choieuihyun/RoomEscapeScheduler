@@ -232,6 +232,7 @@ export function SchedulerPage() {
   }, [wide, nav.view, profileKnown, profileOn, go]);
   /* 멤버 카드 — 어디서든 이름을 누르면(clubStore.openMember 의 'flod:member'). 내 이름이면 내 프로필 화면으로 */
   const [card, setCard] = useState<{ uid: string; name: string; from: HTMLElement | null } | null>(null);
+  if (card && !peopleOn) setCard(null); // 로그아웃·다른 계정이면 열려 있던 카드를 버린다(다시 로그인해도 옛 카드가 뜨지 않게)
   useEffect(() => {
     const on = (e: Event) => {
       const d = (e as CustomEvent<{ uid: string; name: string; from: HTMLElement | null }>).detail;
