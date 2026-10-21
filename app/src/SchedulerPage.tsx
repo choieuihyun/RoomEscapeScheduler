@@ -32,6 +32,7 @@ import { SideNav } from './components/SideNav';
 import { CalendarSide } from './components/CalendarSide';
 import { Toaster } from './components/Toaster';
 import { lazyRetry } from './lazyRetry';
+import { hist, useBackClose } from './backStack';
 import { LazyBoundary, StaleNotice } from './components/LazyBoundary';
 import { PushBanner } from './components/PushBanner';
 import { showPushBanner, showToast } from './toast';
@@ -88,7 +89,7 @@ function useEver(on: boolean): boolean {
    알림을 눌렀는데 서비스 워커가 창을 못 옮긴 경우와 앱 안 알림 띠의 "열기"가 쓴다. */
 function openEventHash(id: number) {
   if (readEventHash(location.hash) === id) dispatchEvent(new HashChangeEvent('hashchange'));
-  else location.hash = `e=${id}`;
+  else hist.hash(() => { location.hash = `e=${id}`; }); // 열린 창(일정 창 등)은 그대로 두는 이동
 }
 
 /* 앱 안 알림 띠의 "열기" — 띠가 사라지며 포커스가 body 로 떨어진다. 일정 패널이 이미 열려 있으면 새로 그려지지 않아
@@ -212,9 +213,15 @@ export function SchedulerPage() {
   /* 주소의 #e= 만 지운다(경로·?view= 는 그대로, 다른 해시는 건드리지 않는다). 패널이 링크 일정을 떠나면 부른다 —
      남겨 두면 새로고침했을 때 처음 링크 일정이 다시 열린다. */
   const dropLink = useCallback(() => {
-    if (readEventHash(location.hash) !== null) history.replaceState(history.state, '', location.pathname + location.search);
+    if (readEventHash(location.hash) !== null) hist.replace(history.state, location.pathname + location.search);
   }, []);
-  const closeEvent = useCallback(() => { setOpenEvent(null); dropLink(); }, [setOpenEvent, dropLink]);
+  /* 닫을 때 #e= 는 뒤로 가기 기록(useBackClose)을 지운 뒤에 지운다 — 먼저 지우면 #e= 가 남은 아래 기록으로 돌아가며
+     hashchange 가 그 일정을 다시 연다. 닫는 일정의 링크일 때만 지운다(다른 일정 링크로 옮겨 가는 중이면 그 링크는 남긴다) */
+  const shown = cal.openEvent;
+  const closeEvent = useCallback(() => {
+    setOpenEvent(null);
+    hist.soon(() => { if (readEventHash(location.hash) === shown) dropLink(); });
+  }, [setOpenEvent, dropLink, shown]);
   /* 칩·줄을 눌러 일정을 연다. 링크로 연 일정과 다른 일정이면 #e= 를 지운다.
      날짜 미정 일정은 누른 후보 날짜(date)를, 없으면(홈·링크) 오늘 이후 가장 이른 후보를 고른다 */
   const openEvent = useCallback((ev: EventDto, date?: string) => {
@@ -259,7 +266,7 @@ export function SchedulerPage() {
      더보기 하위 화면처럼 기록을 하나 더 쌓아 뒤로 가기가 더보기 목록 → 캘린더로 돌아온다 */
   const openPlayedList = () => {
     goView(wide ? 'profile' : 'more');
-    if (!wide) history.pushState({ moreSub: 'played' }, '', location.href);
+    if (!wide) hist.push({ moreSub: 'played' }, location.href);
   };
   /* 홈 미니 달력의 날짜 → 캘린더 화면에서 그날을 고른다. 열려 있던 일정 상세는 닫는다(캘린더의 날짜 고르기와 같게) */
   const pickFromHome = (iso: string) => {
@@ -386,7 +393,7 @@ export function SchedulerPage() {
       } catch (e) {
         if (errorCode(e) === 'NO_SUCH_EVENT') {
           showToast('일정을 찾을 수 없어요. 지워졌을 수 있어요.');
-          if (readEventHash(location.hash) === id) history.replaceState(history.state, '', location.pathname + location.search);
+          if (readEventHash(location.hash) === id) hist.replace(history.state, location.pathname + location.search);
         } else if (!isMissingApi(e)) {
           showToast(sayClub(e));
         }
@@ -426,6 +433,11 @@ export function SchedulerPage() {
     document.addEventListener('keydown', onKeydown);
     return () => document.removeEventListener('keydown', onKeydown);
   }, [auth, saveModal, eventForm, watches, tour, push]);
+
+  /* 뒤로 가기로 닫는 것(backStack) — 일정 상세(캘린더에서 보일 때만, 다른 일정으로 바꿔도 기록은 하나)와 사용법 투어(= 끝내기).
+     창들은 저마다 컴포넌트 안에서 건다 */
+  useBackClose(cal.openEvent !== null && nav.view === 'calendar', closeEvent);
+  useBackClose(tour.active, tour.end);
 
   /* 화면을 바꾸면 새 화면의 맨 위부터 보여준다. */
   useEffect(() => { window.scrollTo({ top: 0 }); }, [nav.view]);
@@ -578,7 +590,7 @@ export function SchedulerPage() {
       /></LazyBoundary>}
       {peopleOn && card && <LazyBoundary><MemberViews
         part="card" uid={card.uid} name={card.name} from={card.from} meUid={meUid} today={today} events={club.events} past={profile.past}
-        onClose={() => setCard(null)} onOpenEvent={(ev) => { setCard(null); openFromProfile(ev); }}
+        onClose={() => setCard(null)} onOpenEvent={(ev) => { setCard(null); hist.soon(() => openFromProfile(ev)); }}
       /></LazyBoundary>}
       <PushBanner onOpen={openFromBanner} />
       <Toaster />

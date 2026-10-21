@@ -11,6 +11,7 @@ import {
 } from '../settle';
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
+import { useBackClose } from '../backStack';
 
 /* 일정 상세의 정산 칸(§4.13) — 참여자·운영진·만든 사람에게(정산이 있으면 항목에 든 사람도 — 서버가 403 이면 숨긴다).
    항목마다 결제한 사람과 같이 낸 사람이 다르다(방탈출 → 저녁 → 카페). 항목 하나를 고칠 때마다 PUT(항목 통째로, version).
@@ -266,8 +267,10 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
 }
 
 /* 창 — body 로 띄운다(상세 패널 안 transform·overflow 와 상관없이). Esc 는 이 창만 닫고, 닫으면 연 단추로 포커스를 돌려준다 */
-function Sheet({ label, onClose, children, wide }: { label: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+/* onClose 가 false 를 돌려주면 닫지 않은 것(저장 중) — 뒤로 가기로 닫을 때 창을 둔다 */
+function Sheet({ label, onClose, children, wide }: { label: string; onClose: () => boolean | void; children: ReactNode; wide?: boolean }) {
   const box = useRef<HTMLDivElement>(null);
+  useBackClose(true, onClose);
   useEffect(() => {
     const back = document.activeElement as HTMLElement | null;
     const first = box.current?.querySelector<HTMLElement>('input, button');
@@ -308,7 +311,7 @@ function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
   const issue = draftIssue(d);
   const gap = d.amount ? gapText(d.amount, shares) : '';
   const nick = (uid: string) => people.find((p) => p.uid === uid)?.nickname ?? uid;
-  const close = useCallback(() => { if (!busy) onClose(); }, [busy, onClose]);
+  const close = useCallback(() => { if (busy) return false; onClose(); }, [busy, onClose]);
 
   /* 금액·사람·결제한 사람을 바꾸면 고친 금액은 버리고 다시 똑같이 나눈다(합이 어긋난 채 남지 않게) */
   /* 금액·같이 낸 사람을 바꾸면 다시 똑같이 나눈다. 이름만 고치면 저장된 몫 그대로(남는 돈이 옮겨 가 "보냈어요"가 풀리지 않게) */

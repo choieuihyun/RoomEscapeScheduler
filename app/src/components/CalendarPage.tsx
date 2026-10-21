@@ -16,6 +16,7 @@ import type { AddedTheme } from '../scheduler/types';
 import { playedWho, playedWhoLabel, playedWhoTitle } from '../playedWho';
 import { playedByDate } from '../playedView';
 import { withoutPending, type UseProfileReturn } from '../useProfile';
+import { useBackClose } from '../backStack';
 
 /* 캘린더 화면(§4.49) — 모달이던 것(§4.38·§4.40)을 왼쪽 메뉴의 한 화면으로 옮겼다.
    그룹웨어 월간 보기처럼 날짜 칸 안에 일정·감시 회차를 줄로 보여주고, 고른 날짜의
@@ -318,6 +319,7 @@ export function CalendarPage({
   const [popRaw, setPop] = useState<{ iso: string; x: number; y: number } | null>(null);
   const pop = active ? popRaw : null;   // 다른 화면으로 가면 창도 같이 사라진다
   const popRef = useRef<HTMLDivElement>(null);
+  useBackClose(!!pop, () => setPop(null)); // 뒤로 가기로 닫는다
   useEffect(() => {
     if (!pop) return;
     const close = (e: Event) => {

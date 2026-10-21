@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { UsePushDeviceReturn } from '../usePushDevice';
+import { useBackClose } from '../backStack';
 
 /* 일정 알림 켜기 안내 (작업명세서 §4.10, 목업 ④ 오른쪽). 승인된 멤버에게 이 기기에서 한 번 저절로 뜨고,
    내 정보 "이 기기 알림"의 "자세히"로 다시 연다.
@@ -19,6 +20,7 @@ const KAKAO_STEP = <>오른쪽 위 <b>⋮</b> → <b>다른 브라우저로 열�
 export function PushGuide({ push }: { push: UsePushDeviceReturn }) {
   const v = push.guide;
   const boxRef = useRef<HTMLDivElement>(null);
+  useBackClose(v !== null, push.closeGuide); // 뒤로 가기로 닫는다
 
   /* 열리면 첫 단추로, 닫히면 열기 전 자리로 포커스를 옮긴다 */
   useEffect(() => {

@@ -1,9 +1,11 @@
 import { fmt } from '../core';
 import type { UseWatchesReturn } from '../useWatches';
+import { useBackClose } from '../backStack';
 
-/* F-16 "빈자리 알림" 목록. LoadModal.tsx/PlanSection.tsx와 같은 패턴
+/* F-16 "빈자리 알림" 목록. SaveModal.tsx/PlanSection.tsx와 같은 패턴
    (.modal/.mbox, .loaditem 재사용, 삭제는 confirm() 통과 후). */
 export function WatchListModal({ w }: { w: UseWatchesReturn }) {
+  useBackClose(w.open, w.close); // 뒤로 가기로 닫는다
   return (
     <div
       className={'modal' + (w.open ? ' on' : '')}

@@ -15,6 +15,7 @@ import {
 import type { AddedTheme } from '../scheduler/types';
 import { WishToggle } from '../clubStore';
 import { setServerRegions, type RegionPick } from '../regions';
+import { useBackClose } from '../backStack';
 
 /* 테마 고르기 창 — 시간표 계산의 "테마 불러오기"와 일정 만들기의 "테마 찾아서 넣기"가 같이 쓴다.
    둘 다 같은 데이터(/api/branches·/api/schedule: 지점 → 날짜 → 그날 테마·회차)를 보고, 다른 건 마지막에 고르는 단위뿐이다.
@@ -59,6 +60,18 @@ async function loadPlayedBy(eventId: number, date: string): Promise<Map<string, 
 const md = (iso: string) => `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}`;
 const WD = '일월화수목금토';
 const mdw = (iso: string) => `${md(iso)}(${WD[new Date(`${iso}T00:00:00Z`).getUTCDay()]})`;
+
+/* 좁은 화면(≤560px) — 지점 목록과 테마 목록이 한 칸씩 번갈아 보인다(CSS 와 같은 기준) */
+function useNarrow(): boolean {
+  const [n, setN] = useState(() => matchMedia('(max-width: 560px)').matches);
+  useEffect(() => {
+    const mq = matchMedia('(max-width: 560px)');
+    const on = () => setN(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return n;
+}
 
 export function ThemePicker(p: Props) {
   const { mode, onClose, mine } = p;
@@ -125,6 +138,10 @@ export function ThemePicker(p: Props) {
   }, [list]);
 
   const branch = list?.find((b) => b.id === branchId) ?? null;
+  /* 뒤로 가기 — 창을 닫는다. 좁은 화면에서 지점을 골라 테마 목록에 들어와 있으면 먼저 지점 목록으로 */
+  const narrow = useNarrow();
+  useBackClose(true, onClose);
+  useBackClose(narrow && branch !== null, () => setBranchId(null));
   const hasDay = !!branch && (branch.dates ?? []).includes(date);
   const key = branch ? `${branch.id}|${date}` : '';
 

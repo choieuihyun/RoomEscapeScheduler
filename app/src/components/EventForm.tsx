@@ -8,6 +8,7 @@ import { conflictOf, sayClub, type EventDto, type EventInput, type PlayedDto } f
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
 import { ThemePicker } from './ThemePicker';
+import { useBackClose } from '../backStack';
 
 interface Props {
   m: UseEventFormModal;
@@ -40,6 +41,9 @@ function Body({ m, create, update, adopt, played }: Props) {
   const [busy, setBusy] = useState(false);
   /* 날짜 칸을 직접 고쳤나 — 안 고쳤으면 미정에서 넘어올 때 채운 가장 이른 후보 안내를 보인다 */
   const [dateEdited, setDateEdited] = useState(false);
+
+  /* 뒤로 가기로 닫는다 — 저장 중이면 둔다 */
+  useBackClose(true, () => { if (busy) return false; m.close(); });
 
   /* 테마 찾기 창 — 열려 있는 동안 Esc 는 그 창만 닫는다 */
   const [finding, setFinding] = useState(false);

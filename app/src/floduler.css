@@ -1715,7 +1715,7 @@ input.tf-q:not([type=checkbox]){margin:10px;width:calc(100% - 20px);height:36px;
 .tf-room.full{color:var(--chip-warn-fg)}
 .tf-ppl{display:inline-flex;align-items:center;gap:8px;margin-left:8px}
 .tf-ppl label{font-size:14px;font-weight:500;color:var(--ink)}
-input.tf-ppl-i,.tf-ppl input:not([type=checkbox]){width:64px;height:36px!important;text-align:center}
+.tf-ppl input:not([type=checkbox]){width:64px;height:36px!important;text-align:center}
 .tf-ppl-h{font-size:12px;color:var(--ink3)}
 .tf-regions,.tf-bdates{display:flex;gap:6px;flex:none}
 .tf-regions{flex-wrap:wrap;padding:0 10px 10px}

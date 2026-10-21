@@ -5,6 +5,7 @@ import { showToast } from '../toast';
 import type { UseAuthReturn } from '../useAuth';
 import { withoutPending, type UseProfileReturn } from '../useProfile';
 import { ProfileForm } from './ProfileForm';
+import { useBackClose } from '../backStack';
 
 export interface ProfileModalProps {
   /* 로그인 뒤 저절로 뜬 "채워 주세요"(닫으면 이번 접속 동안 안 묻는다) — 아니면 사람이 연 고치기 */
@@ -27,9 +28,11 @@ export function ProfileModal({ fill, auth, profile, onClose, onMissing }: Profil
   const title = fill ? '프로필을 채워 주세요' : m?.profile ? '프로필 고치기' : '프로필 채우기';
 
   const askClose = useCallback(() => {
-    if (dirty.current && !confirm('적은 내용이 저장되지 않아요. 닫을까요?')) return;
+    if (dirty.current && !confirm('적은 내용이 저장되지 않아요. 닫을까요?')) return false;
     onClose();
   }, [onClose]);
+  /* 뒤로 가기도 같은 길 — 물어서 취소하면 창을 둔다 */
+  useBackClose(true, askClose);
 
   /* 열리면 제목으로, 닫히면 연 단추로 포커스 */
   useEffect(() => {

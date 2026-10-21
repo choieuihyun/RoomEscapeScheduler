@@ -3,6 +3,7 @@ import type { UseAuthReturn } from '../useAuth';
 import { GoogleMark, KakaoMark } from './SsoMarks';
 import { needJoin } from '../profileGate';
 import { JoinPanel, PendingPanel } from './JoinPanel';
+import { useBackClose } from '../backStack';
 
 /* 로그인 화면. 다우오피스 로그인처럼 화면 전체를 덮고 가운데 한 줄로 놓는다(§4.55).
    로그인 전에는 카카오·구글·(접힌) 기존 아이디 로그인,
@@ -17,11 +18,13 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
   const [joinGen, setJoinGen] = useState(0);
   const close = useCallback(() => {
     if (joinDirty.current) {
-      if (!confirm('적은 내용이 사라져요. 닫을까요?')) return;
+      if (!confirm('적은 내용이 사라져요. 닫을까요?')) return false;
       setJoinGen((n) => n + 1);
     }
     closeAuth();
   }, [closeAuth]);
+  /* 뒤로 가기도 같은 길 — 가입 칸에 적은 게 있으면 묻고, 취소하면 창을 둔다 */
+  useBackClose(open, close);
 
   /* 기존 아이디 칸을 펼쳤을 때만 아이디 칸으로 커서를 보낸다 — 열자마자 키보드가 올라오지 않게 */
   useEffect(() => {

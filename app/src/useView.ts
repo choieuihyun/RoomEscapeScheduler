@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { hist } from './backStack';
 
 /* 화면 전환 — 왼쪽 메뉴(§4.49)의 "홈 / 조합 계산 / 캘린더 / 내 정보 / 멤버 관리". 주소의 ?view= 에 싣는다.
    해시(#s=·#z= 공유 링크)는 이미 쓰고 있어서 건드리지 않고, 주소를 바꿀 때마다
@@ -90,8 +91,8 @@ export function useView(o: Opts) {
     const search = q.toString();
     const url = location.pathname + (search ? '?' + search : '') + location.hash;
     const how = moveMode(replace, url !== location.pathname + location.search + location.hash, !!(history.state as { moreSub?: string } | null)?.moreSub);
-    if (how === 'back') { history.back(); return; }
-    history[how](null, '', url);
+    if (how === 'back') { hist.back(); return; }
+    hist[how === 'pushState' ? 'push' : 'replace'](null, url);
     setRaw({ v: next, hash: '' });
   }, []);
 

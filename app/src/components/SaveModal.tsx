@@ -1,9 +1,11 @@
 import { fmt } from '../core';
 import type { UseSaveModalReturn } from '../useSaveModal';
+import { useBackClose } from '../backStack';
 
 /* 일정 저장 모달 — index.html의 #saveModal + openSave()/submitSave() 이식. */
 export function SaveModal({ m }: { m: UseSaveModalReturn }) {
   const r = m.pending;
+  useBackClose(m.open, () => { if (m.busy) return false; m.close(); }); // 뒤로 가기로 닫는다 — 저장 중이면 둔다
   return (
     <div
       className={'modal' + (m.open ? ' on' : '')}

@@ -8,6 +8,7 @@ import { todayKst } from '../clubEvents';
 import { addPlayed, sayClub, type PlayedDto, type ThemeRef } from '../server';
 import { showToast } from '../toast';
 import { withoutPending, type UseProfileReturn } from '../useProfile';
+import { useBackClose } from '../backStack';
 
 /* 해 본 테마 여러 개 한꺼번에 넣기(기획 §4.61) — 해 본 테마 카드의 "여러 개 한꺼번에 넣기"로 여는 창. 지연 청크.
    ① 안내 + 붙여넣기 → ② 미리 보기(서버 테마에 맞춘 표, 체크) → ③ 4개씩 저장(진행 막대, 끝 요약, 실패한 것만 다시).
@@ -66,9 +67,11 @@ export function BulkModal({ profile, onClose }: { profile: UseProfileReturn; onC
   useEffect(() => { askRef.current = closeAsk(step, text.trim() !== '', !!sv?.running); });
   const askClose = useCallback(() => {
     const q = askRef.current;
-    if (q && !confirm(q)) return;
+    if (q && !confirm(q)) return false;
     onClose();
   }, [onClose]);
+  /* 뒤로 가기도 같은 길 — 물어서 취소하면 창을 둔다 */
+  useBackClose(true, askClose);
 
   /* 단계가 바뀌면 그 단계 첫 줄(제목 구실)로 포커스 — 처음 열 때는 붙여넣기 칸 */
   const stage = step + (sv && !sv.running ? '-done' : '');

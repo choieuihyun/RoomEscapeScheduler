@@ -1,3 +1,4 @@
+import { hist } from '../backStack';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PayCard, useClubStore } from '../clubStore';
 import { moreGroups, type MoreRow, type MoreRowId } from '../moreRows';
@@ -93,8 +94,8 @@ export function MorePage({
     else if (prev) listRef.current?.querySelector<HTMLElement>(`[data-row="${prev}"]`)?.focus();
   }, [sub, active]);
 
-  const openSub = (s: Sub) => { history.pushState({ moreSub: s }, '', location.href); setSub(s); };
-  const back = () => { if (readSub()) history.back(); else setSub(null); };
+  const openSub = (s: Sub) => { hist.push({ moreSub: s }, location.href); setSub(s); };
+  const back = () => { if (readSub()) hist.back(); else setSub(null); };
 
   const m = auth.member;
   const loggedIn = !!auth.me;

@@ -7,6 +7,7 @@ import { birthLabel, lifeLabel } from '../memberProfile';
 import { errorCode, isMissingApi, memberPlayed, sayClub, type EventDto, type PlayedDto } from '../server';
 import { placeLabel } from '../wish';
 import { Avatar } from './Avatar';
+import { useBackClose } from '../backStack';
 
 /* 멤버 카드 — 어디서든 남의 이름을 누르면 뜬다(좁은 화면 아래 시트, 넓은 화면 가운데 작은 창).
    머리(아바타·별명·운영진·실명) → 프로필 줄 → 해 본 테마(앱 기록) → 함께한 일정 → 하고 싶은 테마.
@@ -64,6 +65,7 @@ export function MemberCard({ uid, name, from, meUid, today, events, past, onClos
   const id = useId();
   const s = useClubStore();
   const played = usePlayed(meUid, uid);
+  useBackClose(true, onClose); // 뒤로 가기로 닫는다
   const [memTried, setMemTried] = useState(false);
   const [wishErr, setWishErr] = useState('');
 
