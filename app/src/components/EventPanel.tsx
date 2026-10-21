@@ -127,11 +127,12 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
   const panelRef = useRef<HTMLDivElement>(null);
   /* 포커스가 어디에도 없을 때(앱 안 알림 띠의 "열기"가 사라지며 body 로 떨어진 뒤 등) 일정이 열리면 패널 자체(tabIndex=-1, 제목을 읽어 줌)로 옮긴다 — 사파리에서 스크롤이 튀지 않게 preventScroll —
      클릭한 칸 등 포커스가 이미 있으면 건드리지 않는다.
-     한 칸 화면(≤1100)에선 상세가 달력 자리를 차지하니(CSS) 맨 위부터 보이게 올린다 */
+     한 칸 화면(≤1100)에선 상세가 달력 자리를 차지하니(CSS) 맨 위부터 보이게 올린다 — 뒤로 가기 기록(useBackClose, 마이크로태스크)을
+     쌓은 뒤에 올린다. 먼저 올리면 브라우저가 달력 기록의 스크롤을 맨 위로 적어 두어, 닫을 때 달력이 맨 위로 돌아간다 */
   useEffect(() => {
     const a = document.activeElement;
     if (!a || a === document.body) panelRef.current?.focus({ preventScroll: true });
-    if (matchMedia('(max-width:1100px)').matches) window.scrollTo({ top: 0 });
+    if (matchMedia('(max-width:1100px)').matches) queueMicrotask(() => window.scrollTo({ top: 0 }));
   }, [ev.id]);
 
   const menuBox = useRef<HTMLSpanElement>(null);

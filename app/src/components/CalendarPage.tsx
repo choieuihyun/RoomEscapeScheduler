@@ -311,6 +311,7 @@ export function CalendarPage({
     if (detailOn || backY.current === null) return;
     const y = backY.current;
     backY.current = null;
+    /* 닫을 때 지워지는 뒤로 가기 기록(useBackClose)에서 브라우저도 같은 자리로 되돌린다 — 상세가 맨 위로 넘기기 전에 그 기록을 쌓아서(EventPanel) */
     if (active) scrollTo({ top: y });
   }, [detailOn, active]);
   /* 날짜를 고르면 그날 상세로 돌아간다 */
