@@ -2209,6 +2209,8 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
 .pfx-fill i{margin-left:auto;font-style:normal;font-size:18px;color:var(--ink3)}
 .pfx-fill:hover{border-color:var(--btn-line-hover);color:var(--ink)}
 .pf-me .pfx-fill{margin:16px 0 0}
+/* 프로필 안의 "거주지역을 채워 주세요" 줄 — 프로필 고치기 단추 위 */
+.pfx .pfx-fill-res{margin:0;padding:10px 14px}
 
 /* 멤버 목록 */
 .ppl{display:flex;flex-direction:column;gap:16px;padding-bottom:48px}

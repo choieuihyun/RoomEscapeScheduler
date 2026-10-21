@@ -221,6 +221,8 @@ export interface MeDto {
   kakaoLinked: boolean;
   /* §4.11 — null 은 아직 안 채움, 필드가 없으면(undefined) 서버가 프로필을 모른다(묻지도 보이지도 않는다) */
   profile?: ProfileDto | null;
+  /* 화면이 채운다(서버 필드 아님) — 서버가 프로필에 residence 칸을 보냈는지. 옛 서버면 "거주지역을 채워 주세요" 줄을 띄우지 않는다 */
+  residenceOn?: boolean;
 }
 
 export interface MemberDto {
@@ -246,7 +248,12 @@ export interface ProfileDto {
   roomCount: number;
   genres: Genre[];
   lifeTheme: LifeTheme;
+  /* 거주지역(2026-10-21) — 자유 글 1~20자. 서버는 선택, 화면이 필수로 받는다. 옛 서버·옛 행은 칸이 없거나 null — normProfile 이 null 로 맞춘다 */
+  residence: string | null;
 }
+/* 옛 서버는 residence 칸 없이 보낸다 — 화면은 null(아직 안 적음)로 본다 */
+export const normProfile = <T extends ProfileDto | null | undefined>(p: T): T => (p ? { ...p, residence: p.residence ?? null } : p);
+const normMe = (m: MeDto): MeDto => (m.profile ? { ...m, profile: normProfile(m.profile), residenceOn: 'residence' in m.profile } : m);
 export interface RankMonthDto { month: string; ranks: { rank: number; uid: string; nickname: string; count: number }[] }
 
 /* 로그인 전이라 토큰이 없다 — 받은 customToken 으로 Firebase 에 로그인하는 건 호출부 몫. */
@@ -256,22 +263,22 @@ export const kakaoLogin = (code: string, redirectUri: string): Promise<{ customT
 export const kakaoLink = (code: string, redirectUri: string, token: string): Promise<{ linked: boolean }> =>
   authed('/api/auth/kakao/link', token, 'POST', { code, redirectUri });
 
-export const getMe = (token: string): Promise<MeDto> => authed('/api/me', token, 'GET');
+export const getMe = async (token: string): Promise<MeDto> => normMe(await authed('/api/me', token, 'GET'));
 
 /* profile 은 서버가 선택으로 받는다(옛 서버는 무시) — 화면이 필수로 받아 함께 보낸다 */
-export const joinClub = (nickname: string, profile: ProfileDto | null, token: string): Promise<MeDto> =>
-  authed('/api/me/join', token, 'POST', profile ? { nickname, profile } : { nickname });
+export const joinClub = async (nickname: string, profile: ProfileDto | null, token: string): Promise<MeDto> =>
+  normMe(await authed('/api/me/join', token, 'POST', profile ? { nickname, profile } : { nickname }));
 
 /* 별명·프로필을 통째로 바꾼다(PENDING·APPROVED). 서버가 모르면 본문 없는 404 */
-export const updateProfile = (nickname: string, profile: ProfileDto, token: string): Promise<MeDto> =>
-  authed('/api/me/profile', token, 'PUT', { nickname, profile });
+export const updateProfile = async (nickname: string, profile: ProfileDto, token: string): Promise<MeDto> =>
+  normMe(await authed('/api/me/profile', token, 'PUT', { nickname, profile }));
 
 /* from·to 는 YYYY-MM, 둘 다 포함, 12달까지. 최신 달 먼저 */
 export const rankings = async (from: string, to: string, token: string): Promise<RankMonthDto[]> =>
   (await authed<RankMonthDto[]>(`/api/club/rankings?from=${from}&to=${to}`, token, 'GET')).map((m) => ({ ...m, ranks: m.ranks ?? [] }));
 
-export const listMembers = (status: 'PENDING' | 'APPROVED' | 'ALL', token: string): Promise<MemberDto[]> =>
-  authed(`/api/admin/members?status=${status}`, token, 'GET');
+export const listMembers = async (status: 'PENDING' | 'APPROVED' | 'ALL', token: string): Promise<MemberDto[]> =>
+  (await authed<MemberDto[]>(`/api/admin/members?status=${status}`, token, 'GET')).map((m) => ({ ...m, profile: normProfile(m.profile) }));
 
 export const memberAction = (uid: string, action: 'approve' | 'reject' | 'remove', token: string): Promise<MemberDto> =>
   authed(`/api/admin/members/${encodeURIComponent(uid)}/${action}`, token, 'POST');
@@ -526,8 +533,8 @@ const normFresh = (d: FreshDto): FreshDto => ({
 export const freshThemes = async (eventId: number, date: string | null, token: string): Promise<FreshDto> =>
   normFresh(await authed<FreshDto>(`${EVENTS}/${eventId}/fresh-themes${date ? `?date=${encodeURIComponent(date)}` : ''}`, token, 'GET'));
 
-export const listClubMembers = (token: string): Promise<ClubMemberDto[]> =>
-  authed('/api/club/members', token, 'GET');
+export const listClubMembers = async (token: string): Promise<ClubMemberDto[]> =>
+  (await authed<ClubMemberDto[]>('/api/club/members', token, 'GET')).map((m) => ({ ...m, profile: normProfile(m.profile) }));
 
 /* ── 같이 갈 사람 찾기 — 하고 싶은 테마 (작업명세서 §4.12) ── 알림은 없다(화면에서만) */
 export interface WishDto {

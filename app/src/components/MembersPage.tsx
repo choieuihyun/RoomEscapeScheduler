@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { MemberLink } from '../clubStore';
-import { todayKst } from '../clubEvents';
 import { lifeLabel, personLine } from '../memberProfile';
 import type { MemberDto, ProfileDto } from '../server';
 import { formatKst, memberName, sameNicknameUids, splitMembers, type UseMembersReturn } from '../useMembers';
@@ -9,12 +8,12 @@ import { formatKst, memberName, sameNicknameUids, splitMembers, type UseMembersR
    버튼을 숨기는 건 편의일 뿐이고 승인·운영진 여부는 서버가 모든 요청에서 다시 본다. */
 /* 프로필 한 줄(§4.11 — MemberDto.profile 은 운영진 멤버 관리에도 보인다). 승인할 때 맞춰 보라고 대기 줄에도 둔다.
    서버가 프로필을 모르면(undefined) 아무것도, 안 채웠으면 "프로필 없음" */
-function ProfLine({ p, today }: { p: ProfileDto | null | undefined; today: string }) {
+function ProfLine({ p }: { p: ProfileDto | null | undefined }) {
   if (p === undefined) return null;
   if (p === null) return <span className="mem-prof none">프로필 없음</span>;
   return (
     <span className="mem-prof">
-      {p.realName} · {personLine(p, today)} · {p.genres.join('·')} · 인생 테마 {lifeLabel(p.lifeTheme)}
+      {p.realName} · {personLine(p)} · {p.genres.join('·')} · 인생 테마 {lifeLabel(p.lifeTheme)}
     </span>
   );
 }
@@ -24,7 +23,6 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
   const parts = useMemo(() => splitMembers(list ?? []), [list]);
   const dup = useMemo(() => sameNicknameUids(list ?? []), [list]);
   const [pastOpen, setPastOpen] = useState(false);
-  const today = todayKst();
 
   /* 되돌릴 수 없는 처리는 한 번 더 묻는다 */
   const remove = (m: MemberDto) => {
@@ -58,7 +56,7 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
                     <button className="btn mem-ok" type="button" disabled={busy.has(m.uid)} onClick={() => void act(m, 'approve')}>승인</button>
                     <button className="btn" type="button" disabled={busy.has(m.uid)} onClick={() => void act(m, 'reject')}>거절</button>
                   </span>
-                  <ProfLine p={m.profile} today={today} />
+                  <ProfLine p={m.profile} />
                 </div>
               ))}
             </div>
@@ -78,7 +76,7 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
                     const off = busy.has(m.uid);
                     return (
                       <tr key={m.uid}>
-                        <td><b><MemberLink uid={m.uid} name={memberName(m)} /></b><ProfLine p={m.profile} today={today} /></td>
+                        <td><b><MemberLink uid={m.uid} name={memberName(m)} /></b><ProfLine p={m.profile} /></td>
                         <td>{admin ? <span className="chip-info role">운영진</span> : '멤버'}</td>
                         <td className={m.hasDevice ? 'mem-yes' : 'mem-no'}>{m.hasDevice ? '있음' : '없음'}</td>
                         <td className="mem-sub">{formatKst(m.decidedAt).split(' ').slice(0, 2).join(' ') || '—'}</td>

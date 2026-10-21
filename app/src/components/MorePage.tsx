@@ -199,7 +199,7 @@ export function MorePage({
             </div>
           </div>
           {/* 내 프로필(§4.11) — 가입 신청한 사람·승인 멤버이고 서버가 프로필을 알 때 */}
-          {(m?.status === 'PENDING' || m?.status === 'APPROVED') && <ProfileFacts p={m.profile} onEdit={onEditProfile} />}
+          {(m?.status === 'PENDING' || m?.status === 'APPROVED') && <ProfileFacts p={m.profile} onEdit={onEditProfile} residenceOn={m.residenceOn} />}
           {profileOn && (
             <div className="more-stats">
               <div><b>{playedN}</b><span>해 본 테마</span></div>

@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GENRES, MBTI_ROWS, addMonths, ageKst, allEmpty, birthLabel, checkBirth, cleanRooms, draftFrom, draftIssues, emptyDraft, firstRange, lifeFromRef,
+  GENRES, MBTI_ROWS, addMonths, allEmpty, birthLabel, checkBirth, cleanRooms, draftFrom, draftIssues, emptyDraft, firstRange, lifeFromRef,
   lifeLabel, maskBirth, matchPerson, mergeMonths, monthLabel, monthsBetween, olderRange, personLine, searchLife, sortPeople,
-  toProfile, toggleGenre, topRanks, type Draft,
+  toProfile, toggleGenre, topRanks, yearLabel, type Draft,
 } from './memberProfile';
 import { canEditProfile, needJoin, needsProfile, profileApiOn } from './profileGate';
-import type { ClubMemberDto, ProfileDto, ThemeRef } from './server';
+import { normProfile, type ClubMemberDto, type ProfileDto, type ThemeRef } from './server';
 
 const TODAY = '2026-10-20';
 const P: ProfileDto = {
   realName: '김방탈', birthDate: '1997-06-28', mbti: 'ENFP', roomCount: 312, genres: ['공포', '추리'],
-  lifeTheme: { themeName: '메모리컴퍼니', branchName: '키이스케이프 강남점', themeKey: 'k-mem' },
+  lifeTheme: { themeName: '메모리컴퍼니', branchName: '키이스케이프 강남점', themeKey: 'k-mem' }, residence: '서울 마포구',
 };
 const full: Draft = {
   nickname: '방탈출러버', realName: '김방탈', birth: '1997.06.28', mbti: 'ENFP', rooms: '312', genres: ['공포'],
-  life: { themeName: '메모리컴퍼니', branchName: '키이스케이프 강남점', themeKey: 'k-mem' },
+  life: { themeName: '메모리컴퍼니', branchName: '키이스케이프 강남점', themeKey: 'k-mem' }, residence: '서울 마포구',
 };
 
 describe('목록 값', () => {
@@ -58,21 +58,19 @@ describe('생일 칸', () => {
   });
 });
 
-describe('만 나이(한국 날짜)', () => {
-  it('생일 전날·당일·다음 날', () => {
-    expect(ageKst('1997-06-28', '2026-06-27')).toBe(28);
-    expect(ageKst('1997-06-28', '2026-06-28')).toBe(29);
-    expect(ageKst('1997-06-28', '2026-10-20')).toBe(29);
-    expect(ageKst('1997-12-31', '2026-01-01')).toBe(28);
+describe('나이 표기 "97년생"(2026-10-21 사용자 결정)', () => {
+  it('태어난 해 끝 두 자리 + 년생 — 생일 전후·오늘 날짜와 상관없다', () => {
+    expect(yearLabel('1997-06-28')).toBe('97년생');
+    expect(yearLabel('1997-12-31')).toBe('97년생');
+    expect(yearLabel('1940-01-01')).toBe('40년생');
+  });
+  it('2000년대는 앞의 0 을 남긴다(00년생·07년생)', () => {
+    expect(yearLabel('2000-02-29')).toBe('00년생');
+    expect(yearLabel('2007-03-01')).toBe('07년생');
   });
   it('생일 표시는 월.일(입력 칸과 같은 두 자리)', () => {
     expect(birthLabel('1997-06-28')).toBe('06.28');
     expect(birthLabel('2000-02-29')).toBe('02.29');
-  });
-  it('2월 29일생은 평년엔 3월 1일부터 한 살 더(2월 28일은 아직)', () => {
-    expect(ageKst('2000-02-29', '2025-02-28')).toBe(24);
-    expect(ageKst('2000-02-29', '2025-03-01')).toBe(25);
-    expect(ageKst('2000-02-29', '2028-02-29')).toBe(28);
   });
 });
 
@@ -103,7 +101,7 @@ describe('폼 완성 판정', () => {
     expect(draftIssues(full, TODAY)).toEqual({});
     expect(toProfile({ ...full, nickname: ' 방탈출러버 ', realName: ' 김방탈 ' }, TODAY)).toEqual({
       nickname: '방탈출러버',
-      profile: { realName: '김방탈', birthDate: '1997-06-28', mbti: 'ENFP', roomCount: 312, genres: ['공포'], lifeTheme: full.life },
+      profile: { realName: '김방탈', birthDate: '1997-06-28', mbti: 'ENFP', roomCount: 312, genres: ['공포'], lifeTheme: full.life, residence: '서울 마포구' },
     });
   });
   it('서버가 타입까지 본다(§4.11) — roomCount 는 정수 number, genres 는 배열, birthDate 는 YYYY-MM-DD', () => {
@@ -114,9 +112,9 @@ describe('폼 완성 판정', () => {
     expect(out.profile.birthDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(JSON.parse(JSON.stringify(out.profile)).roomCount).toBe(0);
   });
-  it('빈 폼은 일곱 칸 모두 안내, 보낼 모양 없음', () => {
+  it('빈 폼은 여덟 칸 모두 안내(거주지역 포함), 보낼 모양 없음', () => {
     const iss = draftIssues(emptyDraft(), TODAY);
-    expect(Object.keys(iss).sort()).toEqual(['birth', 'genres', 'life', 'mbti', 'nickname', 'realName', 'rooms']);
+    expect(Object.keys(iss).sort()).toEqual(['birth', 'genres', 'life', 'mbti', 'nickname', 'realName', 'residence', 'rooms']);
     expect(toProfile(emptyDraft(), TODAY)).toBeNull();
   });
   it('글자 수는 코드 포인트(이모지 1개 = 1자), 20자 넘으면 막는다', () => {
@@ -130,6 +128,29 @@ describe('폼 완성 판정', () => {
   it('인생 테마 — 글자 없는 이름·40자 넘는 이름은 막는다', () => {
     expect(draftIssues({ ...full, life: { themeName: '!!!', branchName: null, themeKey: null } }, TODAY).life).toBeDefined();
     expect(draftIssues({ ...full, life: { themeName: '가'.repeat(41), branchName: null, themeKey: null } }, TODAY).life).toContain('40자');
+  });
+  it('거주지역은 화면에서 필수 — 비거나 공백뿐이면 막고, 1~20자(코드 포인트), 앞뒤 공백은 지워 보낸다', () => {
+    expect(draftIssues({ ...full, residence: '' }, TODAY).residence).toBe('거주지역을 적어 주세요. 예: 서울 마포구');
+    expect(draftIssues({ ...full, residence: '   ' }, TODAY).residence).toBe('거주지역을 적어 주세요. 예: 서울 마포구');
+    expect(draftIssues({ ...full, residence: '가'.repeat(20) }, TODAY).residence).toBeUndefined();
+    expect(draftIssues({ ...full, residence: '🏠'.repeat(20) }, TODAY).residence).toBeUndefined();
+    expect(draftIssues({ ...full, residence: '가'.repeat(21) }, TODAY).residence).toBe('거주지역은 20자까지예요 (지금 21자).');
+    expect(toProfile({ ...full, residence: '  서울 마포구  ' }, TODAY)?.profile.residence).toBe('서울 마포구');
+    expect(toProfile({ ...full, residence: '' }, TODAY)).toBeNull();
+  });
+  it('거주지역이 없는(null) 프로필을 고치면 칸이 비어 있고, 채워야 저장된다', () => {
+    const d = draftFrom('방탈출러버', { ...P, residence: null });
+    expect(d.residence).toBe('');
+    expect(Object.keys(draftIssues(d, TODAY))).toEqual(['residence']);
+  });
+  it('옛 서버(residence 칸 없음)의 프로필은 null 로 맞춘다 — 있는 값·null 은 그대로', () => {
+    const { residence: _r, ...old } = P;
+    void _r;
+    expect(normProfile(old as ProfileDto).residence).toBeNull();
+    expect(normProfile(P).residence).toBe('서울 마포구');
+    expect(normProfile({ ...P, residence: null }).residence).toBeNull();
+    expect(normProfile(null)).toBeNull();
+    expect(normProfile(undefined)).toBeUndefined();
   });
   it('있는 프로필로 다시 채우면 같은 값이 나온다', () => {
     const d = draftFrom('방탈출러버', P);
@@ -170,9 +191,10 @@ describe('멤버 목록', () => {
     expect(list.filter((m) => matchPerson(m, '나 비')).map((m) => m.uid)).toEqual(['c']);
     expect(list.filter((m) => matchPerson(m, '')).length).toBe(4);
   });
-  it('둘째 줄 "만 29세 · ENFP · 방 312개", 잘 몰라요·천 단위', () => {
-    expect(personLine(P, TODAY)).toBe('만 29세 · ENFP · 방 312개');
-    expect(personLine({ ...P, mbti: 'UNKNOWN', roomCount: 1234 }, TODAY)).toBe('만 29세 · 잘 몰라요 · 방 1,234개');
+  it('둘째 줄 "97년생 · ENFP · 방 312개 · 서울 마포구", 잘 몰라요·천 단위, 거주지역 없으면 그 칸 없이', () => {
+    expect(personLine(P)).toBe('97년생 · ENFP · 방 312개 · 서울 마포구');
+    expect(personLine({ ...P, mbti: 'UNKNOWN', roomCount: 1234 })).toBe('97년생 · 잘 몰라요 · 방 1,234개 · 서울 마포구');
+    expect(personLine({ ...P, residence: null })).toBe('97년생 · ENFP · 방 312개');
   });
 });
 
@@ -234,6 +256,7 @@ describe('프로필을 묻고 보일 조건(profileGate — 진입 청크)', () 
     expect(needsProfile(me('APPROVED', null))).toBe(true);
     expect(needsProfile(me('PENDING', null))).toBe(true);
     expect(needsProfile(me('APPROVED', P))).toBe(false);
+    expect(needsProfile(me('APPROVED', { ...P, residence: null }))).toBe(false); // 거주지역만 비면 창을 띄우지 않는다(내 프로필 줄로 안내)
   });
   it('가입 전·거절·내보냄은 묻지 않고 고치기도 없다(가입 창에서 받는다)', () => {
     for (const s of ['NONE', 'REJECTED', 'REMOVED'] as const) {

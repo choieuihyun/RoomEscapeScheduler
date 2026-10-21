@@ -133,7 +133,7 @@ export function MemberCard({ uid, name, from, meUid, today, events, past, onClos
                 <p className="mcard-note">프로필을 불러오지 못했어요. <button type="button" className="stl-link" onClick={() => loadMembers(true)}>다시 시도</button></p>
               ) : <p className="mcard-note">불러오는 중이에요…</p>
             ) : !p ? <p className="mcard-note">아직 프로필이 없어요</p> : (<>
-              <p className="mcard-line">{cardLine(p, today)}<span> · 생일 {birthLabel(p.birthDate)}</span></p>
+              <p className="mcard-line">{cardLine(p)}<span> · 생일 {birthLabel(p.birthDate)}</span></p>
               <div className="ppl-genres">{p.genres.map((g) => <span key={g} className="pfx-g">{g}</span>)}</div>
               <p className="mcard-life"><span>인생 테마</span> {lifeLabel(p.lifeTheme)}</p>
             </>)}

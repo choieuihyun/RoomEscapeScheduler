@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  addParticipant, conflictOf, createEvent, deleteEvent, errorCode, getEvent, isMissingApi, joinClub, kakaoLogin,
+  addParticipant, conflictOf, createEvent, deleteEvent, errorCode, getEvent, getMe, isMissingApi, joinClub, kakaoLogin,
   leaveEvent, listClubMembers, listEvents, listMembers, memberAction, removeParticipant, sayClub, setBooked,
   setMemberRole, updateEvent, listPlayed, addPlayed, deletePlayed, memberPlayed, listThemes, myPastEvents, freshThemes, joinEvent, setAvailability, clearAvailability,
   pushTest, deviceStatus, pushTestMessage, updateProfile, rankings, addWatch, sayWatch,
@@ -62,7 +62,7 @@ describe('동호회 API 호출', () => {
 describe('멤버 프로필·랭킹 (§4.11)', () => {
   const PROFILE: ProfileDto = {
     realName: '김방탈', birthDate: '1997-06-28', mbti: 'ENFP', roomCount: 312, genres: ['공포', '추리'],
-    lifeTheme: { themeName: '메모리컴퍼니', branchName: '키이스케이프 강남점', themeKey: 'k-mem' },
+    lifeTheme: { themeName: '메모리컴퍼니', branchName: '키이스케이프 강남점', themeKey: 'k-mem' }, residence: '서울 마포구',
   };
 
   it('가입 신청에 프로필을 함께 싣는다', async () => {
@@ -96,6 +96,32 @@ describe('멤버 프로필·랭킹 (§4.11)', () => {
     const [m] = await listClubMembers('T');
     expect(m.profile).toBeUndefined();
     expect(m.role).toBeUndefined();
+  });
+
+  it('거주지역 — 옛 서버(칸 없음)는 null 로 맞추고 residenceOn=false, 칸이 오면(null 이어도) residenceOn=true', async () => {
+    const { residence: _r, ...old } = PROFILE;
+    void _r;
+    const me = (profile: unknown) => ({ uid: 'u', nickname: '곰', role: 'MEMBER', status: 'APPROVED', kakaoLinked: false, profile });
+    stubFetch(200, me(old));
+    let m = await getMe('T');
+    expect(m.profile?.residence).toBeNull();
+    expect(m.residenceOn).toBe(false);
+    stubFetch(200, me({ ...old, residence: null }));
+    m = await updateProfile('곰', PROFILE, 'T');
+    expect(m.profile?.residence).toBeNull();
+    expect(m.residenceOn).toBe(true);
+    stubFetch(200, me(PROFILE));
+    m = await joinClub('곰', PROFILE, 'T');
+    expect(m.profile?.residence).toBe('서울 마포구');
+    expect(m.residenceOn).toBe(true);
+    stubFetch(200, me(null));
+    expect((await getMe('T')).residenceOn).toBeUndefined();
+    stubFetch(200, [{ uid: 'u', nickname: '곰', profile: old }, { uid: 'v', nickname: '말', profile: null }]);
+    const list = await listClubMembers('T');
+    expect(list[0].profile?.residence).toBeNull();
+    expect(list[1].profile).toBeNull();
+    stubFetch(200, [{ uid: 'u', nickname: '곰', role: 'MEMBER', status: 'APPROVED', createdAt: '', decidedAt: null, hasDevice: false, profile: old }]);
+    expect((await listMembers('ALL', 'T'))[0].profile?.residence).toBeNull();
   });
 
   it('랭킹 API 를 모르는 서버(본문 없는 404)는 isMissingApi, BAD_RANGE 는 서버 문구', async () => {

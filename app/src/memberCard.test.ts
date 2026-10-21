@@ -17,7 +17,7 @@ const G = (themeName: string, uids: string[], o: Partial<WishGroupDto> = {}): Wi
 });
 const PROF: ProfileDto = {
   realName: '김열쇠', birthDate: '1997-06-28', mbti: 'ENFP', roomCount: 1312, genres: ['공포'],
-  lifeTheme: { themeName: '메모리컴퍼니', branchName: '키이스케이프 강남점', themeKey: null },
+  lifeTheme: { themeName: '메모리컴퍼니', branchName: '키이스케이프 강남점', themeKey: null }, residence: '서울 마포구',
 };
 
 describe('함께한 일정 세기', () => {
@@ -72,14 +72,14 @@ describe('하고 싶은 테마 고르기', () => {
 });
 
 describe('카드 프로필 줄', () => {
-  it('만 나이 · MBTI · 방 수(천 단위 쉼표)', () => {
-    expect(cardLine(PROF, TODAY)).toBe('만 29세 · ENFP · 방 1,312개');
+  it('97년생 · MBTI · 방 수(천 단위 쉼표) · 거주지역', () => {
+    expect(cardLine(PROF)).toBe('97년생 · ENFP · 방 1,312개 · 서울 마포구');
   });
-  it('생일 전이면 한 살 적게', () => {
-    expect(cardLine({ ...PROF, birthDate: '1997-12-01' }, TODAY)).toBe('만 28세 · ENFP · 방 1,312개');
+  it('생일 전후와 상관없이 태어난 해, 거주지역이 없으면 그 칸 없이', () => {
+    expect(cardLine({ ...PROF, birthDate: '1997-12-01', residence: null })).toBe('97년생 · ENFP · 방 1,312개');
   });
   it('MBTI 를 모르면 "MBTI 잘 몰라요"', () => {
-    expect(cardLine({ ...PROF, mbti: 'UNKNOWN' }, TODAY)).toBe('만 29세 · MBTI 잘 몰라요 · 방 1,312개');
+    expect(cardLine({ ...PROF, mbti: 'UNKNOWN' })).toBe('97년생 · MBTI 잘 몰라요 · 방 1,312개 · 서울 마포구');
   });
   it('해 본 날 — 올해는 월.일, 다른 해는 연도까지, 없으면 빈칸', () => {
     expect(playedDate('2026-10-03', TODAY)).toBe('10.03');

@@ -99,7 +99,7 @@ export function ProfilePage({
           <b className="home-name">{nickname} 님</b>
           <span className={'chip-info pf-role' + (isAdmin ? ' role' : '')}>{isAdmin ? '운영진' : '멤버'}</span>
           {linkLine && <span className="pf-link">{linkLine}</span>}
-          <ProfileFacts p={member?.profile} onEdit={onEditProfile} />
+          <ProfileFacts p={member?.profile} onEdit={onEditProfile} residenceOn={member?.residenceOn} />
           <div className="pf-stats">
             <div><b>{kept === null ? '–' : kept.length}</b><span>해 본 테마</span></div>
             <div><b>{pastCount}</b><span>지난 일정</span></div>

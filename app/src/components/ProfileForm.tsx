@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode, type KeyboardEvent as ReactKeyboardEvent, type MutableRefObject } from 'react';
 import { cpLen, todayKst } from '../clubEvents';
 import {
-  FIELDS, GENRES, GENRE_MAX, MBTI_ROWS, NAME_MAX, THEME_MAX, cleanRooms, draftFrom, draftIssues, lifeFromRef, lifeLabel, lifeManual, maskBirth,
+  FIELDS, GENRES, GENRE_MAX, MBTI_ROWS, NAME_MAX, RESIDENCE_MAX, THEME_MAX, cleanRooms, draftFrom, draftIssues, lifeFromRef, lifeLabel, lifeManual, maskBirth,
   searchLife, toProfile, toggleGenre, type Draft, type Field,
 } from '../memberProfile';
 import { listThemes, sayClub, type ProfileDto, type ThemeRef } from '../server';
@@ -15,7 +15,7 @@ let themesP: Promise<ThemeRef[]> | null = null;
 const loadThemes = () => (themesP ??= listThemes().catch((e) => { themesP = null; throw e; }));
 
 const LABEL: Record<Field, string> = {
-  nickname: '별명', realName: '이름', birth: '생일', mbti: 'MBTI', rooms: '지금까지 한 방 수', genres: '좋아하는 장르', life: '인생 테마',
+  nickname: '별명', realName: '이름', birth: '생일', residence: '거주지역', mbti: 'MBTI', rooms: '지금까지 한 방 수', genres: '좋아하는 장르', life: '인생 테마',
 };
 
 export function ProfileForm({
@@ -71,6 +71,7 @@ export function ProfileForm({
   /* 가입 신청 칸은 "오픈채팅 닉네임"이라 안내도 그 말로 */
   const word = (t: string | undefined) => (t && nickLabel !== '별명' ? t.replace('별명', '닉네임') : t);
   const hint = (f: Field) => (tried || (f === 'nickname' && cpLen(d.nickname.trim()) > NAME_MAX) || (f === 'realName' && cpLen(d.realName.trim()) > NAME_MAX)
+    || (f === 'residence' && cpLen(d.residence.trim()) > RESIDENCE_MAX)
     ? word(issues[f]) : undefined);
   const hintP = (f: Field) => {
     const h = hint(f);
@@ -141,7 +142,15 @@ export function ProfileForm({
           <input id={id + 'birth'} data-f="birth" inputMode="numeric" autoComplete="bday" placeholder="1997.06.28" maxLength={10}
             value={d.birth} onChange={(e) => set('birth', maskBirth(e.target.value))}
             aria-invalid={hint('birth') ? true : undefined} aria-describedby={described('birth') ?? id + 'birthh'} />
-          {hintP('birth') ?? <span className="pfm-note" id={id + 'birthh'}>숫자만 쳐도 돼요. 나이는 만 나이로 보여요</span>}
+          {hintP('birth') ?? <span className="pfm-note" id={id + 'birthh'}>숫자만 쳐도 돼요. 나이는 '97년생'처럼 보여요</span>}
+        </div>
+
+        <div className="pfm-row">
+          <label htmlFor={id + 'residence'}>거주지역</label>
+          <input id={id + 'residence'} data-f="residence" autoComplete="off" placeholder="예: 서울 마포구" value={d.residence}
+            onChange={(e) => set('residence', e.target.value)} aria-invalid={hint('residence') ? true : undefined}
+            aria-describedby={described('residence') ?? id + 'resh'} />
+          {hintP('residence') ?? <span className="pfm-note" id={id + 'resh'}>시·구까지만 적어도 돼요. 멤버 목록과 멤버 카드에 보여요</span>}
         </div>
 
         <fieldset className="pfm-set" data-f="mbti" aria-describedby={described('mbti')}>

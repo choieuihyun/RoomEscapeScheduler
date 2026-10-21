@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { keepMembers, MemberLink } from '../clubStore';
-import { todayKst } from '../clubEvents';
 import { lifeLabel, matchPerson, personLine, sortPeople, type PeopleSort } from '../memberProfile';
 import { listClubMembers, sayClub, type ClubMemberDto } from '../server';
 import { Avatar } from './Avatar';
@@ -29,7 +28,6 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
   }, []);
   useEffect(() => { if (active) void Promise.resolve().then(load); /* 한 틱 뒤에 — effect 안 동기 setState 경고를 피한다 */ }, [active, load]);
 
-  const today = todayKst();
   const shown = useMemo(() => (list ? sortPeople(list.filter((m) => matchPerson(m, q)), sort, meUid) : []), [list, q, sort, meUid]);
 
   return (<>
@@ -78,7 +76,7 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
                   </div>
                 </div>
                 {p ? (<>
-                  <p className="ppl-line">{personLine(p, today)}</p>
+                  <p className="ppl-line">{personLine(p)}</p>
                   <div className="ppl-genres">{p.genres.map((g) => <span key={g} className="pfx-g">{g}</span>)}</div>
                   <p className="ppl-life"><span>인생 테마</span> {lifeLabel(p.lifeTheme)}</p>
                 </>) : <p className="ppl-none">아직 프로필이 없어요</p>}

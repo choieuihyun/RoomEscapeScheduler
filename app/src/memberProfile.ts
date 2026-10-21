@@ -19,6 +19,7 @@ export const mbtiLabel = (m: Mbti): string => (m === 'UNKNOWN' ? '잘 몰라요'
 export const NAME_MAX = 20;      // 별명·이름(코드 포인트)
 export const THEME_MAX = 40;     // 인생 테마 이름·매장
 export const ROOM_MAX = 9999;
+export const RESIDENCE_MAX = 20; // 거주지역(코드 포인트, 앞뒤 공백 지운 뒤)
 export const BIRTH_MIN = '1940-01-01';
 
 const cp = (s: string) => [...s].length;
@@ -62,13 +63,8 @@ export const BIRTH_ERR: Record<'empty' | 'partial' | 'invalid' | 'range', string
 /* 1997-06-28 → 1997.06.28 (폼에 다시 채울 때) */
 export const birthDots = (iso: string): string => iso.replaceAll('-', '.');
 
-/* 만 나이(한국 날짜 기준). 올해 생일(월·일)이 지났으면(당일 포함) 한 살 더.
-   2월 29일생은 평년에 3월 1일부터 한 살 더 먹는다 — (월, 일) 크기 비교라 2/28 은 아직 전이다. */
-export function ageKst(birth: string, today: string): number {
-  const by = +birth.slice(0, 4), bmd = birth.slice(5);
-  const ty = +today.slice(0, 4), tmd = today.slice(5);
-  return ty - by - (tmd < bmd ? 1 : 0);
-}
+/* 나이 표기 — "만 29세" 대신 "97년생"(2026-10-21 사용자 결정, §4.11). 태어난 해 끝 두 자리 + "년생"(2000 → "00년생") */
+export const yearLabel = (birth: string): string => `${birth.slice(2, 4)}년생`;
 
 /* 생일 표시 — 계약의 "월.일", 입력 칸(1997.06.28)과 같은 모양으로 "06.28" */
 export const birthLabel = (iso: string): string => `${iso.slice(5, 7)}.${iso.slice(8, 10)}`;
@@ -130,17 +126,18 @@ export interface Draft {
   rooms: string;     // 화면 칸 그대로(숫자만)
   genres: Genre[];
   life: LifeTheme | null;
+  residence: string; // 화면 칸 그대로
 }
-export type Field = 'nickname' | 'realName' | 'birth' | 'mbti' | 'rooms' | 'genres' | 'life';
-export const FIELDS: readonly Field[] = ['nickname', 'realName', 'birth', 'mbti', 'rooms', 'genres', 'life'];
+export type Field = 'nickname' | 'realName' | 'birth' | 'residence' | 'mbti' | 'rooms' | 'genres' | 'life';
+export const FIELDS: readonly Field[] = ['nickname', 'realName', 'birth', 'residence', 'mbti', 'rooms', 'genres', 'life'];
 
 export const emptyDraft = (nickname = ''): Draft =>
-  ({ nickname, realName: '', birth: '', mbti: null, rooms: '', genres: [], life: null });
+  ({ nickname, realName: '', birth: '', mbti: null, rooms: '', genres: [], life: null, residence: '' });
 
 /* 이미 있는 프로필로 폼을 채운다(고치기·거절 뒤 다시 신청) */
 export const draftFrom = (nickname: string | null, p: ProfileDto | null | undefined): Draft => (p ? {
   nickname: nickname ?? '', realName: p.realName, birth: birthDots(p.birthDate), mbti: p.mbti,
-  rooms: String(p.roomCount), genres: [...p.genres], life: p.lifeTheme,
+  rooms: String(p.roomCount), genres: [...p.genres], life: p.lifeTheme, residence: p.residence ?? '',
 } : emptyDraft(nickname ?? ''));
 
 /* 칸마다 틀린 까닭(맞으면 없음). 전부 필수(사용자 결정) */
@@ -154,6 +151,10 @@ export function draftIssues(d: Draft, today: string): Partial<Record<Field, stri
   else if (name > NAME_MAX) out.realName = `이름은 ${NAME_MAX}자까지예요 (지금 ${name}자).`;
   const b = checkBirth(d.birth, today);
   if (!b.ok) out.birth = BIRTH_ERR[b.why];
+  /* 거주지역 — 서버는 선택이지만 화면은 필수(§4.11). 이미 있는 프로필이 null 이어도 고칠 때는 채워야 저장된다 */
+  const res = cp(d.residence.trim());
+  if (res === 0) out.residence = '거주지역을 적어 주세요. 예: 서울 마포구';
+  else if (res > RESIDENCE_MAX) out.residence = `거주지역은 ${RESIDENCE_MAX}자까지예요 (지금 ${res}자).`;
   if (!d.mbti) out.mbti = 'MBTI 를 골라 주세요. 모르면 "잘 몰라요"를 골라 주세요.';
   if (d.rooms === '') out.rooms = '지금까지 한 방 수를 적어 주세요. 처음이면 0 이에요.';
   else if (+d.rooms > ROOM_MAX) out.rooms = `${ROOM_MAX}개까지 적을 수 있어요.`;
@@ -172,7 +173,7 @@ export function toProfile(d: Draft, today: string): { nickname: string; profile:
   if (!b.ok || !d.mbti || !d.life) return null;
   return {
     nickname: d.nickname.trim(),
-    profile: { realName: d.realName.trim(), birthDate: b.iso, mbti: d.mbti, roomCount: +d.rooms, genres: [...d.genres], lifeTheme: d.life },
+    profile: { realName: d.realName.trim(), birthDate: b.iso, mbti: d.mbti, roomCount: +d.rooms, genres: [...d.genres], lifeTheme: d.life, residence: d.residence.trim() },
   };
 }
 
@@ -197,9 +198,9 @@ export function sortPeople(list: readonly ClubMemberDto[], sort: PeopleSort, meU
   return [...me, ...rest];
 }
 
-/* 둘째 줄 "만 29세 · ENFP · 방 312개" */
-export const personLine = (p: ProfileDto, today: string): string =>
-  `만 ${ageKst(p.birthDate, today)}세 · ${mbtiLabel(p.mbti)} · 방 ${p.roomCount.toLocaleString('ko-KR')}개`;
+/* 둘째 줄 "97년생 · ENFP · 방 312개 · 서울 마포구"(거주지역이 없으면 그 칸 없이) */
+export const personLine = (p: ProfileDto): string =>
+  `${yearLabel(p.birthDate)} · ${mbtiLabel(p.mbti)} · 방 ${p.roomCount.toLocaleString('ko-KR')}개${p.residence ? ` · ${p.residence}` : ''}`;
 
 /* ── 랭킹 ── */
 
