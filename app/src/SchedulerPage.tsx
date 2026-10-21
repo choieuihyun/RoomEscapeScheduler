@@ -438,9 +438,11 @@ export function SchedulerPage() {
   }, [auth, saveModal, eventForm, watches, tour, push]);
 
   /* 뒤로 가기로 닫는 것(backStack) — 일정 상세(캘린더에서 보일 때만, 다른 일정으로 바꿔도 기록은 하나)와 사용법 투어(= 끝내기).
-     창들은 저마다 컴포넌트 안에서 건다 */
-  useBackClose(cal.openEvent !== null && nav.view === 'calendar', closeEvent);
-  useBackClose(tour.active, tour.end);
+     창들은 저마다 컴포넌트 안에서 건다. 상세는 화면 안이라 layer 0 — 일정 창이 열린 채 알림 "열기"로 상세가 나중에 열려도
+     첫 뒤로 가기는 위에 보이는 일정 창을 닫는다.
+     투어는 실제로 화면에 떴을 때만, 그리고 로그인 확인(카카오 돌아옴 주소 정리)이 끝난 뒤에 — 처음 온 기기의 예약만으로는 쌓지 않는다 */
+  useBackClose(cal.openEvent !== null && nav.view === 'calendar', closeEvent, 0);
+  useBackClose(tour.shown && !auth.authLoading, tour.end);
 
   /* 화면을 바꾸면 새 화면의 맨 위부터 보여준다. */
   useEffect(() => { window.scrollTo({ top: 0 }); }, [nav.view]);
@@ -581,7 +583,7 @@ export function SchedulerPage() {
       </main>
 
       {authMounted && <LazyBoundary><AuthModal auth={auth} /></LazyBoundary>}
-      {loadOpen && <LazyBoundary><ThemePicker mode="themes" onAdd={s.addServerThemes} onClose={closeLoad} mine={profile.played} /></LazyBoundary>}
+      {loadOpen && <LazyBoundary><ThemePicker mode="themes" date={evCtx?.date} onAdd={s.addServerThemes} onClose={closeLoad} mine={profile.played} /></LazyBoundary>}
       {saveMounted && <LazyBoundary><SaveModal m={saveModal} /></LazyBoundary>}
       {clubOn && formMounted && <LazyBoundary><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} played={profile.played} /></LazyBoundary>}
       {auth.cloudOn && watchMounted && <LazyBoundary><WatchListModal w={watches} /></LazyBoundary>}

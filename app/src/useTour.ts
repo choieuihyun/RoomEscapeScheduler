@@ -29,6 +29,8 @@ export function useTour() {
   const [active, setActive] = useState(() => {
     try { return !localStorage.getItem(TOUR_KEY); } catch { return false; }
   });
+  /* 실제로 화면에 떴는지(첫 단계 자리를 잡았는지) — 뒤로 가기 기록은 이때만 쌓는다 */
+  const [shown, setShown] = useState(false);
 
   function mount(): TourNodes {
     if (nodesRef.current) return nodesRef.current;
@@ -53,6 +55,7 @@ export function useTour() {
   function end() {
     clearTimeout(autoRef.current);
     setActive(false);
+    setShown(false);
     if (!nodesRef.current) return;
     unmount();
     localStorage.setItem(TOUR_KEY, '1');
@@ -60,6 +63,7 @@ export function useTour() {
 
   function position(target: Element, step: (typeof TOUR_STEPS)[number]) {
     const { spot, tip } = mount();
+    setShown(true);
     const r = target.getBoundingClientRect();
     const pad = 8;
     spot.style.top = (r.top - pad) + 'px'; spot.style.left = (r.left - pad) + 'px';
@@ -144,5 +148,5 @@ export function useTour() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { start, end, active };
+  return { start, end, active, shown };
 }

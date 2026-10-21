@@ -1,3 +1,4 @@
+import { hist } from './backStack';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Me } from './cloud';
 import { handleKakaoReturn } from './authFlow';
@@ -98,7 +99,8 @@ export function useAuth() {
       const r = await handleKakaoReturn({
         search: location.search,
         href: location.href,
-        replaceUrl: url => history.replaceState(null, '', url),
+        /* 창 기록(투어 등)이 이미 쌓였어도 그 아래 기록까지 정리되게 backStack 으로 */
+        replaceUrl: url => hist.replace(null, url),
         endTrip: endKakaoTrip,
         kakaoLogin,
         kakaoLink,

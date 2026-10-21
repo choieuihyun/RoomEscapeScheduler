@@ -40,6 +40,7 @@ interface SessionsProps extends Common {
 }
 interface ThemesProps extends Common {
   mode: 'themes';
+  date?: string | null;      // 일정 문맥(그 일정의 테마를 고르는 중)이면 그 날짜, 아니면 오늘
   onAdd: (items: AddedTheme[]) => void;
 }
 type Props = SessionsProps | ThemesProps;
@@ -56,6 +57,11 @@ async function loadPlayedBy(eventId: number, date: string): Promise<Map<string, 
   const dto = await freshThemes(eventId, date, t);
   return new Map(dto.themes.map((x) => [x.themeKey, x.playedBy.length]));
 }
+
+/* 지난번 고른 지점 — 이 기기에 기억해 다음에 열 때 미리 고른다(같은 매장을 자주 본다) */
+const LAST_BRANCH = 'flod.picker.branch';
+const lastBranch = (): string | null => { try { return localStorage.getItem(LAST_BRANCH); } catch { return null; } };
+const keepBranch = (id: string) => { try { localStorage.setItem(LAST_BRANCH, id); } catch { /* 저장이 막혀도 고르기는 된다 */ } };
 
 const md = (iso: string) => `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}`;
 const WD = '일월화수목금토';
@@ -77,12 +83,12 @@ export function ThemePicker(p: Props) {
   const { mode, onClose, mine } = p;
   const sessions = p.mode === 'sessions' ? p : null;
   const today = todayKst();
-  const [date, setDate] = useState(sessions ? sessions.date : today);
+  const [date, setDate] = useState(sessions ? sessions.date : (p.mode === 'themes' && p.date) || today);
   const [list, setList] = useState<Branch[] | null>(cachedBranches);
   const [listErr, setListErr] = useState('');
   const [q, setQ] = useState('');
   const [region, setRegion] = useState<RegionPick>('전체');
-  const [branchId, setBranchId] = useState<string | null>(null);
+  const [branchId, setBranchId] = useState<string | null>(lastBranch);
   const [slots, setSlots] = useState<Map<string, Slot>>(new Map());
   const [picks, setPicks] = useState<Map<string, PickedSession>>(new Map());
   const [tpicks, setTpicks] = useState<Map<string, PickedTheme>>(new Map());
@@ -276,7 +282,7 @@ export function ThemePicker(p: Props) {
                   const ok = (b.dates ?? []).includes(date);
                   return (
                     <li key={b.id}>
-                      <button type="button" className={'tf-br' + (ok ? '' : ' no')} aria-pressed={b.id === branchId} onClick={() => setBranchId(b.id)}>
+                      <button type="button" className={'tf-br' + (ok ? '' : ' no')} aria-pressed={b.id === branchId} onClick={() => { setBranchId(b.id); keepBranch(b.id); }}>
                         <span>{branchLabel(b)}</span>
                         {!ok && <span className="tf-br-no">이날 없음</span>}
                       </button>
