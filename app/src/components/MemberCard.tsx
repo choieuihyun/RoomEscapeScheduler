@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CARD_TTL_MS, loadGroups, playedCache, reloadMembers, useClubStore, type PlayedV } from '../clubStore';
+import { Cake, CARD_TTL_MS, isBirthday, loadGroups, playedCache, reloadMembers, useClubStore, type PlayedV } from '../clubStore';
 import { dayLabel, eventTitle } from '../clubEvents';
 import { cardLine, playedDate, togetherWith, wishesOf } from '../memberCard';
 import { birthLabel, lifeLabel } from '../memberProfile';
@@ -60,6 +60,20 @@ function usePlayed(meUid: string, uid: string) {
   return { v, err, retry: load };
 }
 
+/* 생일 색종이 — 카드를 열 때 한 번(1초 안쪽), 카드 머리(아바타) 쪽에서 터져 퍼졌다가 떨어진다. 부드러운 다섯 색(형광 없음).
+   조각 자리는 미리 정해 둔다(그릴 때마다 Math.random 을 쓰지 않게) */
+const CONFETTI = Array.from({ length: 16 }, (_, i) => {
+  const a = (-165 + (150 / 15) * i) * (Math.PI / 180); // 위쪽 반원(-165°~-15°)으로 펼친다
+  const r = 70 + (i % 3) * 22;
+  return {
+    '--ux': `${Math.round(Math.cos(a) * r)}px`, '--uy': `${Math.round(Math.sin(a) * r * 0.75)}px`,
+    '--dx': `${Math.round(Math.cos(a) * r * 1.35)}px`, '--dy': `${40 + (i % 4) * 18}px`,
+    '--rot': `${(i % 2 ? 1 : -1) * (160 + i * 23)}deg`,
+    background: ['#F2B8A2', '#F3D48C', '#A8D5BA', '#A9C4F5', '#C9B6F2'][i % 5],
+    animationDelay: `${(i % 4) * 30}ms`,
+  } as React.CSSProperties;
+});
+
 export function MemberCard({ uid, name, from, meUid, today, events, past, onClose, onOpenEvent }: MemberCardProps) {
   const id = useId();
   const s = useClubStore();
@@ -109,16 +123,30 @@ export function MemberCard({ uid, name, from, meUid, today, events, past, onClos
   const tw = togetherWith([events, past], meUid, uid, today);
   const wishes = s.groups ? wishesOf(s.groups.list, uid, meUid) : null;
   const list = Array.isArray(played.v) ? played.v : null;
+  /* 오늘 생일이면 — 별명 옆 케이크 아이콘, 카드를 연 뒤 프로필을 처음 알게 된 때 색종이 한 번(멤버 목록을 받는 중이었어도).
+     움직임 줄이기면 아이콘만 */
+  const bday = !gone && isBirthday(p?.birthDate, today);
+  const [burst, setBurst] = useState(false);
+  const burstDone = useRef(false);
+  useEffect(() => {
+    if (!bday || burstDone.current) return;
+    burstDone.current = true;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    void Promise.resolve().then(() => setBurst(true));
+    window.setTimeout(() => setBurst(false), 1000); // 정리는 하지 않는다 — StrictMode 의 두 번째 실행이 이 타이머를 지우면 색종이가 남는다
+  }, [bday]);
 
   return createPortal(
     <div className="modal mcard-modal on" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="mbox mcard" role="dialog" aria-modal="true" aria-labelledby={id + 'n'} tabIndex={-1} ref={box}>
+        {burst && <div className="mcard-confetti" aria-hidden="true">{CONFETTI.map((st, i) => <i key={i} style={st} />)}</div>}
         <button type="button" className="btn-x mcard-x" aria-label="닫기" onClick={onClose}>×</button>
         <div className="mcard-head">
           <Avatar name={nick} className="mcard-ava" />
           <div className="mcard-who">
             <div className="mcard-n1">
               <b id={id + 'n'}>{nick}</b>
+              {bday && <><Cake /><span className="sr-only">오늘 생일</span></>}
               {m?.role === 'ADMIN' && <span className="chip-info role">운영진</span>}
             </div>
             {p && <span className="mcard-real">{p.realName}</span>}

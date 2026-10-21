@@ -2526,3 +2526,17 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
   .mcard-modal.modal{padding:0;align-items:flex-end}
   .mcard-modal .mbox{max-width:none;max-height:88vh;border-radius:16px 16px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom))}
 }
+/* 오늘 생일(§4.11) — 별명 옆 케이크 선 아이콘(차분한 갈색 — 주의 칩 글자색과 같은 값), 홈 띠의 아이콘도 같은 색 */
+.bday-ic{flex:none;color:var(--chip-warn-fg)}
+.mcard-n1 .bday-ic,.ppl-n1 .bday-ic{width:18px;height:18px}
+/* 색종이 — 카드 머리(아바타 가운데)에서 위로 퍼졌다가 떨어지며 사라진다(.9초). 카드 밖은 잘린다(.mbox overflow) */
+.mcard-confetti{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;border-radius:inherit}
+.mcard-confetti i{position:absolute;left:48px;top:48px;width:7px;height:10px;margin:-5px 0 0 -3px;border-radius:2px;opacity:0;
+  animation:mcardConf .9s cubic-bezier(.2,.7,.4,1) both}
+@keyframes mcardConf{
+  0%{transform:translate(0,0) rotate(0);opacity:0}
+  10%{opacity:1}
+  45%{transform:translate(var(--ux),var(--uy)) rotate(calc(var(--rot) * .5));opacity:1}
+  100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}
+}
+@media(prefers-reduced-motion:reduce){.mcard-confetti{display:none}}

@@ -149,6 +149,30 @@ export function reloadMembers(force = false): Promise<void> {
   return job.p;
 }
 
+/* ── 생일(§4.11, 2026-10-21 사용자 결정) ── 화면만(서버 일 없음). 멤버 카드·멤버 목록·홈 띠가 같이 쓴다 —
+   따로 모듈을 두면 공유 청크가 하나 더 생겨 진입 청크의 미리 받기 목록이 길어진다(WishToggle 과 같은 이유) */
+const leap = (y: number) => y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
+
+/* 오늘(KST, YYYY-MM-DD)이 생일인지 — 월·일이 같으면. 2월 29일생은 평년이면 2월 28일에 */
+export function isBirthday(birth: string | null | undefined, today: string): boolean {
+  if (!birth) return false;
+  const md = birth.slice(5), t = today.slice(5);
+  return md === t || (md === '02-29' && t === '02-28' && !leap(+today.slice(0, 4)));
+}
+
+/* 홈 생일 띠 — 오늘 생일인 승인 멤버. 나도 생일이면 내 것(축하), 아니면 가나다 첫 사람과 나머지 수. 누르면 그 사람 카드(나면 내 프로필) */
+export interface BdayStrip { uid: string; name: string; me: boolean; more: number }
+export function bdayStrip(members: Iterable<ClubMemberDto> | null | undefined, meUid: string, today: string): BdayStrip | null {
+  const list = [...(members ?? [])].filter((m) => isBirthday(m.profile?.birthDate, today))
+    .sort((a, b) => a.nickname.localeCompare(b.nickname, 'ko'));
+  const me = list.find((m) => m.uid === meUid);
+  if (me) return { uid: me.uid, name: me.nickname, me: true, more: 0 };
+  return list[0] ? { uid: list[0].uid, name: list[0].nickname, me: false, more: list.length - 1 } : null;
+}
+/* 홈 띠 문구 — 이모지는 여기 🎂 하나만(사용자 요청). 나머지 자리는 선 아이콘 */
+export const bdayText = (b: BdayStrip): string =>
+  b.me ? `생일 축하해요, ${b.name}님 🎂` : `오늘 ${b.name}님${b.more > 0 ? ` 외 ${b.more}명` : ''} 생일이에요 🎂`;
+
 /* 이름을 어떻게 그릴지 — 글자만 / 남의 카드 / 내 프로필로 */
 export function nameState(s: Pick<ClubState, 'uid' | 'people' | 'members'>, uid: string): 'text' | 'card' | 'me' {
   if (s.people !== 'on' || !uid) return 'text';
@@ -319,5 +343,5 @@ export const toggleWishFor = (r: WishRef): Promise<boolean> => (myWish(st.wishes
 
 /* "하고 싶어요" 단추도 이 모듈을 거쳐 가져간다 — 따로 가져가면 청크가 하나 더 생겨 진입 청크의 미리 받기 목록이 길어진다(진입 크기 한도) */
 export { WishToggle } from './components/WishToggle';
-export { MemberLink } from './components/MemberLink';
+export { Cake, MemberLink } from './components/MemberLink';
 export { PayCard, PayForm } from './components/PayInfo';

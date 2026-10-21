@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { keepMembers, MemberLink } from '../clubStore';
+import { Cake, isBirthday, keepMembers, MemberLink } from '../clubStore';
+import { todayKst } from '../clubEvents';
 import { lifeLabel, matchPerson, personLine, sortPeople, type PeopleSort } from '../memberProfile';
 import { listClubMembers, sayClub, type ClubMemberDto } from '../server';
 import { Avatar } from './Avatar';
@@ -28,6 +29,7 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
   }, []);
   useEffect(() => { if (active) void Promise.resolve().then(load); /* 한 틱 뒤에 — effect 안 동기 setState 경고를 피한다 */ }, [active, load]);
 
+  const today = todayKst();
   const shown = useMemo(() => (list ? sortPeople(list.filter((m) => matchPerson(m, q)), sort, meUid) : []), [list, q, sort, meUid]);
 
   return (<>
@@ -69,6 +71,7 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
                   <div className="ppl-who">
                     <div className="ppl-n1">
                       <b><MemberLink uid={m.uid} name={m.nickname} className="ppl-open" /></b>
+                      {isBirthday(p?.birthDate, today) && <><Cake /><span className="sr-only">오늘 생일</span></>}
                       {m.role === 'ADMIN' && <span className="chip-info role">운영진</span>}
                       {me && <span className="chip-info">나</span>}
                     </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nameState } from './clubStore';
+import { bdayStrip, bdayText, isBirthday, nameState } from './clubStore';
 import { cardLine, playedDate, togetherWith, wishesOf } from './memberCard';
 import type { ClubMemberDto, EventDto, ProfileDto, WishGroupDto } from './server';
 import { myProfileView } from './useView';
@@ -109,5 +109,47 @@ describe('이름을 누르면', () => {
     expect(myProfileView(true, true)).toBe('profile');
     expect(myProfileView(false, true)).toBe('more');
     expect(myProfileView(true, false)).toBe('more');
+  });
+});
+
+describe('오늘 생일(KST)', () => {
+  it('월·일이 오늘과 같으면 생일 — 해는 상관없다', () => {
+    expect(isBirthday('1997-10-21', '2026-10-21')).toBe(true);
+    expect(isBirthday('1997-10-20', '2026-10-21')).toBe(false);
+    expect(isBirthday('1997-11-21', '2026-10-21')).toBe(false);
+    expect(isBirthday(undefined, '2026-10-21')).toBe(false);
+  });
+  it('2월 29일생 — 평년엔 2월 28일, 윤년엔 2월 29일(28일은 아님)', () => {
+    expect(isBirthday('2000-02-29', '2027-02-28')).toBe(true);
+    expect(isBirthday('2000-02-29', '2027-03-01')).toBe(false);
+    expect(isBirthday('2000-02-29', '2028-02-28')).toBe(false);
+    expect(isBirthday('2000-02-29', '2028-02-29')).toBe(true);
+    expect(isBirthday('2000-02-29', '2100-02-28')).toBe(true); // 2100 은 평년(100 의 배수)
+    expect(isBirthday('1999-02-28', '2027-02-28')).toBe(true);
+  });
+});
+
+describe('홈 생일 띠', () => {
+  const mem = (uid: string, nickname: string, birthDate: string | null): ClubMemberDto =>
+    ({ uid, nickname, profile: birthDate ? { ...PROF, birthDate } : null });
+  const list = [mem('a', '탈출왕', '1990-10-21'), mem('b', '열쇠', '1995-10-21'), mem('c', '방린이', '2000-01-01'), mem('d', '나비', null)];
+  it('한 명이면 "오늘 열쇠님 생일이에요 🎂", 그 사람 카드로', () => {
+    const b = bdayStrip([list[1], list[2]], 'me', TODAY)!;
+    expect(b).toEqual({ uid: 'b', name: '열쇠', me: false, more: 0 });
+    expect(bdayText(b)).toBe('오늘 열쇠님 생일이에요 🎂');
+  });
+  it('여럿이면 가나다 첫 사람 + "외 n명"', () => {
+    const b = bdayStrip(list, 'me', TODAY)!;
+    expect(b.uid).toBe('b');
+    expect(bdayText(b)).toBe('오늘 열쇠님 외 1명 생일이에요 🎂');
+  });
+  it('나도 생일이면 "생일 축하해요, {별명}님 🎂"(다른 사람이 있어도)', () => {
+    const b = bdayStrip([...list, mem('me', '방탈출러버', '1997-10-21')], 'me', TODAY)!;
+    expect(b).toEqual({ uid: 'me', name: '방탈출러버', me: true, more: 0 });
+    expect(bdayText(b)).toBe('생일 축하해요, 방탈출러버님 🎂');
+  });
+  it('아무도 없거나 목록을 못 받았으면 띠 없음', () => {
+    expect(bdayStrip([list[2], list[3]], 'me', TODAY)).toBeNull();
+    expect(bdayStrip(null, 'me', TODAY)).toBeNull();
   });
 });

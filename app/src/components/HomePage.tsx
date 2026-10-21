@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { duesOf, MemberLink, refreshDues, useClubStore } from '../clubStore';
+import { bdayStrip, bdayText, Cake, duesOf, MemberLink, openMember, refreshDues, useClubStore } from '../clubStore';
 import { won } from '../settle';
 import { showToast } from '../toast';
 import type { UseProfileReturn } from '../useProfile';
@@ -150,6 +150,8 @@ export function HomePage({
   /* 맨 위 띠 — 내가 참여한 오늘·내일 일정(푸시를 못 받는 사람용, §4.10). 오늘 이미 끝난 일정은 뺀다(한국 시각) */
   /* 목록을 못 받은 상태면 낡은 목록으로 띠를 만들지 않는다 */
   const strip = club.error ? null : todayStrip(events, now);
+  /* 생일 띠 — 받아 둔 승인 멤버 목록(멤버 카드용, clubStore)에서 오늘(KST) 생일인 사람. 목록이 없으면(6단계 전 서버 등) 없음 */
+  const bday = bdayStrip(club7.members?.values(), club7.uid, today);
 
   return (
     <>
@@ -160,6 +162,13 @@ export function HomePage({
         <b className="home-strip-when">{strip.when}</b>{' '}
         <span className="home-strip-name">{strip.name}</span>
         {strip.more > 0 && <>{' '}<span className="home-strip-more">외 {strip.more}</span></>}
+        <span className="home-strip-go" aria-hidden="true">›</span>
+      </button>
+    )}
+    {bday && (
+      <button type="button" className="home-strip home-bday" onClick={(e) => openMember({ uid: bday.uid, name: bday.name, from: e.currentTarget })}>
+        <Cake className="home-strip-ic bday-ic" />
+        <span className="home-strip-name">{bdayText(bday)}</span>
         <span className="home-strip-go" aria-hidden="true">›</span>
       </button>
     )}
