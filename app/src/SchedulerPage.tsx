@@ -3,7 +3,7 @@ import { recordPlanPlayed } from './played';
 import { useScheduler } from './scheduler/useScheduler';
 import { useTheme } from './useTheme';
 import { useTour } from './useTour';
-import { useLoadModal, type AddedTheme } from './useLoadModal';
+import type { AddedTheme } from './scheduler/types';
 import { useAuth } from './useAuth';
 import { usePlans } from './usePlans';
 import { useSaveModal } from './useSaveModal';
@@ -43,7 +43,8 @@ const ProfilePage = lazyRetry(() => import('./components/ProfilePage').then(m =>
 const MorePage = lazyRetry(() => import('./components/MorePage').then(m => ({ default: m.MorePage })));
 const EventForm = lazyRetry(() => import('./components/EventForm').then(m => ({ default: m.EventForm })));
 const CalendarPage = lazyRetry(() => import('./components/CalendarPage').then(m => ({ default: m.CalendarPage })));
-const LoadModal = lazyRetry(() => import('./components/LoadModal').then(m => ({ default: m.LoadModal })));
+/* 테마 고르기 창 — 시간표 계산의 테마 불러오기(테마째). 일정 만들기의 테마 찾아서 넣기(회차)와 같은 창 */
+const ThemePicker = lazyRetry(() => import('./components/ThemePicker').then(m => ({ default: m.ThemePicker })));
 const AuthModal = lazyRetry(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
 const SaveModal = lazyRetry(() => import('./components/SaveModal').then(m => ({ default: m.SaveModal })));
 const WatchListModal = lazyRetry(() => import('./components/WatchListModal').then(m => ({ default: m.WatchListModal })));
@@ -110,7 +111,8 @@ export function SchedulerPage() {
   const s = useScheduler();
   const theme = useTheme();
   const tour = useTour();
-  const loadModal = useLoadModal(s.addServerThemes);
+  const [loadOpen, setLoadOpen] = useState(false);
+  const closeLoad = useCallback(() => setLoadOpen(false), []);
   const auth = useAuth();
   /* 동호회 API 가 켜진 승인 멤버일 때만 다녀온 일정을 해 본 테마로 잇는다(homeOn 은 아래에서 정해진다) */
   const planDoneRef = useRef<((steps: { name: string }[], date: string) => void) | undefined>(undefined);
@@ -400,7 +402,7 @@ export function SchedulerPage() {
   const [askedOff, setAskedOff] = useState('');
   if (askedOff && askedOff !== meUid) setAskedOff(''); // 로그아웃·다른 계정이면 다시 묻는다
   const wantAsk = needsProfile(auth.member) && !editGone && askedOff !== meUid;
-  const calm = decided && !auth.open && !eventForm.open && !loadModal.open && !saveModal.open && !watches.open && !tour.active && linkId === null
+  const calm = decided && !auth.open && !eventForm.open && !loadOpen && !saveModal.open && !watches.open && !tour.active && linkId === null
     && readEventHash(location.hash) === null;
   const [asking, setAsking] = useState(false);
   if (wantAsk && calm && !editOpen && push.guide === null && !asking) setAsking(true);
@@ -414,7 +416,6 @@ export function SchedulerPage() {
   useEffect(() => {
     function onKeydown(e: KeyboardEvent) {
       if (e.key !== 'Escape' || e.isComposing || e.keyCode === 229) return; // 한글 조합 중 Esc 는 조합만 끝낸다
-      if (loadModal.open) loadModal.close();
       /* 로그인 창은 AuthModal 이 스스로 닫는다 — 가입 칸에 적은 게 있으면 먼저 묻는다 */
       if (saveModal.open) saveModal.close();
       if (eventForm.open) eventForm.close();
@@ -424,7 +425,7 @@ export function SchedulerPage() {
     }
     document.addEventListener('keydown', onKeydown);
     return () => document.removeEventListener('keydown', onKeydown);
-  }, [loadModal, auth, saveModal, eventForm, watches, tour, push]);
+  }, [auth, saveModal, eventForm, watches, tour, push]);
 
   /* 화면을 바꾸면 새 화면의 맨 위부터 보여준다. */
   useEffect(() => { window.scrollTo({ top: 0 }); }, [nav.view]);
@@ -448,7 +449,6 @@ export function SchedulerPage() {
   const clubPagesMounted = useEver(nav.view === 'people' || nav.view === 'ranking' || nav.view === 'together');
   const formMounted = useEver(eventForm.open);
   const authMounted = useEver(auth.open);
-  const loadMounted = useEver(loadModal.open);
   const saveMounted = useEver(saveModal.open);
   const watchMounted = useEver(watches.open);
   const guideMounted = useEver(push.guide !== null);
@@ -492,7 +492,7 @@ export function SchedulerPage() {
               <button type="button" className="evctx-x" onClick={() => setEvCtx(null)}>그만두기</button>
             </div>
           )}
-          <ThemeList s={s} onOpenLoad={loadModal.openModal} watchCtl={watchCtl} />
+          <ThemeList s={s} onOpenLoad={() => setLoadOpen(true)} watchCtl={watchCtl} />
           <ConditionsPanel s={s} />
           <ResultsPanel s={s} onSave={auth.cloudOn ? saveModal.openSave : undefined} onClubPost={homeOn ? postToClub : undefined}
             onInsert={insMode === 'insert' ? insertToEvent : insMode === 'blocked' ? null : undefined} watchCtl={watchCtl} />
@@ -566,7 +566,7 @@ export function SchedulerPage() {
       </main>
 
       {authMounted && <LazyBoundary><AuthModal auth={auth} /></LazyBoundary>}
-      {loadMounted && <LazyBoundary><LoadModal m={loadModal} /></LazyBoundary>}
+      {loadOpen && <LazyBoundary><ThemePicker mode="themes" onAdd={s.addServerThemes} onClose={closeLoad} mine={profile.played} /></LazyBoundary>}
       {saveMounted && <LazyBoundary><SaveModal m={saveModal} /></LazyBoundary>}
       {clubOn && formMounted && <LazyBoundary><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} played={profile.played} /></LazyBoundary>}
       {auth.cloudOn && watchMounted && <LazyBoundary><WatchListModal w={watches} /></LazyBoundary>}

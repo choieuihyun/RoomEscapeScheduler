@@ -7,7 +7,7 @@ import { playedDots } from '../playedWho';
 import { listClubMembers, sayClub, type ClubMemberDto, type EventDto } from '../server';
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
-import type { AddedTheme } from '../useLoadModal';
+import type { AddedTheme } from '../scheduler/types';
 import { EventHelper } from './EventHelper';
 import { EventTalk, EventTalkDone } from './EventTalk';
 import { PlayedDots } from './PlayedDots';

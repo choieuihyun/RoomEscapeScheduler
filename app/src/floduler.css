@@ -609,7 +609,7 @@ button:active{transform:scale(.97)}
 .loaditem:last-child{border-bottom:none}
 .loaditem:hover{background:var(--surface)}
 .loaditem>input{margin:0;flex:none;width:16px;height:16px;accent-color:var(--ctl-on)}
-.loaditem img,.li-ph{width:38px;height:52px;object-fit:cover;border-radius:var(--r-xs);flex:none;background:var(--line)}
+.loaditem img{width:38px;height:52px;object-fit:cover;border-radius:var(--r-xs);flex:none;background:var(--line)}
 .li-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .li-t strong{font-size:14.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
 .li-m{font-size:12.5px;color:var(--ink3)}
@@ -619,7 +619,6 @@ button:active{transform:scale(.97)}
 .loaditem.off{opacity:.5}
 .loaditem.off .li-m b{color:var(--chip-bad-fg);font-weight:500}
 /* 지점을 넘나들며 고른 것들 — 지금 보이는 목록 밖에 있어도 여기서 계속 보인다 */
-.loadpicked{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 .pickedchip{display:inline-flex;align-items:center;gap:5px;height:28px;font-size:12.5px;
   color:var(--ink);background:var(--surface);border:1px solid var(--line2);
   border-radius:var(--pill);padding:0 4px 0 11px}
@@ -1714,6 +1713,31 @@ input.tf-q:not([type=checkbox]){margin:10px;width:calc(100% - 20px);height:36px;
 .tf-picked{display:flex;flex-wrap:wrap;gap:6px;max-height:64px;overflow:auto;margin-bottom:8px}
 .tf-room{margin:0 0 4px;font-size:12.5px;color:var(--ink3);line-height:1.5}
 .tf-room.full{color:var(--chip-warn-fg)}
+.tf-ppl{display:inline-flex;align-items:center;gap:8px;margin-left:8px}
+.tf-ppl label{font-size:14px;font-weight:500;color:var(--ink)}
+input.tf-ppl-i,.tf-ppl input:not([type=checkbox]){width:64px;height:36px!important;text-align:center}
+.tf-ppl-h{font-size:12px;color:var(--ink3)}
+.tf-regions,.tf-bdates{display:flex;gap:6px;flex:none}
+.tf-regions{flex-wrap:wrap;padding:0 10px 10px}
+.tf-bdates{overflow-x:auto;scrollbar-width:thin;padding:10px 16px;border-bottom:1px solid var(--line)}
+.tf-regions .chip-pick,.tf-bdates .chip-pick{height:26px;padding:0 10px;font-size:12px}
+/* 테마째 고르기 — 카드 전체가 고르는 단추(이름 단추의 ::after 가 덮는다). 하고 싶어요 단추만 그 위 */
+.tf-th-sel{position:relative}
+.tf-th-sel:hover{background:var(--surface2)}
+.tf-th-pick{display:flex;align-items:center;gap:9px;min-width:0;padding:0;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.tf-th-pick:active{transform:none} /* 누르는 동안 줄어들면 덮개(::after)가 단추 크기로 줄어 카드 아무 데나 누른 게 빠진다 */
+.tf-th-pick::after{content:'';position:absolute;inset:0}
+.tf-th-pick:focus-visible{outline:none}
+.tf-th-pick:focus-visible::after{box-shadow:inset 0 0 0 2px rgba(var(--blue-rgb),.35)}
+.tf-th-sel .wish-t{position:relative;z-index:1}
+.tf-chk{position:relative;flex:none;width:16px;height:16px;box-sizing:border-box;border:1.5px solid var(--line2);border-radius:4px;background:var(--surface)}
+.tf-th-pick[aria-pressed="true"] .tf-chk{border-color:var(--ink);background:var(--ink)}
+.tf-th-pick[aria-pressed="true"] .tf-chk::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid var(--surface);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.tf-th-sel:has(.tf-th-pick[aria-pressed="true"]){background:var(--surface2)}
+.tf-th-sel.off{opacity:.5}
+.tf-ss-ro{padding-left:25px}
+.tf-ss-ro .tf-s{height:26px;padding:0 8px;font-size:12.5px;color:var(--ink2);cursor:inherit;border-color:var(--line)}
+.tf-ss-ro .tf-s.sold{background:var(--surface2);color:var(--ink-past);text-decoration:line-through}
 .evf-chips{display:flex;flex-wrap:wrap;gap:6px}
 .evf-cand{display:flex;flex-direction:column;gap:8px}
 .evf-cal{border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -1748,6 +1772,11 @@ input.tf-q:not([type=checkbox]){margin:10px;width:calc(100% - 20px);height:36px;
   .tf-body.has-br .tf-brs,.tf-body:not(.has-br) .tf-ths{display:none}
   .tf-brs{border-right:0}
   .tf-back{display:inline-flex;align-items:center;justify-content:center}
+  .tf-ppl{margin-left:0}
+  .tf-regions{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .tf-regions::-webkit-scrollbar,.tf-bdates::-webkit-scrollbar{display:none}
+  .tf-bdates{scrollbar-width:none}
+  .tf-ss-ro{padding-left:0}
 }
 
 /* ── 내 정보(계획 Task 7, §4.9) — 홈과 같은 카드(.home-card·.home-h·.home-avatar…)에 이 화면 것만 더한다.

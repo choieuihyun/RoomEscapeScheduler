@@ -12,7 +12,7 @@ import { DayBranches } from './DayBranches';
 import { EventPanel } from './EventPanel';
 import { dayLabel, eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
-import type { AddedTheme } from '../useLoadModal';
+import type { AddedTheme } from '../scheduler/types';
 import { playedWho, playedWhoLabel, playedWhoTitle } from '../playedWho';
 import { playedByDate } from '../playedView';
 import { withoutPending, type UseProfileReturn } from '../useProfile';

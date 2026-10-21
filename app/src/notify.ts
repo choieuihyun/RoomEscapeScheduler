@@ -1,6 +1,6 @@
 /* F-16 웹 푸시 등록 — 서비스워커 등록 + FCM 토큰 발급 + 서버에 주소 올리기.
    cloud.ts는 토큰을 얻을 때만 지연 로드한다(로그인 전 0바이트 불변식, §4.34).
-   server.ts는 이미 useLoadModal.ts가 정적 import해서 항상 번들에 있으므로
+   server.ts는 이미 SchedulerPage 가 정적 import해서 항상 번들에 있으므로
    여기서도 정적 import한다(동적으로 해봤자 청크가 안 갈린다). */
 import { pushSupport, type PushEnv, type PushSupport } from './pushState';
 import { registerDevice } from './server';

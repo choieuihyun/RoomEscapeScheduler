@@ -7,9 +7,8 @@ import {
   inflateShare, readShareHash, restore, serialize, shareHash,
   type AppState, type OptionsState, type TeamState,
 } from '../serialize';
-import { blankTheme, type Theme } from './types';
+import { blankTheme, type AddedTheme, type Theme } from './types';
 import { dropOtherCtx, mergeServerThemes } from '../eventFlow';
-import type { AddedTheme } from '../useLoadModal';
 import type { OcrError } from '../ocr';
 
 export const SHOW = 12;

@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { emptyForm, formFromEvent, MAX_SEGS, toInput, type FormSeg, type FormState } from './eventForm';
-import { branchLabel, filterBranches, mergePicks, overlaps, placedOn, playedByMe, roomLeft, segFromPick, segMeta, segRanges, toPick, type PickedSession } from './eventPick';
+import {
+  branchLabel, branchRegions, filterBranches, fitsPeople, mergePicks, mixedDates, overlaps, placedOn, playedByMe, roomLeft, segFromPick, segMeta, segRanges,
+  themePickKey, toAdded, toPick, togglePicked, type PickedSession, type PickedTheme,
+} from './eventPick';
+import { setServerRegions } from './regions';
 import type { Branch, EventDto, PlayedDto, ServerTheme } from './server';
 
 const B = { id: 'zero-gn', store: '제로월드', branch: '강남점' };
@@ -267,3 +271,62 @@ describe('eventPick — 날짜·옮김 표시와 섞여도 같은 순간', () =>
   });
 });
 
+
+/* 시간표 계산의 테마 불러오기(테마째 고르기) — 옛 useLoadModal.addPicked 와 같은 결과 */
+describe('eventPick — 테마째 고르기', () => {
+  const tp = (o: Partial<PickedTheme> = {}): PickedTheme => ({
+    key: themePickKey('zero-gn', '2026-10-22', 'zero-gn:1'), date: '2026-10-22', branchName: '제로월드 강남점',
+    theme: th({ place: '제로월드 강남점', sessions: [{ id: 2, t: 900, soldout: true }, { id: 1, t: 820 }] }), checkedAt: null, ...o,
+  });
+
+  it('고른 테마 → 계산 카드: 회차 전부(매진 포함, 시각 순), 날짜, 테마 키', () => {
+    expect(toAdded(tp())).toEqual({
+      name: '비밀의 화원', place: '제로월드 강남점', dur: 70, fresh: '', date: '2026-10-22', themeKey: 'zero-gn:1',
+      sessions: [{ t: 820, soldout: false, id: 1 }, { t: 900, soldout: true, id: 2 }],
+    });
+  });
+  it('소요 시간을 모르면 70분, place 가 없으면 빈 글자, 받은 지 오래면 "n분 전 기준"', () => {
+    const a = toAdded(tp({ theme: th({ dur: undefined, place: undefined }), checkedAt: new Date(Date.now() - 5 * 60_000).toISOString() }));
+    expect([a.dur, a.place, a.fresh]).toEqual([70, '', '5분 전 기준']);
+  });
+  it('고르기 키는 지점·날짜·테마 — 다른 지점·날짜에서 고른 것은 그대로 남고, 같은 것을 다시 누르면 빠진다', () => {
+    const a = tp();
+    const b = tp({ key: themePickKey('key-hd', '2026-10-22', 'key-hd:1'), branchName: '키이스케이프 홍대점' });
+    const c = tp({ key: themePickKey('zero-gn', '2026-10-23', 'zero-gn:1'), date: '2026-10-23' });
+    let m = togglePicked(new Map(), a);
+    m = togglePicked(m, b);
+    m = togglePicked(m, c);
+    expect([...m.keys()]).toEqual(['zero-gn::2026-10-22::zero-gn:1', 'key-hd::2026-10-22::key-hd:1', 'zero-gn::2026-10-23::zero-gn:1']);
+    const before = m;
+    m = togglePicked(m, a);
+    expect([...m.keys()]).toEqual(['key-hd::2026-10-22::key-hd:1', 'zero-gn::2026-10-23::zero-gn:1']);
+    expect(before.size).toBe(3); // 새 Map — 앞의 것은 그대로
+  });
+  it('날짜가 섞이면 그 날짜들, 하나면 빈 목록', () => {
+    expect(mixedDates([tp(), tp()])).toEqual([]);
+    expect(mixedDates([tp({ date: '2026-10-23' }), tp(), tp()])).toEqual(['2026-10-22', '2026-10-23']);
+    expect(mixedDates([])).toEqual([]);
+  });
+  it('인원 — 비었거나 숫자가 아니면 모두, 아니면 최소·최대 안', () => {
+    const t = { minPeople: 2, maxPeople: 4 };
+    expect([fitsPeople(t, ''), fitsPeople(t, '예'), fitsPeople(t, '3'), fitsPeople(t, '1'), fitsPeople(t, '5'), fitsPeople({}, '9')])
+      .toEqual([true, true, true, false, false, true]);
+  });
+});
+
+describe('eventPick — 지점 지역', () => {
+  const br = (id: string, store: string, branch: string, region?: string | null): Branch => ({ id, store, branch, dates: ['2026-10-22'], checkedAt: null, region });
+  const list = [br('zero-gn', '제로월드', '강남점'), br('key-hd', '키이스케이프', '홍대점'), br('odd', '어딘가', '본점', '부산'), br('solo', '', '동네방탈출')];
+
+  it('지역 칩은 있는 지역만 지역 순서대로 — 서버 region 을 먼저(지점 id 로)', () => {
+    setServerRegions(list);
+    expect(branchRegions(list)).toEqual(['강남', '홍대', '부산', '기타']);
+  });
+  it('지역으로 거르고 이름 찾기와 겹쳐 쓴다', () => {
+    setServerRegions(list);
+    expect(filterBranches(list, '', '2026-10-22', '부산').map((b) => b.id)).toEqual(['odd']);
+    expect(filterBranches(list, '', '2026-10-22', '강남').map((b) => b.id)).toEqual(['zero-gn']);
+    expect(filterBranches(list, '홍대', '2026-10-22', '강남')).toEqual([]);
+    expect(filterBranches(list, '', '2026-10-22', '전체').length).toBe(4);
+  });
+});

@@ -3,7 +3,7 @@ import type { PathStep } from './core';
 import { countOtherCtx, countSame, ctxAlive, dropOtherCtx, insertMode, mergeServerThemes, stepCards } from './eventFlow';
 import { addGone } from './clubEvents';
 import { blankTheme, type Theme } from './scheduler/types';
-import type { AddedTheme } from './useLoadModal';
+import type { AddedTheme } from './scheduler/types';
 
 const D = '2026-10-25';
 const added = (themeKey: string | undefined, t: number, o: Partial<AddedTheme> = {}): AddedTheme => ({

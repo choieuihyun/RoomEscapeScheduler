@@ -27,6 +27,18 @@ export interface Theme {
   ctx?: number;
 }
 
+/* 예약 사이트에서 불러온 테마 하나 — 테마 고르기 창(테마째)·협의 도우미가 계산 카드로 넣는다(useScheduler.addServerThemes) */
+export interface AddedTheme {
+  name: string;
+  place: string;
+  dur: number;
+  sessions: Session[];
+  fresh: string;
+  date?: string;
+  /* 서버 테마 키 — 같은 테마를 또 넣으면 카드를 바꾸는 데 쓴다 */
+  themeKey?: string;
+}
+
 export function blankTheme(id: number, name = ''): Theme {
   return {
     id, name, place: '', dur: 70, raw: '', sessions: [],

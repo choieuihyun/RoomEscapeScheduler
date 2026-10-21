@@ -112,7 +112,7 @@ export function toSessions(ss: ServerSession[]): Session[] {
 }
 
 /* ── F-16 감시 API ── 인증이 필요한 유일한 엔드포인트들이라 get()과 갈라놨다.
-   server.ts는 useLoadModal.ts가 항상 정적 import하므로, 여기서 cloud.ts를
+   server.ts는 SchedulerPage 가 항상 정적 import하므로, 여기서 cloud.ts를
    끌어오면 로그인 전 0바이트 불변식이 깨진다 — 그래서 토큰은 호출부(지연
    로드되는 useWatches.ts)가 넘겨준다. 계약: 작업명세서 §4.5, 이 세션에서
    테스트 계정으로 실측 확인(2026-09-01). */

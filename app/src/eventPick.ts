@@ -1,10 +1,13 @@
-/* 일정 만들기 창의 "테마 찾아서 넣기" — 예약 사이트에서 모은 회차를 구간으로 바꾸고 이미 있는 구간과 합친다.
-   React 밖의 순수 함수. 일정 창(지연 청크)만 쓴다 — eventForm.ts 는 진입 번들이라 여기에 둔다. */
+/* 테마 고르기 창(ThemePicker)의 순수 함수 — 일정 만들기의 "테마 찾아서 넣기"(회차 고르기)와
+   시간표 계산의 "테마 불러오기"(테마째 고르기)가 같이 쓴다. 회차를 구간으로 바꾸고 이미 있는 구간과 합치는 것,
+   고른 테마를 계산 카드로 바꾸는 것, 지점 찾기·지역. 고르기 창(지연 청크)만 쓴다 — eventForm.ts 는 진입 번들이라 여기에 둔다. */
 import { fmt } from './core';
 import { addDays, cpLen, parseClock24, rollDays, type TimeRow } from './clubEvents';
 import { MAX_SEGS, type FormSeg, type FormState } from './eventForm';
 import { normalizeName } from './played';
-import type { Branch, PlayedDto, ServerSession, ServerTheme } from './server';
+import { regionCounts, regionOf, type Region, type RegionPick } from './regions';
+import { ago, toSessions, type Branch, type PlayedDto, type ServerSession, type ServerTheme } from './server';
+import type { AddedTheme } from './scheduler/types';
 
 /* 고른 회차 하나. t 는 그 날짜 자정부터 분(다음날 회차는 1440 이상), dur 은 테마 소요 시간(모르면 null) */
 export interface PickedSession {
@@ -188,11 +191,54 @@ export function playedByMe(th: Pick<ServerTheme, 'id' | 'name'>, mine: PlayedDto
   return mine.some((p) => (p.themeKey && th.id ? p.themeKey === th.id : normalizeName(p.themeName) === name));
 }
 
-/* 지점 찾기 — 매장·지점 이름 부분 일치(공백·대소문자 무시). 그날 시간표가 있는 지점을 먼저 */
+/* 지점 찾기 — 매장·지점 이름 부분 일치(공백·대소문자 무시)와 지역. 그날 시간표가 있는 지점을 먼저 */
 const squash = (s: string) => s.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
-export function filterBranches(list: Branch[], q: string, date: string): Branch[] {
+const branchRegion = (b: Branch): Region => regionOf(b.store, b.branch, b.id); // 지점 id 로 서버 지역을 먼저 찾는다
+export function filterBranches(list: Branch[], q: string, date: string, region: RegionPick = '전체'): Branch[] {
   const needle = squash(q);
-  const hit = needle ? list.filter((b) => squash(branchLabel(b)).includes(needle)) : list;
+  const hit = list.filter((b) => (!needle || squash(branchLabel(b)).includes(needle)) && (region === '전체' || branchRegion(b) === region));
   const has = (b: Branch) => (b.dates ?? []).includes(date);
   return [...hit.filter(has), ...hit.filter((b) => !has(b))];
+}
+
+/* 지점 목록에 실제로 있는 지역만, 지역 순서대로 — 지역 칩 */
+export const branchRegions = (list: Branch[]): Region[] =>
+  regionCounts(list.map((b) => ({ storeName: b.store, branchName: b.branch, themeKey: b.id }))).map((x) => x.region);
+
+/* ── 테마째 고르기(시간표 계산의 테마 불러오기) ── */
+
+/* 고른 테마 하나 — 지점·날짜·테마 id 로 기억해야 지점·날짜를 넘나들어도 남는다(서버가 주는 테마 id 는 안정적이다) */
+export interface PickedTheme {
+  key: string;
+  date: string;
+  branchName: string;
+  theme: ServerTheme;
+  checkedAt: string | null;
+}
+export const themePickKey = (branchId: string, date: string, themeId: string): string => `${branchId}::${date}::${themeId}`;
+
+/* 고른 테마 → 계산 카드. 회차는 전부(매진도 — 카드에 남고 계산에서 빠진다), 소요 시간을 모르면 70분(계산은 끝이 있어야 한다) */
+export const toAdded = (p: PickedTheme): AddedTheme => ({
+  name: p.theme.name, place: p.theme.place || '', dur: p.theme.dur || 70,
+  sessions: toSessions(p.theme.sessions), fresh: ago(p.checkedAt), date: p.date, themeKey: p.theme.id,
+});
+
+/* 고르기·빼기 — 같은 키면 빼고 없으면 더한다. 다른 지점·날짜에서 고른 것은 그대로 */
+export function togglePicked<T extends { key: string }>(m: Map<string, T>, p: T): Map<string, T> {
+  const n = new Map(m);
+  if (n.has(p.key)) n.delete(p.key); else n.set(p.key, p);
+  return n;
+}
+
+/* 고른 것들의 날짜가 서로 다르면 그 날짜들(정렬) — 같은 날로 맞춰야 조합이 맞다(§4.41). 하나뿐이면 빈 목록 */
+export function mixedDates(picks: Iterable<{ date: string }>): string[] {
+  const ds = [...new Set([...picks].map((p) => p.date))].sort();
+  return ds.length > 1 ? ds : [];
+}
+
+/* 인원이 맞는가 — 비었거나 숫자가 아니면 모두 맞는 것으로 */
+export function fitsPeople(th: Pick<ServerTheme, 'minPeople' | 'maxPeople'>, people: string): boolean {
+  const n = parseInt(people, 10);
+  if (!n) return true;
+  return (th.minPeople == null || n >= th.minPeople) && (th.maxPeople == null || n <= th.maxPeople);
 }

@@ -2,7 +2,7 @@
    넣기 본문은 eventInsert.ts(누를 때 받는다). */
 import { sessionsToText, type PathStep, type SearchTheme } from './core';
 import { blankTheme, type Theme } from './scheduler/types';
-import type { AddedTheme } from './useLoadModal';
+import type { AddedTheme } from './scheduler/types';
 
 /* 계산 화면이 기억하는 "어느 일정에서 왔나". 상태로만 들고 새로 고치면 사라진다.
    date: 도우미가 보던 날짜(정해진 일정이면 그 날짜) — 손으로 넣은 카드뿐이라 결과 날짜를 모를 때 쓴다 */

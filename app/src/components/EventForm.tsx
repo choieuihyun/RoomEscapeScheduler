@@ -7,7 +7,7 @@ import { mergePicks, placedOn, roomLeft, segMeta, type PickedSession } from '../
 import { conflictOf, sayClub, type EventDto, type EventInput, type PlayedDto } from '../server';
 import { showToast } from '../toast';
 import type { UseEventFormModal } from '../useEventFormModal';
-import { ThemeFinder } from './ThemeFinder';
+import { ThemePicker } from './ThemePicker';
 
 interface Props {
   m: UseEventFormModal;
@@ -300,7 +300,8 @@ function Body({ m, create, update, adopt, played }: Props) {
         <button className="btn" type="button" onClick={m.close}>취소</button>
       </div>
       {finding && (
-        <ThemeFinder
+        <ThemePicker
+          mode="sessions"
           date={candMode ? f.candidates[0] ?? f.date ?? today : f.date || today}
           formDate={candMode ? null : f.date || null}
           candidates={candMode ? f.candidates : []}
