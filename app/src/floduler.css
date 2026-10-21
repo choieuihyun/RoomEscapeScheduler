@@ -382,6 +382,8 @@ button:active{transform:scale(.97)}
   .mealrow>.lb:last-child{grid-column:2 / -1}
   .teamrow{padding:14px}
 }
+/* 아주 좁은 폭(320 등)에선 2열이면 "가장 이른 시작 지금부터" 라벨이 옆 칸으로 넘친다 — 1열로 */
+@media(max-width:340px){.opts{grid-template-columns:minmax(0,1fr)}}
 
 /* 드래그 손잡이 겸 순서 번호. 이 번호 순서가 곧 조합 순서다 (§4.14 후기) */
 .idx{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;
