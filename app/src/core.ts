@@ -298,10 +298,12 @@ export interface SortDef {
   f: (a: SearchResultRow, b: SearchResultRow) => number;
 }
 
+/* 'gap'·'even' 은 이동을 포함한 비는 시간(total·varc)으로 줄 세운다 — 화면의 "대기"(이동을 뺀 값)와 다르므로 이름도 "비는 시간"(2026-10-21 검토).
+   k 는 링크·자동저장에 실리므로 그대로 둔다 */
 export const SORTS: SortDef[] = [
-  { k: 'gap', label: '대기 적은 순', f: (a, b) => b.count - a.count || a.total - b.total || a.end - b.end },
+  { k: 'gap', label: '비는 시간 적은 순', f: (a, b) => b.count - a.count || a.total - b.total || a.end - b.end },
   { k: 'end', label: '빨리 끝나는 순', f: (a, b) => b.count - a.count || a.end - b.end || a.total - b.total },
-  { k: 'even', label: '대기 고른 순', f: (a, b) => b.count - a.count || a.varc - b.varc || a.total - b.total },
+  { k: 'even', label: '비는 시간 고른 순', f: (a, b) => b.count - a.count || a.varc - b.varc || a.total - b.total },
   { k: 'late', label: '늦게 시작 순', f: (a, b) => b.count - a.count || b.start - a.start || a.total - b.total },
   { k: 'safe', label: '여유 있는 순', f: (a, b) => b.count - a.count || b.minGap - a.minGap || a.total - b.total },
 ];

@@ -17,6 +17,8 @@ const WIDE = 'not all and (max-width: 900px)';
    날짜가 섞였다는 경고와 계산 안내(runNote)는 접혀 있어도 보이는 자리에 둔다 */
 export function ConditionsPanel({ s }: { s: Scheduler }) {
   const [open, setOpen] = useState(() => matchMedia(WIDE).matches);
+  /* 최대 대기 ⓘ — 휴대폰엔 title 이 안 보여서 눌러 펼치는 한 줄 */
+  const [gapInfo, setGapInfo] = useState(false);
   const hint = moveHint(s);
   /* 3연방은 보통 같은 날 몰아서 도는데, 세션 시각엔 날짜가 없어(core.ts) 서버에서
      불러온 테마끼리 날짜가 섞여도 계산 자체는 막을 방법이 없다 — 계산 전에
@@ -85,7 +87,11 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
               <input className="mono" value={s.options.oMinGap} onChange={e => s.setOption('oMinGap', e.target.value)} />
             </div>
             <div className="opt">
-              <label>최대 대기 (분)</label>
+              <label>
+                최대 대기 (분)
+                <button className="cz-ii" type="button" aria-label="최대 대기 설명" title="최대 대기 설명" aria-expanded={gapInfo} aria-controls="czGapInfo"
+                  onClick={() => setGapInfo(v => !v)}><Ic n="info" /></button>
+              </label>
               <input className="mono" placeholder="90" value={s.options.oMaxGap} onChange={e => s.setOption('oMaxGap', e.target.value)} />
             </div>
             <div className="opt">
@@ -93,6 +99,8 @@ export function ConditionsPanel({ s }: { s: Scheduler }) {
               <input className="mono" value={s.options.oMove} onChange={e => s.setOption('oMove', e.target.value)} />
             </div>
           </div>
+          {/* 계산(core.ts search)은 최소 대기를 이동을 뺀 값으로, 최대 대기를 이동을 포함한 빈 시간으로 본다 */}
+          {gapInfo && <p className="cz-note cz-gapinfo" id="czGapInfo">최대 대기는 이동 시간을 포함한 빈 시간이에요. 최소 대기는 이동 시간을 뺀 대기예요.</p>}
           <p className={hint.className}>{hint.content}</p>
           <MoveTimeGrid s={s} />
           <div className="checks">

@@ -17,6 +17,7 @@ import { playedWho, playedWhoLabel, playedWhoTitle } from '../playedWho';
 import { playedByDate } from '../playedView';
 import { withoutPending, type UseProfileReturn } from '../useProfile';
 import { useBackClose } from '../backStack';
+import { planWaitText } from '../planWait';
 
 /* 캘린더 화면(§4.49) — 모달이던 것(§4.38·§4.40)을 왼쪽 메뉴의 한 화면으로 옮겼다.
    그룹웨어 월간 보기처럼 날짜 칸 안에 일정·감시 회차를 줄로 보여주고, 고른 날짜의
@@ -45,7 +46,7 @@ function eventsOf(entry: DayEntry | undefined, filter: CalFilter): Ev[] {
     evs.push({
       key: 'p' + p.id, kind, start: p.start, end: p.end,
       text: `${fmt(p.start)} ${p.count}연방`,
-      title: `${kind === 'wish' ? '하고 싶은 일정' : '다녀온 일정'} · ${fmt(p.start)}–${fmt(p.end)} · ${p.count}연방 · 대기 ${p.total}분`
+      title: `${kind === 'wish' ? '하고 싶은 일정' : '다녀온 일정'} · ${fmt(p.start)}–${fmt(p.end)} · ${p.count}연방 · ${planWaitText(p)}`
         + route + (p.memo ? '\n' + p.memo : ''),
     });
   }
@@ -149,7 +150,7 @@ function PlanDetailRow({ p, s, plans, onLoaded }: { p: Plan; s: Scheduler; plans
     <div className="loaditem">
       <div className="li-t">
         <strong>{fmt(p.start)} → {fmt(p.end)}</strong>
-        <span className="li-m">{p.count}연방 · 대기 {p.total}분</span>
+        <span className="li-m">{p.count}연방 · {planWaitText(p)}</span>
         <span className={'tag ' + (wish ? 'wish' : 'done')}>{wish ? '하고 싶음' : '다녀옴'}</span>
       </div>
       <span className="pbtns">

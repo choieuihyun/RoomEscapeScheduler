@@ -227,6 +227,8 @@ export interface Plan {
   start: number;
   end: number;
   total: number;
+  /* 이동 합(2026-10-21 검토) — 대기 = total − moveTotal. 옛 문서엔 없다(planWait.ts 가 snapshot 에서 다시 센다) */
+  moveTotal?: number;
   minGap: number | null;
   snapshot: string;
   createdAt?: unknown;

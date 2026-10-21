@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { fmt } from '../core';
 import type { Plan } from '../cloud';
+import { planWaitText } from '../planWait';
 import type { UseAuthReturn } from '../useAuth';
 import type { UsePlansReturn } from '../usePlans';
 import type { Scheduler } from '../scheduler/useScheduler';
@@ -16,7 +17,7 @@ function PlanRow({ p, plans, s }: { p: Plan; plans: UsePlansReturn; s: Scheduler
     <div className={'plan ' + (wish ? 'wish' : 'done')}>
       <span className="pd">{p.date || ''}</span>
       <span className={'tag ' + (wish ? 'wish' : 'done')}>{wish ? '하고 싶음' : '다녀옴'}</span>
-      <span className="pspan">{fmt(p.start)} → {fmt(p.end)} · {p.count}연방 · 대기 {p.total}분</span>
+      <span className="pspan">{fmt(p.start)} → {fmt(p.end)} · {p.count}연방 · {planWaitText(p)}</span>
       <span className="pbtns">
         <button
           className="btn" type="button"

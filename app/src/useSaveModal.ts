@@ -43,7 +43,7 @@ export function useSaveModal(auth: UseAuthReturn, getSnapshot: () => string, onS
          나중에 계산 로직이 바뀌면 순위가 달라질 수 있다 (작업명세서 §7.1). */
       await C.savePlan({
         date, status, memo: memo.trim(),
-        count: pending.count, start: pending.start, end: pending.end, total: pending.total,
+        count: pending.count, start: pending.start, end: pending.end, total: pending.total, moveTotal: pending.moveTotal || 0,
         minGap: pending.minGap === Infinity ? null : pending.minGap,
         steps: pending.steps.map(x => ({ name: x.name, dur: x.dur, start: x.start, end: x.end })),
         snapshot: getSnapshot(),
