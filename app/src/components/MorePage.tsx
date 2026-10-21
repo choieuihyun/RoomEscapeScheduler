@@ -38,6 +38,7 @@ const ICON: Partial<Record<MoreRowId, ReactNode>> = {
   members: <Ic><circle cx="10" cy="8" r="4" /><path d="M3 21c0-4 3-7 7-7 1.4 0 2.7.4 3.8 1M15 18.5l2 2 4-4" /></Ic>,
   dark: <Ic><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></Ic>,
   tour: <Ic><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></Ic>,
+  terms: <Ic><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z" /><path d="M14 3v5h5M8.5 13h7M8.5 17h5" /></Ic>,
   kakao: <span className="more-kakao"><KakaoMark /></span>,
   google: <GoogleMark />,
   join: <Ic><circle cx="9" cy="8" r="4" /><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7M19 8v6M16 11h6" /></Ic>,
@@ -145,6 +146,7 @@ export function MorePage({
     played: () => openSub('played'), past: () => openSub('past'), push: () => openSub('push'), pay: () => openSub('pay'),
     together: () => onView('together'), people: () => onView('people'), ranking: () => onView('ranking'),
     members: onMembers, dark: onToggleTheme, tour: onTour,
+    terms: () => window.open(`${import.meta.env.BASE_URL}terms.html`, '_blank', 'noopener'),
     kakao: auth.linkKakao, google: () => void auth.linkGoogle(), join: () => auth.openAuth(), logout: () => void auth.logout(),
   };
   const right = (r: MoreRow): ReactNode => {

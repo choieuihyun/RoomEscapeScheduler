@@ -80,6 +80,10 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
             </button>
           )}
         </div>
+        {/* 약관(§4.69) — 자동 수집 금지 조항의 근거가 되도록 로그인하는 자리에서 보인다 */}
+        <p className="mnote auth-terms">
+          로그인하면 <a href={`${import.meta.env.BASE_URL}terms.html`} target="_blank" rel="noopener">이용약관</a>에 동의하는 것으로 봐요.
+        </p>
         <p className="merr" role="alert">{auth.err}</p>
         {/* 아이디로 쓰던 사람이 카카오로 바로 들어오면 새 계정이 따로 생긴다 — 질문으로 먼저 붙잡는다 */}
         <details className="legacy" open={auth.legacyOpen} onToggle={e => auth.setLegacyOpen(e.currentTarget.open)}>
