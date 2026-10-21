@@ -274,6 +274,11 @@ export function SchedulerPage() {
     goView(wide ? 'profile' : 'more');
     if (!wide) hist.push({ moreSub: 'played' }, location.href);
   };
+  /* 왼쪽 미니 달력의 날짜 → 그날을 고르고, 열려 있던 일정 상세는 닫는다(901~1100 에선 상세가 달력 자리를 차지하고 있다) */
+  const pickFromSide = (iso: string) => {
+    calSelect(iso);
+    if (cal.openEvent !== null) closeEvent();
+  };
   /* 홈 미니 달력의 날짜 → 캘린더 화면에서 그날을 고른다. 열려 있던 일정 상세는 닫는다(캘린더의 날짜 고르기와 같게) */
   const pickFromHome = (iso: string) => {
     goView('calendar');
@@ -497,7 +502,7 @@ export function SchedulerPage() {
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
         isAdmin={isAdmin} pendingCount={pendingCount} onEditProfile={openEdit}
       >
-        {nav.view === 'calendar' && <CalendarSide ctl={cal} clubOn={homeOn} playedOn={profileOn} />}
+        {nav.view === 'calendar' && <CalendarSide ctl={cal} clubOn={homeOn} playedOn={profileOn} onPick={pickFromSide} />}
       </SideNav>
 
       <main className="main">

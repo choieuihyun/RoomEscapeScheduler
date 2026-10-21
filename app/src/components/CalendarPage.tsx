@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { fmt, monthGrid, toISO, WEEKDAYS } from '../core';
 import type { Plan } from '../cloud';
 import type { EventDto, PlayedDto, WatchDto } from '../server';
@@ -299,7 +299,20 @@ export function CalendarPage({
   const showPlayed = profile !== null && ctl.filter.played;
   const playedOf = (iso: string) => (showPlayed ? playedMap.get(iso) ?? [] : []);
   const openEv = ctl.openEvent === null ? null : club.events.find(e => e.id === ctl.openEvent) ?? null;
-  const openClub = onOpenEvent;
+  /* 한 칸 화면(≤1100)에선 상세가 달력 자리를 차지하고 맨 위로 넘긴다 — 달력에서 열 때 보던 자리를 적어 두고,
+     상세를 닫으면(‹ 캘린더·뒤로 가기·날짜 고르기) 그 자리로 돌아간다. 일정에서 일정으로 옮겨 갈 때는 처음 자리를 지킨다 */
+  const backY = useRef<number | null>(null);
+  const openClub = (ev: EventDto, date?: string) => {
+    if (ctl.openEvent === null && active && matchMedia('(max-width:1100px)').matches) backY.current = scrollY;
+    onOpenEvent(ev, date);
+  };
+  const detailOn = openEv !== null;
+  useLayoutEffect(() => {
+    if (detailOn || backY.current === null) return;
+    const y = backY.current;
+    backY.current = null;
+    if (active) scrollTo({ top: y });
+  }, [detailOn, active]);
   /* 날짜를 고르면 그날 상세로 돌아간다 */
   const pick = (iso: string) => { ctl.select(iso); if (ctl.openEvent !== null) onCloseEvent(); };
   /* 칸·창·주 보기가 같이 쓰는 줄 목록: 동호회 일정 먼저, 그다음 내 일정·빈자리 알림 */
