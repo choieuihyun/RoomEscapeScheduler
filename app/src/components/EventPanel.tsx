@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { eventStatus, eventTitle, isUndecided, kakaoPost, rangeLabel, STATUS_LABEL, timeLabel, todayKst } from '../clubEvents';
+import { useBackClose } from '../backStack';
 import { eventLink } from '../eventLink';
 import { dDay, monthDayLabel, peopleLabel, placeLabel, talkSummary } from '../eventView';
 import { MemberLink } from '../clubStore';
@@ -137,6 +138,9 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
   const stBox = useRef<HTMLSpanElement>(null);
   useDismiss(menu, () => setMenu(false), menuBox);
   useDismiss(stMenu, () => setStMenu(false), stBox);
+  /* 메뉴가 열린 채 뒤로 가기 — 메뉴만 닫는다(상세는 layer 0, 메뉴는 그 위) */
+  useBackClose(menu, () => setMenu(false));
+  useBackClose(stMenu, () => setStMenu(false));
 
   const inIds = new Set(ev.participants.map((p) => p.uid));
   const candidates = (members ?? []).filter((m) => !inIds.has(m.uid));
@@ -207,11 +211,12 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
                 <button type="button" role="menuitemradio" aria-checked={ev.booked} disabled={busy} onClick={() => book(true)}>
                   <i className="cal-dot done" />예약 완료
                 </button>
-                <p className="evp-menu-hint">참여한 사람, 만든 사람, 운영진이 바꿀 수 있어요.</p>
               </div>
             )}
           </span>
         ) : <span className={'chip-st ' + st}>{STATUS_LABEL[st]}</span>}
+        {/* 누가 바꿀 수 있는지 — 메뉴(role=menu) 밖, 칩 바로 아래 작은 글 */}
+        {canBook && <p className="evp-st-hint">참여한 사람, 만든 사람, 운영진이 바꿀 수 있어요.</p>}
         <h2 className="evp-title" id="evp-title">{eventTitle(ev)}</h2>
       </div>
 

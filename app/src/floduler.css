@@ -3254,3 +3254,5 @@ button.hm-me-c:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-
 /* 홈 다음 일정 — 동그라미 아래 이름 한 줄 "열쇠 외 3명" */
 .hm-pplw{min-width:0}
 .hm-names{margin:6px 0 0;font-size:12.5px;line-height:1.4;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 일정 상세 — 예약 상태를 누가 바꾸는지, 상태 칩 바로 아래 작은 글(메뉴 밖) */
+.evp-st-hint{margin:-4px 0 0;font-size:12px;line-height:1.5;color:var(--ink-past)}
