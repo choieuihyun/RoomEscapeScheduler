@@ -12,8 +12,12 @@ import {
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
 import { useBackClose } from '../backStack';
+import { owesMoney, settleSummary } from '../eventView';
+import { Fold } from './Fold';
 
 /* 일정 상세의 정산 칸(§4.13) — 참여자·운영진·만든 사람에게(정산이 있으면 항목에 든 사람도 — 서버가 403 이면 숨긴다).
+   2026-10-21 개편: 접힌 줄 "정산 · 132,000원 · 보낼 돈 2건 남음 ›" 안에 둔다(요약은 받은 정산으로 여기서 만든다).
+   내가 아직 안 보낸 돈이 있으면 처음부터 펼친다(홈 "보낼 돈" 줄로 들어온 경우).
    항목마다 결제한 사람과 같이 낸 사람이 다르다(방탈출 → 저녁 → 카페). 항목 하나를 고칠 때마다 PUT(항목 통째로, version).
    송금은 서버가 계산하고 여기서는 받은 transfers 를 그린다. 알림은 없다. */
 
@@ -44,6 +48,8 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
   const [payOpen, setPayOpen] = useState(false);
   const [text, setText] = useState('');
   const [starting, setStarting] = useState(false);
+  /* 접힌 줄 — 사람이 열고 닫기 전엔 "내가 보낼 돈이 남았나"로 */
+  const [open, setOpen] = useState<boolean | null>(null);
   /* 마지막으로 맞춘 합계 — 내가 저장해 목록 합계를 바꾼 때는 다시 받지 않는다 */
   const lastKey = useRef<string | null>(null);
 
@@ -82,12 +88,18 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
   }, [want, ev.settlementTotal, load]);
 
   if (s.settleApi !== 'on' || hidden || (!member && !has)) return null;
+  /* 내가 보낼 돈이 남아 처음 펼친 것은 붙잡아 둔다 — "보냈어요"를 체크하는 순간 접히지 않게(렌더 중에 맞춘다) */
+  if (open === null && owesMoney(dto, meUid)) setOpen(true);
+  const isOpen = open ?? false;
+  const fold = (body: ReactNode) => (
+    <Fold name="정산" sum={settleSummary(ev.settlementTotal, member ? dto : null)} open={isOpen} onOpen={setOpen} className="stl-fold">{body}</Fold>
+  );
   if (!member) {
-    return (
+    return fold(
       <section className="stl stl-none" aria-label="정산">
-        <div className="stl-h"><h3>정산</h3><span className="stl-only">모두 {won(ev.settlementTotal as number)}</span></div>
+        <div className="stl-h"><span className="stl-only">모두 {won(ev.settlementTotal as number)}</span></div>
         <p className="evp-hint">참여한 사람만 자세히 볼 수 있어요.</p>
-      </section>
+      </section>,
     );
   }
 
@@ -149,16 +161,16 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
     if (!(await copy(t, '정산 내용을 복사했어요. 카톡에 붙여 넣으세요.'))) showToast('복사가 안 돼요. 아래 글을 길게 눌러 복사해 주세요.');
   };
 
+  /* 이름("정산")은 접힌 줄이 보인다 — 여기엔 오른쪽 단추만 */
   const head = (right?: ReactNode) => (
     <div className="stl-h">
-      <h3>정산</h3>
       {right}
     </div>
   );
 
   /* 아직 정산이 없다 — 단추 한 줄 */
   if (items.length === 0) {
-    return (
+    return fold(
       <section className="stl stl-none" aria-label="정산">
         {/* 받다가 403 밖의 오류가 났으면 "정산하기" 대신 "다시 시도" */}
         {err ? head(<button type="button" className="btn evp-sm stl-start" onClick={() => void load()}>다시 시도</button>)
@@ -169,7 +181,7 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
         {err && <p className="merr">{err}</p>}
         {notice && <p className="stl-notice" role="alert">{notice}</p>}
         {edit && <ItemEditor ev={ev} dto={edit.base} at={edit.at} meUid={meUid} onSave={(at, item) => save(edit.base, at, item)} onClose={() => setEdit(null)} />}
-      </section>
+      </section>,
     );
   }
 
@@ -181,7 +193,7 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
     <MemberLink uid={u.uid} name={u.nickname} className={u.uid === meUid ? 'stl-me' : undefined}>{u.nickname}{u.uid === meUid && <em> (나)</em>}</MemberLink>
   );
 
-  return (
+  return fold(
     <section className="stl" aria-label="정산">
       {head(<button type="button" className="btn evp-sm" onClick={() => void copyText()}>텍스트 복사</button>)}
       {notice && <p className="stl-notice" role="alert">{notice}</p>}
@@ -262,7 +274,7 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
           <div className="mbtns"><button type="button" className="btn" onClick={() => setPayOpen(false)}>닫기</button></div>
         </Sheet>
       )}
-    </section>
+    </section>,
   );
 }
 
