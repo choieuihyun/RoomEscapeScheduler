@@ -43,6 +43,8 @@ export interface Branch {
   id: string;
   store: string;
   branch: string;
+  /* 지역(§4.4, 2026-10-21) — 옛 서버엔 없고, 모르면 null. 화면은 있으면 이름 추측보다 먼저 쓴다(regions.ts) */
+  region?: string | null;
   dates: string[];
   checkedAt: string | null;
 }

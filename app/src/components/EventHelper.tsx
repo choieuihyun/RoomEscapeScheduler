@@ -5,6 +5,7 @@ import { playedDots } from '../playedWho';
 import { REGIONS, inRegion, pageAt, pageFor, pageOf, regionCounts, type PageAt, type RegionPick } from '../regions';
 import { ago, freshThemes, isMissingApi, sayClub, toSessions, type EventDto, type FreshDto, type FreshTheme } from '../server';
 import type { AddedTheme } from '../useLoadModal';
+import { useServerRegions } from '../useServerRegions';
 import { PlayedDots } from './PlayedDots';
 import { WishToggle } from '../clubStore';
 
@@ -107,6 +108,7 @@ export function EventHelper({ ev, onCalcThemes }: {
     headRef.current?.scrollIntoView({ block: 'start' });
   }, [page]);
 
+  useServerRegions(); // 서버가 준 지점 지역(§4.4)을 받으면 다시 그린다 — 지역 계산은 아래에서 매번
   if (hidden || !plan || !date) return null;
   const slot = slots.get(key);
 

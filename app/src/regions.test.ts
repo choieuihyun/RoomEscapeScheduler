@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { PAGE_SIZE, REGIONS, inRegion, pageAt, pageFor, pageOf, regionCounts, regionOf } from './regions';
+import { afterEach, describe, expect, it } from 'vitest';
+import { PAGE_SIZE, REGIONS, inRegion, pageAt, pageFor, pageOf, regionCounts, regionOf, serverRegionsVersion, setServerRegions } from './regions';
 
 describe('regionOf — 지역 표', () => {
   it.each([
@@ -28,8 +28,11 @@ describe('regionOf — 지역 표', () => {
     expect(regionOf('다이아에그', '다이아에그')).toBe('부산'); // 서면(id diaegg-seomyeon)
   });
 
-  it('아직 지역을 못 받은 지점·표에 없는 지점은 기타', () => {
-    for (const b of ['LOG_IN 1', 'LOG_IN 2', 'STATION', '더오름', '메모리컴퍼니', '우주라이크', '후즈데어']) expect(regionOf('키이스케이프', b)).toBe('기타');
+  it('키이스케이프 강남 일곱 곳은 강남(플레이방탈 강남 목록, 2026-10-21)', () => {
+    for (const b of ['LOG_IN 1', 'LOG_IN 2', 'STATION', '더오름', '메모리컴퍼니', '우주라이크', '후즈데어']) expect(regionOf('키이스케이프', b)).toBe('강남');
+  });
+
+  it('아직 지역을 모르는 지점·표에 없는 지점은 기타', () => {
     expect(regionOf('다이아에그', '미스테리인')).toBe('기타');
     expect(regionOf('비트포비아', '던전101')).toBe('기타');
     expect(regionOf('', '')).toBe('기타');
@@ -111,5 +114,40 @@ describe('pageOf · pageFor — 20개씩 쪽 나누기', () => {
     s = pageAt(s, A);
     expect([s.at, pageFor(s, A)]).toEqual([A, 0]);
     expect(pageFor(pageAt({ at: A, page: 4 }, '2026-10-26|u1,u2|강남'), '2026-10-26|u1,u2|강남')).toBe(0); // 날짜가 바뀌어도
+  });
+});
+
+describe('서버가 준 지역(§4.4 region) — 이름 추측보다 먼저', () => {
+  const B = (store: string, branch: string, region?: string | null) => ({ store, branch, region });
+  afterEach(() => setServerRegions([B('다이아에그', '미스테리인', null), B('제로월드', '강남점', null), B('비트포비아', '던전101', null)]));
+
+  it('region 이 있으면 그 값을 쓴다 — 이름 추측과 달라도', () => {
+    setServerRegions([B('다이아에그', '미스테리인', '홍대'), B('제로월드', '강남점', '홍대')]);
+    expect(regionOf('다이아에그', '미스테리인')).toBe('홍대');
+    expect(regionOf('제로월드', '강남점')).toBe('홍대');
+    expect(regionOf('다이아에그 ', ' 미스테리 인')).toBe('홍대'); // 공백·대소문자 무시
+  });
+
+  it('region 이 null·없음·목록 밖이면 이름 추측으로 넘어간다', () => {
+    setServerRegions([B('제로월드', '강남점', null), B('비트포비아', '던전101'), B('다이아에그', '미스테리인', '서울')]);
+    expect(regionOf('제로월드', '강남점')).toBe('강남');
+    expect(regionOf('비트포비아', '던전101')).toBe('기타');
+    expect(regionOf('다이아에그', '미스테리인')).toBe('기타');
+  });
+
+  it('다시 받아 null 이 되면 서버 값을 지운다, 받을 때마다 번호가 오른다', () => {
+    const v = serverRegionsVersion();
+    setServerRegions([B('비트포비아', '던전101', '강남')]);
+    expect(regionOf('비트포비아', '던전101')).toBe('강남');
+    setServerRegions([B('비트포비아', '던전101', null)]);
+    expect(regionOf('비트포비아', '던전101')).toBe('기타');
+    expect(serverRegionsVersion()).toBe(v + 2);
+  });
+
+  it('지역 개수·거르기도 서버 값을 따른다', () => {
+    setServerRegions([B('비트포비아', '던전101', '강남')]);
+    const list = [{ id: 'a', storeName: '비트포비아', branchName: '던전101' }];
+    expect(regionCounts(list)).toEqual([{ region: '강남', n: 1 }]);
+    expect(inRegion(list, '강남')).toHaveLength(1);
   });
 });

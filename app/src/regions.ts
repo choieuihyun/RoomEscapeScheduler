@@ -20,23 +20,43 @@ const WORDS: [Region, string[]][] = [
 const squash = (s: string) => s.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
 
 /* 이름만으로 모르는 지점 — "매장 지점" 을 붙여 공백을 뺀 것. 값만 고치면 된다.
-   '기타' 로 둔 것은 사용자에게 아직 지역을 못 받은 지점이다(2026-10-20) */
+   키이스케이프 강남 일곱 곳은 플레이방탈 강남 목록으로 확인(2026-10-21). '기타' 는 아직 지역을 모르는 지점이다 */
 const EXTRA: Record<string, Region> = {
   '키이스케이프에버랜드': '용인',
-  '키이스케이프log_in1': '기타',
-  '키이스케이프log_in2': '기타',
-  '키이스케이프station': '기타',
-  '키이스케이프더오름': '기타',
-  '키이스케이프메모리컴퍼니': '기타',
-  '키이스케이프우주라이크': '기타',
-  '키이스케이프후즈데어': '기타',
+  '키이스케이프log_in1': '강남',
+  '키이스케이프log_in2': '강남',
+  '키이스케이프station': '강남',
+  '키이스케이프더오름': '강남',
+  '키이스케이프메모리컴퍼니': '강남',
+  '키이스케이프우주라이크': '강남',
+  '키이스케이프후즈데어': '강남',
   '다이아에그다이아에그': '부산', // 서면
   '다이아에그미스테리인': '기타',
 };
 
+/* 서버가 지점마다 준 지역(/api/branches 의 region, 작업명세서 §4.4) — 있으면 이름 추측보다 먼저 쓴다.
+   지점 목록을 받는 곳마다 setServerRegions 로 채운다. 목록 밖 값·null 은 모르는 것으로 보고 이름 추측으로 넘긴다 */
+const fromServer = new Map<string, Region>();
+let serverVer = 0;
+const isRegion = (r: unknown): r is Region => typeof r === 'string' && (REGIONS as readonly string[]).includes(r);
+
+export function setServerRegions(list: readonly { store: string; branch: string; region?: string | null }[]): void {
+  for (const b of list) {
+    const k = squash(b.store ?? '') + squash(b.branch ?? '');
+    if (isRegion(b.region)) fromServer.set(k, b.region);
+    else fromServer.delete(k);
+  }
+  serverVer += 1;
+}
+/* 받은 지역이 바뀌면 오르는 번호 — 화면이 다시 계산할 때 쓴다 */
+export const serverRegionsVersion = (): number => serverVer;
+
 export function regionOf(storeName: string, branchName: string): Region {
   const branch = squash(branchName ?? '');
-  const extra = EXTRA[squash(storeName ?? '') + branch];
+  const key = squash(storeName ?? '') + branch;
+  const server = fromServer.get(key);
+  if (server) return server;
+  const extra = EXTRA[key];
   if (extra) return extra;
   /* 지점 이름을 먼저 본다 — 매장 이름에 지역 낱말이 들어 있어도 지점이 이긴다 */
   for (const name of [branch, squash(storeName ?? '')]) {

@@ -10,6 +10,7 @@ import {
   type Branch, type PlayedDto, type ServerSession, type ServerTheme,
 } from '../server';
 import { WishToggle } from '../clubStore';
+import { setServerRegions } from '../regions';
 
 /* 일정 만들기 창의 "테마 찾아서 넣기" — 시간표 계산의 회차 불러오기(useLoadModal)와 같은 데이터(/api/branches·/api/schedule).
    지점을 고르면 그날 테마와 회차가 보이고, 회차를 눌러 여러 개 고른 뒤 한 번에 구간으로 넣는다.
@@ -92,7 +93,7 @@ export function ThemeFinder({ date: date0, formDate, candidates, placedOn, room,
     if (list) return;
     let live = true;
     fetchBranches().then(
-      (l) => { branchCache = { at: Date.now(), list: l }; if (live) setList(l); },
+      (l) => { branchCache = { at: Date.now(), list: l }; setServerRegions(l); if (live) setList(l); },
       (e) => { if (live) setListErr(say(e)); },
     );
     return () => { live = false; };
