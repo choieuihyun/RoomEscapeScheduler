@@ -18,7 +18,7 @@ const WIDE = 'not all and (max-width: 900px)';
 export function TimeBar({ s }: { s: Scheduler }) {
   const [edit, setEdit] = useState(false);
   return (
-    <section className="cz-time" aria-label="가능한 시간">
+    <section className="cz-avail" aria-label="가능한 시간">
       {!edit ? (
         <button className="cz-time-sum" type="button" aria-expanded="false" onClick={() => setEdit(true)}>
           <span className="cz-time-l">가능한 시간</span>

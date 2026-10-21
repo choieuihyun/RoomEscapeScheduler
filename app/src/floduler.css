@@ -3275,7 +3275,8 @@ button.hm-me-c:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-
 }
 
 /* ── 시간표 맨 위 "가능한 시간" 한 줄 (2026-10-21) ── */
-.cz-time{margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+/* 바깥 상자 이름은 cz-avail — 테마 카드의 시간 직접 고치기 칸(.cz-time)과 이름이 겹쳐 그 칸에 상자 테두리가 생겼다(2026-10-22) */
+.cz-avail{margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
 .cz-time-sum{width:100%;min-height:52px;padding:8px 14px 8px 16px;display:flex;align-items:center;gap:10px;text-align:left;
   background:none;border:0;border-radius:inherit;color:var(--ink);font:inherit}
 .cz-time-sum:active{transform:none}
