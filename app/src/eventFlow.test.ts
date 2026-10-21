@@ -36,6 +36,13 @@ describe('mergeServerThemes — 같은 테마는 카드를 바꾸고 새로 더�
     expect(again[2].sessions.map((s) => s.t)).toEqual([1260]);
   });
 
+  it('테마 사진 주소를 카드에 싣고, 같은 테마를 다시 넣으면 새 주소로(손으로 넣은 카드는 없음)', () => {
+    const first = run([manual(1)], [added('zero-gn:1', 600, { posterUrl: 'https://img.example/a.jpg' })]);
+    expect(first.map((t) => t.posterUrl)).toEqual([undefined, 'https://img.example/a.jpg']);
+    const again = run(first, [added('zero-gn:1', 660, { posterUrl: 'https://img.example/b.jpg' })], 200);
+    expect(again.map((t) => t.posterUrl)).toEqual([undefined, 'https://img.example/b.jpg']);
+  });
+
   it('여러 번 보내도 카드 수가 2 → 2 → 2 (2·4·6 으로 늘지 않는다)', () => {
     let ts: Theme[] = [];
     const pick = [added('zero-gn:1', 600), added('zero-gn:2', 720)];

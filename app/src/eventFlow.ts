@@ -40,7 +40,7 @@ export function mergeServerThemes(ts: Theme[], items: AddedTheme[], newId: () =>
   for (const it of items) {
     const card = {
       name: it.name, place: it.place, dur: it.dur || 70, sessions: it.sessions, raw: sessionsToText(it.sessions),
-      source: 'server', fresh: it.fresh, date: it.date, themeKey: it.themeKey, err: '', busy: '',
+      source: 'server', fresh: it.fresh, date: it.date, themeKey: it.themeKey, posterUrl: it.posterUrl, err: '', busy: '',
       /* 같은 키 카드를 바꿀 때 문맥도 새 값으로 — 문맥 없이 다시 넣으면 앞 문맥 표시를 지운다(undefined 로 덮는다) */
       ctx,
     };

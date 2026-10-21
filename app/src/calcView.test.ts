@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { condSummary, endsNextDay, foldChips, sessionCounts, themesInfo, timeText } from './calcView';
+import { condSummary, endsNextDay, firstChar, foldChips, sessionCounts, themesInfo, timeText } from './calcView';
 import { gapText, hm, resultToText, waitOf } from './resultText';
 import type { OptionsState } from './serialize';
 import type { PathStep, SearchResultRow } from './core';
@@ -112,5 +112,11 @@ describe('timeText — 맨 위 가능한 시간 한 줄', () => {
     expect(timeText({ oStart: '13:00', oEnd: '' })).toBe('13:00부터');
     expect(timeText({ oStart: '', oEnd: '23:59' })).toBe('23:59까지');
     expect(timeText({ oStart: ' ', oEnd: '' })).toBe('시간 제한 없음');
+  });
+});
+
+describe('firstChar — 테마 사진 없는 자리의 첫 글자', () => {
+  it('앞 빈칸은 건너뛰고 한 글자, 두 칸 글자(이모지)도 한 글자, 없으면 빈 글', () => {
+    expect([firstChar('비밀의 화원'), firstChar('  셜록'), firstChar('🔐 금고'), firstChar(''), firstChar('   ')]).toEqual(['비', '셜', '🔐', '', '']);
   });
 });

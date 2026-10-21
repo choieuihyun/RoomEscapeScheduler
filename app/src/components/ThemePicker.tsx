@@ -16,6 +16,7 @@ import type { AddedTheme } from '../scheduler/types';
 import { WishToggle } from '../clubStore';
 import { setServerRegions, type RegionPick } from '../regions';
 import { useBackClose } from '../backStack';
+import { Poster } from './Poster';
 
 /* 테마 고르기 창 — 시간표 계산의 "테마 불러오기"와 일정 만들기의 "테마 찾아서 넣기"가 같이 쓴다.
    둘 다 같은 데이터(/api/branches·/api/schedule: 지점 → 날짜 → 그날 테마·회차)를 보고, 다른 건 마지막에 고르는 단위뿐이다.
@@ -333,6 +334,7 @@ export function ThemePicker(p: Props) {
                         const fits = fitsPeople(th, people);
                         return (
                           <li key={th.id} className={'tf-th tf-th-sel' + (fits ? '' : ' off')}>
+                            <Poster url={th.posterUrl} name={th.name} className="pst-tf" />
                             <div className="tf-th-top">
                               <button type="button" className="tf-th-pick" aria-pressed={on} onClick={() => toggleTheme(th, slot.checkedAt)}>
                                 <span className="tf-chk" aria-hidden="true" />
@@ -355,6 +357,7 @@ export function ThemePicker(p: Props) {
                       }
                       return (
                         <li key={th.id} className="tf-th">
+                          <Poster url={th.posterUrl} name={th.name} className="pst-tf" />
                           <div className="tf-th-top">
                             <span className="tf-th-n">{th.name}</span>
                             <span className="tf-th-m">{meta}</span>

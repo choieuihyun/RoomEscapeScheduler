@@ -4,6 +4,7 @@ import { endsNextDay, foldChips, sessionCounts } from '../calcView';
 import type { Theme } from '../scheduler/types';
 import type { WatchControl } from '../useWatches';
 import { Ic } from './Ic';
+import { Poster } from './Poster';
 import { WatchBell } from './WatchBell';
 
 const DRAG_TYPE = 'application/x-theme-index';
@@ -119,16 +120,19 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
       }}
     >
       <div className="cz-head">
-        {/* 순서 번호 겸 끌어서 옮기는 손잡이(마우스). 터치는 ⋯ 의 위로/아래로 */}
+        {/* 테마 사진(없으면 이름 첫 글자) + 그 위 순서 번호 — 둘을 합친 칸이 끌어서 옮기는 손잡이(마우스). 터치는 ⋯ 의 위로/아래로 */}
         <span
-          className="cz-idx" draggable title="끌어서 순서 바꾸기"
+          className="cz-pos" draggable title="끌어서 순서 바꾸기"
           onDragStart={e => {
             e.dataTransfer.setData(DRAG_TYPE, String(index));
             e.dataTransfer.effectAllowed = 'move';
             setDragState('dragging');
           }}
           onDragEnd={() => setDragState('')}
-        >{String(index + 1).padStart(2, '0')}</span>
+        >
+          <Poster url={th.posterUrl} name={th.name} className="pst-cz" />
+          <span className="cz-idx">{String(index + 1).padStart(2, '0')}</span>
+        </span>
         {editing ? (
           <div className="cz-edit" onKeyDown={e => {
             if ((e.key === 'Enter' || e.key === 'Escape') && !ime(e)) { e.preventDefault(); e.stopPropagation(); done(); }
@@ -147,13 +151,16 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
           </div>
         ) : (
           <>
+            {/* 사진 높이(두 줄)를 쓴다 — 첫 줄 이름·매장·분, 둘째 줄 "예약 가능 n · 매진 m"(사진만큼 이름이 좁아져 한 줄에 다 넣으면 이름이 일찍 잘린다) */}
             <button type="button" className="cz-name" ref={nameRef} onClick={() => setEditing(true)} title="눌러서 이름·매장·분 고치기">
-              <span className={'cz-nm' + (th.name ? '' : ' none')}>{th.name || '이름 없는 테마'}</span>
-              {th.place && <span className="cz-pl">· {th.place}</span>}
-              <span className="cz-du">· {th.dur}분</span>
+              <span className="cz-l1">
+                <span className={'cz-nm' + (th.name ? '' : ' none')}>{th.name || '이름 없는 테마'}</span>
+                {th.place && <span className="cz-pl">· {th.place}</span>}
+                <span className="cz-du">· {th.dur}분</span>
+              </span>
+              {counts && <span className="cz-cnts mono">{counts}</span>}
               <span className="sr-only"> 고치기</span>
             </button>
-            {counts && <span className="cz-cnts mono">{counts}</span>}
             <button type="button" className="cz-more" ref={moreRef} aria-label={`${label} 메뉴`} title="더 보기"
               aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(m => !m)}><Ic n="more" /></button>
           </>

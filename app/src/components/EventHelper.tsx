@@ -42,7 +42,7 @@ const toAdded = (t: FreshTheme, dto: FreshDto): AddedTheme => ({
   /* 테마 불러오기(eventPick.toAdded)와 같은 모양 — toSessions 가 시각 순으로 세운다.
      서버가 place 를 안 주면 매장·지점 이름으로(이동 시간 표의 매장 칸) */
   name: t.name, place: t.place || `${t.storeName} ${t.branchName}`.trim(), dur: t.dur || 70,
-  sessions: toSessions(t.sessions), fresh: ago(dto.checkedAt), date: dto.date, themeKey: t.themeKey || t.id,
+  sessions: toSessions(t.sessions), fresh: ago(dto.checkedAt), date: dto.date, themeKey: t.themeKey || t.id, posterUrl: t.posterUrl,
 });
 
 export function EventHelper({ ev, onCalcThemes }: {

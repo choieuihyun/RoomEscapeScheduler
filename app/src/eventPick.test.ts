@@ -285,6 +285,10 @@ describe('eventPick — 테마째 고르기', () => {
       sessions: [{ t: 820, soldout: false, id: 1 }, { t: 900, soldout: true, id: 2 }],
     });
   });
+  it('테마 사진 주소를 카드로 같이 넘긴다(없으면 없음)', () => {
+    expect(toAdded(tp({ theme: th({ posterUrl: 'https://img.example/p.jpg' }) })).posterUrl).toBe('https://img.example/p.jpg');
+    expect(toAdded(tp()).posterUrl).toBeUndefined();
+  });
   it('소요 시간을 모르면 70분, place 가 없으면 빈 글자, 받은 지 오래면 "n분 전 기준"', () => {
     const a = toAdded(tp({ theme: th({ dur: undefined, place: undefined }), checkedAt: new Date(Date.now() - 5 * 60_000).toISOString() }));
     expect([a.dur, a.place, a.fresh]).toEqual([70, '', '5분 전 기준']);

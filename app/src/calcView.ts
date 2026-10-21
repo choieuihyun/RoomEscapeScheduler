@@ -48,3 +48,6 @@ export function sessionCounts(ss: readonly { soldout: boolean }[]): string {
 
 /* 자정 전에 시작해 다음날 끝나는 회차(예 23:30 시작 70분) — 끝 시각 쪽 "+1". 자정 이후 시작(t ≥ 1440)은 시작 쪽 +1 이 따로 있다 */
 export const endsNextDay = (t: number, dur: number): boolean => t < 24 * 60 && t + dur > 24 * 60;
+
+/* 테마 사진이 없을 때 자리에 쓰는 이름 첫 글자 — 앞뒤 빈칸은 건너뛰고, 이모지 같은 두 칸 글자도 한 글자로. 이름이 없으면 빈 글 */
+export const firstChar = (name: string): string => Array.from(name.trim())[0] ?? '';

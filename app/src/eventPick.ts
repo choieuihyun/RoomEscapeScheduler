@@ -220,7 +220,7 @@ export const themePickKey = (branchId: string, date: string, themeId: string): s
 /* 고른 테마 → 계산 카드. 회차는 전부(매진도 — 카드에 남고 계산에서 빠진다), 소요 시간을 모르면 70분(계산은 끝이 있어야 한다) */
 export const toAdded = (p: PickedTheme): AddedTheme => ({
   name: p.theme.name, place: p.theme.place || '', dur: p.theme.dur || 70,
-  sessions: toSessions(p.theme.sessions), fresh: ago(p.checkedAt), date: p.date, themeKey: p.theme.id,
+  sessions: toSessions(p.theme.sessions), fresh: ago(p.checkedAt), date: p.date, themeKey: p.theme.id, posterUrl: p.theme.posterUrl,
 });
 
 /* 고르기·빼기 — 같은 키면 빼고 없으면 더한다. 다른 지점·날짜에서 고른 것은 그대로 */
