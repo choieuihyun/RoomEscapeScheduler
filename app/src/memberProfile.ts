@@ -182,7 +182,7 @@ export function toProfile(d: Draft, today: string): { nickname: string; profile:
 
 /* ── 멤버 목록 ── */
 
-export type PeopleSort = 'name' | 'rooms' | 'age';
+export type PeopleSort = 'name' | 'rooms';
 
 /* 별명·이름 부분 일치(공백·대소문자 무시) */
 export function matchPerson(m: Pick<ClubMemberDto, 'nickname' | 'profile'>, q: string): boolean {
@@ -192,32 +192,40 @@ export function matchPerson(m: Pick<ClubMemberDto, 'nickname' | 'profile'>, q: s
 
 const byName = (a: ClubMemberDto, b: ClubMemberDto) => a.nickname.localeCompare(b.nickname, 'ko');
 
-/* 기준마다 "앞에 올 값이 작게" 바꾼 값 — 나이는 생일(이른 = 나이 많음), 방 수는 음수(많은 게 앞). 프로필 없으면 null */
-const sortKey = (m: ClubMemberDto, sort: 'age' | 'rooms'): string | number | null =>
-  !m.profile ? null : sort === 'age' ? m.profile.birthDate : -m.profile.roomCount;
-
 /* 정렬 단추 글 — 기준과 방향(rev: 기본 방향을 뒤집었나) */
 export function sortLabel(sort: PeopleSort, rev: boolean): string {
   if (sort === 'name') return rev ? '이름 역순' : '이름순';
-  if (sort === 'age') return rev ? '나이 적은 순' : '나이 많은 순';
   return rev ? '방 적은 순' : '방 많은 순';
 }
 
-/* 멤버 목록 정렬(2026-10-22 사용자 요청: 이름순·나이순·방 수순, 같은 단추를 다시 누르면 방향이 바뀐다).
-   기본 방향은 이름 가나다, 나이 많은 순, 방 많은 순 — rev 면 거꾸로.
-   내 카드는 늘 맨 위. 나이·방 수는 같으면 가나다, 프로필 없는 사람은 방향과 상관없이 뒤(그 안은 가나다) */
+/* 멤버 목록 정렬(2026-10-22 사용자 요청: 이름순·방 수순, 같은 단추를 다시 누르면 방향이 바뀐다 — 나이는 정렬 대신
+   태어난 해 고르기(birthYears·bornIn)로 바꿨다). 기본 방향은 이름 가나다, 방 많은 순 — rev 면 거꾸로.
+   내 카드는 늘 맨 위. 방 수는 같으면 가나다, 프로필 없는 사람은 방향과 상관없이 뒤(그 안은 가나다) */
 export function sortPeople(list: readonly ClubMemberDto[], sort: PeopleSort, meUid: string, rev = false): ClubMemberDto[] {
   const dir = rev ? -1 : 1;
   const cmp = sort === 'name' ? (a: ClubMemberDto, b: ClubMemberDto) => dir * byName(a, b)
     : (a: ClubMemberDto, b: ClubMemberDto) => {
-      const x = sortKey(a, sort), y = sortKey(b, sort);
+      const x = a.profile?.roomCount ?? null, y = b.profile?.roomCount ?? null;
       if (x === null || y === null) return x === y ? byName(a, b) : x === null ? 1 : -1;
-      return (x < y ? -dir : x > y ? dir : 0) || byName(a, b);
+      return (x > y ? -dir : x < y ? dir : 0) || byName(a, b);
     };
   const rest = list.filter((m) => m.uid !== meUid).sort(cmp);
   const me = list.filter((m) => m.uid === meUid);
   return [...me, ...rest];
 }
+
+/* 나이(태어난 해) 고르기(2026-10-22 사용자 요청: 90~02년생 중 골라 그 멤버만) — 고를 수 있는 해.
+   90~02 를 늘 두고, 그 밖에 태어난 멤버가 있으면 그 해도 넣는다(아무 해로도 못 찾는 사람이 없게). 오름차순 */
+export function birthYears(list: readonly ClubMemberDto[]): number[] {
+  const ys = new Set<number>();
+  for (let y = 1990; y <= 2002; y++) ys.add(y);
+  for (const m of list) if (m.profile) ys.add(+m.profile.birthDate.slice(0, 4));
+  return [...ys].sort((a, b) => a - b);
+}
+
+/* 고른 해에 태어났나 — year 가 null 이면(전체) 누구나. 프로필 없는 사람은 해를 골랐으면 빠진다 */
+export const bornIn = (m: Pick<ClubMemberDto, 'profile'>, year: number | null): boolean =>
+  year === null || (!!m.profile && +m.profile.birthDate.slice(0, 4) === year);
 
 /* 방 수 순위 — 메달(1~3등)을 달 사람만 uid → 순위. 같은 수면 같은 순위이고 다음은 바로 이어진다(1·2·2·3 —
    2026-10-22 사용자 결정, 랭킹 화면 topRanks 와 같은 방식). 찾기로 걸러도 순위가 바뀌지 않게 부르는 쪽이 전체 목록을 넘긴다.

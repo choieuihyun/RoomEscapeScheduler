@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   GENRES, MBTI_ROWS, addMonths, allEmpty, birthLabel, checkBirth, cleanRooms, draftFrom, draftIssues, emptyDraft, firstRange, lifeFromRef,
-  lifeLabel, maskBirth, matchPerson, mergeMonths, monthLabel, monthsBetween, olderRange, personLine, roomRanks, searchLife, sortLabel, sortPeople,
+  lifeLabel, maskBirth, matchPerson, mergeMonths, monthLabel, monthsBetween, olderRange, personLine, roomRanks, birthYears, bornIn, searchLife, sortLabel, sortPeople,
   toProfile, toggleGenre, topRanks, yearLabel, type Draft,
 } from './memberProfile';
 import { canEditProfile, needJoin, needsProfile, profileApiOn } from './profileGate';
@@ -186,23 +186,24 @@ describe('멤버 목록', () => {
   it('방 수 많은 순 — 프로필 없는 사람은 뒤(그 안은 가나다)', () => {
     expect(sortPeople(list, 'rooms', 'me').map((m) => m.nickname)).toEqual(['하마', '가오리', '다람쥐', '나비']);
   });
-  it('나이 많은 순(생일 이른 순) — 같은 생일은 가나다, 프로필 없는 사람은 뒤(그 안은 가나다), 내 카드는 맨 위', () => {
-    const ages = [
-      M('a', '다람쥐', { ...P, birthDate: '1999-01-05' }), M('b', '가오리', { ...P, birthDate: '1995-11-30' }),
-      M('d', '라마', { ...P, birthDate: '1999-01-05' }), M('me', '하마', { ...P, birthDate: '2001-03-03' }),
-      M('c', '나비', null), M('e', '고래', { ...P, birthDate: '1995-02-01' }),
+  it('방향 뒤집기 — 방 적은 순·이름 역순. 같으면 가나다, 프로필 없는 사람은 그래도 뒤, 내 카드는 맨 위', () => {
+    const ms = [
+      M('a', '다람쥐', { ...P, roomCount: 50 }), M('b', '가오리', { ...P, roomCount: 500 }),
+      M('d', '라마', { ...P, roomCount: 50 }), M('me', '하마', null),
+      M('c', '나비', null), M('e', '고래', { ...P, roomCount: 7 }),
     ];
-    expect(sortPeople(ages, 'age', 'me').map((m) => m.nickname)).toEqual(['하마', '고래', '가오리', '다람쥐', '라마', '나비']);
+    expect(sortPeople(ms, 'rooms', 'me', true).map((m) => m.nickname)).toEqual(['하마', '고래', '다람쥐', '라마', '가오리', '나비']);
+    expect(sortPeople(ms, 'name', 'me', true).map((m) => m.nickname)).toEqual(['하마', '라마', '다람쥐', '나비', '고래', '가오리']);
   });
-  it('방향 뒤집기 — 나이 적은 순·방 적은 순·가나다 거꾸로. 같으면 가나다, 프로필 없는 사람은 그래도 뒤, 내 카드는 맨 위', () => {
-    const ages = [
-      M('a', '다람쥐', { ...P, birthDate: '1999-01-05', roomCount: 50 }), M('b', '가오리', { ...P, birthDate: '1995-11-30', roomCount: 500 }),
-      M('d', '라마', { ...P, birthDate: '1999-01-05', roomCount: 50 }), M('me', '하마', null),
-      M('c', '나비', null), M('e', '고래', { ...P, birthDate: '1995-02-01', roomCount: 7 }),
-    ];
-    expect(sortPeople(ages, 'age', 'me', true).map((m) => m.nickname)).toEqual(['하마', '다람쥐', '라마', '가오리', '고래', '나비']);
-    expect(sortPeople(ages, 'rooms', 'me', true).map((m) => m.nickname)).toEqual(['하마', '고래', '다람쥐', '라마', '가오리', '나비']);
-    expect(sortPeople(ages, 'name', 'me', true).map((m) => m.nickname)).toEqual(['하마', '라마', '다람쥐', '나비', '고래', '가오리']);
+  it('나이(태어난 해) 고르기 — 90~02년생 기본, 멤버 중 그 밖의 해도 넣는다(아무도 못 고르는 사람이 없게), 오름차순', () => {
+    expect(birthYears([])).toEqual([1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002]);
+    const ys = birthYears([M('a', '가', { ...P, birthDate: '1988-03-01' }), M('b', '나', { ...P, birthDate: '1997-01-01' }), M('c', '다', null), M('d', '라', { ...P, birthDate: '2005-12-31' })]);
+    expect([ys[0], ys[1], ys[ys.length - 1], ys.length]).toEqual([1988, 1990, 2005, 15]);
+  });
+  it('태어난 해로 거르기 — 고른 해만, 프로필 없는 사람은 빠진다, null 이면 전부', () => {
+    const ms = [M('a', '가', { ...P, birthDate: '1997-06-28' }), M('b', '나', { ...P, birthDate: '1998-01-01' }), M('c', '다', null), M('me', '라', { ...P, birthDate: '1997-12-01' })];
+    expect(ms.filter((m) => bornIn(m, 1997)).map((m) => m.uid)).toEqual(['a', 'me']);
+    expect(ms.filter((m) => bornIn(m, null)).map((m) => m.uid)).toEqual(['a', 'b', 'c', 'me']);
   });
   it('방 수 순위(메달) — 많은 순, 같은 수면 같은 순위이고 다음은 바로 이어서(1·1·2·3), 3등까지만, 0방·프로필 없는 사람은 빼고, 내 카드도 센다', () => {
     const rs = [
@@ -216,8 +217,6 @@ describe('멤버 목록', () => {
   it('정렬 단추 글 — 고른 기준은 방향까지', () => {
     expect(sortLabel('name', false)).toBe('이름순');
     expect(sortLabel('name', true)).toBe('이름 역순');
-    expect(sortLabel('age', false)).toBe('나이 많은 순');
-    expect(sortLabel('age', true)).toBe('나이 적은 순');
     expect(sortLabel('rooms', false)).toBe('방 많은 순');
     expect(sortLabel('rooms', true)).toBe('방 적은 순');
   });
