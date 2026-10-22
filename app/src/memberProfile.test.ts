@@ -204,13 +204,13 @@ describe('멤버 목록', () => {
     expect(sortPeople(ages, 'rooms', 'me', true).map((m) => m.nickname)).toEqual(['하마', '고래', '다람쥐', '라마', '가오리', '나비']);
     expect(sortPeople(ages, 'name', 'me', true).map((m) => m.nickname)).toEqual(['하마', '라마', '다람쥐', '나비', '고래', '가오리']);
   });
-  it('방 수 순위(메달) — 많은 순, 같은 수면 같은 순위(1·1·3), 3등까지만, 0방·프로필 없는 사람은 빼고, 내 카드도 센다', () => {
+  it('방 수 순위(메달) — 많은 순, 같은 수면 같은 순위이고 다음은 바로 이어서(1·1·2·3), 3등까지만, 0방·프로필 없는 사람은 빼고, 내 카드도 센다', () => {
     const rs = [
       M('a', '다람쥐', { ...P, roomCount: 300 }), M('b', '가오리', { ...P, roomCount: 500 }),
       M('me', '하마', { ...P, roomCount: 500 }), M('c', '나비', null),
       M('d', '라마', { ...P, roomCount: 200 }), M('e', '고래', { ...P, roomCount: 0 }),
     ];
-    expect([...roomRanks(rs)]).toEqual([['b', 1], ['me', 1], ['a', 3]]);
+    expect([...roomRanks(rs)]).toEqual([['b', 1], ['me', 1], ['a', 2], ['d', 3]]);
     expect([...roomRanks([M('x', '혼자', { ...P, roomCount: 0 })])]).toEqual([]);
   });
   it('정렬 단추 글 — 고른 기준은 방향까지', () => {
@@ -267,9 +267,10 @@ describe('랭킹 달 범위', () => {
     const m2 = mergeMonths(m, [{ month: '2026-07', ranks: [] }], { from: '2026-05', to: '2026-07' });
     expect(m2.map((x) => x.month)).toEqual(['2026-10', '2026-09', '2026-08', '2026-07', '2026-06', '2026-05']);
   });
-  it('같은 순위는 같은 숫자, 5등에 걸리면 6명 이상도 그대로', () => {
+  it('같은 순위는 같은 숫자, 다음은 바로 이어서(서버 1·1·3 → 1·1·2), 서버 5등에 걸리면 6명 이상도 그대로', () => {
     const ranks = [1, 1, 3, 4, 5, 5].map((rank, i) => ({ rank, uid: 'u' + i, nickname: 'n' + i, count: 10 - rank }));
-    expect(topRanks({ month: '2026-10', ranks }).map((r) => r.rank)).toEqual([1, 1, 3, 4, 5, 5]);
+    expect(topRanks({ month: '2026-10', ranks }).map((r) => r.rank)).toEqual([1, 1, 2, 3, 4, 4]);
+    expect(topRanks({ month: '2026-10', ranks: [...ranks].reverse() }).map((r) => r.uid)).toEqual(['u1', 'u0', 'u2', 'u3', 'u5', 'u4']);
     expect(topRanks({ month: '2026-10', ranks: [...ranks, { rank: 7, uid: 'x', nickname: 'x', count: 1 }] })).toHaveLength(6);
   });
 });

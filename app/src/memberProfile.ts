@@ -219,15 +219,16 @@ export function sortPeople(list: readonly ClubMemberDto[], sort: PeopleSort, meU
   return [...me, ...rest];
 }
 
-/* 방 수 순위 — 메달(1~3등)을 달 사람만 uid → 순위. 같은 수면 같은 순위(1·1·3, 랭킹 화면과 같은 방식).
-   찾기로 걸러도 순위가 바뀌지 않게 부르는 쪽이 전체 목록을 넘긴다. 0방·프로필 없는 사람은 순위 밖 */
+/* 방 수 순위 — 메달(1~3등)을 달 사람만 uid → 순위. 같은 수면 같은 순위이고 다음은 바로 이어진다(1·2·2·3 —
+   2026-10-22 사용자 결정, 랭킹 화면 topRanks 와 같은 방식). 찾기로 걸러도 순위가 바뀌지 않게 부르는 쪽이 전체 목록을 넘긴다.
+   0방·프로필 없는 사람은 순위 밖 */
 export function roomRanks(list: readonly ClubMemberDto[]): Map<string, number> {
   const ranked = list.filter((m) => (m.profile?.roomCount ?? 0) > 0)
     .sort((a, b) => (b.profile as ProfileDto).roomCount - (a.profile as ProfileDto).roomCount || byName(a, b));
   const out = new Map<string, number>();
+  let rank = 0;
   ranked.forEach((m, i) => {
-    const prev = ranked[i - 1];
-    const rank = prev && prev.profile?.roomCount === m.profile?.roomCount ? (out.get(prev.uid) as number) : i + 1;
+    if (i === 0 || ranked[i - 1].profile?.roomCount !== m.profile?.roomCount) rank++;
     if (rank <= 3) out.set(m.uid, rank);
   });
   return out;
@@ -273,6 +274,13 @@ export function mergeMonths(had: readonly RankMonthDto[], got: readonly RankMont
 /* "2026년 10월" */
 export const monthLabel = (ym: string): string => `${+ym.slice(0, 4)}년 ${+ym.slice(5, 7)}월`;
 
-/* 순위 순(같은 순위는 서버 순서 = 가나다). 5등 밖은 서버가 안 주지만 혹시 와도 뺀다 */
-export const topRanks = (m: RankMonthDto): RankMonthDto['ranks'] =>
-  m.ranks.filter((r) => r.rank <= 5).sort((a, b) => a.rank - b.rank);
+/* 순위 순(같은 순위는 서버 순서 = 가나다). 5등 밖은 서버가 안 주지만 혹시 와도 뺀다.
+   서버 순위는 1·2·2·4 식이라 화면에선 다음 순위를 바로 이어 다시 매긴다(1·2·2·3 — 2026-10-22 사용자 결정, 메달도 이 순위) */
+export function topRanks(m: RankMonthDto): RankMonthDto['ranks'] {
+  const rows = m.ranks.filter((r) => r.rank <= 5).sort((a, b) => a.rank - b.rank);
+  let dense = 0;
+  return rows.map((r, i) => {
+    if (i === 0 || rows[i - 1].rank !== r.rank) dense++;
+    return { ...r, rank: dense };
+  });
+}
