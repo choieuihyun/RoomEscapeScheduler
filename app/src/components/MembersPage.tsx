@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { MemberLink } from '../clubStore';
 import { lifeLabel, personLine } from '../memberProfile';
 import type { MemberDto, ProfileDto } from '../server';
 import { formatKst, memberName, sameNicknameUids, splitMembers, type UseMembersReturn } from '../useMembers';
 
-/* 멤버 관리 화면(기획 §4.54, 운영진 전용). 승인 대기 → 멤버 → 접힌 "지난 신청" 순.
+/* 멤버 관리 화면(기획 §4.54, 운영진 전용). 승인 대기 → 멤버 순("지난 신청" 칸은 2026-10-22 사용자 요청으로 뺐다).
    버튼을 숨기는 건 편의일 뿐이고 승인·운영진 여부는 서버가 모든 요청에서 다시 본다. */
 /* 프로필 한 줄(§4.11 — MemberDto.profile 은 운영진 멤버 관리에도 보인다). 승인할 때 맞춰 보라고 대기 줄에도 둔다.
    서버가 프로필을 모르면(undefined) 아무것도, 안 채웠으면 "프로필 없음" */
@@ -22,7 +22,6 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
   const { list, err, busy, act, setRole } = ctl;
   const parts = useMemo(() => splitMembers(list ?? []), [list]);
   const dup = useMemo(() => sameNicknameUids(list ?? []), [list]);
-  const [pastOpen, setPastOpen] = useState(false);
 
   /* 되돌릴 수 없는 처리는 한 번 더 묻는다 */
   const remove = (m: MemberDto) => {
@@ -95,31 +94,9 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
               </table>
             </div>
           )}
-          <p className="mem-note">거절한 신청과 내보낸 계정은 아래 "지난 신청"에 남아요. 내보내면 걸어 둔 빈자리 알림도 지워져요. 다시 가입 신청은 할 수 있어요.</p>
+          <p className="mem-note">내보내면 걸어 둔 빈자리 알림도 지워져요. 거절하거나 내보낸 사람도 다시 가입 신청은 할 수 있어요.</p>
         </section>
 
-        <section className="mem-sec">
-          <button className="mem-fold" type="button" aria-expanded={pastOpen} onClick={() => setPastOpen(o => !o)}>
-            <span className="mem-caret" aria-hidden="true">{pastOpen ? '▾' : '▸'}</span>
-            지난 신청 <span className="mem-n">{parts.past.length}명</span>
-          </button>
-          {pastOpen && (parts.past.length === 0 ? <p className="mem-empty">지난 신청이 없어요.</p> : (
-            <div className="mem-card">
-              {parts.past.map(m => (
-                <div className="mem-row" key={m.uid}>
-                  <b>{memberName(m)}</b>
-                  <span className={'chip-info ' + (m.status === 'REMOVED' ? 'danger' : 'muted')}>{m.status === 'REJECTED' ? '거절함' : '내보냄'}</span>
-                  <span className="mem-sub">{formatKst(m.decidedAt) || formatKst(m.createdAt)}</span>
-                  <span className="mem-btns">
-                    {m.status === 'REJECTED'
-                      ? <button className="btn mem-ok" type="button" disabled={busy.has(m.uid)} onClick={() => void act(m, 'approve')}>승인</button>
-                      : <span className="mem-sub">다시 신청하면 승인 대기로 와요</span>}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </section>
       </>)}
     </div>
   </>);
