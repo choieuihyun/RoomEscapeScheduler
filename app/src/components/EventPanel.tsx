@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { eventStatus, eventTitle, isUndecided, kakaoPost, rangeLabel, STATUS_LABEL, timeLabel, todayKst } from '../clubEvents';
 import { useBackClose } from '../backStack';
+import { googleCalUrl, icsText } from '../calExport';
 import { eventLink } from '../eventLink';
 import { dDay, monthDayLabel, peopleLabel, placeLabel, talkSummary } from '../eventView';
 import { MemberLink } from '../clubStore';
@@ -74,6 +75,20 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
   const [stMenu, setStMenu] = useState(false);
   const [showPost, setShowPost] = useState(false);
   const post = kakaoPost(ev, eventLink(ev.id, location));
+  const calUrl = googleCalUrl(ev, eventLink(ev.id, location));
+  /* .ics 받기 — 아이폰 사파리는 파일을 열면 "캘린더에 추가"를, 안드로이드·PC 는 내려받은 파일을 캘린더 앱으로 연다 */
+  const saveIcs = () => {
+    const text = icsText(ev, eventLink(ev.id, location), new Date());
+    if (!text) return;
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `floduler-${ev.date}-${ev.id}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
 
   const undecided = isUndecided(ev);
   /* 시간 — 큰 시작 + 작은 끝. 날짜 미정이면 "날짜 미정"을 크게, 시간이 없으면 "하루 종일" */
@@ -256,6 +271,15 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
             <Ic size={20}><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></Ic>
             <span>만든 사람 <MemberLink uid={ev.createdBy.uid} name={ev.createdBy.nickname} /></span>
           </div>
+          {/* 내 캘린더에 넣기(2026-10-23) — 날짜가 정해진 일정만. 구글은 새 탭의 일정 추가 화면, 애플·기타는 .ics 파일 */}
+          {calUrl && (
+            <div className="evp-fact sub evp-cal">
+              <Ic size={20}><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4M12 13v4M10 15h4" /></Ic>
+              <span>내 캘린더에 넣기</span>
+              <a className="evp-cal-b" href={calUrl} target="_blank" rel="noopener noreferrer">구글</a>
+              <button type="button" className="evp-cal-b" onClick={saveIcs}>애플·기타</button>
+            </div>
+          )}
         </div>
       </section>
 
