@@ -56,13 +56,36 @@ const MemberViews = lazyRetry(() => import('./components/MemberViews').then(m =>
 const ResultsPanel = lazyRetry(() => import('./components/ResultsPanel').then(m => ({ default: m.ResultsPanel })));
 const PlanSection = lazyRetry(() => import('./components/PlanSection').then(m => ({ default: m.PlanSection })));
 
-/* 배포 뒤 옛 탭에서 청크를 못 찾으면(vite:preloadError) 맨 위 띠로 한 번 알린다 */
+/* 배포 뒤 옛 탭에서 청크를 못 찾으면(vite:preloadError) 맨 위 띠로 한 번 알린다.
+   그리고 화면으로 돌아올 때·30분마다 첫 화면 파일 이름(index-해시.js)을 서버 것과 견줘, 새 버전이 나왔으면 같은 띠를 띄운다
+   — 열어 둔 탭·홈 화면 앱이 새로 고침 전까지 예전 화면에 머무는 것(2026-10-22) */
+const myEntry = (): string => {
+  const src = [...document.scripts].map((s) => s.src).find((s) => /\/assets\/index-[\w-]+\.js/.test(s));
+  return src ? (src.match(/index-[\w-]+\.js/)?.[0] ?? '') : '';
+};
 function useStaleStrip(): boolean {
   const [stale, setStale] = useState(false);
   useEffect(() => {
     const on = (e: Event) => { e.preventDefault(); setStale(true); };
     window.addEventListener('vite:preloadError', on);
-    return () => window.removeEventListener('vite:preloadError', on);
+    if (!import.meta.env.PROD) return () => window.removeEventListener('vite:preloadError', on);
+    const mine = myEntry();
+    let last = 0;
+    const check = () => {
+      if (!mine || document.visibilityState !== 'visible' || Date.now() - last < 60_000) return;
+      last = Date.now();
+      fetch(`${import.meta.env.BASE_URL}?v=${last}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.text() : ''))
+        .then((html) => { const now = html.match(/index-[\w-]+\.js/)?.[0]; if (now && now !== mine) setStale(true); })
+        .catch(() => {});
+    };
+    const t = window.setInterval(check, 30 * 60_000);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      window.removeEventListener('vite:preloadError', on);
+      window.clearInterval(t);
+      document.removeEventListener('visibilitychange', check);
+    };
   }, []);
   return stale;
 }

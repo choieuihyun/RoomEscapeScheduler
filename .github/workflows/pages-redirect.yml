@@ -1,0 +1,39 @@
+name: 옛 주소(GitHub Pages) → web.app 넘기기
+
+# 2026-10-21 배포를 Firebase Hosting(web.app)으로 옮기면서 GitHub Pages 배포를 뺐는데, 옛 주소에는 마지막 버전이 그대로 남아
+# 북마크·홈 화면 앱·옛 공유 링크·옛 알림 링크로 들어온 사람이 예전 화면을 봤다(2026-10-22).
+# 옛 주소에 "새 주소로 이동" 페이지만 올린다 — pages-redirect/ 가 바뀔 때만 돈다(앱 배포와 무관).
+# 옛 주소에서 알림을 켠 기기도 계속 받도록 알림 서비스워커·아이콘·매니페스트를 함께 올린다.
+on:
+  push:
+    branches: [main]
+    paths: ['pages-redirect/**', '.github/workflows/pages-redirect.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 이동 페이지 묶기
+        run: |
+          cp pages-redirect/index.html pages-redirect/404.html
+          cp app/public/firebase-messaging-sw.js app/public/icon-192.png app/public/icon-512.png app/public/manifest.json pages-redirect/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-redirect
+      - id: deployment
+        uses: actions/deploy-pages@v4
