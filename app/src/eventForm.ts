@@ -1,7 +1,7 @@
 /* 일정 만들기·수정 창의 폼 상태 ↔ EventInput 변환과 검사 — React 밖의 순수 함수 (계획 Task E5).
    시각은 입력 칸 문자열("13:40", 24시간제), 서버로 보낼 때만 분으로 바꾸며 자정 넘김(다음날)을 채운다. */
 import { fmt, type PathStep } from './core';
-import { addDays, sortKeyDate, clockLabel, cpLen, parseClock24, rangeLabel, rollDays, type TimeRow } from './clubEvents';
+import { addDays, sortKeyDate, clockLabel, cpLen, HALF_DAY, halfOf, parseClock24, rangeLabel, rollDays, type HalfDay, type TimeRow } from './clubEvents';
 import type { EventDto, EventInput, SegmentInput } from './server';
 
 const DAY_MIN = 1440;
@@ -18,6 +18,8 @@ export interface FormState {
   title: string;
   date: string;
   allDay: boolean;
+  /* 오전·오후(2026-10-22) — 고르면 시각 칸 대신 HALF_DAY 범위로 보낸다. 하루 종일과 같이 고를 수 없다(창이 하나만 켠다) */
+  half: HalfDay | null;
   start: string;
   end: string;
   location: string;
@@ -64,7 +66,7 @@ const clockOrBlank = (min: number | null): string => (min === null ? '' : fmt(mi
 
 export function emptyForm(date: string): FormState {
   return {
-    title: '', date, allDay: true, start: '', end: '', location: '',
+    title: '', date, allDay: true, half: null, start: '', end: '', location: '',
     capacity: null, booked: false, memo: '', segs: [], dateMoved: false,
     dateMode: 'fixed', candidates: [], candidatesTouched: false,
   };
@@ -88,8 +90,10 @@ export function formFromEvent(ev: EventDto): FormState {
     candidates: ev.candidates.map((c) => c.date).sort(),
     candidatesTouched: false,
     allDay: ev.startMin === null && ev.segments.length === 0,
-    start: clockOrBlank(ev.startMin),
-    end: clockOrBlank(ev.endMin),
+    ...(() => {
+      const half = ev.segments.length === 0 ? halfOf(ev.startMin, ev.endMin) : null;
+      return half ? { half, start: '', end: '' } : { half: null, start: clockOrBlank(ev.startMin), end: clockOrBlank(ev.endMin) };
+    })(),
     location: ev.location ?? '',
     capacity: ev.capacity,
     booked: ev.booked,
@@ -213,7 +217,11 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
   /* 구간이 있으면 일정 시각은 구간에서 읽으므로 보내지 않는다. 끝은 비워도 된다(시작만 있는 일정). */
   let startMin: number | null = null;
   let endMin: number | null = null;
-  if (segments.length === 0 && !f.allDay) {
+  const half = segments.length === 0 && !f.allDay ? f.half : null;
+  if (half) {
+    startMin = HALF_DAY[half].start;
+    endMin = HALF_DAY[half].end;
+  } else if (segments.length === 0 && !f.allDay) {
     startMin = parseClock24(f.start);
     if (startMin === null) return { error: `시작 시각은 ${TIME_HINT}` };
     if (f.end.trim()) {
@@ -232,7 +240,7 @@ export function toInput(f: FormState): { input: EventInput } | { error: string }
   /* 날짜를 하루 옮겨 연 정해진 일정(첫 시각 24:00 넘김)을 후보 모드로 돌리면, 화면의 00:30 은 "옮긴 날 00:30" 이다.
      후보 일정은 날짜가 없어 이 보정이 안 되므로 원래 날짜 기준(1470)으로 되돌려 보낸다 — 안 그러면 후보 날짜마다 하루 어긋난다.
      첫 시각이 아직 새벽(06시 전)일 때만 — 그 사이 첫 시각을 낮 시각으로 고쳤으면 옮긴 날짜와 상관없다. */
-  if (f.dateMode === 'candidates' && f.dateMoved) {
+  if (f.dateMode === 'candidates' && f.dateMoved && !half) {   // 오전·오후는 날짜와 상관없는 범위라 옮기지 않는다
     const first = segments.length > 0 ? segments[0].startMin : startMin;
     if (first !== null && first < 6 * 60) {
       for (const g of segments) { g.startMin += DAY_MIN; if (g.endMin !== null) g.endMin += DAY_MIN; }

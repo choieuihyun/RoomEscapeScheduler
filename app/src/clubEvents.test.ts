@@ -54,6 +54,10 @@ describe('clubEvents', () => {
 
   it('시각 표시 — 시작만 있는 일정, 다음날', () => {
     expect(timeLabel(ev({ startMin: 1140, endMin: null }))).toBe('19:00');
+    /* 오전·오후로 만든 일정(00:00–11:59 · 12:00–23:59)은 시각 대신 오전·오후 (2026-10-22) */
+    expect(timeLabel(ev({ startMin: 0, endMin: 719 }))).toBe('오전');
+    expect(timeLabel(ev({ startMin: 720, endMin: 1439 }))).toBe('오후');
+    expect(timeLabel(ev({ startMin: 720, endMin: 1438 }))).toBe('12:00–23:58');
     expect(timeLabel(ev({ startMin: 1320, endMin: 1500 }))).toBe('22:00–다음날 01:00');
     expect(clockLabel(1470)).toBe('다음날 00:30');
     expect(clockLabel(1439)).toBe('23:59');

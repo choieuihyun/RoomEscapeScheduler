@@ -17,6 +17,19 @@ const err = (f: FormState) => ('error' in toInput(f) ? (toInput(f) as { error: s
 const EVENING = '자정을 넘기는 일정은 저녁 6시 이후에 시작할 때만 이어서 적을 수 있어요. 날짜를 나눠 주세요.';
 
 describe('eventForm', () => {
+  it('오전·오후(2026-10-22) — 오전은 00:00–11:59, 오후는 12:00–23:59 로 보내고, 그 시각으로 저장된 일정은 다시 오전·오후로 연다', () => {
+    const am = toInput(base({ title: '모임', allDay: false, half: 'am', start: '10:00', end: '' }));
+    expect('input' in am && [am.input.startMin, am.input.endMin]).toEqual([0, 719]);
+    const pm = toInput(base({ title: '모임', allDay: false, half: 'pm' }));
+    expect('input' in pm && [pm.input.startMin, pm.input.endMin]).toEqual([720, 1439]);
+    expect(formFromEvent(ev({ startMin: 0, endMin: 719 })).half).toBe('am');
+    expect(formFromEvent(ev({ startMin: 720, endMin: 1439 })).half).toBe('pm');
+    const f = formFromEvent(ev({ startMin: 720, endMin: 1439 }));
+    expect([f.allDay, f.start, f.end]).toEqual([false, '', '']);
+    expect(formFromEvent(ev({ startMin: 720, endMin: 1380 })).half).toBe(null);
+    expect(emptyForm('2026-10-20').half).toBe(null);
+  });
+
   it('18시 전에 시작해 자정을 넘는 시각은 이유를 말해 준다', () => {
     expect(err(base({ title: 'a', allDay: false, start: '17:00', end: '01:00' }))).toBe(EVENING);
     const s = (start: string, end = '') => ({ themeName: 'A', branchName: '', themeKey: null, start, end });

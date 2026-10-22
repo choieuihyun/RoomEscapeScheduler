@@ -11,7 +11,7 @@ import type { Scheduler } from '../scheduler/useScheduler';
 import { DayBranches } from './DayBranches';
 import { Fold } from './Fold';
 import { EventPanel } from './EventPanel';
-import { dayLabel, eventStatus, eventTitle, isUndecided, sortEvents, STATUS_LABEL, timeLabel } from '../clubEvents';
+import { dayLabel, eventStatus, eventTitle, HALF_DAY, halfOf, isUndecided, sortEvents, STATUS_LABEL, timeLabel } from '../clubEvents';
 import type { UseClubEventsReturn } from '../useClubEvents';
 import type { AddedTheme } from '../scheduler/types';
 import { playedWho, playedWhoLabel, playedWhoTitle } from '../playedWho';
@@ -80,6 +80,8 @@ function PlayedLine({ p }: { p: PlayedDto }) {
 /* 동호회 일정 칩(계획 Task E6) — 상태 점 + 제목(또는 첫 테마)과 시각 + 참여 수. 누르면 오른쪽 패널에 상세. */
 function chipText(ev: EventDto): string {
   const label = ev.title || ev.segments[0]?.themeName || '';
+  const half = ev.segments.length === 0 ? halfOf(ev.startMin, ev.endMin) : null;
+  if (half) return `${label} ${HALF_DAY[half].label}`;   // 오전·오후 일정은 00:00 이 아니라 "오전"
   const start = ev.startMin ?? ev.segments[0]?.startMin ?? null;
   return start === null ? label : `${label} ${fmt(start)}`;
 }

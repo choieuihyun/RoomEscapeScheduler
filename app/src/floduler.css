@@ -1682,6 +1682,9 @@ html:has(.modal.on){overflow:hidden;scrollbar-gutter:stable}
 .evf-time{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:38px}
 .evf-time input:not([type=checkbox]){width:78px;text-align:center}
 .evf-check{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--ink)}
+.evf-check + .evf-check{margin-left:6px}
+/* 시작–끝은 한 덩어리 — 좁은 화면에서 체크 줄 뒤에 둘이 갈라져 줄바꿈되지 않게 같이 넘어간다 */
+.evf-range{display:inline-flex;align-items:center;gap:8px}
 .evf-time-ro{min-height:38px;display:flex;align-items:center;font-size:14px;color:var(--ink2)}
 .evf-past{margin:0;font-size:12.5px;color:var(--ink3);word-break:keep-all}
 /* 테마(구간) — 카드 한 장에 1행 이름·지점, 2행 시작–끝(한 칸으로 붙임)·다음날·소요·빼기 (2026-10-20) */

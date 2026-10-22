@@ -1,6 +1,6 @@
 /* 결과 카드의 "이 일정에 넣기" — 일정 상세에서 시작한 계산의 결과를 그 일정의 구간으로 바꾼다.
    누를 때 받는다(진입 청크 크기). 저장은 일정 수정(§4.7, version 비교) 한 번이다. */
-import { addDays, dayLabel, eventTitle, isUndecided, rangeLabel } from './clubEvents';
+import { addDays, dayLabel, eventTitle, isUndecided, timeLabel } from './clubEvents';
 import type { PathStep } from './core';
 import { formFromEvent, formFromSteps, toInput } from './eventForm';
 import { stepCards, type EventCtx } from './eventFlow';
@@ -41,7 +41,7 @@ export function planInsert(ev: EventDto, steps: PathStep[], keys: (string | null
   if (isUndecided(ev) && !inCand) lines.push(`후보에 없는 날짜예요. ${dayLabel(night)}로 정할까요?`);
   if (n > 0) lines.push(`지금 테마 ${n}개를 이 결과로 바꿔요.`);
   /* 구간 없이 일정 시각만 있던 일정 — 시각은 이제 테마에서 읽는다(일정 시각은 비워 보낸다) */
-  if (n === 0 && ev.startMin !== null) lines.push(`일정 시각(${rangeLabel(ev.startMin, ev.endMin)})은 테마 시각으로 바뀌어요.`);
+  if (n === 0 && ev.startMin !== null) lines.push(`일정 시각(${timeLabel(ev)})은 테마 시각으로 바뀌어요.`);
   if (ev.date !== null && ev.date !== s.date) lines.push(`일정 날짜도 ${dayLabel(ev.date)}에서 ${dayLabel(s.date)}로 바뀌어요.`);
   if (ev.booked && n > 0) lines.push('예약 완료 표시는 예약 전으로 돌아가요.');
   const done = `'${eventTitle(ev)}' 일정에 테마 ${r.input.segments.length}개를 `

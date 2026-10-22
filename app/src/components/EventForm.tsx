@@ -196,18 +196,25 @@ function Body({ m, create, update, adopt, played }: Props) {
             <div className="evf-time-ro">{timeText}</div>
           ) : (
             <div className="evf-time">
+              {/* 하루 종일·오전·오후 — 하나만 켜진다(켜면 나머지는 꺼진다). 다 끄면 시각 칸 (오전·오후는 2026-10-22) */}
               <label className="evf-check">
-                <input type="checkbox" checked={f.allDay} onChange={(e) => set({ allDay: e.target.checked })} />
+                <input type="checkbox" checked={f.allDay} onChange={(e) => set({ allDay: e.target.checked, half: null })} />
                 하루 종일
               </label>
-              {!f.allDay && (
-                <>
+              {(['am', 'pm'] as const).map((h) => (
+                <label key={h} className="evf-check">
+                  <input type="checkbox" checked={!f.allDay && f.half === h} onChange={(e) => set({ allDay: false, half: e.target.checked ? h : null })} />
+                  {h === 'am' ? '오전' : '오후'}
+                </label>
+              ))}
+              {!f.allDay && !f.half && (
+                <span className="evf-range">
                   <input aria-label="시작 시각" inputMode="numeric" placeholder="13:40" value={f.start}
                     onChange={(e) => set({ start: e.target.value })} onBlur={() => set({ start: tidyClockText(f.start) })} />
                   <span>–</span>
                   <input aria-label="끝 시각" inputMode="numeric" placeholder="끝(선택)" value={f.end}
                     onChange={(e) => set({ end: e.target.value })} onBlur={() => set({ end: tidyClockText(f.end) })} />
-                </>
+                </span>
               )}
             </div>
           )}

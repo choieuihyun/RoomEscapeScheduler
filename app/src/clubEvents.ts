@@ -91,10 +91,21 @@ export function rangeLabel(start: number, end: number | null): string {
   return `${clockLabel(start)}–${start >= DAY_MIN ? fmt(end) : clockLabel(end)}`;
 }
 
-/* 시각 표시. 하루 종일이면 ''. 끝이 없으면 시작만(`19:00`). 일정 시각이 없으면 구간의 첫 시작~마지막 끝으로 대신한다. */
+/* 오전·오후 일정(2026-10-22 사용자 요청) — 서버에 칸이 없어 일정 시각으로 담는다: 오전 00:00–11:59, 오후 12:00–23:59.
+   이 두 범위 그대로인 일정은 화면에서 시각 대신 "오전"·"오후"로 보인다 */
+export const HALF_DAY = { am: { start: 0, end: 719, label: '오전' }, pm: { start: 720, end: 1439, label: '오후' } } as const;
+export type HalfDay = keyof typeof HALF_DAY;
+export function halfOf(start: number | null, end: number | null): HalfDay | null {
+  for (const k of ['am', 'pm'] as const) if (HALF_DAY[k].start === start && HALF_DAY[k].end === end) return k;
+  return null;
+}
+
+/* 시각 표시. 하루 종일이면 ''. 오전·오후 일정이면 그 글자. 끝이 없으면 시작만(`19:00`). 일정 시각이 없으면 구간의 첫 시작~마지막 끝으로 대신한다. */
 export function timeLabel(
   ev: Pick<EventDto, 'startMin' | 'endMin' | 'segments'>,
 ): string {
+  const half = ev.segments.length === 0 ? halfOf(ev.startMin, ev.endMin) : null;
+  if (half) return HALF_DAY[half].label;
   let start = ev.startMin;
   let end = ev.endMin;
   if (start === null) {

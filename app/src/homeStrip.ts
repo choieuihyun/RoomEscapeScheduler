@@ -1,5 +1,5 @@
 /* 홈(지연 청크)만 쓰는 일정 계산 — 내 다음 일정·오늘/내일 띠. 첫 화면 번들에 안 들어가게 clubEvents 와 떼어 둔다. */
-import { addDays, clockLabel, DAY_MIN, daysBetween, kst, sortEvents, sortKeyDate } from './clubEvents';
+import { addDays, clockLabel, DAY_MIN, daysBetween, HALF_DAY, halfOf, kst, sortEvents, sortKeyDate } from './clubEvents';
 import type { EventDto } from './server';
 
 /* 일정이 끝나는 시각(그 날짜 자정부터 분). 일정 끝 → 마지막 구간 끝 → 마지막 구간 시작(없으면 일정 시작) + 2시간,
@@ -42,9 +42,10 @@ export function todayStrip(evs: EventDto[], now: Date): TodayStrip | null {
   if (!first) return null;
   const { e, day, start } = first;
   const name = e.segments.length > 0 ? e.segments.map((g) => g.themeName).join(' → ') : e.title || '일정';
+  const half = e.segments.length === 0 ? halfOf(e.startMin, e.endMin) : null;   // 오전·오후 일정은 "오늘 오전"
   return {
     event: e,
-    when: `${day === today ? '오늘' : '내일'} ${start === null ? '하루 종일' : clockLabel(start)}`,
+    when: `${day === today ? '오늘' : '내일'} ${half ? HALF_DAY[half].label : start === null ? '하루 종일' : clockLabel(start)}`,
     name,
     more: rows.length - 1,
   };
