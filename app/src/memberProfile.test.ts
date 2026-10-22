@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   GENRES, MBTI_ROWS, addMonths, allEmpty, birthLabel, checkBirth, cleanRooms, draftFrom, draftIssues, emptyDraft, firstRange, lifeFromRef,
-  lifeLabel, maskBirth, matchPerson, mergeMonths, monthLabel, monthsBetween, olderRange, personLine, searchLife, sortPeople,
+  lifeLabel, maskBirth, matchPerson, mergeMonths, monthLabel, monthsBetween, olderRange, personLine, searchLife, sortLabel, sortPeople,
   toProfile, toggleGenre, topRanks, yearLabel, type Draft,
 } from './memberProfile';
 import { canEditProfile, needJoin, needsProfile, profileApiOn } from './profileGate';
@@ -193,6 +193,24 @@ describe('멤버 목록', () => {
       M('c', '나비', null), M('e', '고래', { ...P, birthDate: '1995-02-01' }),
     ];
     expect(sortPeople(ages, 'age', 'me').map((m) => m.nickname)).toEqual(['하마', '고래', '가오리', '다람쥐', '라마', '나비']);
+  });
+  it('방향 뒤집기 — 나이 적은 순·방 적은 순·가나다 거꾸로. 같으면 가나다, 프로필 없는 사람은 그래도 뒤, 내 카드는 맨 위', () => {
+    const ages = [
+      M('a', '다람쥐', { ...P, birthDate: '1999-01-05', roomCount: 50 }), M('b', '가오리', { ...P, birthDate: '1995-11-30', roomCount: 500 }),
+      M('d', '라마', { ...P, birthDate: '1999-01-05', roomCount: 50 }), M('me', '하마', null),
+      M('c', '나비', null), M('e', '고래', { ...P, birthDate: '1995-02-01', roomCount: 7 }),
+    ];
+    expect(sortPeople(ages, 'age', 'me', true).map((m) => m.nickname)).toEqual(['하마', '다람쥐', '라마', '가오리', '고래', '나비']);
+    expect(sortPeople(ages, 'rooms', 'me', true).map((m) => m.nickname)).toEqual(['하마', '고래', '다람쥐', '라마', '가오리', '나비']);
+    expect(sortPeople(ages, 'name', 'me', true).map((m) => m.nickname)).toEqual(['하마', '라마', '다람쥐', '나비', '고래', '가오리']);
+  });
+  it('정렬 단추 글 — 고른 기준은 방향까지', () => {
+    expect(sortLabel('name', false)).toBe('이름순');
+    expect(sortLabel('name', true)).toBe('이름 역순');
+    expect(sortLabel('age', false)).toBe('나이 많은 순');
+    expect(sortLabel('age', true)).toBe('나이 적은 순');
+    expect(sortLabel('rooms', false)).toBe('방 많은 순');
+    expect(sortLabel('rooms', true)).toBe('방 적은 순');
   });
   it('별명·이름으로 찾는다(공백·대소문자 무시)', () => {
     expect(list.filter((m) => matchPerson(m, '박다')).map((m) => m.uid)).toEqual(['a']);

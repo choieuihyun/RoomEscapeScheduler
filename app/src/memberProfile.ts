@@ -192,22 +192,28 @@ export function matchPerson(m: Pick<ClubMemberDto, 'nickname' | 'profile'>, q: s
 
 const byName = (a: ClubMemberDto, b: ClubMemberDto) => a.nickname.localeCompare(b.nickname, 'ko');
 
-/* 생일 이른 순(나이 많은 순) — YYYY-MM-DD 라 글자 비교가 곧 날짜 비교. 프로필 없는 사람은 뒤 */
-const byAge = (a: ClubMemberDto, b: ClubMemberDto) => {
-  const x = a.profile?.birthDate, y = b.profile?.birthDate;
-  if (x === y) return 0;
-  if (!x) return 1;
-  if (!y) return -1;
-  return x < y ? -1 : 1;
-};
+/* 기준마다 "앞에 올 값이 작게" 바꾼 값 — 나이는 생일(이른 = 나이 많음), 방 수는 음수(많은 게 앞). 프로필 없으면 null */
+const sortKey = (m: ClubMemberDto, sort: 'age' | 'rooms'): string | number | null =>
+  !m.profile ? null : sort === 'age' ? m.profile.birthDate : -m.profile.roomCount;
 
-/* 내 카드는 늘 맨 위. 나머지는 가나다(별명), 방 수 많은 순, 나이 많은 순(2026-10-22 사용자 요청) —
-   뒤 둘은 같으면 가나다, 프로필 없는 사람은 뒤 */
-export function sortPeople(list: readonly ClubMemberDto[], sort: PeopleSort, meUid: string): ClubMemberDto[] {
-  const rooms = (m: ClubMemberDto) => m.profile?.roomCount ?? -1;
-  const cmp = sort === 'rooms' ? (a: ClubMemberDto, b: ClubMemberDto) => rooms(b) - rooms(a) || byName(a, b)
-    : sort === 'age' ? (a: ClubMemberDto, b: ClubMemberDto) => byAge(a, b) || byName(a, b)
-    : byName;
+/* 정렬 단추 글 — 기준과 방향(rev: 기본 방향을 뒤집었나) */
+export function sortLabel(sort: PeopleSort, rev: boolean): string {
+  if (sort === 'name') return rev ? '이름 역순' : '이름순';
+  if (sort === 'age') return rev ? '나이 적은 순' : '나이 많은 순';
+  return rev ? '방 적은 순' : '방 많은 순';
+}
+
+/* 멤버 목록 정렬(2026-10-22 사용자 요청: 이름순·나이순·방 수순, 같은 단추를 다시 누르면 방향이 바뀐다).
+   기본 방향은 이름 가나다, 나이 많은 순, 방 많은 순 — rev 면 거꾸로.
+   내 카드는 늘 맨 위. 나이·방 수는 같으면 가나다, 프로필 없는 사람은 방향과 상관없이 뒤(그 안은 가나다) */
+export function sortPeople(list: readonly ClubMemberDto[], sort: PeopleSort, meUid: string, rev = false): ClubMemberDto[] {
+  const dir = rev ? -1 : 1;
+  const cmp = sort === 'name' ? (a: ClubMemberDto, b: ClubMemberDto) => dir * byName(a, b)
+    : (a: ClubMemberDto, b: ClubMemberDto) => {
+      const x = sortKey(a, sort), y = sortKey(b, sort);
+      if (x === null || y === null) return x === y ? byName(a, b) : x === null ? 1 : -1;
+      return (x < y ? -dir : x > y ? dir : 0) || byName(a, b);
+    };
   const rest = list.filter((m) => m.uid !== meUid).sort(cmp);
   const me = list.filter((m) => m.uid === meUid);
   return [...me, ...rest];

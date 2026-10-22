@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Cake, isBirthday, keepMembers, MemberLink } from '../clubStore';
 import { todayKst } from '../clubEvents';
-import { lifeLabel, matchPerson, personLine, sortPeople, type PeopleSort } from '../memberProfile';
+import { lifeLabel, matchPerson, personLine, sortLabel, sortPeople, type PeopleSort } from '../memberProfile';
 import { listClubMembers, sayClub, type ClubMemberDto } from '../server';
 import { Avatar } from './Avatar';
 
-const SORT_LABEL: Record<PeopleSort, string> = { name: '가나다', age: '나이 많은 순', rooms: '방 수 많은 순' };
+/* 정렬 단추 — 안 고른 단추는 기준 이름만, 고른 단추는 방향까지(sortLabel) + 화살표. 고른 단추를 다시 누르면 방향이 바뀐다 */
+const SORT_BASE: Record<PeopleSort, string> = { name: '이름순', age: '나이순', rooms: '방 수순' };
 
 /* 멤버 목록(§4.11) — 승인 멤버 누구나. 운영진의 멤버 관리(승인·역할)와는 따로다.
    화면에 들어올 때마다 GET /api/club/members 를 새로 받는다(프로필을 고친 사람이 바로 보이게 — 멤버 카드도 이것을 쓴다).
@@ -16,6 +17,8 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<PeopleSort>('name');
+  const [rev, setRev] = useState(false);
+  const pickSort = (k: PeopleSort) => { if (k === sort) setRev(!rev); else { setSort(k); setRev(false); } };
   const seq = useRef(0);
 
   const load = useCallback(async () => {
@@ -32,7 +35,7 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
   useEffect(() => { if (active) void Promise.resolve().then(load); /* 한 틱 뒤에 — effect 안 동기 setState 경고를 피한다 */ }, [active, load]);
 
   const today = todayKst();
-  const shown = useMemo(() => (list ? sortPeople(list.filter((m) => matchPerson(m, q)), sort, meUid) : []), [list, q, sort, meUid]);
+  const shown = useMemo(() => (list ? sortPeople(list.filter((m) => matchPerson(m, q)), sort, meUid, rev) : []), [list, q, sort, rev, meUid]);
 
   return (<>
     <header className="page-head">
@@ -50,8 +53,14 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
         </div>
         <div className="ppl-sort" role="group" aria-label="정렬">
           {(['name', 'age', 'rooms'] as const).map((k) => (
-            <button key={k} type="button" className="chip-pick" aria-pressed={sort === k} onClick={() => setSort(k)}>
-              {SORT_LABEL[k]}
+            <button key={k} type="button" className="chip-pick" aria-pressed={sort === k} onClick={() => pickSort(k)}
+              title={sort === k ? '한 번 더 누르면 반대로' : undefined}>
+              {sort === k ? sortLabel(k, rev) : SORT_BASE[k]}
+              {sort === k && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M7 4v16M3 16l4 4 4-4" /><path d="M17 20V4M13 8l4-4 4 4" />
+                </svg>
+              )}
             </button>
           ))}
         </div>
