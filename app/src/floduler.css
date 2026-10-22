@@ -3375,6 +3375,39 @@ button.hm-me-c:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-
 .hm-install-x:hover{background:var(--btn-bg-hover);color:var(--ink)}
 .hm-install-x:active{transform:none}
 .hm-install-x:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+
+/* 홈 공지(§4.14, NoticeCard) — 홈 맨 위. 청록 왼쪽 띠로 다른 카드와 구분, 글은 3줄까지(더 보기로 펼침) */
+.nt-card{order:0;position:relative;padding:14px 16px 12px 18px;border-left:3px solid var(--blue-text);display:flex;flex-direction:column;gap:6px}
+.nt-top{display:flex;align-items:center;gap:6px;color:var(--blue-text)}
+.nt-ic{display:inline-flex}
+.nt-label{font-size:13px;font-weight:700}
+.nt-x{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;margin-right:-8px;border:0;border-radius:var(--r-sm);
+  background:none;color:var(--ink3);cursor:pointer}
+.nt-x:hover{background:var(--btn-bg-hover);color:var(--ink)}
+.nt-x:focus-visible{outline:none;box-shadow:var(--ring)}
+.nt-text{margin:0;font-size:15px;line-height:1.6;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.nt-text.clip{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.nt-text a{color:var(--blue-text);text-decoration:underline;text-underline-offset:2px}
+.nt-more{align-self:flex-start;padding:0;border:0;background:none;font:inherit;font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer}
+.nt-more:hover{color:var(--ink)}
+.nt-foot{display:flex;align-items:center;gap:8px;min-height:24px}
+.nt-meta{font-size:12.5px;color:var(--ink3)}
+.nt-acts{margin-left:auto;display:flex;gap:4px}
+.nt-act{height:28px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--pill);background:var(--surface);
+  font:inherit;font-size:12.5px;font-weight:500;color:var(--ink);cursor:pointer}
+.nt-act:hover{border-color:var(--tab-line-hover)}
+.nt-act.danger{color:var(--red-text)}
+.nt-act:focus-visible{outline:none;box-shadow:var(--ring)}
+.nt-write{order:0;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px dashed var(--line2);border-radius:var(--r);
+  background:none;font:inherit;font-size:13.5px;color:var(--ink3);cursor:pointer;text-align:left}
+.nt-write:hover{color:var(--ink);border-color:var(--tab-line-hover)}
+.nt-write:focus-visible{outline:none;box-shadow:var(--ring)}
+.nt-box{max-width:440px}
+.nt-field{position:relative;display:block;margin-bottom:10px}
+.nt-field textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:132px;font-size:14.5px;line-height:1.55}
+.nt-count{position:absolute;right:10px;bottom:8px;font-style:normal;font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums;pointer-events:none}
+.nt-count.over{color:var(--red-text)}
+.nt-notify{margin-bottom:6px}
 @media(min-width:901px){
   .hm-alerts.hm-install{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
   .hm-install .hm-alert,.hm-install .hm-alert:first-child{border:0;border-radius:0;background:none}

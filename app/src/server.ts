@@ -677,3 +677,23 @@ export const getPayInfo = async (token: string): Promise<PayInfoDto> => normPay(
 
 export const putPayInfo = async (info: PayInfoDto, token: string): Promise<PayInfoDto> =>
   normPay(await authed<PayInfoDto>('/api/me/payinfo', token, 'PUT', info));
+
+/* ── 홈 공지 (작업명세서 §4.14) ── 한 번에 하나. 읽기는 승인 멤버, 쓰기·내리기는 운영진. 서버가 모르면 404(isMissingApi) */
+export interface NoticeDto {
+  id: number;              // 쓸 때마다 새 값 — 앱이 "닫은 공지"를 id 로 기억한다
+  text: string;            // 1~500자, 10줄까지
+  updatedAt: string;
+  updatedBy: Who;
+}
+/* 공지가 없으면 null. 서버가 null 을 빈 본문으로 보내도 null 로 읽는다 */
+export const getNotice = async (token: string): Promise<NoticeDto | null> => {
+  try {
+    return (await authed<NoticeDto | null>('/api/club/notice', token, 'GET')) ?? null;
+  } catch (e) {
+    if (e instanceof SyntaxError) return null;
+    throw e;
+  }
+};
+export const putNotice = (body: { text: string; notify: boolean }, token: string): Promise<NoticeDto> =>
+  authed('/api/club/notice', token, 'PUT', body);
+export const deleteNotice = (token: string): Promise<{ deleted: true }> => authed('/api/club/notice', token, 'DELETE');

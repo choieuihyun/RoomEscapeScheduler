@@ -14,6 +14,7 @@ import { playedWho, playedWhoLabel, playedWhoTitle } from '../playedWho';
 import type { EventDto } from '../server';
 import type { UseClubEventsReturn } from '../useClubEvents';
 import { AvaText } from './Avatar';
+import { NoticeCard } from './NoticeCard';
 
 /* 홈(대시보드) — 2026-10-21 개편(승인 목업 Main·DesktopHome). 주인공은 "내 다음 일정" 하나(D-day 큰 청록 숫자 —
    홈에서 유일한 청록 숫자). 그 아래 알림 줄(오늘·내일 일정, 보낼 돈, 생일), 가까운 일정(탭·쪽).
@@ -198,6 +199,8 @@ export function HomePage({
     <>
     <div className="hm-grid home-grid">
       <div className="hm-col">
+        {/* 홈 공지(§4.14) — 맨 위. 서버가 모르면 아무것도 없다 */}
+        <NoticeCard active={active} isAdmin={isAdmin} />
         {/* 앱 설치 띠 — 알림 줄과 같은 모양 한 줄 + 닫기(×). 줄을 누르면 설치(크롬) 또는 안내(아이폰·카카오톡) */}
         {installOn && !installHide && (
           <section className="hm-card hm-alerts hm-install" aria-label="앱 설치">
