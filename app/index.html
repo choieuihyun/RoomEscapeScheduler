@@ -2,6 +2,13 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <!-- Firebase 가 함께 주는 두 번째 주소(firebaseapp.com)는 서버 CORS 허용 목록에 없어 로그인해도 모임 기능이 안 보인다 —
+         그 주소로 들어오면 경로·?·#(#e= 일정, #s=·#z= 공유)를 그대로 싣고 web.app 으로 넘긴다(2026-10-22).
+         /__/ 는 Firebase 가 쓰는 로그인 처리 경로라 건드리지 않는다 -->
+    <script>
+      if (location.hostname === 'roomescapescheduler.firebaseapp.com' && location.pathname.indexOf('/__/') !== 0)
+        location.replace('https://roomescapescheduler.web.app' + location.pathname + location.search + location.hash);
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Floduler</title>
     <meta name="description" content="방탈출 테마별 회차 시간을 넣으면 겹치지 않는 조합을 전부 계산해 주는 도구" />
