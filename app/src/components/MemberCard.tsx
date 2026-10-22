@@ -224,7 +224,8 @@ export function MemberCard({ uid, name, from, meUid, today, events, past, onClos
                 <ul className="mcard-wish">
                   {wishes.chips.map((c, i) => (
                     <li key={c.key + '|' + i} className={'mcard-w' + (c.also ? ' also' : '')} title={c.place || undefined}>
-                      {c.name}{c.also && <em>나도</em>}
+                      {/* 나도 원하는 테마는 칩 색(.also)으로만 — 이름 뒤 "나도" 글자는 2026-10-22 사용자 요청으로 뺐다 */}
+                      {c.name}
                     </li>
                   ))}
                   {wishes.more > 0 && <li className="mcard-w more">외 {wishes.more}</li>}
