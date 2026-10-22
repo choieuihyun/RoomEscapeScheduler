@@ -35,6 +35,7 @@ import { hist, useBackClose } from './backStack';
 import { LazyBoundary, StaleNotice } from './components/LazyBoundary';
 import { PushBanner } from './components/PushBanner';
 import { showPushBanner, showToast } from './toast';
+import { canInstall, closeInstallGuide, startInstall, useInstall } from './installPrompt';
 
 /* 동호회·캘린더·내 정보 화면은 처음 쓸 때 받는다 — 로그인 전 첫 화면(조합 계산)이 이 코드를 받지 않게 한다 */
 const MembersPage = lazyRetry(() => import('./components/MembersPage').then(m => ({ default: m.MembersPage })));
@@ -49,6 +50,7 @@ const AuthModal = lazyRetry(() => import('./components/AuthModal').then(m => ({ 
 const SaveModal = lazyRetry(() => import('./components/SaveModal').then(m => ({ default: m.SaveModal })));
 const WatchListModal = lazyRetry(() => import('./components/WatchListModal').then(m => ({ default: m.WatchListModal })));
 const PushGuide = lazyRetry(() => import('./components/PushGuide').then(m => ({ default: m.PushGuide })));
+const InstallGuide = lazyRetry(() => import('./components/InstallGuide').then(m => ({ default: m.InstallGuide })));
 /* 멤버 목록·랭킹 화면과 프로필 창(§4.11)은 한 청크 — 진입 청크에 늘어나는 것을 줄인다 */
 const MemberViews = lazyRetry(() => import('./components/MemberViews').then(m => ({ default: m.MemberViews })));
 /* 시간표 계산의 결과·내 일정(2026-10-21 개편) — 계산을 누른 뒤·로그인했을 때만 보여서 늦게 받는다(진입 청크 크기, §4.64).
@@ -138,6 +140,12 @@ export function SchedulerPage() {
   const s = useScheduler();
   const theme = useTheme();
   const tour = useTour();
+  /* 앱 설치 단추(2026-10-22) — 왼쪽 메뉴·더보기 행·홈 띠가 같은 것을 부른다. 크롬은 설치 창, 아이폰·카카오톡은 안내 창 */
+  const install = useInstall();
+  const installOn = canInstall(install.state);
+  const onInstall = useCallback(() => {
+    void startInstall().then((o) => { if (o === 'accepted') showToast('설치했어요.'); });
+  }, []);
   const [loadOpen, setLoadOpen] = useState(false);
   const closeLoad = useCallback(() => setLoadOpen(false), []);
   const auth = useAuth();
@@ -523,7 +531,7 @@ export function SchedulerPage() {
         view={nav.view} onView={goView} auth={auth} homeOn={homeOn} profileOn={profileOn} peopleOn={peopleOn} rankOn={rankOn} togetherOn={togetherOn}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
-        isAdmin={isAdmin} pendingCount={pendingCount} onEditProfile={openEdit}
+        isAdmin={isAdmin} pendingCount={pendingCount} onEditProfile={openEdit} onInstall={installOn ? onInstall : undefined}
       >
         {nav.view === 'calendar' && <CalendarSide ctl={cal} clubOn={homeOn} playedOn={profileOn} onPick={pickFromSide} />}
       </SideNav>
@@ -586,6 +594,7 @@ export function SchedulerPage() {
               onNewEvent={() => eventForm.openNew()}
               onOpenEvent={openFromHome} onPickDay={pickFromHome}
               profile={profileOn ? profile : null} peopleOn={peopleOn} rankOn={rankOn} onView={goView}
+              installOn={installOn} onInstall={onInstall}
             /></LazyBoundary>
           </div>
         )}
@@ -628,6 +637,7 @@ export function SchedulerPage() {
               dark={theme.dark} onToggleTheme={theme.toggle} onTour={startTour}
               onMembers={() => goView('members')} onOpenEvent={openFromProfile}
               peopleOn={peopleOn} rankOn={rankOn} onView={goView} onEditProfile={openEdit}
+              installOn={installOn} onInstall={onInstall}
             /></LazyBoundary>
           </div>
         )}
@@ -645,6 +655,7 @@ export function SchedulerPage() {
       {clubOn && formMounted && <LazyBoundary><EventForm m={eventForm} create={club.create} update={club.update} adopt={club.adopt} played={profile.played} /></LazyBoundary>}
       {auth.cloudOn && watchMounted && <LazyBoundary><WatchListModal w={watches} /></LazyBoundary>}
       {clubOn && guideMounted && <LazyBoundary><PushGuide push={push} /></LazyBoundary>}
+      {install.guide !== null && <LazyBoundary><InstallGuide kind={install.guide} onClose={closeInstallGuide} /></LazyBoundary>}
       {(asking || editOpen) && <LazyBoundary><MemberViews
         part="modal" fill={asking} auth={auth} profile={profileOn ? profile : null}
         onClose={() => { if (asking) setAskedOff(meUid); setEditOpen(false); }}

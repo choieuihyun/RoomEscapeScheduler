@@ -38,6 +38,7 @@ const ICON: Partial<Record<MoreRowId, ReactNode>> = {
   members: <Ic><circle cx="10" cy="8" r="4" /><path d="M3 21c0-4 3-7 7-7 1.4 0 2.7.4 3.8 1M15 18.5l2 2 4-4" /></Ic>,
   dark: <Ic><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></Ic>,
   tour: <Ic><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01" /></Ic>,
+  install: <Ic><path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5" /><path d="M4.5 16v2.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V16" /></Ic>,
   kakao: <span className="more-kakao"><KakaoMark /></span>,
   google: <GoogleMark />,
   join: <Ic><circle cx="9" cy="8" r="4" /><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7M19 8v6M16 11h6" /></Ic>,
@@ -60,7 +61,7 @@ const PUSH_CHIP: Record<NonNullable<UsePushDeviceReturn['card']>, { text: string
 
 export function MorePage({
   active, auth, profile, profileOn, clubOn, isAdmin, pendingCount, push, dark, onToggleTheme, onTour, onMembers, onOpenEvent,
-  peopleOn, rankOn, onView, onEditProfile,
+  peopleOn, rankOn, onView, onEditProfile, installOn, onInstall,
 }: {
   /* 지금 더보기 화면인지 — 아래 탭으로 다시 들어오면 목록부터 보인다 */
   active: boolean;
@@ -71,6 +72,8 @@ export function MorePage({
   peopleOn: boolean; rankOn: boolean; onView: (v: View) => void;
   /* 프로필 고치기(§4.11) — 서버가 고치기를 모르거나 가입 신청 전이면 없다 */
   onEditProfile?: () => void;
+  /* 앱 설치(2026-10-22) — 이 기기에서 설치를 도울 수 있을 때 설정 맨 위 행 */
+  installOn: boolean; onInstall: () => void;
 }) {
   const [sub, setSub] = useState<Sub | null>(readSub);
   useEffect(() => {
@@ -102,7 +105,7 @@ export function MorePage({
   /* 같이 가요(§4.12)·송금 정보(§4.13) — 서버가 그 API 를 아는지는 공유 상태가 안다 */
   const club7 = useClubStore();
   const groups = moreGroups({ loggedIn, profileOn, clubOn, isAdmin, member: m, providerIds: auth.providerIds, peopleOn, rankOn,
-    togetherOn: clubOn && club7.wishApi === 'on', payOn: clubOn && club7.settleApi === 'on' });
+    togetherOn: clubOn && club7.wishApi === 'on', payOn: clubOn && club7.settleApi === 'on', installOn });
   /* 하위 화면은 그 그룹이 보일 때만 — 로그아웃했으면 목록으로 */
   const subOk = sub !== null && (sub === 'push' ? loggedIn && clubOn : sub === 'pay' ? loggedIn && clubOn && club7.settleApi === 'on' : loggedIn && profileOn);
 
@@ -144,7 +147,7 @@ export function MorePage({
   const act: Partial<Record<MoreRowId, () => void>> = {
     played: () => openSub('played'), past: () => openSub('past'), push: () => openSub('push'), pay: () => openSub('pay'),
     together: () => onView('together'), people: () => onView('people'), ranking: () => onView('ranking'),
-    members: onMembers, dark: onToggleTheme, tour: onTour,
+    members: onMembers, dark: onToggleTheme, tour: onTour, install: onInstall,
     kakao: auth.linkKakao, google: () => void auth.linkGoogle(), join: () => auth.openAuth(), logout: () => void auth.logout(),
   };
   const right = (r: MoreRow): ReactNode => {

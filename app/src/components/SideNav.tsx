@@ -28,6 +28,7 @@ const IcHelp = () => <Icon><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2
 const IcMoon = () => <Icon><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" /></Icon>;
 const IcFold = ({ open }: { open: boolean }) => <Icon>{open ? <path d="M15 6l-6 6 6 6" /> : <path d="M9 6l6 6-6 6" />}</Icon>;
 const IcMore = () => <Icon><circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" /></Icon>;
+const IcInstall = () => <Icon><path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5" /><path d="M4.5 16v2.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V16" /></Icon>;
 const IcSun = () => <Icon><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></Icon>;
 
 /* 접기(§4.50) — 아이콘만 남는 좁은 막대. 이 기기에서만 기억하는 편의 설정이다. */
@@ -35,7 +36,7 @@ const FOLD_KEY = 'flod.lnb.folded';
 const readFold = () => { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; } };
 
 export function SideNav({
-  view, onView, auth, homeOn, profileOn, peopleOn, rankOn, togetherOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, onEditProfile, children,
+  view, onView, auth, homeOn, profileOn, peopleOn, rankOn, togetherOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, onEditProfile, onInstall, children,
 }: {
   view: View | null; onView: (v: View) => void; auth: UseAuthReturn;
   /* 승인 멤버(이고 일정 API 가 있을 때)만 "홈" 메뉴 */
@@ -52,6 +53,8 @@ export function SideNav({
   isAdmin: boolean; pendingCount: number;
   /* 계정 칸의 "프로필 고치기" — 고칠 수 있을 때만 */
   onEditProfile?: () => void;
+  /* 앱 설치(2026-10-22) — 이 기기에서 설치를 도울 수 있을 때만(설치 창·아이폰 안내·카카오톡 안내) */
+  onInstall?: () => void;
   /* 화면별로 메뉴 아래에 붙는 것 — 캘린더 화면의 미니 달력·내 캘린더(§4.50) */
   children?: ReactNode;
 }) {
@@ -130,6 +133,11 @@ export function SideNav({
       </nav>
       {!folded && children}
       <div className="lnb-foot">
+        {onInstall && (
+          <button className="lnb-item lnb-tool" type="button" onClick={onInstall} title="앱 설치" aria-label="앱 설치">
+            <IcInstall /><span className="lnb-txt">앱 설치</span>
+          </button>
+        )}
         <button className="lnb-item lnb-tool" type="button" onClick={onTour} title="사용법 보기">
           <IcHelp /><span className="lnb-txt">사용법 보기</span>
         </button>

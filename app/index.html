@@ -17,9 +17,9 @@
     <meta name="robots" content="noindex, nofollow" />
     <!-- 앱 아이콘(2026-10-22) — Flo.D 로고(test/fixtures/플로디.png 에서 아이콘만 잘라 냄). 전에는 열쇠 이모지였다 -->
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <!-- F-16 웹 푸시(iOS는 홈 화면 추가로 PWA 취급돼야 알림이 온다)를 위한
-         최소 매니페스트. manifest.json은 base(§3 서브패스)를 따로 안 읽으므로
-         start_url을 "."로 둬서 자기 위치 기준 상대경로로 풀리게 했다. -->
+    <!-- F-16 웹 푸시(iOS는 홈 화면 추가로 PWA 취급돼야 알림이 온다)와 앱 설치 단추(installPrompt.ts)를 위한
+         매니페스트. 배포는 web.app 뿌리(base /)라 id·start_url·scope 를 "/" 로 둔다(2026-10-22, 전엔 "."
+         — 같은 주소로 풀려 이미 설치한 앱은 그대로 같은 앱이다). 옛 주소 넘김 페이지는 따로 둔 사본을 쓴다 -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />

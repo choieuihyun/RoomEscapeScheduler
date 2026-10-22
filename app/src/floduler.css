@@ -3324,3 +3324,23 @@ button.hm-me-c:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-
   .cz-head .cz-cnts{display:block}
   .cz-sonote .cz-cnts-n{display:none}
 }
+
+/* ── 앱 설치 (2026-10-22) ── */
+/* 홈 맨 위 띠 — 알림 줄(.hm-alert)과 같은 한 줄 + 오른쪽 닫기(×). 넓은 화면도 한 장짜리 카드(알림 줄의 2칸 격자를 쓰지 않는다) */
+.hm-install{display:flex;align-items:stretch}
+.hm-install .hm-alert{flex:1;min-width:0}
+.hm-install-x{flex:none;display:inline-flex;align-items:center;justify-content:center;width:48px;border:0;border-left:1px solid var(--line);
+  background:none;color:var(--ink3);cursor:pointer;font:inherit}
+.hm-install-x:hover{background:var(--btn-bg-hover);color:var(--ink)}
+.hm-install-x:active{transform:none}
+.hm-install-x:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-text)}
+@media(min-width:901px){
+  .hm-alerts.hm-install{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+  .hm-install .hm-alert,.hm-install .hm-alert:first-child{border:0;border-radius:0;background:none}
+  .hm-install .hm-alert:hover{background:var(--btn-bg-hover)}
+  .hm-install .hm-alert:focus-visible{box-shadow:inset 0 0 0 2px var(--blue-text)}
+}
+/* 좁은 화면은 한 줄 흐름에서 다음 일정보다 위 */
+@media(max-width:900px){
+  .hm-alerts.hm-install{order:0}
+}

@@ -66,6 +66,14 @@ describe('moreGroups', () => {
     }
   });
 
+  it('앱 설치(installOn)면 설정 그룹 맨 위에 앱 설치 — 로그아웃이어도, 없으면 행 없음', () => {
+    expect(shape(moreGroups({ ...member, installOn: true })).find((x) => x.startsWith('settings'))).toBe('settings:install,dark,tour');
+    expect(shape(moreGroups({ ...member, loggedIn: false, profileOn: false, clubOn: false, member: null, providerIds: [], installOn: true })))
+      .toEqual(['settings:install,dark,tour']);
+    expect(moreGroups({ ...member, installOn: true }).find((x) => x.id === 'settings')?.rows[0].label).toBe('앱 설치');
+    expect(shape(moreGroups({ ...member, installOn: false })).find((x) => x.startsWith('settings'))).toBe('settings:dark,tour');
+  });
+
   it('승인 대기(소셜 계정, 붙은 것 없음)면 계정 그룹 없이 로그아웃만', () => {
     const g = moreGroups({ ...member, profileOn: false, clubOn: false, member: { status: 'PENDING', kakaoLinked: false }, providerIds: [] });
     expect(shape(g)).toEqual(['settings:dark,tour', 'out:logout']);

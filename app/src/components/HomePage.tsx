@@ -47,9 +47,13 @@ const Ic = ({ size = 18, children }: { size?: number; children: ReactNode }) => 
 );
 const Chev = () => <Ic size={16}><path d="m9 6 6 6-6 6" /></Ic>;
 
+/* 앱 설치 띠를 닫았는지 — 이 기기에서만 기억한다(못 읽으면 보인다) */
+const INSTALL_HIDE_KEY = 'flod.install.hide';
+const readInstallHide = () => { try { return localStorage.getItem(INSTALL_HIDE_KEY) === '1'; } catch { return false; } };
+
 export function HomePage({
   active, club, today, isAdmin, watchCount, watchLimit, pendingCount, month,
-  onMonth, onWatches, onMembers, onNewEvent, onOpenEvent, onPickDay, profile, peopleOn, rankOn, onView,
+  onMonth, onWatches, onMembers, onNewEvent, onOpenEvent, onPickDay, profile, peopleOn, rankOn, onView, installOn, onInstall,
 }: {
   /* 홈이 지금 보이는지(숨겨 둔 채 남아 있을 때는 정산을 받지 않는다) */
   active: boolean;
@@ -75,8 +79,16 @@ export function HomePage({
   onView: (v: View) => void;
   onOpenEvent: (ev: EventDto) => void;
   onPickDay: (iso: string) => void;
+  /* 앱 설치 띠(2026-10-22) — 이 기기에서 설치를 도울 수 있을 때(이미 설치한 앱이면 false). 닫으면 이 기기에선 다시 안 보인다 */
+  installOn: boolean;
+  onInstall: () => void;
 }) {
   const events = club.events;
+  const [installHide, setInstallHide] = useState(readInstallHide);
+  const hideInstall = () => {
+    setInstallHide(true);
+    try { localStorage.setItem(INSTALL_HIDE_KEY, '1'); } catch { /* 기억 못 해도 이번엔 닫힌다 */ }
+  };
   const [Bulk, setBulk] = useState<BulkComp | null>(null);
   const [bulkOn, setBulkOn] = useState(false);
   const openBulk = async () => {
@@ -185,6 +197,19 @@ export function HomePage({
     <>
     <div className="hm-grid home-grid">
       <div className="hm-col">
+        {/* 앱 설치 띠 — 알림 줄과 같은 모양 한 줄 + 닫기(×). 줄을 누르면 설치(크롬) 또는 안내(아이폰·카카오톡) */}
+        {installOn && !installHide && (
+          <section className="hm-card hm-alerts hm-install" aria-label="앱 설치">
+            <button type="button" className="hm-alert" onClick={onInstall}>
+              <Ic><path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5" /><path d="M4.5 16v2.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V16" /></Ic>
+              <span className="hm-alert-t">앱으로 설치하면 더 편해요 · <b>설치</b></span>
+              <Chev />
+            </button>
+            <button type="button" className="hm-install-x" aria-label="앱 설치 안내 닫기" title="닫기" onClick={hideInstall}>
+              <Ic size={16}><path d="M6 6l12 12M18 6 6 18" /></Ic>
+            </button>
+          </section>
+        )}
         <section className="hm-card hm-next" aria-label="내 다음 일정">
           <div className="hm-next-h">
             <h2 className="hm-cap">내 다음 일정</h2>

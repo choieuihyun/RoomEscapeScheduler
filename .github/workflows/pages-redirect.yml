@@ -4,10 +4,12 @@ name: 옛 주소(GitHub Pages) → web.app 넘기기
 # 북마크·홈 화면 앱·옛 공유 링크·옛 알림 링크로 들어온 사람이 예전 화면을 봤다(2026-10-22).
 # 옛 주소에 "새 주소로 이동" 페이지만 올린다 — pages-redirect/ 가 바뀔 때만 돈다(앱 배포와 무관).
 # 옛 주소에서 알림을 켠 기기도 계속 받도록 알림 서비스워커·아이콘·매니페스트를 함께 올린다.
+# 매니페스트는 앱 것을 복사하지 않고 pages-redirect/manifest.json(옛 내용 그대로 — start_url ".")을 쓴다:
+# 앱 매니페스트는 web.app 기준 절대 경로(id·start_url·scope "/", 2026-10-22)라 옛 주소(/RoomEscapeScheduler/)에선 엉뚱한 곳을 가리킨다.
 on:
   push:
     branches: [main]
-    paths: ['pages-redirect/**', '.github/workflows/pages-redirect.yml', 'app/public/icon-*.png', 'app/public/manifest.json', 'app/public/firebase-messaging-sw.js']
+    paths: ['pages-redirect/**', '.github/workflows/pages-redirect.yml', 'app/public/icon-*.png', 'app/public/firebase-messaging-sw.js']
   workflow_dispatch:
 
 permissions:
@@ -30,7 +32,7 @@ jobs:
       - name: 이동 페이지 묶기
         run: |
           cp pages-redirect/index.html pages-redirect/404.html
-          cp app/public/firebase-messaging-sw.js app/public/icon-192.png app/public/icon-512.png app/public/manifest.json pages-redirect/
+          cp app/public/firebase-messaging-sw.js app/public/icon-192.png app/public/icon-512.png pages-redirect/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
