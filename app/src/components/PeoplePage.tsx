@@ -5,6 +5,8 @@ import { lifeLabel, matchPerson, personLine, sortPeople, type PeopleSort } from 
 import { listClubMembers, sayClub, type ClubMemberDto } from '../server';
 import { Avatar } from './Avatar';
 
+const SORT_LABEL: Record<PeopleSort, string> = { name: '가나다', age: '나이 많은 순', rooms: '방 수 많은 순' };
+
 /* 멤버 목록(§4.11) — 승인 멤버 누구나. 운영진의 멤버 관리(승인·역할)와는 따로다.
    화면에 들어올 때마다 GET /api/club/members 를 새로 받는다(프로필을 고친 사람이 바로 보이게 — 멤버 카드도 이것을 쓴다).
    카드 어디를 눌러도 그 사람의 멤버 카드(별명 단추의 ::after 가 카드를 덮는다). 내 카드는 내 프로필 화면으로. */
@@ -47,9 +49,9 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
             strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
         </div>
         <div className="ppl-sort" role="group" aria-label="정렬">
-          {(['name', 'rooms'] as const).map((k) => (
+          {(['name', 'age', 'rooms'] as const).map((k) => (
             <button key={k} type="button" className="chip-pick" aria-pressed={sort === k} onClick={() => setSort(k)}>
-              {k === 'name' ? '가나다' : '방 수 많은 순'}
+              {SORT_LABEL[k]}
             </button>
           ))}
         </div>

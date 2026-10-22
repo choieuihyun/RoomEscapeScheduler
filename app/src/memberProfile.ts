@@ -182,7 +182,7 @@ export function toProfile(d: Draft, today: string): { nickname: string; profile:
 
 /* ── 멤버 목록 ── */
 
-export type PeopleSort = 'name' | 'rooms';
+export type PeopleSort = 'name' | 'rooms' | 'age';
 
 /* 별명·이름 부분 일치(공백·대소문자 무시) */
 export function matchPerson(m: Pick<ClubMemberDto, 'nickname' | 'profile'>, q: string): boolean {
@@ -192,11 +192,23 @@ export function matchPerson(m: Pick<ClubMemberDto, 'nickname' | 'profile'>, q: s
 
 const byName = (a: ClubMemberDto, b: ClubMemberDto) => a.nickname.localeCompare(b.nickname, 'ko');
 
-/* 내 카드는 늘 맨 위. 나머지는 가나다(별명) 또는 방 수 많은 순(같으면 가나다, 프로필 없는 사람은 뒤) */
+/* 생일 이른 순(나이 많은 순) — YYYY-MM-DD 라 글자 비교가 곧 날짜 비교. 프로필 없는 사람은 뒤 */
+const byAge = (a: ClubMemberDto, b: ClubMemberDto) => {
+  const x = a.profile?.birthDate, y = b.profile?.birthDate;
+  if (x === y) return 0;
+  if (!x) return 1;
+  if (!y) return -1;
+  return x < y ? -1 : 1;
+};
+
+/* 내 카드는 늘 맨 위. 나머지는 가나다(별명), 방 수 많은 순, 나이 많은 순(2026-10-22 사용자 요청) —
+   뒤 둘은 같으면 가나다, 프로필 없는 사람은 뒤 */
 export function sortPeople(list: readonly ClubMemberDto[], sort: PeopleSort, meUid: string): ClubMemberDto[] {
   const rooms = (m: ClubMemberDto) => m.profile?.roomCount ?? -1;
-  const rest = list.filter((m) => m.uid !== meUid)
-    .sort(sort === 'rooms' ? (a, b) => rooms(b) - rooms(a) || byName(a, b) : byName);
+  const cmp = sort === 'rooms' ? (a: ClubMemberDto, b: ClubMemberDto) => rooms(b) - rooms(a) || byName(a, b)
+    : sort === 'age' ? (a: ClubMemberDto, b: ClubMemberDto) => byAge(a, b) || byName(a, b)
+    : byName;
+  const rest = list.filter((m) => m.uid !== meUid).sort(cmp);
   const me = list.filter((m) => m.uid === meUid);
   return [...me, ...rest];
 }

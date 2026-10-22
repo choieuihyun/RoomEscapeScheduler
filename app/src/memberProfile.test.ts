@@ -186,6 +186,14 @@ describe('멤버 목록', () => {
   it('방 수 많은 순 — 프로필 없는 사람은 뒤(그 안은 가나다)', () => {
     expect(sortPeople(list, 'rooms', 'me').map((m) => m.nickname)).toEqual(['하마', '가오리', '다람쥐', '나비']);
   });
+  it('나이 많은 순(생일 이른 순) — 같은 생일은 가나다, 프로필 없는 사람은 뒤(그 안은 가나다), 내 카드는 맨 위', () => {
+    const ages = [
+      M('a', '다람쥐', { ...P, birthDate: '1999-01-05' }), M('b', '가오리', { ...P, birthDate: '1995-11-30' }),
+      M('d', '라마', { ...P, birthDate: '1999-01-05' }), M('me', '하마', { ...P, birthDate: '2001-03-03' }),
+      M('c', '나비', null), M('e', '고래', { ...P, birthDate: '1995-02-01' }),
+    ];
+    expect(sortPeople(ages, 'age', 'me').map((m) => m.nickname)).toEqual(['하마', '고래', '가오리', '다람쥐', '라마', '나비']);
+  });
   it('별명·이름으로 찾는다(공백·대소문자 무시)', () => {
     expect(list.filter((m) => matchPerson(m, '박다')).map((m) => m.uid)).toEqual(['a']);
     expect(list.filter((m) => matchPerson(m, '나 비')).map((m) => m.uid)).toEqual(['c']);
