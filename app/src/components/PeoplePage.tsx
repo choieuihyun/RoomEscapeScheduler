@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Cake, isBirthday, keepMembers, MemberLink } from '../clubStore';
 import { todayKst } from '../clubEvents';
-import { lifeLabel, matchPerson, personLine, sortLabel, sortPeople, type PeopleSort } from '../memberProfile';
+import { lifeLabel, matchPerson, personLine, roomRanks, sortLabel, sortPeople, type PeopleSort } from '../memberProfile';
 import { listClubMembers, sayClub, type ClubMemberDto } from '../server';
 import { Avatar } from './Avatar';
+import { Medal } from './Medal';
 
 /* 정렬 단추 — 안 고른 단추는 기준 이름만, 고른 단추는 방향까지(sortLabel) + 화살표. 고른 단추를 다시 누르면 방향이 바뀐다 */
 const SORT_BASE: Record<PeopleSort, string> = { name: '이름순', age: '나이순', rooms: '방 수순' };
@@ -36,6 +37,8 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
 
   const today = todayKst();
   const shown = useMemo(() => (list ? sortPeople(list.filter((m) => matchPerson(m, q)), sort, meUid, rev) : []), [list, q, sort, rev, meUid]);
+  /* 방 많은 순일 때만 1~3등 메달 — 순위는 찾기와 상관없이 전체 멤버 기준 */
+  const medals = useMemo(() => (list && sort === 'rooms' && !rev ? roomRanks(list) : null), [list, sort, rev]);
 
   return (<>
     <header className="page-head">
@@ -81,6 +84,7 @@ export function PeoplePage({ active, meUid, onBack }: { active: boolean; meUid: 
                   <Avatar name={m.nickname} className="ppl-ava" />
                   <div className="ppl-who">
                     <div className="ppl-n1">
+                      {medals?.has(m.uid) && <Medal rank={medals.get(m.uid) as number} />}
                       <b><MemberLink uid={m.uid} name={m.nickname} className="ppl-open" /></b>
                       {isBirthday(p?.birthDate, today) && <><Cake /><span className="sr-only">오늘 생일</span></>}
                       {m.role === 'ADMIN' && <span className="chip-info role">운영진</span>}

@@ -219,6 +219,20 @@ export function sortPeople(list: readonly ClubMemberDto[], sort: PeopleSort, meU
   return [...me, ...rest];
 }
 
+/* 방 수 순위 — 메달(1~3등)을 달 사람만 uid → 순위. 같은 수면 같은 순위(1·1·3, 랭킹 화면과 같은 방식).
+   찾기로 걸러도 순위가 바뀌지 않게 부르는 쪽이 전체 목록을 넘긴다. 0방·프로필 없는 사람은 순위 밖 */
+export function roomRanks(list: readonly ClubMemberDto[]): Map<string, number> {
+  const ranked = list.filter((m) => (m.profile?.roomCount ?? 0) > 0)
+    .sort((a, b) => (b.profile as ProfileDto).roomCount - (a.profile as ProfileDto).roomCount || byName(a, b));
+  const out = new Map<string, number>();
+  ranked.forEach((m, i) => {
+    const prev = ranked[i - 1];
+    const rank = prev && prev.profile?.roomCount === m.profile?.roomCount ? (out.get(prev.uid) as number) : i + 1;
+    if (rank <= 3) out.set(m.uid, rank);
+  });
+  return out;
+}
+
 /* 둘째 줄 "97년생 · ENFP · 312방 · 서울 마포구"(거주지역이 없으면 그 칸 없이) */
 export const personLine = (p: ProfileDto): string =>
   `${yearLabel(p.birthDate)} · ${mbtiLabel(p.mbti)} · ${roomsLabel(p.roomCount)}${p.residence ? ` · ${p.residence}` : ''}`;

@@ -3,6 +3,7 @@ import { MemberLink } from '../clubStore';
 import { allEmpty, firstRange, mergeMonths, monthLabel, olderRange, topRanks } from '../memberProfile';
 import { isMissingApi, rankings, sayClub, type RankMonthDto } from '../server';
 import { showToast } from '../toast';
+import { Medal } from './Medal';
 
 /* 달별 랭킹(§4.11) — 이번 달부터 거꾸로 달마다 5등까지(별명·횟수). 처음엔 최근 3달, "이전 달 더 보기"로 3달씩.
    서버가 이 API 를 모르면(본문 없는 404) onMissing — 메뉴를 숨기고 더보기로 돌아간다.
@@ -81,7 +82,7 @@ export function RankingPage({ active, today, meUid, onBack, onMissing }: {
                       const me = r.uid === meUid;
                       return (
                         <li key={r.uid} className={'rk-row' + (me ? ' me' : '') + (r.rank === 1 ? ' first' : '')}>
-                          <span className="rk-no">{r.rank}</span>
+                          {r.rank <= 3 ? <Medal rank={r.rank} className="rk-no" /> : <span className="rk-no">{r.rank}</span>}
                           <MemberLink uid={r.uid} name={r.nickname} className="rk-nick">{r.nickname}{me && <span className="rk-me">나</span>}</MemberLink>
                           <span className="rk-cnt">{r.count}개</span>
                         </li>
