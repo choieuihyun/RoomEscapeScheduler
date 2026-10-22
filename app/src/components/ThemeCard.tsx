@@ -205,7 +205,7 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
         <div className="cz-time">
           <textarea
             aria-label={`${label} 회차 시간`} autoFocus={!editing}
-            placeholder={'10:00  13:10  15:40  17:20  ← 예약 가능한 회차만 (쉼표·줄바꿈도 돼요)\n카톡에서 복사한 글이나 예약 화면 캡처를 붙여넣어도 돼요 (Ctrl+V)'}
+            placeholder={'10:00  13:10  15:40  17:20  ← 예약 가능한 회차만 (쉼표·줄바꿈도 돼요)\n예약 화면 캡처를 붙여넣어도 돼요 (Ctrl+V)'}
             value={th.raw}
             onChange={e => onRawChange(th.id, e.target.value)}
             onPaste={e => {

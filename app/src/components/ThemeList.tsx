@@ -5,13 +5,13 @@ import type { WatchControl } from '../useWatches';
 import { Ic } from './Ic';
 import { ThemeCard } from './ThemeCard';
 
-/* 1단계 테마 넣기(2026-10-21 개편) — 카드 목록 + 넣는 길 한 상자(직접 넣기·불러오기·사진 읽기·카톡 붙여넣기).
+/* 1단계 테마 넣기(2026-10-21 개편) — 카드 목록 + 넣는 길 한 상자(직접 넣기·불러오기·사진 읽기).
+   "카톡 붙여넣기"는 직접 넣기와 겹치고 쓰기 어려워 2026-10-22 사용자 요청으로 뺐다.
    비었으면 다음 행동 단추. 사용법 투어가 #loadBtn·#addTheme·#themes 를 가리킨다(빈 상태와 상자가 같이 그려지지 않는다) */
 export function ThemeList({ s, onOpenLoad, watchCtl }: { s: Scheduler; onOpenLoad: () => void; watchCtl?: WatchControl }) {
   const n = s.themes.length;
   const imgRef = useRef<HTMLInputElement>(null);
   const photo = () => imgRef.current?.click();
-  const paste = () => s.addTheme('paste');
   return (
     <section className="sec cz-sec" aria-labelledby="czH1">
       <div className="cz-step">
@@ -29,7 +29,6 @@ export function ThemeList({ s, onOpenLoad, watchCtl }: { s: Scheduler; onOpenLoa
           </div>
           <div className="cz-empty-x">
             <button className="cz-link" type="button" onClick={photo}><Ic n="cam" />사진 읽기</button>
-            <button className="cz-link" type="button" onClick={paste}><Ic n="chat" />카톡 붙여넣기</button>
           </div>
         </div>
       ) : (
@@ -50,9 +49,7 @@ export function ThemeList({ s, onOpenLoad, watchCtl }: { s: Scheduler; onOpenLoa
           <div className="cz-ways" role="group" aria-label="테마 넣기">
             <button id="addTheme" type="button" onClick={() => s.addTheme('edit')}><Ic n="plus" />직접 넣기</button>
             <button id="loadBtn" type="button" onClick={onOpenLoad}><Ic n="dl" />불러오기</button>
-            <button type="button" onClick={photo}><Ic n="cam" />사진 읽기</button>
-            <button type="button" onClick={paste}><Ic n="chat" />카톡 붙여넣기</button>
-          </div>
+            <button type="button" onClick={photo}><Ic n="cam" />사진 읽기</button>          </div>
         </>
       )}
       <input

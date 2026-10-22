@@ -146,7 +146,7 @@ export function useScheduler() {
     return () => clearTimeout(t);
   }, [serializeNow]);
 
-  /* ui: 새 카드를 연 채로 둘 칸(types.ts) — 직접 넣기는 'edit', 카톡 붙여넣기는 'paste' */
+  /* ui: 새 카드를 연 채로 둘 칸(types.ts) — 직접 넣기는 'edit' */
   const addTheme = useCallback((ui?: Theme['ui']) => {
     setThemes(ts => [...ts, { ...blankTheme(nextId.current++), ui }]);
   }, []);
