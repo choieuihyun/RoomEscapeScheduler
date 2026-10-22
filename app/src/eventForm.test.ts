@@ -94,13 +94,13 @@ describe('eventForm', () => {
     expect(err(base({ title: 'a', allDay: false, start: '14:00', end: '14:00' }))).toBe('끝 시각이 시작보다 늦어야 해요.');
     expect(err(base({ title: 'a', allDay: false, start: '14:00', end: '13:00' }))).toBe('끝 시각이 시작보다 늦어야 해요.');
     expect(err(base({ title: 'a', allDay: false, start: '17:30', end: '05:30' }))).toBe(EVENING);
-    expect(err(base({ title: 'a', allDay: false, start: '1pm', end: '13:00' }))).toBe('시작 시각은 13:40 처럼 24시간제로 적어 주세요.');
+    expect(err(base({ title: 'a', allDay: false, start: '1pm', end: '13:00' }))).toBe('시작 시각은 13:40(또는 1340) 처럼 24시간제로 적어 주세요.');
   });
 
   it('24시 이상은 칸 오류 (24시간제)', () => {
-    expect(err(base({ title: 'a', allDay: false, start: '24:30' }))).toBe('시작 시각은 13:40 처럼 24시간제로 적어 주세요.');
+    expect(err(base({ title: 'a', allDay: false, start: '24:30' }))).toBe('시작 시각은 13:40(또는 1340) 처럼 24시간제로 적어 주세요.');
     const ok = { themeName: 'A', branchName: '', themeKey: null, start: '13:40', end: '' };
-    expect(err(base({ segs: [{ ...ok, end: '25:00' }] }))).toBe('1번째 테마의 끝 시각은 13:40 처럼 24시간제로 적어 주세요.');
+    expect(err(base({ segs: [{ ...ok, end: '25:00' }] }))).toBe('1번째 테마의 끝 시각은 13:40(또는 1340) 처럼 24시간제로 적어 주세요.');
   });
 
   it('시작만 있는 일정 — 끝 칸을 비우면 endMin null', () => {
@@ -236,7 +236,7 @@ describe('eventForm', () => {
 
   it('구간 시각 오류는 몇 번째 테마인지 알려 준다', () => {
     const ok = { themeName: 'A', branchName: '', themeKey: null, start: '13:40', end: '' };
-    expect(err(base({ segs: [ok, { ...ok, start: 'abc' }] }))).toBe('2번째 테마의 시작 시각은 13:40 처럼 24시간제로 적어 주세요.');
+    expect(err(base({ segs: [ok, { ...ok, start: 'abc' }] }))).toBe('2번째 테마의 시작 시각은 13:40(또는 1340) 처럼 24시간제로 적어 주세요.');
   });
 
   it('충돌이면 입력을 지키고 최신으로 바꿀 수 있다', () => {

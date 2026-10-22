@@ -1,7 +1,7 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import { MemberLink } from '../clubStore';
 import {
-  availText, candidateSummary, dayLabel, parseAvailText, sortKeyDate, todayKst, windowLabel, type AvailTime, type CandidateRow,
+  availText, candidateSummary, dayLabel, parseAvailText, sortKeyDate, tidyClockText, todayKst, windowLabel, type AvailTime, type CandidateRow,
 } from '../clubEvents';
 import { decideForm, formFromEvent, toInput, type FormState } from '../eventForm';
 import { errorCode, sayClub, type EventDto } from '../server';
@@ -112,6 +112,7 @@ function MyRow({ ev, date, mine, club }: {
     const r = parseAvailText(text);
     if ('error' in r) { setErr(r.error); return; }
     setErr('');
+    setText(tidyClockText(text)); // 숫자만 친 `1400~2200` → `14:00~22:00`
     if (mine?.available && mine.startMin === r.startMin && mine.endMin === r.endMin) return; // 그대로면 안 보낸다
     void club.answer(ev.id, date, true, r.startMin, r.endMin);
   }

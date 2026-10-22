@@ -13,6 +13,7 @@ import {
   monthGrid,
   moveCost,
   pairKey,
+  parseClock,
   parseSessions,
   search,
   sessionsToText,
@@ -56,6 +57,14 @@ describe('[1] 회차 텍스트 파싱 (requirements.md §2.2)', () => {
 
   it('빈 입력', () => {
     expect(parseSessions('').map(s => fmt(s.t))).toEqual([]);
+  });
+
+  it('콜론 없이 숫자만 친 시각(1920·930) — 콜론 시각이 하나도 없을 때만 읽는다(붙여 넣은 글의 연도·가격 오인 방지)', () => {
+    expect(parseSessions('1000 1310 1540 1720').map(s => fmt(s.t))).toEqual(['10:00', '13:10', '15:40', '17:20']);
+    expect(parseSessions('930, 1100').map(s => fmt(s.t))).toEqual(['09:30', '11:00']);
+    expect(parseSessions('1030 매진 1200').map(s => fmt(s.t) + (s.soldout ? '/매진' : ''))).toEqual(['10:30/매진', '12:00']);
+    expect(parseSessions('10:00 2026 13:10').map(s => fmt(s.t))).toEqual(['10:00', '13:10']);
+    expect(parseSessions('1960 3000 12 12345').map(s => fmt(s.t))).toEqual([]);
   });
 
   it('12시간 보정된 항목에 fixed 표시', () => {
@@ -493,5 +502,20 @@ describe('[10] mdWeekday — 테마 카드 날짜 표시 (§4.41)', () => {
   it('"YYYY-MM-DD"를 "M/D(요일)"로', () => {
     expect(mdWeekday('2026-09-01')).toBe('9/1(화)');
     expect(mdWeekday('2026-09-03')).toBe('9/3(목)');
+  });
+});
+
+describe('시각 칸 — 콜론 없이 숫자만(1920·2100·930) 쳐도 시각으로', () => {
+  it('parseClock 은 3~4자리 숫자를 H:MM 으로 읽는다(29시까지·59분까지, 그 밖은 못 읽음)', () => {
+    expect(parseClock('1920')).toBe(1160);
+    expect(parseClock('2100')).toBe(1260);
+    expect(parseClock('930')).toBe(570);
+    expect(parseClock('0930')).toBe(570);
+    expect(parseClock(' 2430 ')).toBe(1470);
+    expect(parseClock('1960')).toBeNull();
+    expect(parseClock('3000')).toBeNull();
+    expect(parseClock('12')).toBeNull();
+    expect(parseClock('12345')).toBeNull();
+    expect(parseClock('19:20')).toBe(1160);
   });
 });

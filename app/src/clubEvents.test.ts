@@ -5,7 +5,7 @@ import {
   sortEvents, addDays, cpLen, STATUS_LABEL,
   mergeRange, upsert, isUndecided, sortKeyDate, candidateSummary, dropEvent, afterActionError,
   parseClock24, rollDays, todayKst, daysBetween, dayLabel, longDayLabel, clockLabel, rangeLabel,
-  parseAvailText, availText, windowLabel, windowToCalc, msUntilKstMidnight,
+  parseAvailText, availText, windowLabel, windowToCalc, msUntilKstMidnight, tidyClockText,
 } from './clubEvents';
 import { parseKakaoTitle } from './kakaoTitle';
 import { nextMine, relDay, todayStrip, upcoming } from './homeStrip';
@@ -133,6 +133,31 @@ describe('clubEvents', () => {
     expect(parseClock24('25:30')).toBeNull();
     expect(parseClock24('13:60')).toBeNull();
     expect(parseClock24('abc')).toBeNull();
+  });
+
+  it('parseClock24 도 콜론 없는 3~4자리(1920·930)를 읽는다 — 24시 넘으면 못 읽음', () => {
+    expect(parseClock24('1920')).toBe(1160);
+    expect(parseClock24(' 930 ')).toBe(570);
+    expect(parseClock24('0005')).toBe(5);
+    expect(parseClock24('2400')).toBeNull();
+    expect(parseClock24('1975')).toBeNull();
+    expect(parseClock24('19200')).toBeNull();
+  });
+
+  it('parseAvailText 도 숫자만 친 범위(1400~2200·1400-2200)를 읽는다', () => {
+    expect(parseAvailText('1400~2200')).toEqual({ startMin: 840, endMin: 1320 });
+    expect(parseAvailText('1400-2200')).toEqual({ startMin: 840, endMin: 1320 });
+  });
+
+  it('tidyClockText — 칸을 벗어날 때 숫자만 친 시각을 HH:MM 으로 바꿔 보여 준다(못 읽는 숫자·다른 글은 그대로)', () => {
+    expect(tidyClockText('1920')).toBe('19:20');
+    expect(tidyClockText('930')).toBe('09:30');
+    expect(tidyClockText('1400~2200')).toBe('14:00~22:00');
+    expect(tidyClockText('1400 - 2200')).toBe('14:00 - 22:00');
+    expect(tidyClockText('19:20')).toBe('19:20');
+    expect(tidyClockText('1975')).toBe('1975');
+    expect(tidyClockText('종일')).toBe('종일');
+    expect(tidyClockText('')).toBe('');
   });
 
   it('자정 넘김 자동 (rollDays) — 18시 이후 → 6시 전일 때만, 한 번만', () => {

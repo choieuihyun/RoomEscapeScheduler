@@ -10,8 +10,15 @@
 export const pad = (n: number) => String(n).padStart(2, '0');
 export const fmt = (m: number) => pad(Math.floor(m / 60) % 24) + ':' + pad(m % 60);
 
+/* 콜론 없이 숫자만 친 시각(1920·2100·930·0930)을 H:MM 으로 — 3~4자리 숫자 하나일 때만(2026-10-22 사용자 요청).
+   범위·유효성은 부르는 쪽 정규식·검사가 그대로 본다 */
+export function expandClock(s: string): string {
+  const t = s.trim();
+  return /^\d{3,4}$/.test(t) ? t.slice(0, -2) + ':' + t.slice(-2) : t;
+}
+
 export function parseClock(s: string | null | undefined): number | null {
-  const m = String(s || '').trim().match(/^(\d{1,2})\s*:\s*(\d{2})$/);
+  const m = expandClock(String(s || '')).match(/^(\d{1,2})\s*:\s*(\d{2})$/);
   if (!m) return null;
   const h = +m[1], mi = +m[2];
   if (h > 29 || mi > 59) return null;
@@ -54,7 +61,15 @@ export interface Session {
 /* "오전 10:30 매진 오후 12:00 매진 …" 또는 "10:30, 12:00, 1:30" 모두 처리 */
 export function parseSessions(text: string | null | undefined): Session[] {
   const out: Session[] = [];
-  const toks = String(text || '').split(/[\s,·|\n\r\t]+/).filter(Boolean);
+  let toks = String(text || '').split(/[\s,·|\n\r\t]+/).filter(Boolean);
+  /* 콜론 없이 숫자만 친 회차(1000 1310 …, 2026-10-22) — 콜론 시각이 하나도 없을 때만 H:MM 으로 읽는다.
+     콜론 시각이 섞인 글(붙여 넣은 예약 화면)의 "2026"·"9000" 같은 숫자는 지금처럼 무시한다. 3~4자리 + 29시·59분까지만 */
+  if (!toks.some(tk => /\d:\d{2}/.test(tk))) {
+    toks = toks.map(tk => {
+      const c = expandClock(tk);
+      return c !== tk && parseClock(c) !== null ? c : tk;
+    });
+  }
   let mer: 'am' | 'pm' | null = null, sawMer = false;
   for (const tk of toks) {
     if (/오전|AM/i.test(tk) && !/\d{1,2}:\d{2}/.test(tk)) { mer = 'am'; sawMer = true; continue; }

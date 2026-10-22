@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { dayLabel, todayKst } from '../clubEvents';
+import { dayLabel, tidyClockText, todayKst } from '../clubEvents';
 import { applyPaste, parseKakaoTitle, shouldApplyOnBlur } from '../kakaoTitle';
 import { monthGrid } from '../core';
 import { emptySeg, formFromEvent, MAX_CANDIDATES, MAX_SEGS, segTimeText, switchDateMode, toggleCandidate, toInput, type FormSeg, type FormState } from '../eventForm';
@@ -203,10 +203,10 @@ function Body({ m, create, update, adopt, played }: Props) {
               {!f.allDay && (
                 <>
                   <input aria-label="시작 시각" inputMode="numeric" placeholder="13:40" value={f.start}
-                    onChange={(e) => set({ start: e.target.value })} />
+                    onChange={(e) => set({ start: e.target.value })} onBlur={() => set({ start: tidyClockText(f.start) })} />
                   <span>–</span>
                   <input aria-label="끝 시각" inputMode="numeric" placeholder="끝(선택)" value={f.end}
-                    onChange={(e) => set({ end: e.target.value })} />
+                    onChange={(e) => set({ end: e.target.value })} onBlur={() => set({ end: tidyClockText(f.end) })} />
                 </>
               )}
             </div>
@@ -239,12 +239,12 @@ function Body({ m, create, update, adopt, played }: Props) {
                       <div className="evf-span">
                         <label>시작
                           <input className="evf-s-time" aria-label={`테마 ${n} 시작`} inputMode="numeric" placeholder="--:--"
-                            value={g.start} onChange={(e) => setSeg(i, { start: e.target.value })} />
+                            value={g.start} onChange={(e) => setSeg(i, { start: e.target.value })} onBlur={() => setSeg(i, { start: tidyClockText(g.start) })} />
                         </label>
                         <span className="evf-span-dash" aria-hidden="true">–</span>
                         <label>끝
                           <input className="evf-s-time" aria-label={`테마 ${n} 끝`} inputMode="numeric" placeholder="--:--"
-                            value={g.end} onChange={(e) => setSeg(i, { end: e.target.value })} />
+                            value={g.end} onChange={(e) => setSeg(i, { end: e.target.value })} onBlur={() => setSeg(i, { end: tidyClockText(g.end) })} />
                         </label>
                       </div>
                       {meta.next && <span className="evf-next">다음날</span>}

@@ -1,6 +1,6 @@
 /* 동호회 일정의 화면 쪽 규칙 — React 밖의 순수 함수 (작업명세서 §4.7, 계획 Task E1).
    상태·제목 만들기, 카톡 제목 해석, 카톡에 올릴 글, 홈에 고를 일정. */
-import { fmt, WEEKDAYS } from './core';
+import { expandClock, fmt, WEEKDAYS } from './core';
 import { errorCode, type EventDto } from './server';
 
 export type EventStatus = 'talk' | 'before' | 'done';
@@ -29,13 +29,22 @@ export function eventTitle(ev: Pick<EventDto, 'title' | 'segments'>): string {
 
 export const DAY_MIN = 1440;
 
-/* 동호회 쪽 시각 칸 해석: `13:40`, `9:05`, 앞뒤 공백 허용. 24시 이상은 못 읽은 것(null).
+/* 동호회 쪽 시각 칸 해석: `13:40`, `9:05`, 콜론 없는 `1340`·`905`(2026-10-22), 앞뒤 공백 허용. 24시 이상은 못 읽은 것(null).
    조합 계산의 core.ts parseClock(예약 사이트의 `24:30` 표기용, 29시까지)과는 따로 둔다. */
 export function parseClock24(s: string): number | null {
-  const m = s.match(/^\s*(\d{1,2})\s*:\s*(\d{2})\s*$/);
+  const m = expandClock(s).match(/^(\d{1,2})\s*:\s*(\d{2})$/);
   if (!m) return null;
   const h = +m[1], mi = +m[2];
   return h > 23 || mi > 59 ? null : h * 60 + mi;
+}
+
+/* 칸을 벗어날 때 숫자만 친 시각을 HH:MM 으로 바꿔 보여 준다 — `1920`→`19:20`, `1400~2200`→`14:00~22:00`.
+   공백·~·-·– 로 갈린 3~4자리 숫자 덩어리 중 24시간제로 읽히는 것만 바꾸고, 나머지 글은 그대로 둔다 */
+export function tidyClockText(s: string): string {
+  return s.replace(/(^|[\s~\-–])(\d{3,4})(?=$|[\s~\-–])/g, (all, pre: string, d: string) => {
+    const t = parseClock24(d);
+    return t === null ? all : pre + fmt(t);
+  });
 }
 
 export type TimeRow = { start: number; end: number | null };

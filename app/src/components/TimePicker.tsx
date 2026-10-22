@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { expandClock } from '../core';
 
 /* native <input type="time">의 스피너 화살표가 불편하다는 요청으로 만든
    대체 컴포넌트 — 클릭하면 30분 단위 후보가 드롭다운으로 뜨고, 직접
@@ -12,8 +13,9 @@ const OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return `${h}:${m}`;
 });
 
+/* `13:00`·`9:30`, 콜론 없는 `1300`·`930`(2026-10-22)도 → "HH:MM". 못 읽으면 null(칸을 되돌린다) */
 function normalize(v: string): string | null {
-  const m = v.trim().match(/^(\d{1,2}):(\d{2})$/);
+  const m = expandClock(v).match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return null;
   const h = +m[1], mi = +m[2];
   if (h > 23 || mi > 59) return null;

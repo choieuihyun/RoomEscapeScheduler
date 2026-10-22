@@ -159,7 +159,7 @@ function isEarlyOvernight(rows: TimeRow[], bad: 'start' | 'end', i: number): boo
   return late !== null && late < early && late < 6 * 60 && early >= 6 * 60 && early < 18 * 60;
 }
 
-const TIME_HINT = '13:40 처럼 24시간제로 적어 주세요.';
+const TIME_HINT = '13:40(또는 1340) 처럼 24시간제로 적어 주세요.';
 
 export function toInput(f: FormState): { input: EventInput } | { error: string } {
   const title = f.title.trim();
