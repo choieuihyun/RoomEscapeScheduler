@@ -87,25 +87,21 @@ const peopleText = (ev: EventDto) => (ev.capacity === null ? `${ev.count}` : `${
 /* 이 일정 테마를 이미 해 본 참여자(playedWho) — 고른 날 줄은 둘까지 이름(셋부터 "철수 외 2명 해 봄"),
    달 칸 칩은 자리가 없어 "2명 해 봄". 이름은 다 title 로. 없으면 아무것도 안 붙인다 */
 
-/* 날짜 미정 일정은 후보 날짜마다 흐린 칩(cand)으로 — 누르면 그 후보 날짜를 고른 채 상세를 연다 */
+/* 날짜 미정 일정은 후보 날짜마다 흐린 칩(cand)으로 — 누르면 그 후보 날짜를 고른 채 상세를 연다.
+   onOpen 이 없으면 누를 수 없는 표시만 한다(달·주 칸 — 2026-10-22 사용자 요청: 칸 안 칩을 잘못 눌러 상세로 들어가는 일이 잦았다.
+   칸을 누르면 날짜만 고르고, 상세는 아래 그날 목록(ClubRow)에서 연다) */
 function ClubChip({ ev, iso, on, past, onOpen }: {
-  ev: EventDto; iso: string; on: boolean; past: boolean; onOpen: (ev: EventDto, date: string) => void;
+  ev: EventDto; iso: string; on: boolean; past: boolean; onOpen?: (ev: EventDto, date: string) => void;
 }) {
   const st = eventStatus(ev);
   const time = timeLabel(ev);
   const cand = isUndecided(ev);
   const who = playedWho(ev);
   const pl = who.length > 0 ? `${who.length}명 해 봄` : '';
-  return (
-    <button
-      type="button" className={'cal-ev club ' + st + (cand ? ' cand' : '') + (on ? ' on' : '') + (past ? ' past' : '')}
-      title={`${STATUS_LABEL[st]}${cand ? ` · 후보 날짜(${ev.candidates.length}개 중)` : ''} · ${eventTitle(ev)}${time ? ' · ' + time : ''} · 참여 ${peopleText(ev)}${pl ? ' · ' + playedWhoTitle(who) : ''}`}
-      aria-pressed={on}
-      /* 칸(role=button)의 클릭·Enter·Space 처리로 번지지 않게 — 칸은 그 키에 preventDefault 를 건다.
-         다른 키(←/→ 달 이동 등)는 그대로 둔다 */
-      onClick={e => { e.stopPropagation(); onOpen(ev, iso); }}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
-    >
+  const cls = 'cal-ev club ' + st + (cand ? ' cand' : '') + (on ? ' on' : '') + (past ? ' past' : '');
+  const title = `${STATUS_LABEL[st]}${cand ? ` · 후보 날짜(${ev.candidates.length}개 중)` : ''} · ${eventTitle(ev)}${time ? ' · ' + time : ''} · 참여 ${peopleText(ev)}${pl ? ' · ' + playedWhoTitle(who) : ''}`;
+  const body = (
+    <>
       <i className="cal-dot" /><span className="cal-ev-t">{chipText(ev)}</span>
       {/* 좁은 달 칸에선 세모만 보이고 글자는 읽어 주기만 한다(floduler.css 의 @container) */}
       {pl && (
@@ -117,6 +113,18 @@ function ClubChip({ ev, iso, on, past, onOpen }: {
         </span>
       )}
       <span className="cal-ev-n">{peopleText(ev)}</span>
+    </>
+  );
+  if (!onOpen) return <span className={cls} title={title}>{body}</span>;
+  return (
+    <button
+      type="button" className={cls} title={title} aria-pressed={on}
+      /* 칸(role=button)의 클릭·Enter·Space 처리로 번지지 않게 — 칸은 그 키에 preventDefault 를 건다.
+         다른 키(←/→ 달 이동 등)는 그대로 둔다 */
+      onClick={e => { e.stopPropagation(); onOpen(ev, iso); }}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
+    >
+      {body}
     </button>
   );
 }
@@ -322,9 +330,10 @@ export function CalendarPage({
   /* 칸·창·주 보기가 같이 쓰는 줄 목록: 동호회 일정 먼저, 그다음 내 일정·빈자리 알림 */
   /* 연 일정 표시 — 날짜 미정 일정은 고른(누른) 후보 칸에서만 */
   const isOn = (ev: EventDto, iso: string) => ev.id === ctl.openEvent && (ev.date !== null || iso === ctl.selected);
-  const lineOf = (iso: string) => [
+  /* open: 칩을 눌러 상세를 열 수 있나 — 달·주 칸은 아니고(칸을 누르면 날짜만 고른다), "+n" 창은 그렇다 */
+  const lineOf = (iso: string, open = false) => [
     ...clubOf(iso).map(ev => (
-      <ClubChip key={'c' + ev.id} ev={ev} iso={iso} on={isOn(ev, iso)} past={iso < clubToday} onOpen={openClub} />
+      <ClubChip key={'c' + ev.id} ev={ev} iso={iso} on={isOn(ev, iso)} past={iso < clubToday} onOpen={open ? openClub : undefined} />
     )),
     ...evsOf(iso).map(e => <EvLine key={e.key} e={e} />),
     ...playedOf(iso).map(p => <PlayedLine key={'d' + p.id} p={p} />),
@@ -373,7 +382,7 @@ export function CalendarPage({
   const sel = ctl.selected;
   const selEntry = byDate.get(sel);
   const weeks = Array.from({ length: grid.length / 7 }, (_, i) => grid.slice(i * 7, i * 7 + 7));
-  const popEvs = pop ? lineOf(pop.iso) : [];
+  const popEvs = pop ? lineOf(pop.iso, true) : [];
   const selClub = clubOf(sel);
   const selPlayed = playedOf(sel);
 

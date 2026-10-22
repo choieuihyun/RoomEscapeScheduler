@@ -13,6 +13,7 @@ import { nextMine, todayStrip, upcoming } from '../homeStrip';
 import { playedWho, playedWhoLabel, playedWhoTitle } from '../playedWho';
 import type { EventDto } from '../server';
 import type { UseClubEventsReturn } from '../useClubEvents';
+import { AvaText } from './Avatar';
 
 /* 홈(대시보드) — 2026-10-21 개편(승인 목업 Main·DesktopHome). 주인공은 "내 다음 일정" 하나(D-day 큰 청록 숫자 —
    홈에서 유일한 청록 숫자). 그 아래 알림 줄(오늘·내일 일정, 보낼 돈, 생일), 가까운 일정(탭·쪽).
@@ -242,10 +243,10 @@ export function HomePage({
                 <div className="hm-pplw">
                   <div className="hm-ppl">
                     <span className="hm-avas">
-                      {/* 머리글자만 보이므로 별명은 title(마우스)과 화면 읽기용 글로 */}
+                      {/* 동그라미 안 별명은 겹쳐 작게 보이므로 title(마우스)과 화면 읽기용 글로도 */}
                       {next.participants.slice(0, 4).map((p) => (
                         <MemberLink key={p.uid} uid={p.uid} name={p.nickname} className="hm-ava" title={p.nickname}>
-                          <span aria-hidden="true">{[...p.nickname][0] ?? '?'}</span><span className="sr-only">{p.nickname}</span>
+                          <span aria-hidden="true"><AvaText name={p.nickname} /></span><span className="sr-only">{p.nickname}</span>
                         </MemberLink>
                       ))}
                       {next.participants.length > 4 && <span className="hm-ava more" aria-hidden="true">+{next.participants.length - 4}</span>}

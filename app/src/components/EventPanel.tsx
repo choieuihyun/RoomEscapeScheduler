@@ -12,6 +12,7 @@ import type { UseClubEventsReturn } from '../useClubEvents';
 import type { AddedTheme } from '../scheduler/types';
 import { EventHelper } from './EventHelper';
 import { EventTalk, EventTalkDone } from './EventTalk';
+import { AvaText } from './Avatar';
 import { Fold } from './Fold';
 import { PlayedDots } from './PlayedDots';
 import { SettlePanel } from './SettlePanel';
@@ -19,7 +20,8 @@ import { SettlePanel } from './SettlePanel';
 /* 캘린더의 동호회 일정 상세 (계획 Task E6 → 2026-10-21 개편, 승인 목업 MobileEvent·DesktopEvent).
    위에서부터: 상태 칩(누르면 예약 전/완료) + 제목 → 언제·어디·몇 명(시간 크게) → 코스 → 참여자 →
    접힌 줄(정산·날짜 협의·테마 도우미) → 아래 막대 [카톡 글 복사][참여하기/참여 취소](좁은 화면은 탭 위에 붙는다).
-   수정·삭제·카톡 글 보기는 ⋯ 메뉴. 기능은 개편 전과 같다.
+   수정·삭제는 ⋯ 메뉴. "카톡 글 보기" 메뉴는 2026-10-22 사용자 요청으로 뺐다 — 글은 [카톡 글 복사]로 가져가고,
+   복사가 막힌 브라우저에서만 글을 펼쳐 보여 준다.
    보이는 일정은 늘 목록(useClubEvents)에서 꺼낸 최신 값이다 — 정원 초과 뒤 다시 불러온 값,
    수정 창에서 저장한 값이 그대로 여기 나온다. 고른 일정이 바뀌면 부르는 쪽이 key 로 새로 그린다. */
 
@@ -164,30 +166,24 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
           <Ic size={20}><path d="m15 6-6 6 6 6" /></Ic>캘린더
         </button>
         <span className="evp-tools" ref={menuBox}>
-          <button type="button" className="evp-more" aria-label="더 보기 메뉴" title="더 보기" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.75" /><circle cx="12" cy="12" r="1.75" /><circle cx="19" cy="12" r="1.75" /></svg>
-          </button>
-          {menu && (
+          {/* 메뉴에 남은 건 수정·삭제뿐이라 고칠 수 있는 사람에게만 ⋯ 를 보인다 */}
+          {ev.canManage && (
+            <button type="button" className="evp-more" aria-label="더 보기 메뉴" title="더 보기" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.75" /><circle cx="12" cy="12" r="1.75" /><circle cx="19" cy="12" r="1.75" /></svg>
+            </button>
+          )}
+          {menu && ev.canManage && (
             <div className="evp-menu" role="menu" aria-label="일정 메뉴">
-              {ev.canManage && (
-                <button type="button" role="menuitem" disabled={busy} onClick={() => { setMenu(false); onEdit(ev); }}>
-                  <Ic><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></Ic>수정
-                </button>
-              )}
-              <button type="button" role="menuitem" onClick={() => { setMenu(false); setShowPost(!showPost); }}>
-                <Ic><path d="M4 5h16v11H8l-4 4z" /><path d="M8 9h8M8 12h5" /></Ic>{showPost ? '카톡 글 접기' : '카톡 글 보기'}
+              <button type="button" role="menuitem" disabled={busy} onClick={() => { setMenu(false); onEdit(ev); }}>
+                <Ic><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></Ic>수정
               </button>
-              {ev.canManage && (
-                <>
-                  <span className="evp-menu-sep" role="separator" />
-                  <button
-                    type="button" role="menuitem" className="danger" disabled={busy}
-                    onClick={() => { setMenu(false); if (confirm('이 일정을 지울까요? 참여한 사람들 화면에서도 사라져요.')) void club.remove(ev.id); }}
-                  >
-                    <Ic><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></Ic>삭제
-                  </button>
-                </>
-              )}
+              <span className="evp-menu-sep" role="separator" />
+              <button
+                type="button" role="menuitem" className="danger" disabled={busy}
+                onClick={() => { setMenu(false); if (confirm('이 일정을 지울까요? 참여한 사람들 화면에서도 사라져요.')) void club.remove(ev.id); }}
+              >
+                <Ic><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></Ic>삭제
+              </button>
             </div>
           )}
           <button type="button" className="btn-x evp-x" aria-label="닫기" onClick={close}>×</button>
@@ -319,7 +315,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
         <ul className="evp-plist">
           {ev.participants.map((p) => (
             <li key={p.uid} className={'evp-pr' + (perPerson.has(p.uid) ? ' played' : '')}>
-              <span className="evp-pa" aria-hidden="true">{[...p.nickname][0] ?? '?'}</span>
+              <span className="evp-pa" aria-hidden="true"><AvaText name={p.nickname} /></span>
               <span className="evp-pn">
                 <MemberLink uid={p.uid} name={p.nickname} />
                 {p.uid === ev.createdBy.uid && <i>만든 사람</i>}
