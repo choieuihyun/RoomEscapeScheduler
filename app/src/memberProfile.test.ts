@@ -191,10 +191,10 @@ describe('멤버 목록', () => {
     expect(list.filter((m) => matchPerson(m, '나 비')).map((m) => m.uid)).toEqual(['c']);
     expect(list.filter((m) => matchPerson(m, '')).length).toBe(4);
   });
-  it('둘째 줄 "97년생 · ENFP · 방 312개 · 서울 마포구", 잘 몰라요·천 단위, 거주지역 없으면 그 칸 없이', () => {
-    expect(personLine(P)).toBe('97년생 · ENFP · 방 312개 · 서울 마포구');
-    expect(personLine({ ...P, mbti: 'UNKNOWN', roomCount: 1234 })).toBe('97년생 · 잘 몰라요 · 방 1,234개 · 서울 마포구');
-    expect(personLine({ ...P, residence: null })).toBe('97년생 · ENFP · 방 312개');
+  it('둘째 줄 "97년생 · ENFP · 312방 · 서울 마포구", 잘 몰라요·천 단위, 거주지역 없으면 그 칸 없이', () => {
+    expect(personLine(P)).toBe('97년생 · ENFP · 312방 · 서울 마포구');
+    expect(personLine({ ...P, mbti: 'UNKNOWN', roomCount: 1234 })).toBe('97년생 · 잘 몰라요 · 1,234방 · 서울 마포구');
+    expect(personLine({ ...P, residence: null })).toBe('97년생 · ENFP · 312방');
   });
 });
 

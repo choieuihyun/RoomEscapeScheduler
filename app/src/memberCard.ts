@@ -1,13 +1,13 @@
 /* 멤버 카드(어디서든 이름을 누르면)의 화면 규칙 — 순수 함수. 지연 청크 전용(카드·테스트만 가져다 쓴다).
    서버는 바꾸지 않았다 — 멤버 목록(§4.11)·남의 해 본 테마(§4.9)·위시 묶음(§4.12)·앱이 받아 둔 일정으로 만든다. */
 import { sortKeyDate } from './clubEvents';
-import { mbtiLabel, yearLabel } from './memberProfile';
+import { mbtiLabel, roomsLabel, yearLabel } from './memberProfile';
 import type { EventDto, ProfileDto, WishGroupDto } from './server';
 import { placeLabel, wishKey } from './wish';
 
-/* 프로필 줄 "97년생 · ENFP · 방 312개 · 서울 마포구" — 모르는 MBTI 는 카드에선 "MBTI 잘 몰라요"(멤버 목록의 "잘 몰라요"만으론 무엇을 모르는지 안 보인다) */
+/* 프로필 줄 "97년생 · ENFP · 312방 · 서울 마포구" — 모르는 MBTI 는 카드에선 "MBTI 잘 몰라요"(멤버 목록의 "잘 몰라요"만으론 무엇을 모르는지 안 보인다) */
 export const cardLine = (p: ProfileDto): string =>
-  `${yearLabel(p.birthDate)} · ${p.mbti === 'UNKNOWN' ? 'MBTI 잘 몰라요' : mbtiLabel(p.mbti)} · 방 ${p.roomCount.toLocaleString('ko-KR')}개${p.residence ? ` · ${p.residence}` : ''}`;
+  `${yearLabel(p.birthDate)} · ${p.mbti === 'UNKNOWN' ? 'MBTI 잘 몰라요' : mbtiLabel(p.mbti)} · ${roomsLabel(p.roomCount)}${p.residence ? ` · ${p.residence}` : ''}`;
 
 /* 해 본 날 — 올해면 "10.12", 다른 해면 "2025.10.12", 없으면 '' */
 export function playedDate(iso: string | null, today: string): string {

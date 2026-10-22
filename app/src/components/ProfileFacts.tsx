@@ -1,4 +1,4 @@
-import { birthLabel, lifeLabel, mbtiLabel, yearLabel } from '../memberProfile';
+import { birthLabel, lifeLabel, mbtiLabel, roomsLabel, yearLabel } from '../memberProfile';
 import type { ProfileDto } from '../server';
 
 /* 내 프로필 한 덩이(§4.11) — 좁은 화면 더보기의 프로필 카드와 넓은 화면 내 정보의 프로필 카드가 같이 쓴다.
@@ -20,7 +20,7 @@ export function ProfileFacts({ p, onEdit, residenceOn }: { p: ProfileDto | null 
         <div><dt>이름</dt><dd>{p.realName}</dd></div>
         <div><dt>나이</dt><dd>{yearLabel(p.birthDate)} <span className="pfx-sub">· 생일 {birthLabel(p.birthDate)}</span></dd></div>
         <div><dt>MBTI</dt><dd>{mbtiLabel(p.mbti)}</dd></div>
-        <div><dt>방 수</dt><dd>{p.roomCount.toLocaleString('ko-KR')}개</dd></div>
+        <div><dt>방 수</dt><dd>{roomsLabel(p.roomCount)}</dd></div>
         {p.residence && <div className="wide"><dt>거주지역</dt><dd>{p.residence}</dd></div>}
         <div className="wide"><dt>장르</dt><dd className="pfx-genres">{p.genres.map((g) => <span key={g} className="pfx-g">{g}</span>)}</dd></div>
         <div className="wide"><dt>인생 테마</dt><dd>{lifeLabel(p.lifeTheme)}</dd></div>

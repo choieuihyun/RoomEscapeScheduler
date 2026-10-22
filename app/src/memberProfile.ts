@@ -66,6 +66,9 @@ export const birthDots = (iso: string): string => iso.replaceAll('-', '.');
 /* 나이 표기 — "만 29세" 대신 "97년생"(2026-10-21 사용자 결정, §4.11). 태어난 해 끝 두 자리 + "년생"(2000 → "00년생") */
 export const yearLabel = (birth: string): string => `${birth.slice(2, 4)}년생`;
 
+/* 방 수 "312방" · "1,234방"(방탈출에서 세는 말 — 2026-10-22 사용자 요청, 전엔 "방 312개") */
+export const roomsLabel = (n: number): string => `${n.toLocaleString('ko-KR')}방`;
+
 /* 생일 표시 — 계약의 "월.일", 입력 칸(1997.06.28)과 같은 모양으로 "06.28" */
 export const birthLabel = (iso: string): string => `${iso.slice(5, 7)}.${iso.slice(8, 10)}`;
 
@@ -198,9 +201,9 @@ export function sortPeople(list: readonly ClubMemberDto[], sort: PeopleSort, meU
   return [...me, ...rest];
 }
 
-/* 둘째 줄 "97년생 · ENFP · 방 312개 · 서울 마포구"(거주지역이 없으면 그 칸 없이) */
+/* 둘째 줄 "97년생 · ENFP · 312방 · 서울 마포구"(거주지역이 없으면 그 칸 없이) */
 export const personLine = (p: ProfileDto): string =>
-  `${yearLabel(p.birthDate)} · ${mbtiLabel(p.mbti)} · 방 ${p.roomCount.toLocaleString('ko-KR')}개${p.residence ? ` · ${p.residence}` : ''}`;
+  `${yearLabel(p.birthDate)} · ${mbtiLabel(p.mbti)} · ${roomsLabel(p.roomCount)}${p.residence ? ` · ${p.residence}` : ''}`;
 
 /* ── 랭킹 ── */
 

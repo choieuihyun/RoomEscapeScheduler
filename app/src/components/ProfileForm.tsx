@@ -170,7 +170,7 @@ export function ProfileForm({
             <input id={id + 'rooms'} data-f="rooms" inputMode="numeric" autoComplete="off" placeholder="0" value={d.rooms}
               onChange={(e) => set('rooms', cleanRooms(e.target.value))} aria-invalid={hint('rooms') ? true : undefined}
               aria-describedby={described('rooms') ?? (playedCount !== null ? id + 'roomsh' : undefined)} />
-            <span>개</span>
+            <span>방</span>
             {playedCount !== null && <em id={id + 'roomsh'}>앱 기록 {playedCount}개</em>}
           </span>
           {hintP('rooms') ?? <span className="pfm-note">앱 기록과 상관없이 본인이 센 수를 적어 주세요</span>}
