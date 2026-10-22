@@ -7,10 +7,13 @@
    다시 어둡게 칠한다(헤드리스 강제 다크로 재현: light → 어두움, only light → 흰색). 다크 두 블록은 dark. */
 :root{
   color-scheme:only light;
-  --bg:#F8F8F8;          /* 페이지 바닥 */
+  /* 2026-10-22 "또렷하게"(사용자 승인) — 바닥을 한 단계 깊게(#F8F8F8→#F2F3F3), 선을 한 단계 진하게(#E4E5E5·#DBDCDC→),
+     홈 카드에 옅은 그림자(--card-sh). 흰 카드와 바닥이 거의 같아 카드 경계가 흐렸다. 굵기는 1px 그대로 */
+  --bg:#F2F3F3;          /* 페이지 바닥 */
   --surface:#FFFFFF;     /* 카드 */
   --surface2:#F8F8F8;    /* 입력칸처럼 안으로 파인 면 */
-  --line:#E4E5E5; --line2:#DBDCDC;
+  --line:#D5D6D7; --line2:#C8C9CA;
+  --card-sh:0 1px 3px rgba(0,0,0,.06);
 
   --ink:#1C1C1C;         /* 본문 */
   --ink2:#525253;        /* 보조 — surface 대비 7.8:1 */
@@ -101,8 +104,10 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#1C1C1C; --surface:#2A2B2C; --surface2:#323333;
-    --line:#424343; --line2:#525253;
+    /* 2026-10-22 "또렷하게" — 바닥 #1C1C1C→#161616, 선 한 단계 밝게(#424343·#525253→). 다크는 그림자 없이 */
+    --bg:#161616; --surface:#2A2B2C; --surface2:#323333;
+    --line:#505152; --line2:#606162;
+    --card-sh:none;
     --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --ink-past:#9D9EA0; --placeholder:#7A7B7D;
 
     --blue:#00889C; --blue-hover:#117182; --blue-press:#3CBED7; --blue-text:#3CBED7;
@@ -150,8 +155,9 @@
 :root[data-theme="light"]{color-scheme:only light}
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#1C1C1C; --surface:#2A2B2C; --surface2:#323333;
-  --line:#424343; --line2:#525253;
+  --bg:#161616; --surface:#2A2B2C; --surface2:#323333;
+  --line:#505152; --line2:#606162;
+  --card-sh:none;
   --ink:#FFFFFF; --ink2:#CCCDCE; --ink3:#969799; --ink-past:#9D9EA0; --placeholder:#7A7B7D;
 
   --blue:#00889C; --blue-hover:#117182; --blue-press:#3CBED7; --blue-text:#3CBED7;
@@ -1263,7 +1269,7 @@ html:has(.modal.on){overflow:hidden;scrollbar-gutter:stable}
 .home-strip-go{flex:none;margin-left:auto;color:var(--blue-text);font-size:18px;line-height:1}
 .home-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:start;padding-bottom:48px}
 .home-col{display:flex;flex-direction:column;gap:24px;min-width:0}
-.home-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;color:var(--ink);min-width:0}
+.home-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;color:var(--ink);min-width:0;box-shadow:var(--card-sh)}
 .home-h{margin:0 0 14px;font-size:20px;font-weight:500;letter-spacing:-.02em;color:var(--ink)}
 
 .home-me{padding:36px 32px 24px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
