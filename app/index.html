@@ -8,12 +8,13 @@
     <!-- 검색에 안 나오게(§4.69). web.app 은 robots.txt 가 막지만 github.io 서브패스의 robots.txt 는
          크롤러가 안 읽어서 이 태그가 그쪽을 맡는다 -->
     <meta name="robots" content="noindex, nofollow" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🗝️</text></svg>" />
+    <!-- 앱 아이콘(2026-10-22) — Flo.D 로고(test/fixtures/플로디.png 에서 아이콘만 잘라 냄). 전에는 열쇠 이모지였다 -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <!-- F-16 웹 푸시(iOS는 홈 화면 추가로 PWA 취급돼야 알림이 온다)를 위한
          최소 매니페스트. manifest.json은 base(§3 서브패스)를 따로 안 읽으므로
          start_url을 "."로 둬서 자기 위치 기준 상대경로로 풀리게 했다. -->
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
     <meta name="theme-color" id="themeColorMeta" content="#F8F8F8" />
