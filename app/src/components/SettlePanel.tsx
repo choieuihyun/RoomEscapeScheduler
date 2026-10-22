@@ -244,12 +244,10 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
                     <b className="stl-amt">{won(t.amount)}</b>
                   </div>
                   <div className="stl-tr-acts">
-                    {/* 계좌·카카오페이는 내가 보낼 줄에만 — 남의 줄은 금액·상태만 읽는다 */}
+                    {/* 계좌는 내가 보낼 줄에만 — 남의 줄은 금액·상태만 읽는다(카카오페이 단추는 2026-10-22 뺐다) */}
                     {mine && !t.paid && p?.bankText && (
                       <button type="button" className="stl-link" onClick={() => void copy(p.bankText as string, `${t.to.nickname} 님 계좌를 복사했어요.`).then((ok) => { if (!ok) showToast(p.bankText as string); })}>계좌 복사</button>
-                    )}
-                    {mine && !t.paid && p?.kakaopayUrl && <a className="stl-link" href={p.kakaopayUrl} target="_blank" rel="noopener noreferrer">카카오페이</a>}
-                    {can ? (
+                    )}                    {can ? (
                       <label className="stl-paid">
                         <input type="checkbox" checked={t.paid} disabled={marking !== ''} onChange={(e) => void mark(t, e.target.checked)} />
                         보냈어요
@@ -269,7 +267,7 @@ export function SettlePanel({ ev, club, meUid }: { ev: EventDto; club: UseClubEv
       {payOpen && (
         <Sheet label="송금 정보" onClose={() => setPayOpen(false)}>
           <h3>송금 정보</h3>
-          <p className="msub">정산에서 내가 받을 돈이 있으면 계좌 복사·카카오페이 단추로 보여요.</p>
+          <p className="msub">정산에서 내가 받을 돈이 있으면 계좌 복사 단추로 보여요.</p>
           <PayForm onSaved={() => { setPayOpen(false); void load(); }} />
           <div className="mbtns"><button type="button" className="btn" onClick={() => setPayOpen(false)}>닫기</button></div>
         </Sheet>
@@ -306,6 +304,11 @@ function Sheet({ label, onClose, children, wide }: { label: string; onClose: () 
     document.body,
   );
 }
+
+/* 고른 사람 칩의 체크 — 다크 모드에서 테두리·굵기만으론 골랐는지 안 보였다(2026-10-22). 색(.stl-chips CSS)과 같이 쓴다 */
+const Check = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>
+);
 
 /* 항목 더하기·고치기 — 이름 · 금액 · 결제한 사람 · 같이 낸 사람 · 사람별 금액(기본 똑같이, 고치면 "조정됨") */
 function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
@@ -390,7 +393,7 @@ function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
           {people.map((p) => (
             <button key={p.uid} type="button" role="radio" aria-checked={d.payerUid === p.uid}
               className={'chip-pick sm' + (d.payerUid === p.uid ? ' on' : '') + (p.gone ? ' gone' : '')} title={p.gone ? '지금은 참여하지 않아요' : undefined} onClick={() => setPayer(p.uid)}>
-              {p.nickname}{p.uid === meUid && ' (나)'}
+              {d.payerUid === p.uid && <Check />}{p.nickname}{p.uid === meUid && ' (나)'}
             </button>
           ))}
         </div>
@@ -407,7 +410,7 @@ function ItemEditor({ ev, dto, at, meUid, onSave, onClose }: {
           {people.map((p) => (
             <button key={p.uid} type="button" className={'chip-pick sm' + (p.gone ? ' gone' : '')} aria-pressed={d.sharers.includes(p.uid)}
               title={p.gone ? '지금은 참여하지 않아요' : undefined} onClick={() => toggleSharer(p.uid)}>
-              {p.nickname}{p.uid === meUid && ' (나)'}
+              {d.sharers.includes(p.uid) && <Check />}{p.nickname}{p.uid === meUid && ' (나)'}
             </button>
           ))}
         </div>

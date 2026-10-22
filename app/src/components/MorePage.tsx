@@ -156,7 +156,7 @@ export function MorePage({
       case 'played': return <span className="more-v num">{playedN}</span>;
       case 'past': return <span className="more-v num">{pastN}</span>;
       case 'push': return <span className={'chip-info ' + pushChip.cls}>{pushChip.text}</span>;
-      case 'pay': return <span className="more-v more-pay">{club7.pay?.bankText || (club7.pay?.kakaopayUrl ? '카카오페이' : '비어 있음')}</span>;
+      case 'pay': return <span className="more-v more-pay">{club7.pay?.bankText || '비어 있음'}</span>;
       case 'members': return pendingCount > 0 ? <span className="more-v strong">승인 대기 {pendingCount}명</span> : null;
       case 'dark': return <span className={'more-switch' + (dark ? ' on' : '')} aria-hidden="true" />;
       default: return null;

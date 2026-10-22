@@ -154,8 +154,9 @@ describe('보낼 돈', () => {
     expect(canMark(tr('a', 'b', 1), 'me', false)).toBe(false);
     expect(canMark(tr('a', 'b', 1), 'me', true)).toBe(true);
   });
-  it('송금 정보 안내 — 받을 돈이 있는데 두 칸 다 비었을 때만(payInfo 에는 받는 사람 전원이 null 로라도 온다)', () => {
+  it('송금 정보 안내 — 받을 돈이 있는데 계좌가 비었을 때만(payInfo 에는 받는 사람 전원이 null 로라도 온다, 카카오페이 링크만 있어도 비었다)', () => {
     expect(payInfoMissing({ transfers: [tr('a', 'me', 1)], payInfo: { me: { bankText: null, kakaopayUrl: null } } }, 'me')).toBe(true);
+    expect(payInfoMissing({ transfers: [tr('a', 'me', 1)], payInfo: { me: { bankText: null, kakaopayUrl: 'https://qr.kakaopay.com/abc' } } }, 'me')).toBe(true);
     expect(payInfoMissing({ transfers: [tr('a', 'me', 1)], payInfo: {} }, 'me')).toBe(true);
     expect(payInfoMissing({ transfers: [tr('a', 'me', 1)], payInfo: { me: { bankText: '카뱅 1', kakaopayUrl: null } } }, 'me')).toBe(false);
     expect(payInfoMissing({ transfers: [tr('me', 'a', 1)], payInfo: {} }, 'me')).toBe(false);
@@ -172,7 +173,7 @@ describe('텍스트로 뽑기', () => {
     transfers: [{ ...tr('b', 'a', 6400), from: W('b', '열쇠'), to: W('a', '방탈출러버') }, { ...tr('c', 'a', 41400, true), from: W('c', '방린이'), to: W('a', '방탈출러버') }],
     payInfo: { a: { bankText: '카카오뱅크 3333-01-1234567 홍길동', kakaopayUrl: 'https://qr.kakaopay.com/abc' } },
   });
-  it('제목·날짜, 항목별 금액·결제한 사람·인원, 모두, 보낼 돈, 받는 사람 계좌', () => {
+  it('제목·날짜, 항목별 금액·결제한 사람·인원, 모두, 보낼 돈, 받는 사람 계좌(예전에 넣어 둔 카카오페이 링크는 안 싣는다)', () => {
     expect(settleText(ev(), d)).toBe([
       '[정산] 10/24(토) 월야애담 정모',
       '방탈출 132,000원 · 방탈출러버 결제 · 5명',
@@ -185,7 +186,6 @@ describe('텍스트로 뽑기', () => {
       '',
       '받는 사람 계좌',
       '방탈출러버: 카카오뱅크 3333-01-1234567 홍길동',
-      '방탈출러버 카카오페이: https://qr.kakaopay.com/abc',
     ].join('\n'));
   });
   it('날짜 미정 일정은 날짜 없이, 송금이 없으면 그렇게, 계좌가 없으면 그 절이 빠진다', () => {
@@ -195,14 +195,9 @@ describe('텍스트로 뽑기', () => {
 });
 
 describe('송금 정보 검사(§4.13)', () => {
-  it('계좌 글 60자, 카카오페이 링크는 https://qr.kakaopay.com/ 으로 시작·공백 없음·200자', () => {
-    expect(payIssue('', '')).toBe('');
-    expect(payIssue('가'.repeat(60), '')).toBe('');
-    expect(payIssue('가'.repeat(61), '')).toBe('계좌 글은 60자까지 적을 수 있어요.');
-    expect(payIssue('', 'https://qr.kakaopay.com/Ej7abc')).toBe('');
-    expect(payIssue('', 'http://qr.kakaopay.com/x')).toMatch(/으로 시작하는 주소만/);
-    expect(payIssue('', 'https://qr.kakaopay.com/')).toMatch(/으로 시작하는 주소만/);
-    expect(payIssue('', 'https://qr.kakaopay.com/a b')).toMatch(/으로 시작하는 주소만/);
-    expect(payIssue('', 'https://qr.kakaopay.com/' + 'a'.repeat(200))).toMatch(/200자/);
+  it('계좌 글 60자까지(카카오페이 링크 칸은 2026-10-22 뺐다)', () => {
+    expect(payIssue('')).toBe('');
+    expect(payIssue('가'.repeat(60))).toBe('');
+    expect(payIssue('가'.repeat(61))).toBe('계좌 글은 60자까지 적을 수 있어요.');
   });
 });

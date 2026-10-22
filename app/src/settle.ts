@@ -105,11 +105,11 @@ export const canMark = (t: TransferDto, meUid: string, canManage: boolean): bool
 export const myDue = (dto: Pick<SettlementDto, 'transfers'> | null | undefined, meUid: string): number =>
   (dto?.transfers ?? []).filter((t) => t.from.uid === meUid && !t.paid).reduce((a, t) => a + t.amount, 0);
 
-/* 받을 돈이 있는데 내 송금 정보가 비었나 — "송금 정보를 넣어 두면 계좌 복사가 돼요" */
+/* 받을 돈이 있는데 내 계좌가 비었나 — "송금 정보를 넣어 두면 계좌 복사가 돼요".
+   카카오페이 링크는 2026-10-22 사용자 요청으로 화면에서 뺐다(계좌만) — 예전에 넣어 둔 링크는 서버에 남아도 안 쓴다 */
 export function payInfoMissing(dto: Pick<SettlementDto, 'transfers' | 'payInfo'>, meUid: string): boolean {
   if (!dto.transfers.some((t) => t.to.uid === meUid)) return false;
-  const p = dto.payInfo[meUid];
-  return !p || (!p.bankText && !p.kakaopayUrl);
+  return !dto.payInfo[meUid]?.bankText;
 }
 
 /* "10/24(금)" */
@@ -133,7 +133,6 @@ export function settleText(ev: Pick<EventDto, 'title' | 'segments' | 'date'>, dt
     seen.add(t.to.uid);
     const p = dto.payInfo[t.to.uid];
     if (p?.bankText) acct.push(`${t.to.nickname}: ${p.bankText}`);
-    if (p?.kakaopayUrl) acct.push(`${t.to.nickname} 카카오페이: ${p.kakaopayUrl}`);
   }
   if (acct.length) lines.push('', '받는 사람 계좌', ...acct);
   return lines.join('\n');
@@ -204,12 +203,8 @@ export function withItem(items: SettlementItemDto[], at: number | null, item: Se
   return item ? list.map((x, i) => (i === at ? item : x)) : list.filter((_, i) => i !== at);
 }
 
-/* 카카오페이 송금 링크 검사(§4.13) — 비면 통과 */
-export const KAKAO_PREFIX = 'https://qr.kakaopay.com/';
-export function payIssue(bankText: string, kakaopayUrl: string): string {
+/* 송금 정보 검사(§4.13) — 계좌 글 60자까지. 비면 통과 */
+export function payIssue(bankText: string): string {
   if (cpLen(bankText.trim()) > 60) return '계좌 글은 60자까지 적을 수 있어요.';
-  const u = kakaopayUrl.trim();
-  if (u && (!u.startsWith(KAKAO_PREFIX) || u.length <= KAKAO_PREFIX.length || /\s/.test(u))) return `카카오페이 링크는 ${KAKAO_PREFIX} 으로 시작하는 주소만 넣을 수 있어요.`;
-  if (u.length > 200) return '카카오페이 링크가 너무 길어요(200자까지).';
   return '';
 }
