@@ -40,6 +40,8 @@ describe('readView', () => {
     expect(readView('?view=together', '', { ...on, togetherOn: true })).toBe('together');
     expect(readView('?view=together', '', on)).toBe('calc');
     expect(readView('?view=together', '', { ...on, togetherOn: false, peopleOn: true })).toBe('calc');
+    expect(readView('?view=feedback', '', { ...on, feedbackOn: true })).toBe('feedback');
+    expect(readView('?view=feedback', '', on)).toBe('calc');
   });
   it('운영진이면 members', () => {
     expect(readView('?view=members', '', { ...on, isAdmin: true })).toBe('members');

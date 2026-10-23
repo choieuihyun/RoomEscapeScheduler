@@ -1,6 +1,6 @@
 /* 좁은 화면 더보기(§4.60)의 그룹·행 목록 — 누가 무엇을 보는지만 정한다. 오른쪽 숫자·칩은 화면이 붙인다.
    - 내 기록: 승인 멤버이고 서버가 해 본 테마 API 를 알 때(profileOn)
-   - 모임: 같이 가요(togetherOn — 서버가 위시 API 를 알 때)·멤버 목록(peopleOn — 서버가 프로필을 알 때)·랭킹(rankOn)
+   - 모임: 같이 가요(togetherOn — 서버가 위시 API 를 알 때)·멤버 목록(peopleOn — 서버가 프로필을 알 때)·랭킹(rankOn)·의견(feedbackOn, §4.15)
    - 알림: 승인 멤버(clubOn)
    - 운영진: 운영진만
    - 설정: 늘(로그아웃·계정 기능 꺼짐 포함). 이용약관 줄은 2026-10-21 사용자 요청으로 뺐다.
@@ -9,7 +9,7 @@
      소셜 로그인 계정이면 붙은 것만 "연결됨"으로 보인다. 카카오 연결은 서버 일이라 member 가 null 이면 뺀다.
    - 로그아웃: 맨 아래 따로 떨어진 그룹(제목 없음) */
 import { needJoin } from './profileGate';
-export type MoreRowId = 'played' | 'past' | 'together' | 'pay' | 'people' | 'ranking' | 'push' | 'members' | 'dark' | 'tour' | 'install' | 'kakao' | 'google' | 'join' | 'logout';
+export type MoreRowId = 'played' | 'past' | 'together' | 'pay' | 'people' | 'ranking' | 'feedback' | 'push' | 'members' | 'dark' | 'tour' | 'install' | 'kakao' | 'google' | 'join' | 'logout';
 export type MoreGroupId = 'records' | 'club' | 'alerts' | 'admin' | 'settings' | 'account' | 'out';
 export interface MoreRow {
   id: MoreRowId;
@@ -22,7 +22,7 @@ export interface MoreGroup { id: MoreGroupId; title: string; rows: MoreRow[] }
 export function moreGroups(o: {
   loggedIn: boolean; profileOn: boolean; clubOn: boolean; isAdmin: boolean;
   member: { status: string; kakaoLinked: boolean } | null; providerIds: string[];
-  peopleOn?: boolean; rankOn?: boolean; togetherOn?: boolean; payOn?: boolean; installOn?: boolean;
+  peopleOn?: boolean; rankOn?: boolean; togetherOn?: boolean; feedbackOn?: boolean; payOn?: boolean; installOn?: boolean;
 }): MoreGroup[] {
   const groups: MoreGroup[] = [];
   if (o.loggedIn && o.profileOn) {
@@ -33,6 +33,7 @@ export function moreGroups(o: {
   if (o.loggedIn && o.togetherOn) club.push({ id: 'together', label: '같이 가요' });
   if (o.loggedIn && o.peopleOn) club.push({ id: 'people', label: '멤버 목록' });
   if (o.loggedIn && o.rankOn) club.push({ id: 'ranking', label: '랭킹' });
+  if (o.loggedIn && o.feedbackOn) club.push({ id: 'feedback', label: '의견' });
   if (club.length) groups.push({ id: 'club', title: '모임', rows: club });
   if (o.loggedIn && o.clubOn) groups.push({ id: 'alerts', title: '알림', rows: [{ id: 'push', label: '이 기기 알림' }] });
   if (o.loggedIn && o.isAdmin) groups.push({ id: 'admin', title: '운영진', rows: [{ id: 'members', label: '멤버 관리' }] });

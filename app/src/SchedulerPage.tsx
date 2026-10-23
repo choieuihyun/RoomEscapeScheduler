@@ -238,7 +238,10 @@ export function SchedulerPage() {
     return () => { live = false; };
   }, [homeOn, meUid, peopleOn]);
   const togetherOn = homeOn && (club7 & 1) > 0;
-  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided, peopleOn, rankOn, togetherOn });
+  /* 의견 게시판(§4.15) — 승인 멤버면 메뉴에 둔다. 그 API 가 본문 없는 404 면 이 접속 동안 숨긴다(랭킹과 같다) */
+  const [feedbackGone, setFeedbackGone] = useState(false);
+  const feedbackOn = homeOn && !feedbackGone;
+  const nav = useView({ calendarOn: auth.cloudOn, isAdmin, homeOn, profileOn, decided, peopleOn, rankOn, togetherOn, feedbackOn });
   const onProfile = nav.view === 'profile' || nav.view === 'more';
   if (profileActive !== onProfile) setProfileActive(onProfile);
   const members = useMembers(isAdmin, nav.view === 'members', auth.refreshMember);
@@ -507,7 +510,7 @@ export function SchedulerPage() {
   const profileMounted = useEver(nav.view === 'profile');
   const membersMounted = useEver(nav.view === 'members');
   const moreMounted = useEver(nav.view === 'more' && !wide);
-  const clubPagesMounted = useEver(nav.view === 'people' || nav.view === 'ranking' || nav.view === 'together');
+  const clubPagesMounted = useEver(nav.view === 'people' || nav.view === 'ranking' || nav.view === 'together' || nav.view === 'feedback');
   const formMounted = useEver(eventForm.open);
   const authMounted = useEver(auth.open);
   const saveMounted = useEver(saveModal.open);
@@ -528,7 +531,7 @@ export function SchedulerPage() {
   return (
     <div className="shell">
       <SideNav
-        view={nav.view} onView={goView} auth={auth} homeOn={homeOn} profileOn={profileOn} peopleOn={peopleOn} rankOn={rankOn} togetherOn={togetherOn}
+        view={nav.view} onView={goView} auth={auth} homeOn={homeOn} profileOn={profileOn} peopleOn={peopleOn} rankOn={rankOn} togetherOn={togetherOn} feedbackOn={feedbackOn}
         watchCount={watches.watches.length} watchLimit={watches.limit} onWatches={watches.openModal}
         onTour={startTour} dark={theme.dark} onToggleTheme={theme.toggle}
         isAdmin={isAdmin} pendingCount={pendingCount} onEditProfile={openEdit} onInstall={installOn ? onInstall : undefined}
@@ -636,16 +639,17 @@ export function SchedulerPage() {
               isAdmin={isAdmin} pendingCount={pendingCount} push={push}
               dark={theme.dark} onToggleTheme={theme.toggle} onTour={startTour}
               onMembers={() => goView('members')} onOpenEvent={openFromProfile}
-              peopleOn={peopleOn} rankOn={rankOn} onView={goView} onEditProfile={openEdit}
+              peopleOn={peopleOn} rankOn={rankOn} feedbackOn={feedbackOn} onView={goView} onEditProfile={openEdit}
               installOn={installOn} onInstall={onInstall}
             /></LazyBoundary>
           </div>
         )}
-        {(peopleOn || togetherOn) && clubPagesMounted && <LazyBoundary><MemberViews
+        {(peopleOn || togetherOn || feedbackOn) && clubPagesMounted && <LazyBoundary><MemberViews
           part="pages" view={nav.view} rankOn={rankOn} meUid={meUid} today={today} onBack={() => goView('more')}
           onRankMissing={() => { setRankGone(true); go('more', true); }}
           togetherOn={togetherOn} events={club.events} played={profile.played}
           onMakeEvent={(f) => eventForm.show(f, null)} onOpenEvent={openFromHome}
+          feedbackOn={feedbackOn} isAdmin={isAdmin} onFeedbackMissing={() => { setFeedbackGone(true); go('more', true); }}
         /></LazyBoundary>}
       </main>
 

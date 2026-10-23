@@ -18,6 +18,7 @@ const Icon = ({ children }: { children: ReactNode }) => (
 const IcHome = () => <Icon><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10v10h13V10M10 20v-5.5h4V20" /></Icon>;
 const IcCalc = () => <Icon><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" /></Icon>;
 const IcCal = () => <Icon><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></Icon>;
+const IcTalk = () => <Icon><path d="M4 5h16v11H9l-5 4z" /><path d="M8.5 9.5h7M8.5 12.5h4" /></Icon>;
 const IcPeople = () => <Icon><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.4c1.9.8 3 2.7 3 5.6" /></Icon>;
 const IcAdmin = () => <Icon><circle cx="10" cy="8" r="4" /><path d="M3 21c0-4 3-7 7-7 1.4 0 2.7.4 3.8 1M15 18.5l2 2 4-4" /></Icon>;
 const IcRank = () => <Icon><path d="M5 20v-8M12 20V5M19 20v-5" /></Icon>;
@@ -36,7 +37,7 @@ const FOLD_KEY = 'flod.lnb.folded';
 const readFold = () => { try { return localStorage.getItem(FOLD_KEY) === '1'; } catch { return false; } };
 
 export function SideNav({
-  view, onView, auth, homeOn, profileOn, peopleOn, rankOn, togetherOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, onEditProfile, onInstall, children,
+  view, onView, auth, homeOn, profileOn, peopleOn, rankOn, togetherOn, feedbackOn, watchCount, watchLimit, onWatches, onTour, dark, onToggleTheme, isAdmin, pendingCount, onEditProfile, onInstall, children,
 }: {
   view: View | null; onView: (v: View) => void; auth: UseAuthReturn;
   /* 승인 멤버(이고 일정 API 가 있을 때)만 "홈" 메뉴 */
@@ -47,6 +48,8 @@ export function SideNav({
   peopleOn: boolean; rankOn: boolean;
   /* 승인 멤버이고 서버가 위시 API(§4.12)를 알 때 "같이 가요" */
   togetherOn: boolean;
+  /* 승인 멤버면 "의견"(§4.15) — 그 API 가 404 면 SchedulerPage 가 끈다 */
+  feedbackOn: boolean;
   watchCount: number; watchLimit: number; onWatches: () => void;
   onTour: () => void; dark: boolean; onToggleTheme: () => void;
   /* 운영진에게만 "멤버 관리" 메뉴와 승인 대기 숫자 */
@@ -128,6 +131,7 @@ export function SideNav({
         {togetherOn && menu('together', '같이 가요', <IcFlag />)}
         {peopleOn && menu('people', '멤버', <IcPeople />)}
         {rankOn && menu('ranking', '랭킹', <IcRank />)}
+        {feedbackOn && menu('feedback', '의견', <IcTalk />)}
         {isAdmin && menu('members', '멤버 관리', <IcAdmin />,
           pendingCount > 0 && <span className="badge-n lnb-badge" aria-label={`승인 대기 ${pendingCount}명`}>{pendingCount}</span>)}
       </nav>

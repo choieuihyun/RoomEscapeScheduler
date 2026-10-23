@@ -5,6 +5,7 @@ import { PeoplePage } from './PeoplePage';
 import { ProfileModal, type ProfileModalProps } from './ProfileModal';
 import { RankingPage } from './RankingPage';
 import { TogetherPage } from './TogetherPage';
+import { FeedbackPage } from './FeedbackPage';
 import type { EventDto, PlayedDto } from '../server';
 import type { FormState } from '../eventForm';
 
@@ -21,6 +22,8 @@ type Pages = {
   /* 같이 가요(§4.12) — 서버가 위시 API 를 알 때 */
   togetherOn: boolean; events: EventDto[]; played: PlayedDto[] | null;
   onMakeEvent: (form: FormState) => void; onOpenEvent: (ev: EventDto) => void;
+  /* 의견 게시판(§4.15) — 운영진은 처리 상태를 바꾼다. 서버가 모르면 onFeedbackMissing */
+  feedbackOn: boolean; isAdmin: boolean; onFeedbackMissing: () => void;
 };
 type Modal = { part: 'modal' } & ProfileModalProps;
 type Card = { part: 'card' } & MemberCardProps;
@@ -35,8 +38,9 @@ export function MemberViews(p: Pages | Modal | Card) {
   return p.part === 'modal' ? <ProfileModal {...p} /> : p.part === 'card' ? <MemberCard key={p.uid} {...p} /> : <ClubPages {...p} />;
 }
 
-function ClubPages({ view, rankOn, meUid, today, onBack, onRankMissing, togetherOn, events, played, onMakeEvent, onOpenEvent }: Pages) {
+function ClubPages({ view, rankOn, meUid, today, onBack, onRankMissing, togetherOn, events, played, onMakeEvent, onOpenEvent, feedbackOn, isAdmin, onFeedbackMissing }: Pages) {
   const people = useEver(view === 'people');
+  const feedback = useEver(view === 'feedback');
   const rank = useEver(view === 'ranking');
   const together = useEver(view === 'together');
   return (<>
@@ -54,6 +58,11 @@ function ClubPages({ view, rankOn, meUid, today, onBack, onRankMissing, together
     {rankOn && rank && (
       <div className={'view' + (view === 'ranking' ? '' : ' off')}>
         <RankingPage active={view === 'ranking'} today={today} meUid={meUid} onBack={onBack} onMissing={onRankMissing} />
+      </div>
+    )}
+    {feedbackOn && feedback && (
+      <div className={'view' + (view === 'feedback' ? '' : ' off')}>
+        <FeedbackPage active={view === 'feedback'} isAdmin={isAdmin} onBack={onBack} onMissing={onFeedbackMissing} />
       </div>
     )}
   </>);

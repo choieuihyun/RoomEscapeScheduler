@@ -31,6 +31,6 @@ export function bottomTabs(o: {
     tabs.push({ id: 'watches', label: '빈자리', on: false, count: o.watchCount, gated: o.gated });
   }
   const v = o.view;
-  tabs.push({ id: 'more', label: '더보기', on: v === 'more' || v === 'profile' || v === 'members' || v === 'people' || v === 'ranking' || v === 'together', pending });
+  tabs.push({ id: 'more', label: '더보기', on: v === 'more' || v === 'profile' || v === 'members' || v === 'people' || v === 'ranking' || v === 'together' || v === 'feedback', pending });
   return tabs.length < 2 ? [] : tabs;
 }

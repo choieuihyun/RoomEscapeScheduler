@@ -32,6 +32,10 @@ describe('moreGroups', () => {
   it('위시 API(§4.12)를 알면 모임 그룹 맨 앞에 같이 가요 — 프로필 API 와 따로 본다', () => {
     expect(shape(moreGroups({ ...member, togetherOn: true, peopleOn: true, rankOn: true }))[1]).toBe('club:together,people,ranking');
     expect(shape(moreGroups({ ...member, togetherOn: true }))[1]).toBe('club:together');
+    /* 의견 게시판(§4.15) — 서버가 그 API 를 알 때(feedbackOn), 모임 맨 끝 */
+    expect(shape(moreGroups({ ...member, togetherOn: true, peopleOn: true, rankOn: true, feedbackOn: true }))[1]).toBe('club:together,people,ranking,feedback');
+    expect(shape(moreGroups({ ...member, feedbackOn: true }))[1]).toBe('club:feedback');
+    expect(shape(moreGroups({ ...member, loggedIn: false, feedbackOn: true }))).toEqual(['settings:dark,tour']);
     expect(shape(moreGroups({ ...member, loggedIn: false, togetherOn: true }))).toEqual(['settings:dark,tour']);
   });
 

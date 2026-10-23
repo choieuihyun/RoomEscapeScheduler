@@ -3408,6 +3408,79 @@ button.hm-me-c:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-
 .nt-count{position:absolute;right:10px;bottom:8px;font-style:normal;font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums;pointer-events:none}
 .nt-count.over{color:var(--red-text)}
 .nt-notify{margin-bottom:6px}
+
+/* 의견 게시판(§4.15, FeedbackPage) — 쓰기 칸 · 거르기/정렬 · 카드 목록. 상태 색은 일정 상태 색을 빌린다:
+   접수 = 회색, 검토 중 = 주황(예약 전), 반영됨 = 초록(예약 완료), 보류 = 흐린 회색 */
+.fb{display:flex;flex-direction:column;gap:14px;padding-bottom:48px;max-width:760px}
+.fb-write{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px}
+.fb-write textarea{width:100%;box-sizing:border-box;resize:vertical;font-size:14.5px;line-height:1.55;border:0;padding:4px;background:none;box-shadow:none}
+.fb-write textarea:focus{outline:none;box-shadow:none}
+.fb-write-b{display:flex;align-items:center;gap:8px}
+.fb-write-b .merr{margin:0;flex:1}
+.fb-count{flex:1;font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.fb-post{height:36px;padding:0 18px;font-size:14px;font-weight:600}
+.fb-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.fb-filter{display:flex;gap:6px;flex-wrap:wrap}
+.fb-filter .chip-pick{height:28px;padding:0 11px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.fb-sort{margin-left:auto;display:flex;gap:2px}
+.fb-sort-b{height:28px;padding:0 8px;border:0;background:none;font:inherit;font-size:12.5px;color:var(--ink3);cursor:pointer;border-radius:var(--r-sm)}
+.fb-sort-b.on{color:var(--ink);font-weight:600}
+.fb-sort-b:focus-visible{outline:none;box-shadow:var(--ring)}
+.fb-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.fb-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px 10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.fb-top{display:flex;align-items:center;gap:8px;min-height:24px}
+.fb-st-w{position:relative;display:inline-flex}
+.fb-st{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 9px;border-radius:var(--pill);border:1px solid var(--line2);
+  background:var(--surface);font:inherit;font-size:12px;font-weight:600;color:var(--ink2);white-space:nowrap}
+button.fb-st{cursor:pointer}
+button.fb-st:focus-visible{outline:none;box-shadow:var(--ring)}
+.fb-st.review{color:var(--st-before-fg);border-color:var(--st-before-line)}
+.fb-st.done{color:var(--st-done-fg);border-color:var(--st-done-line)}
+.fb-st.hold{color:var(--ink3);border-style:dashed}
+.fb-st-by{font-size:12px;color:var(--ink3)}
+.fb-st-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:20;display:flex;flex-direction:column;min-width:120px;padding:4px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--sh-up)}
+.fb-st-menu button{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border:0;border-radius:6px;background:none;
+  font:inherit;font-size:13.5px;color:var(--ink);text-align:left;cursor:pointer}
+.fb-st-menu button:hover,.fb-st-menu button[aria-checked="true"]{background:var(--btn-bg-hover)}
+.fb-st-menu button[aria-checked="true"]{font-weight:600}
+.fb-dot{width:8px;height:8px;border-radius:50%;background:var(--ink3)}
+.fb-dot.review{background:var(--st-before-dot)}
+.fb-dot.done{background:var(--st-done-dot)}
+.fb-dot.hold{background:none;border:1px dashed var(--ink3);box-sizing:border-box}
+.fb-text{margin:0;font-size:15px;line-height:1.6;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.fb-text.clip{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.fb-more{align-self:flex-start;padding:0;border:0;background:none;font:inherit;font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer}
+.fb-edit{display:flex;flex-direction:column;gap:8px}
+.fb-edit textarea{width:100%;box-sizing:border-box;resize:vertical;font-size:14.5px;line-height:1.55}
+.fb-edit-b{display:flex;gap:8px;justify-content:flex-end}
+.fb-edit-b .btn,.fb-edit-b .btn-go{height:34px;padding:0 14px}
+.fb-meta{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--ink3)}
+.fb-meta .mlink{color:var(--ink2);font-weight:500}
+.fb-acts{display:flex;align-items:center;gap:4px;margin:0 -6px;border-top:1px solid var(--line);padding-top:6px}
+.fb-act{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 8px;border:0;border-radius:var(--r-sm);background:none;
+  font:inherit;font-size:13px;color:var(--ink2);cursor:pointer;font-variant-numeric:tabular-nums}
+.fb-act:hover{background:var(--btn-bg-hover);color:var(--ink)}
+.fb-act.on{color:var(--ink);font-weight:600}
+.fb-like.on{color:var(--red-text)}
+.fb-act:focus-visible,.fb-link:focus-visible{outline:none;box-shadow:var(--ring)}
+.fb-acts-r{margin-left:auto;display:flex;gap:2px}
+.fb-link{height:32px;padding:0 8px;border:0;border-radius:var(--r-sm);background:none;font:inherit;font-size:12.5px;color:var(--ink3);cursor:pointer}
+.fb-link:hover{color:var(--ink);background:var(--btn-bg-hover)}
+.fb-link.danger:hover{color:var(--red-text)}
+.fb-cmts{display:flex;flex-direction:column;gap:8px;padding:8px 0 4px}
+.fb-note{margin:0;font-size:13px;color:var(--ink3)}
+.fb-cmt-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.fb-cmt{padding:8px 10px;border-radius:var(--r-sm);background:var(--surface2)}
+.fb-cmt-h{display:flex;align-items:center;gap:6px;font-size:12.5px}
+.fb-cmt-h .mlink{font-weight:600;color:var(--ink)}
+.fb-cmt-h .chip-info{height:18px;padding:0 6px;font-size:10.5px}
+.fb-cmt-h .fb-link{margin-left:auto;height:24px}
+.fb-cmt-d{color:var(--ink3)}
+.fb-cmt-t{margin:4px 0 0;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.fb-reply{display:flex;gap:6px}
+.fb-reply input{flex:1;min-width:0;height:38px;font-size:14px}
+.fb-reply .btn{height:38px;padding:0 14px;flex:none}
 @media(min-width:901px){
   .hm-alerts.hm-install{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
   .hm-install .hm-alert,.hm-install .hm-alert:first-child{border:0;border-radius:0;background:none}

@@ -697,3 +697,43 @@ export const getNotice = async (token: string): Promise<NoticeDto | null> => {
 export const putNotice = (body: { text: string; notify: boolean }, token: string): Promise<NoticeDto> =>
   authed('/api/club/notice', token, 'PUT', body);
 export const deleteNotice = (token: string): Promise<{ deleted: true }> => authed('/api/club/notice', token, 'DELETE');
+
+/* ── 의견 게시판 (작업명세서 §4.15) ── 승인 멤버 모두 보고 누구나 댓글, 운영진이 처리 상태. 알림 없음. 서버가 모르면 404(isMissingApi) */
+export type FeedbackStatus = 'OPEN' | 'REVIEW' | 'DONE' | 'HOLD';
+export interface FeedbackDto {
+  id: number;
+  text: string;
+  status: FeedbackStatus;
+  author: Who;
+  createdAt: string;
+  updatedAt: string;            // 글을 고친 때(상태·공감·댓글로는 안 바뀐다)
+  statusAt: string | null;      // 마지막으로 상태를 바꾼 때·사람(OPEN 이면 null)
+  statusBy: Who | null;
+  likes: number;
+  liked: boolean;
+  comments: number;
+  mine: boolean;
+  canDelete: boolean;
+}
+export interface FeedbackCommentDto {
+  id: number;
+  feedbackId: number;
+  text: string;
+  author: Who;
+  admin: boolean;               // 쓸 때 운영진이었나
+  createdAt: string;
+  mine: boolean;
+  canDelete: boolean;
+}
+export const listFeedback = (token: string): Promise<FeedbackDto[]> => authed('/api/club/feedback', token, 'GET');
+export const postFeedback = (text: string, token: string): Promise<FeedbackDto> => authed('/api/club/feedback', token, 'POST', { text });
+export const editFeedback = (id: number, text: string, token: string): Promise<FeedbackDto> => authed(`/api/club/feedback/${id}`, token, 'PUT', { text });
+export const deleteFeedback = (id: number, token: string): Promise<{ id: number; deleted: true }> => authed(`/api/club/feedback/${id}`, token, 'DELETE');
+export const likeFeedback = (id: number, liked: boolean, token: string): Promise<FeedbackDto> => authed(`/api/club/feedback/${id}/like`, token, 'POST', { liked });
+export const setFeedbackStatus = (id: number, status: FeedbackStatus, token: string): Promise<FeedbackDto> =>
+  authed(`/api/club/feedback/${id}/status`, token, 'PUT', { status });
+export const listFeedbackComments = (id: number, token: string): Promise<FeedbackCommentDto[]> => authed(`/api/club/feedback/${id}/comments`, token, 'GET');
+export const postFeedbackComment = (id: number, text: string, token: string): Promise<FeedbackCommentDto> =>
+  authed(`/api/club/feedback/${id}/comments`, token, 'POST', { text });
+export const deleteFeedbackComment = (commentId: number, token: string): Promise<{ id: number; deleted: true }> =>
+  authed(`/api/club/feedback/comments/${commentId}`, token, 'DELETE');
