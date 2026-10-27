@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toInput } from './eventForm';
 import type { EventDto, WishGroupDto } from './server';
-import { eventHas, filterGroups, inPick, placeLabel, sameTheme, upcomingWith, wanterChips, wishForm, wishKey } from './wish';
+import { eventHas, filterGroups, inPick, partyWantCount, partyWishes, placeLabel, sameTheme, upcomingWith, wanterChips, wishForm, wishKey } from './wish';
 
 const G = (o: Partial<WishGroupDto> & { n?: string[] }): WishGroupDto => ({
   themeKey: null, themeName: '테마', branchName: null, storeName: null, playedBy: [],
@@ -125,5 +125,32 @@ describe('"이 사람들과 일정 만들기" 폼', () => {
       title: '월야애담 같이 가요', date: null, candidates: ['2026-10-24', '2026-10-25'], startMin: null, endMin: null,
       location: null, capacity: null, booked: false, memo: '같이 가요: 월야애담', segments: [],
     });
+  });
+});
+
+describe('일정 참여자가 하고 싶은 테마(2026-10-27 사용자 요청)', () => {
+  const P = (uid: string, nickname = uid) => ({ uid, nickname, addedBy: null, joinedAt: '' });
+  const party = [P('a', '열쇠'), P('b', '방린'), P('c', '탈출')];
+  const groups = [
+    G({ themeName: '혼자 원함', themeKey: 'k1', n: ['a'] }),
+    G({ themeName: '둘이 원함', themeKey: 'k2', n: ['a', 'b', 'z'], playedBy: ['c'] }),
+    G({ themeName: '밖사람만', themeKey: 'k3', n: ['z'] }),
+    G({ themeName: '둘이 원함 해본 사람 없음', themeKey: 'k4', n: ['b', 'c'] }),
+  ];
+  it('참여자가 원하는 테마만 — 원하는 참여자 많은 순, 같으면 해 본 참여자 적은 순, 그다음 이름', () => {
+    const r = partyWishes(groups, party);
+    expect(r.map((x) => x.group.themeName)).toEqual(['둘이 원함 해본 사람 없음', '둘이 원함', '혼자 원함']);
+    expect(r[1].want.map((w) => w.nickname)).toEqual(['닉a', '닉b']);
+    expect(r[1].played).toEqual(['c']);
+  });
+  it('참여자가 없거나 아무도 원하지 않으면 빈 목록', () => {
+    expect(partyWishes(groups, [])).toEqual([]);
+    expect(partyWishes(groups, [P('q')])).toEqual([]);
+  });
+  it('도우미 줄에 붙일 "하고 싶어요 n명" — 같은 테마 판정(키·이름)으로', () => {
+    const r = partyWishes(groups, party);
+    expect(partyWantCount(r, { themeKey: 'k2', themeName: '아무 이름' })).toBe(2);
+    expect(partyWantCount(r, { themeKey: null, themeName: '혼자 원함' })).toBe(1);
+    expect(partyWantCount(r, { themeKey: 'zz', themeName: '없음' })).toBe(0);
   });
 });

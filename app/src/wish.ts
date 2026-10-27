@@ -83,3 +83,20 @@ const clip = (s: string, n: number) => (cpLen(s) <= n ? s : [...s].slice(0, n).j
 export function wishForm(g: Placed, today: string): FormState {
   return { ...emptyForm(today), title: clip(wishTitle(g), 60), memo: clip(wishMemo(g), 500), dateMode: 'candidates' };
 }
+
+/* 일정 참여자가 하고 싶은 테마(2026-10-27 사용자 요청: 일정 상세에서 바로 보기 쉽게) — 멤버들의 위시 묶음에서
+   그 일정 참여자가 원하는 테마만. 원하는 참여자가 많은 순 → 해 본 참여자가 적은 순 → 이름 순.
+   want: 원하는 참여자(묶음의 since 순), played: 이 테마를 해 본 참여자 uid */
+export interface PartyWish { group: WishGroupDto; want: { uid: string; nickname: string }[]; played: string[] }
+export function partyWishes(groups: readonly WishGroupDto[], participants: readonly { uid: string }[]): PartyWish[] {
+  const ids = new Set(participants.map((p) => p.uid));
+  return groups
+    .map((g) => ({ group: g, want: g.wanters.filter((w) => ids.has(w.uid)).map((w) => ({ uid: w.uid, nickname: w.nickname })), played: g.playedBy.filter((u) => ids.has(u)) }))
+    .filter((x) => x.want.length > 0)
+    .sort((a, b) => b.want.length - a.want.length || a.played.length - b.played.length || a.group.themeName.localeCompare(b.group.themeName, 'ko'));
+}
+
+/* 테마 도우미 줄의 "하고 싶어요 n명" — 그 테마를 원하는 참여자 수(없으면 0) */
+export function partyWantCount(party: readonly PartyWish[], t: WishRef): number {
+  return party.find((x) => sameTheme(x.group, t))?.want.length ?? 0;
+}

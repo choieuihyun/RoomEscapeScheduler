@@ -13,6 +13,7 @@ import type { UseClubEventsReturn } from '../useClubEvents';
 import type { AddedTheme } from '../scheduler/types';
 import { EventComments } from './EventComments';
 import { EventHelper } from './EventHelper';
+import { EventWishes } from './EventWishes';
 import { EventTalk, EventTalkDone } from './EventTalk';
 import { AvaText } from './Avatar';
 import { Fold } from './Fold';
@@ -283,6 +284,9 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
           )}
         </div>
       </section>
+
+      {/* 참여자가 하고 싶은 테마(2026-10-27) — 테마를 정하는 중일 때, 코스·협의보다 먼저 */}
+      <EventWishes ev={ev} />
 
       {ev.segments.length > 0 && (
         <section className="evp-course" aria-labelledby="evp-course-h">

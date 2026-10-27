@@ -7,7 +7,8 @@ import { ago, freshThemes, isMissingApi, sayClub, toSessions, type EventDto, typ
 import type { AddedTheme } from '../scheduler/types';
 import { useServerRegions } from '../useServerRegions';
 import { PlayedDots } from './PlayedDots';
-import { WishToggle } from '../clubStore';
+import { loadGroups, useClubStore, WishToggle } from '../clubStore';
+import { partyWantCount, partyWishes } from '../wish';
 
 /* 일정 상세의 협의 도우미 "어떤 테마가 좋을까요?"(§4.9, 계획 Task 8, 목업 ② 왼쪽 아래).
    그날 열린 회차가 있는 테마를 "아무도 안 해 봄" 먼저(서버가 세운 순서) 보이고, 고른 테마로 조합 계산을 연다.
@@ -109,6 +110,10 @@ export function EventHelper({ ev, onCalcThemes }: {
   }, [page]);
 
   useServerRegions(); // 서버가 준 지점 지역(§4.4)을 받으면 다시 그린다 — 지역 계산은 아래에서 매번
+  /* 참여자가 하고 싶은 테마(2026-10-27) — 줄마다 "♥ 2명" 표시. 위시 묶음은 일정 상세의 EventWishes 가 받아 둔다 */
+  const club7 = useClubStore();
+  useEffect(() => { if (open && club7.wishApi !== 'missing') loadGroups().catch(() => {}); }, [open, club7.wishApi]);
+  const party = club7.groups ? partyWishes(club7.groups.list, ev.participants) : [];
   if (hidden || !plan || !date) return null;
   const slot = slots.get(key);
 
@@ -211,7 +216,9 @@ export function EventHelper({ ev, onCalcThemes }: {
                     />
                   )}
                   <label htmlFor={catalog ? undefined : `evh-${ev.id}-${t.id}`} className="evh-main">
-                    <span className="evh-n">{t.name} <span className="evh-at">· {t.storeName} {t.branchName}{t.dur ? ` · ${t.dur}분` : ''}</span></span>
+                    <span className="evh-n">{t.name} <span className="evh-at">· {t.storeName} {t.branchName}{t.dur ? ` · ${t.dur}분` : ''}</span>
+                      {(() => { const n = partyWantCount(party, { themeKey: t.themeKey || t.id, themeName: t.name }); return n > 0 ? <span className="evh-want" title="참여자 중 하고 싶어요">♥ {n}명</span> : null; })()}
+                    </span>
                     {!catalog && (
                       <span className="evh-ss">
                         {toSessions(t.sessions).map((s, i) => (
