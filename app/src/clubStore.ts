@@ -12,7 +12,7 @@ import {
 } from './server';
 import { myDue } from './settle';
 import { showToast } from './toast';
-import { sameTheme, wishKey, type WishRef } from './wish';
+import { sameTheme, wishKey, withPlayed, type WishRef } from './wish';
 
 export type Api = 'unknown' | 'on' | 'missing';
 export interface ClubState {
@@ -213,6 +213,14 @@ export function loadGroups(): Promise<void> {
 
 /* 내 위시가 바뀌면 받아 둔 묶음은 낡았다 — 값은 두고(열린 화면이 "불러오는 중"으로 바뀌지 않게) 받은 때만 지워 다음에 새로 받게 */
 const staleGroups = () => { if (st.groups) set({ groups: { ...st.groups, at: 0 } }); };
+
+/* 일정 상세 "해 봤어요"(2026-10-27) — 받아 둔 묶음에서 내 해 봄을 바로 고치고, 서버에서 새로 받는다.
+   해 본 기록이 생기면 서버가 같은 테마의 내 위시를 지우므로(§4.12) 내 위시도 다시 받는다 */
+export function markPlayedInGroups(r: WishRef, played: boolean): void {
+  if (st.groups) set({ groups: { at: 0, list: withPlayed(st.groups.list, r, st.uid, played) } });
+  void reloadWishes();
+  loadGroups().catch(() => { /* 못 받으면 고친 값으로 둔다 */ });
+}
 
 /* 내 송금 정보 — 정산 API 를 아는지도 이것으로 안다(본문 없는 404 면 정산 칸·송금 정보 행을 숨긴다) */
 export async function reloadPay(): Promise<void> {

@@ -10,6 +10,7 @@ import { playedDots } from '../playedWho';
 import { listClubMembers, sayClub, type ClubMemberDto, type EventDto } from '../server';
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
+import type { UseProfileReturn } from '../useProfile';
 import type { AddedTheme } from '../scheduler/types';
 import { EventComments } from './EventComments';
 import { EventHelper } from './EventHelper';
@@ -58,8 +59,10 @@ function useDismiss(open: boolean, close: () => void, box: RefObject<HTMLElement
   }, [open, close, box]);
 }
 
-export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onPicked, onCalcThemes }: {
+export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onPicked, onCalcThemes, profile }: {
   ev: EventDto; club: UseClubEventsReturn; meUid: string; onClose: () => void; onEdit: (ev: EventDto) => void;
+  /* 내 해 본 테마(§4.9) — '참여자가 하고 싶은 테마'의 "해 봤어요"가 쓴다. 서버가 모르면 null */
+  profile?: UseProfileReturn | null;
   /* 정해진 날짜에 다 같이 되는 시간으로 조합 계산 조건을 채우고 계산 화면으로(계산 화면이 이 일정을 기억한다) */
   onCalcWindow?: (w: { start: number; end: number }, ev: EventDto) => void;
   /* 정하기·다시 미정으로 뒤 캘린더에서 그 날짜를 고른다 */
@@ -286,7 +289,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
       </section>
 
       {/* 참여자가 하고 싶은 테마(2026-10-27) — 테마를 정하는 중일 때, 코스·협의보다 먼저 */}
-      <EventWishes ev={ev} />
+      <EventWishes ev={ev} meUid={meUid} profile={profile ?? null} />
 
       {ev.segments.length > 0 && (
         <section className="evp-course" aria-labelledby="evp-course-h">

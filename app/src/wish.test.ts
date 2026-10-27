@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toInput } from './eventForm';
 import type { EventDto, WishGroupDto } from './server';
-import { eventHas, filterGroups, inPick, partyWantCount, partyWishes, placeLabel, sameTheme, upcomingWith, wanterChips, wishForm, wishKey } from './wish';
+import { eventHas, filterGroups, inPick, partyWantCount, partyWishes, withPlayed, placeLabel, sameTheme, upcomingWith, wanterChips, wishForm, wishKey } from './wish';
 
 const G = (o: Partial<WishGroupDto> & { n?: string[] }): WishGroupDto => ({
   themeKey: null, themeName: '테마', branchName: null, storeName: null, playedBy: [],
@@ -152,5 +152,19 @@ describe('일정 참여자가 하고 싶은 테마(2026-10-27 사용자 요청)'
     expect(partyWantCount(r, { themeKey: 'k2', themeName: '아무 이름' })).toBe(2);
     expect(partyWantCount(r, { themeKey: null, themeName: '혼자 원함' })).toBe(1);
     expect(partyWantCount(r, { themeKey: 'zz', themeName: '없음' })).toBe(0);
+  });
+});
+
+describe('"해 봤어요"로 묶음 고치기(2026-10-27 사용자 요청)', () => {
+  const gs = [G({ themeName: '가', themeKey: 'k1', n: ['a'], playedBy: ['b'] }), G({ themeName: '나', themeKey: 'k2', n: ['a'] })];
+  it('같은 테마 묶음의 playedBy 에 나를 넣는다(겹치지 않게), 다른 묶음은 그대로', () => {
+    const r = withPlayed(gs, { themeKey: 'k1', themeName: '아무' }, 'me', true);
+    expect(r[0].playedBy).toEqual(['b', 'me']);
+    expect(r[1]).toBe(gs[1]);
+    expect(withPlayed(r, { themeKey: 'k1', themeName: '아무' }, 'me', true)[0].playedBy).toEqual(['b', 'me']);
+  });
+  it('뺄 때는 나만 뺀다', () => {
+    const r = withPlayed([G({ themeName: '가', themeKey: 'k1', n: ['a'], playedBy: ['b', 'me'] })], { themeKey: null, themeName: '가' }, 'me', false);
+    expect(r[0].playedBy).toEqual(['b']);
   });
 });

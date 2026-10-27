@@ -518,6 +518,7 @@ export function CalendarPage({
             <EventPanel
               key={openEv.id} ev={openEv} club={club} meUid={auth.member?.uid ?? auth.me?.uid ?? ''}
               onClose={onCloseEvent} onEdit={onEditEvent} onCalcWindow={onCalcWindow} onPicked={ctl.select} onCalcThemes={onCalcThemes}
+              profile={profile?.api === 'on' ? profile : null}
             />
           ) : (
           <>

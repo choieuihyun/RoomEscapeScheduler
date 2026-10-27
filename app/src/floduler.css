@@ -3242,6 +3242,14 @@ button.hm-me-c:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-
 .evw-row{display:flex;flex-direction:column;gap:3px;padding:10px 0;border-top:1px solid var(--line)}
 .evw-row:first-child{border-top:0}
 .evw-n{font-size:15px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.evw-top{display:flex;align-items:flex-start;gap:8px}
+.evw-top .evw-n{flex:1;min-width:0}
+/* "해 봤어요" — 눌리면 빨강(해 봄 점과 같은 색) */
+.evw-mark{flex:none;height:28px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--pill);background:var(--surface);
+  font:inherit;font-size:12.5px;font-weight:500;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.evw-mark:hover{border-color:var(--tab-line-hover);color:var(--ink)}
+.evw-mark.on{border-color:var(--red-line);background:var(--red-soft);color:var(--red-text);font-weight:600}
+.evw-mark:focus-visible{outline:none;box-shadow:var(--ring)}
 .evw-at{font-weight:400;font-size:13px;color:var(--ink3)}
 .evw-who{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px}
 .evw-want{display:inline-flex;align-items:center;gap:4px;color:var(--blue-text);font-weight:500}

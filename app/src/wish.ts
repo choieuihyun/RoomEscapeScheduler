@@ -100,3 +100,12 @@ export function partyWishes(groups: readonly WishGroupDto[], participants: reado
 export function partyWantCount(party: readonly PartyWish[], t: WishRef): number {
   return party.find((x) => sameTheme(x.group, t))?.want.length ?? 0;
 }
+
+/* 일정 상세에서 "해 봤어요"를 누른 뒤 받아 둔 묶음을 바로 고친다 — 같은 테마 묶음의 playedBy 에 나를 넣거나 뺀다(서버에서 새로 받기 전까지) */
+export function withPlayed(groups: readonly WishGroupDto[], t: WishRef, uid: string, played: boolean): WishGroupDto[] {
+  return groups.map((g) => {
+    if (!sameTheme(g, t)) return g;
+    const rest = g.playedBy.filter((u) => u !== uid);
+    return { ...g, playedBy: played ? [...rest, uid] : rest };
+  });
+}
