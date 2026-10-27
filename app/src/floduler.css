@@ -1215,7 +1215,12 @@ html:has(.modal.on){overflow:hidden;scrollbar-gutter:stable}
 .evh-norec{margin:0;padding:8px 10px;font-size:12.5px;line-height:1.5;color:var(--amber-text);border:1px solid var(--amber-line);
   border-radius:var(--r-sm);word-break:keep-all;overflow-wrap:anywhere}
 .evh-list{list-style:none;margin:0;padding:0}
-.evh-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.evh-row{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.evh-row input{margin-top:2px!important}
+/* 이름·회차·점 아래 한 줄에 해 봤어요·하고 싶어요(2026-10-27) — 단추가 없으면(위시 API 없음·참여 전) 줄도 없다 */
+.evh-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.evh-acts{display:flex;flex-wrap:wrap;gap:6px}
+.evh-acts:empty{display:none}
 .evh-row:last-child{border-bottom:0}
 .evh-row input{flex:none;width:16px;height:16px;margin:0;accent-color:var(--ctl-on)}
 .evh-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;cursor:pointer}
@@ -2347,7 +2352,7 @@ img.ava{background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}
 .wish-t:disabled{opacity:.5;cursor:default}
 .wish-t:focus-visible{outline:none;box-shadow:var(--ring)}
 .tf-th-top .wish-t{margin-left:auto}
-.evh-row .wish-t{align-self:flex-start;margin-top:1px}
+.evh-acts .wish-t{margin:0}
 
 .tg{display:flex;flex-direction:column;gap:28px;padding-bottom:48px}
 .tg-sec-h{display:flex;align-items:center;gap:8px;margin:0 0 14px;min-height:32px}
@@ -3244,12 +3249,13 @@ button.hm-me-c:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--blue-
 .evw-n{font-size:15px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
 .evw-top{display:flex;align-items:flex-start;gap:8px}
 .evw-top .evw-n{flex:1;min-width:0}
-/* "해 봤어요" — 눌리면 빨강(해 봄 점과 같은 색) */
-.evw-mark{flex:none;height:28px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--pill);background:var(--surface);
+/* "해 봤어요"(PlayedMark) — '+ 하고 싶어요'(.wish-t)와 같은 크기의 알약. 눌리면 빨강(해 봄 점과 같은 색) */
+.pm-t{flex:none;display:inline-flex;align-items:center;height:28px;padding:0 10px;box-sizing:border-box;border:1px solid var(--line2);border-radius:var(--pill);background:var(--surface);
   font:inherit;font-size:12.5px;font-weight:500;color:var(--ink2);cursor:pointer;white-space:nowrap}
-.evw-mark:hover{border-color:var(--tab-line-hover);color:var(--ink)}
-.evw-mark.on{border-color:var(--red-line);background:var(--red-soft);color:var(--red-text);font-weight:600}
-.evw-mark:focus-visible{outline:none;box-shadow:var(--ring)}
+.pm-t:hover:not(:disabled){border-color:var(--tab-line-hover);color:var(--ink)}
+.pm-t.on{border-color:var(--red-line);background:var(--red-soft);color:var(--red-text);font-weight:600}
+.pm-t:disabled{opacity:.6;cursor:default}
+.pm-t:focus-visible{outline:none;box-shadow:var(--ring)}
 .evw-at{font-weight:400;font-size:13px;color:var(--ink3)}
 .evw-who{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px}
 .evw-want{display:inline-flex;align-items:center;gap:4px;color:var(--blue-text);font-weight:500}

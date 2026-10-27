@@ -105,7 +105,7 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
   /* 예약 상태는 구간이 있는 일정에서 참여한 사람·만든 사람·운영진이 바꾼다(개편 전 "예약" 줄과 같은 조건) */
   const canBook = ev.segments.length > 0 && (ev.joined || ev.canManage);
   /* 협의 도우미 — 협의 중·예약 전 일정의 참여자만(예약 완료면 테마가 이미 정해졌다) */
-  const helper = ev.joined && (undecided || !ev.booked) && onCalcThemes ? <EventHelper ev={ev} onCalcThemes={(items) => onCalcThemes(items, ev)} /> : null;
+  const helper = ev.joined && (undecided || !ev.booked) && onCalcThemes ? <EventHelper ev={ev} onCalcThemes={(items) => onCalcThemes(items, ev)} profile={profile ?? null} meUid={meUid} /> : null;
   const hasTalk = undecided || ev.candidates.length > 0;
   /* 날짜 미정이면 협의가 할 일의 전부라 처음부터 펼친다 */
   const [talkOpen, setTalkOpen] = useState(undecided);

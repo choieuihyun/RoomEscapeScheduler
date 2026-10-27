@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clockLabel, dayLabel, todayKst } from '../clubEvents';
-import { freshCatalog, freshMessage, freshStale, helperDates, noRecordNames, noRecordText } from '../played';
+import { freshCatalog, freshMessage, freshStale, withFreshPlayed, helperDates, noRecordNames, noRecordText } from '../played';
 import { playedDots } from '../playedWho';
 import { REGIONS, inRegion, pageAt, pageFor, pageOf, regionCounts, type PageAt, type RegionPick } from '../regions';
 import { ago, freshThemes, isMissingApi, sayClub, toSessions, type EventDto, type FreshDto, type FreshTheme } from '../server';
 import type { AddedTheme } from '../scheduler/types';
 import { useServerRegions } from '../useServerRegions';
 import { PlayedDots } from './PlayedDots';
+import { PlayedMark, usePlayedMark } from './PlayedMark';
+import type { UseProfileReturn } from '../useProfile';
 import { loadGroups, useClubStore, WishToggle } from '../clubStore';
-import { partyWantCount, partyWishes } from '../wish';
+import { partyWantCount, partyWishes, wishKey } from '../wish';
 
 /* 일정 상세의 협의 도우미 "어떤 테마가 좋을까요?"(§4.9, 계획 Task 8, 목업 ② 왼쪽 아래).
    그날 열린 회차가 있는 테마를 "아무도 안 해 봄" 먼저(서버가 세운 순서) 보이고, 고른 테마로 조합 계산을 연다.
@@ -46,8 +48,11 @@ const toAdded = (t: FreshTheme, dto: FreshDto): AddedTheme => ({
   sessions: toSessions(t.sessions), fresh: ago(dto.checkedAt), date: dto.date, themeKey: t.themeKey || t.id, posterUrl: t.posterUrl,
 });
 
-export function EventHelper({ ev, onCalcThemes }: {
+export function EventHelper({ ev, onCalcThemes, profile = null, meUid = '' }: {
   ev: EventDto;
+  /* "해 봤어요"(2026-10-27) — 참여한 나만, 내 해 본 테마를 쓸 수 있을 때 */
+  profile?: UseProfileReturn | null;
+  meUid?: string;
   /* 고른 테마를 계산 화면에 넣고 그리로 */
   onCalcThemes: (items: AddedTheme[]) => void;
 }) {
@@ -112,6 +117,8 @@ export function EventHelper({ ev, onCalcThemes }: {
   useServerRegions(); // 서버가 준 지점 지역(§4.4)을 받으면 다시 그린다 — 지역 계산은 아래에서 매번
   /* 참여자가 하고 싶은 테마(2026-10-27) — 줄마다 "하고 싶어요 2명" 표시(하트는 2026-10-27 사용자 요청으로 뺐다). 위시 묶음은 일정 상세의 EventWishes 가 받아 둔다 */
   const club7 = useClubStore();
+  const mark = usePlayedMark(profile);
+  const canMark = ev.joined && !!profile && !!meUid;
   useEffect(() => { if (open && club7.wishApi !== 'missing') loadGroups().catch(() => {}); }, [open, club7.wishApi]);
   const party = club7.groups ? partyWishes(club7.groups.list, ev.participants) : [];
   if (hidden || !plan || !date) return null;
@@ -208,6 +215,7 @@ export function EventHelper({ ev, onCalcThemes }: {
           <ul className="evh-list">
             {view.items.map((t) => {
               const dots = playedDots(t.playedBy, ev.participants);
+              const ref = { themeKey: t.themeKey || t.id, themeName: t.name, branchName: t.branchName };
               return (
                 <li key={t.id} className={'evh-row' + (dots.some((d) => d.played) ? ' played' : '') + (catalog ? ' cat' : '')}>
                   {/* 카탈로그(회차 전)는 고를 것이 없다 — 체크 칸·회차 줄 없이 이름·해 본 사람만 */}
@@ -217,21 +225,32 @@ export function EventHelper({ ev, onCalcThemes }: {
                       onChange={(e) => toggle(t.id, e.target.checked)}
                     />
                   )}
-                  <label htmlFor={catalog ? undefined : `evh-${ev.id}-${t.id}`} className="evh-main">
-                    <span className="evh-n">{t.name} <span className="evh-at">· {t.storeName} {t.branchName}{t.dur ? ` · ${t.dur}분` : ''}</span>
-                      {(() => { const n = partyWantCount(party, { themeKey: t.themeKey || t.id, themeName: t.name }); return n > 0 ? <span className="evh-want" title="참여자 중 하고 싶어요">하고 싶어요 {n}명</span> : null; })()}
-                    </span>
-                    {!catalog && (
-                      <span className="evh-ss">
-                        {toSessions(t.sessions).map((s, i) => (
-                          <span key={s.id ?? i}>{i > 0 && ' · '}{s.soldout ? <><s>{clockLabel(s.t)}</s><span className="sr-only"> 매진</span></> : clockLabel(s.t)}</span>
-                        ))}
+                  <div className="evh-body">
+                    <label htmlFor={catalog ? undefined : `evh-${ev.id}-${t.id}`} className="evh-main">
+                      <span className="evh-n">{t.name} <span className="evh-at">· {t.storeName} {t.branchName}{t.dur ? ` · ${t.dur}분` : ''}</span>
+                        {(() => { const n = partyWantCount(party, { themeKey: t.themeKey || t.id, themeName: t.name }); return n > 0 ? <span className="evh-want" title="참여자 중 하고 싶어요">하고 싶어요 {n}명</span> : null; })()}
                       </span>
-                    )}
-                    <PlayedDots dots={dots} />
-                  </label>
-                  {/* 하고 싶어요(§4.12) — 라벨 밖에 둔다(누르면 체크가 같이 바뀌지 않게) */}
-                  <WishToggle theme={{ themeKey: t.themeKey || t.id, themeName: t.name, branchName: t.branchName }} />
+                      {!catalog && (
+                        <span className="evh-ss">
+                          {toSessions(t.sessions).map((s, i) => (
+                            <span key={s.id ?? i}>{i > 0 && ' · '}{s.soldout ? <><s>{clockLabel(s.t)}</s><span className="sr-only"> 매진</span></> : clockLabel(s.t)}</span>
+                          ))}
+                        </span>
+                      )}
+                      <PlayedDots dots={dots} />
+                    </label>
+                    {/* 해 봤어요 · 하고 싶어요 — 라벨 밖 한 줄에 나란히(누르면 체크가 같이 바뀌지 않게, 2026-10-27 정리) */}
+                    <div className="evh-acts">
+                      {canMark && (
+                        <PlayedMark theme={ref} played={t.playedBy.includes(meUid)} busy={mark.busy === wishKey(ref)}
+                          onClick={() => void mark.toggle(ref, t.playedBy.includes(meUid), (p) => {
+                            const cur = slots.get(key)?.dto;
+                            if (cur) setSlots((m) => new Map(m).set(key, { ...m.get(key), dto: withFreshPlayed(cur, t.id, meUid, p) }));
+                          })} />
+                      )}
+                      <WishToggle theme={ref} />
+                    </div>
+                  </div>
                 </li>
               );
             })}

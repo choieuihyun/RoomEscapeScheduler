@@ -136,3 +136,17 @@ export async function recordPlanPlayed(steps: { name: string }[], date: string):
     console.warn('해 본 테마 기록 실패:', e);
   }
 }
+
+/* 도우미에서 "해 봤어요"를 누른 뒤 받아 둔 결과를 바로 고친다 — 그 테마(id)의 playedBy 에 나를 넣거나 뺀다.
+   넣으면 이제 기록이 있는 사람이라 noRecord 에서도 뺀다(빼는 쪽은 다른 기록이 있을 수 있어 그대로) */
+export function withFreshPlayed(dto: FreshDto, themeId: string, uid: string, played: boolean): FreshDto {
+  return {
+    ...dto,
+    noRecord: played ? dto.noRecord.filter((u) => u !== uid) : dto.noRecord,
+    themes: dto.themes.map((t) => {
+      if (t.id !== themeId) return t;
+      const rest = t.playedBy.filter((u) => u !== uid);
+      return { ...t, playedBy: played ? [...rest, uid] : rest };
+    }),
+  };
+}

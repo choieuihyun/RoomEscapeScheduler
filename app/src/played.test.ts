@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  freshMessage, freshCatalog, helperDates, isPlayableName, noRecordNames, noRecordText, playedCount, playedNames, playedPerPerson, searchThemes, sourceLabel, stepsToPlayed, freshStale, FRESH_STALE_MS,
+  freshMessage, freshCatalog, helperDates, withFreshPlayed, isPlayableName, noRecordNames, noRecordText, playedCount, playedNames, playedPerPerson, searchThemes, sourceLabel, stepsToPlayed, freshStale, FRESH_STALE_MS,
 } from './played';
 import type { EventDto, FreshDto, PlayedDto, ThemeRef } from './server';
 
@@ -115,5 +115,17 @@ describe('도우미 결과 낡음', () => {
   it('5분을 넘기면 낡았다고 본다(딱 5분은 아직)', () => {
     expect(freshStale(1000, 1000 + FRESH_STALE_MS)).toBe(false);
     expect(freshStale(1000, 1000 + FRESH_STALE_MS + 1)).toBe(true);
+  });
+});
+
+describe('도우미에서 "해 봤어요" 뒤 받아 둔 결과 고치기(2026-10-27)', () => {
+  const T = (id: string, playedBy: string[]) => ({ id, name: id, sessions: [], themeKey: 'k-' + id, storeName: 's', branchName: 'b', playedBy });
+  const d = { date: '2026-11-15', collected: true, checkedAt: null, missing: [], noRecord: ['me', 'x'], themes: [T('a', ['x']), T('b', [])] } as unknown as FreshDto;
+  it('그 테마 playedBy 에 나를 넣고 빼고, 기록 없음(noRecord)에서는 뺀다', () => {
+    const on = withFreshPlayed(d, 'a', 'me', true);
+    expect(on.themes[0].playedBy).toEqual(['x', 'me']);
+    expect(on.themes[1]).toBe(d.themes[1]);
+    expect(on.noRecord).toEqual(['x']);
+    expect(withFreshPlayed(on, 'a', 'me', false).themes[0].playedBy).toEqual(['x']);
   });
 });

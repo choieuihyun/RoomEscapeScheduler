@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { loadGroups, markPlayedInGroups, useClubStore } from '../clubStore';
+import { loadGroups, useClubStore } from '../clubStore';
 import { playedDots } from '../playedWho';
-import { deletePlayed, sayClub, type EventDto, type WishGroupDto } from '../server';
-import { showToast } from '../toast';
+import type { EventDto } from '../server';
 import type { UseProfileReturn } from '../useProfile';
-import { partyWishes, placeLabel, sameTheme, wishKey } from '../wish';
+import { partyWishes, placeLabel, wishKey } from '../wish';
 import { PlayedDots } from './PlayedDots';
+import { PlayedMark, usePlayedMark } from './PlayedMark';
 
 /* 일정 상세 "참여자가 하고 싶은 테마"(2026-10-27 사용자 요청: 시간표보다 참여자들이 하고 싶은 테마를 바로 보기 쉽게).
    멤버들의 위시 묶음(§4.12, 같이 가요와 같은 데이터 — 서버 작업 없음)에서 이 일정 참여자가 원하는 테마만 모은다.
@@ -17,7 +17,7 @@ const FIRST = 5;
 export function EventWishes({ ev, meUid, profile }: { ev: EventDto; meUid: string; profile: UseProfileReturn | null }) {
   const club7 = useClubStore();
   const [all, setAll] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
+  const mark = usePlayedMark(profile);
   const on = !ev.booked && ev.participants.length > 0 && club7.wishApi !== 'missing';
   useEffect(() => { if (on) loadGroups().catch(() => { /* 못 받으면 칸을 안 보일 뿐 */ }); }, [on]);
   if (!on || !club7.groups) return null;
@@ -26,35 +26,6 @@ export function EventWishes({ ev, meUid, profile }: { ev: EventDto; meUid: strin
   const shown = all ? list : list.slice(0, FIRST);
   /* "해 봤어요"는 이 일정에 참여한 나만, 내 해 본 테마를 쓸 수 있을 때만 */
   const canMark = ev.joined && !!profile && !!meUid;
-
-  async function toggle(g: WishGroupDto, played: boolean) {
-    if (!profile) return;
-    const ref = { themeKey: g.themeKey, themeName: g.themeName, branchName: g.branchName };
-    const k = wishKey(ref);
-    if (played && !confirm(`'${g.themeName}'을(를) 해 본 테마에서 뺄까요?`)) return;
-    setBusy(k);
-    try {
-      if (!played) {
-        await profile.add({ ...ref, source: 'MANUAL' });
-        markPlayedInGroups(ref, true);
-        showToast('해 본 테마에 넣었어요.');
-      } else {
-        const rows = profile.played ?? await profile.reloadPlayed() ?? [];
-        const row = rows.find((p) => sameTheme(p, ref));
-        if (!row) { showToast('해 본 기록을 찾지 못했어요. 내 정보에서 확인해 주세요.'); return; }
-        const t = await (await import('../cloud')).idToken();
-        if (!t) { showToast('로그인해 주세요.'); return; }
-        await deletePlayed(row.id, t);
-        await profile.reloadPlayed();
-        markPlayedInGroups(ref, false);
-        showToast('해 본 테마에서 뺐어요.');
-      }
-    } catch (e) {
-      showToast(e instanceof Error && !('body' in e) ? e.message : sayClub(e));
-    } finally {
-      setBusy(null);
-    }
-  }
 
   return (
     <section className="evw" aria-labelledby={`evw-h-${ev.id}`}>
@@ -70,12 +41,7 @@ export function EventWishes({ ev, meUid, profile }: { ev: EventDto; meUid: strin
               <li key={(g.themeKey ?? '') + '|' + g.themeName} className="evw-row">
                 <div className="evw-top">
                   <span className="evw-n">{g.themeName}{placeLabel(g) && <span className="evw-at"> · {placeLabel(g)}</span>}</span>
-                  {canMark && (
-                    <button type="button" className={'evw-mark' + (mine ? ' on' : '')} aria-pressed={mine} disabled={busy === k}
-                      title={mine ? '해 본 테마에서 빼기' : '내 해 본 테마에 넣기'} onClick={() => void toggle(g, mine)}>
-                      {busy === k ? '…' : mine ? '해 봤어요 ✓' : '해 봤어요'}
-                    </button>
-                  )}
+                  {canMark && <PlayedMark theme={g} played={mine} busy={mark.busy === k} onClick={() => void mark.toggle(g, mine)} />}
                 </div>
                 <span className="evw-who">
                   <span className="evw-want" title={`하고 싶어요: ${want.map((w) => w.nickname).join(', ')}`}>{want.map((w) => w.nickname).join(' · ')}</span>
