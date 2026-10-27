@@ -54,7 +54,13 @@ export function EventWishes({ ev, meUid, profile }: { ev: EventDto; meUid: strin
         </ul>
       )}
       {list.length > FIRST && (
-        <button type="button" className="fb-more evw-more" onClick={() => setAll(!all)}>{all ? '접기' : `${list.length - FIRST}개 더 보기`}</button>
+        /* 더 보기 — 목록 아래 가운데 청록 알약(2026-10-27 사용자 요청: 확실하게 보이게) */
+        <button type="button" className="evw-more" aria-expanded={all} onClick={() => setAll(!all)}>
+          {all ? '접기' : `${list.length - FIRST}개 더 보기`}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d={all ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+          </svg>
+        </button>
       )}
     </section>
   );
