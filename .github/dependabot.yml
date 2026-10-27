@@ -1,0 +1,35 @@
+# 라이브러리 취약점·새 버전 자동 알림(Dependabot) — 2026-10-27 사용자 결정(서버 저장소 b000310 과 같은 모양).
+# 매주 월 09:00(KST)에 확인한다. minor·patch 는 PR 하나로 묶고, major 버전 올리기는 받지 않는다(깨지는 변경은 사람이 따로 판단).
+# ⚠ main 에 병합하면 바로 운영 배포다(.github/workflows/deploy.yml). PR 에는 CI 가 돌지 않으니
+#   GitHub 에서 바로 병합하지 말고 받아서 테스트·빌드한 뒤 올린다 — 배포.md "7. 보안 — 라이브러리 업데이트".
+version: 2
+updates:
+  # 앱(React+TS, app/package-lock.json). 루트 package.json 은 의존성이 없어 넣지 않는다
+  - package-ecosystem: npm
+    directory: /app
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    open-pull-requests-limit: 5
+    groups:
+      app-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+  # 배포 워크플로가 쓰는 액션(checkout·setup-node·Firebase 배포)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
