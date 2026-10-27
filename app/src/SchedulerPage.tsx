@@ -415,6 +415,12 @@ export function SchedulerPage() {
   const memberStatus = auth.member?.status ?? null;
   useEffect(() => {
     if (linkId === null || !authSettled) return;
+    if (!auth.me && auth.restoreFailed) {
+      /* 저장된 로그인을 찾다가 로그인 기능을 못 받았다(느린 망 등) — 로그아웃으로 보고 로그인 창을 띄우면 "자동 로그인이 안 된다"가 된다.
+         다시 열어 달라고만 한다(2026-10-27) */
+      if (askedFor.current !== linkId) { askedFor.current = linkId; showToast('로그인 정보를 불러오지 못했어요. 인터넷 연결을 확인하고 다시 열어 주세요.'); }
+      return;
+    }
     if (!auth.me || (memberStatus !== null && memberStatus !== 'APPROVED')) {
       /* 로그아웃·승인 전 — 로그인 창(승인 전이면 그 안에서 가입 신청·승인 대기)을 연다. 승인되면 이어서 연다 */
       if (askedFor.current !== linkId) { askedFor.current = linkId; openAuth(); }
@@ -448,7 +454,7 @@ export function SchedulerPage() {
         setLinkId(cur => (cur === id ? null : cur));
       }
     })();
-  }, [linkId, authSettled, auth.me, memberStatus, clubOn, openAuth, adopt, go, calSelect, setOpenEvent]);
+  }, [linkId, authSettled, auth.me, auth.restoreFailed, memberStatus, clubOn, openAuth, adopt, go, calSelect, setOpenEvent]);
 
   /* "프로필을 채워 주세요"(§4.11) — 프로필이 null 인 가입 신청자·멤버에게. 닫으면 이번 접속 동안은 묻지 않는다(새로 고침·다음 로그인에 다시).
      다른 창·투어·링크로 여는 일정과 겹치지 않게 기다리고, 한 번 뜨면 채우거나 닫을 때까지 둔다. 알림 켜기 안내는 이 창 뒤에 */

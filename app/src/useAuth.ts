@@ -37,6 +37,11 @@ function cloudConfigured(): boolean {
 export function useAuth() {
   const cloudOn = useRef(cloudConfigured()).current;
   const wasSeen = useRef(cloudOn && !!localStorage.getItem(SEEN_KEY)).current;
+  /* 일정 링크(#e=)·공지 알림(#notice)으로 들어왔다 — "로그인한 적 있음" 표시(SEEN_KEY)가 없어도 저장된 로그인을 먼저 찾아본다.
+     표시가 지워졌는데 Firebase 의 로그인은 남아 있으면(저장소 일부만 지워짐 등) 그동안 복원 없이 로그인 창부터 떴다
+     — "알림·링크로 들어오면 자동 로그인이 안 된다"(2026-10-27 사용자 보고). 로그인 안 한 사람은 어차피 로그인에 SDK 가 필요하다 */
+  const linkEntry = useRef(cloudOn && /^#(e=\d|notice$)/.test(location.hash)).current;
+  const wake = wasSeen || linkEntry;
   /* 카카오에서 막 돌아온 주소면 토큰으로 로그인하는 동안도 "복원 중"이다 */
   /* cloudOn 과 무관 — Firebase 설정이 없어도 돌아온 code·state 는 주소에서 지운다 */
   const kakaoBack = useRef((readKakaoReturn(location.search) !== null || new URLSearchParams(location.search).has('code'))).current;
@@ -55,7 +60,9 @@ export function useAuth() {
      새로고침 직후 잠깐 "로그인" 버튼이 떴다가 돌아오는 깜빡임이 실제로
      "로그아웃됐다"는 오해를 준다. 예전에 로그인한 적 있을 때만(SEEN_KEY)
      로딩 상태로 시작한다 — 한 번도 로그인 안 한 사람은 애초에 기다릴 게 없다. */
-  const [authLoading, setAuthLoading] = useState(wasSeen || kakaoBack);
+  const [authLoading, setAuthLoading] = useState(wake || kakaoBack);
+  /* 저장된 로그인을 찾다가 SDK 를 못 받았다(느린 망·차단) — 링크로 들어온 사람에게 로그인 창 대신 "다시 열어 주세요"를 보이게 */
+  const [restoreFailed, setRestoreFailed] = useState(false);
   const [open, setOpen] = useState(false);
   const [id, setId] = useState('');
   const [pw, setPw] = useState('');
@@ -73,10 +80,14 @@ export function useAuth() {
   /* 예전에 로그인한 적이 있을 때만 SDK를 미리 깨운다 — 한 번도 안 쓴 사람에게
      짐을 지우지 않기 위해서다 (index.html의 SEEN_KEY 가드). */
   useEffect(() => {
-    if (!wasSeen) return;
-    cloud().then(C => C.watch(u => { setMe(u); setAuthLoading(false); }))
-      .catch(e => { console.warn('로그인 복귀 실패:', e); setAuthLoading(false); });
-  }, [wasSeen]);
+    if (!wake) return;
+    cloud().then(C => C.watch(u => {
+      setMe(u); setAuthLoading(false);
+      /* 복원된 로그인이 있으면 표시도 맞춘다 — 다음부터는 링크가 아니어도 바로 복원한다 */
+      if (u) { try { localStorage.setItem(SEEN_KEY, '1'); } catch { /* 시크릿 창 등 */ } }
+    }))
+      .catch(e => { console.warn('로그인 복귀 실패:', e); setRestoreFailed(true); setAuthLoading(false); });
+  }, [wake]);
 
   /* 멤버 상태 — 로그인 상태가 바뀔 때마다 서버에 묻는다. 실패·404 는 조용히 null */
   const loadMember = useCallback(async (): Promise<MeDto | null> => {
@@ -299,6 +310,7 @@ export function useAuth() {
     /* 프로필 고치기(§4.11) 창이 서버가 준 MeDto 를 넣는다 — 요청은 그 창(지연 청크)이 한다 */
     adoptMember: setMember,
     inKakaoApp, legacyOpen, setLegacyOpen, linkErr, returnView, providerIds: uid ? providerIds : [],
+    restoreFailed,
   };
 }
 

@@ -8,6 +8,8 @@ const bag = (v: unknown): Bag | null => (v && typeof v === 'object' ? (v as Bag)
 
 /* 알림의 data 에서 링크를 찾는다. 차례: 우리가 띄운 알림의 data.link → SDK 가 띄운 알림(data.FCM_MSG)의
    data.link → fcmOptions.link → notification.click_action. 앱 주소(root) 밖이거나 없으면 root. */
+/* 새 앱 주소 — 옛 주소(github.io)에서 알림을 켠 기기의 워커도 서버가 보낸 이 주소의 링크는 연다(2026-10-27) */
+export const WEB_APP = 'https://roomescapescheduler.web.app/';
 export function pickLink(data: unknown, root: string): string {
   const d = bag(data);
   const fcm = bag(d?.FCM_MSG);
@@ -21,7 +23,7 @@ export function pickLink(data: unknown, root: string): string {
     if (typeof t !== 'string' || !t) continue;
     try {
       const url = new URL(t, root).href;
-      if (url.startsWith(root)) return url;
+      if (url.startsWith(root) || url.startsWith(WEB_APP)) return url;
     } catch { /* 못 읽는 주소는 건너뛴다 */ }
   }
   return root;

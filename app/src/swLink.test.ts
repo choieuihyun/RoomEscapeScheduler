@@ -19,6 +19,9 @@ const CASES: [string, unknown, string][] = [
   ['비슷한 경로도 앱 밖', { link: 'https://choieuihyun.github.io/RoomEscapeSchedulerX/#e=1' }, ROOT],
   ['상대 주소는 앱 주소 기준', { link: '#e=7' }, ROOT + '#e=7'],
   ['빈 문자열·숫자는 건너뜀', { link: '', FCM_MSG: { data: { link: 5 }, fcmOptions: { link: ROOT + '#e=8' } } }, ROOT + '#e=8'],
+  /* 옛 주소(github.io)에서 알림을 켠 기기 — 서버 링크는 새 주소(web.app)라 그대로 연다(2026-10-27, 전엔 앱 밖으로 보고 옛 첫 화면으로 가 일정이 빠졌다) */
+  ['새 주소(web.app) 링크는 옛 주소 워커에서도 그대로', { FCM_MSG: { data: { link: 'https://roomescapescheduler.web.app/#e=17' } } }, 'https://roomescapescheduler.web.app/#e=17'],
+  ['web.app 처럼 보이는 남의 주소는 버린다', { link: 'https://roomescapescheduler.web.app.evil.example/#e=1' }, ROOT],
 ];
 
 /* public/firebase-messaging-sw.js 의 pickLink·clickTarget 을 꺼내 함수로 만든다 */

@@ -70,10 +70,15 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
             <KakaoMark />카카오 로그인
           </button>
           {auth.inKakaoApp ? (
-            <p className="auth-box">
-              구글 로그인은 카카오톡 안에서는 안 돼요. 오른쪽 위 <b>⋮</b> → <b>다른 브라우저로 열기</b>를 누른 뒤
-              거기서 구글로 로그인해 주세요.
-            </p>
+            <div className="auth-box">
+              {/* 카카오톡 안 브라우저는 로그인이 따로라(평소 쓰는 크롬·사파리의 로그인이 없다) 링크·알림으로 들어오면 로그인부터 뜬다.
+                  카카오톡이 여는 바깥 브라우저 주소(kakaotalk://web/openExternal)로 지금 주소(#e= 포함) 그대로 연다(2026-10-27) */}
+              카카오톡 안에서는 로그인이 따로라, 평소 쓰는 브라우저에서 여는 게 편해요. 구글 로그인도 거기서만 돼요.
+              <button type="button" className="btn auth-ext" onClick={() => { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href); }}>
+                다른 브라우저로 열기
+              </button>
+              <span className="auth-ext-h">안 열리면 오른쪽 위 <b>⋮</b> → <b>다른 브라우저로 열기</b>를 눌러 주세요.</span>
+            </div>
           ) : (
             <button className="sso-btn sso-google" type="button" disabled={auth.busy} onClick={auth.loginGoogle}>
               <GoogleMark />Google 계정으로 로그인

@@ -21,6 +21,8 @@ self.addEventListener('activate', event => event.waitUntil(self.clients.claim())
    (안 막으면 창이 두 번 열리거나, 앞으로 온 창이 그 일정을 안 연다). */
 
 // pickLink 시작 — app/src/swLink.ts 의 pickLink·clickTarget 과 똑같이 유지한다(swLink.test.ts 가 같은 표로 둘 다 돌린다)
+/* 새 앱 주소 — 옛 주소(github.io)에서 알림을 켠 기기의 워커도 서버가 보낸 이 주소의 링크는 연다(2026-10-27) */
+const WEB_APP = 'https://roomescapescheduler.web.app/';
 function pickLink(data, root) {
   const bag = v => (v && typeof v === 'object' ? v : null);
   const d = bag(data);
@@ -35,7 +37,7 @@ function pickLink(data, root) {
     if (typeof t !== 'string' || !t) continue;
     try {
       const url = new URL(t, root).href;
-      if (url.startsWith(root)) return url;
+      if (url.startsWith(root) || url.startsWith(WEB_APP)) return url;
     } catch { /* 못 읽는 주소는 건너뛴다 */ }
   }
   return root;
