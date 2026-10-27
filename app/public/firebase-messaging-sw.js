@@ -103,6 +103,8 @@ const messaging = firebase.messaging();
 
 /* 서버는 모든 알림(빈자리·동호회)에 notification 을 담아 보낸다 — 그러면 SDK 가 알아서 띄우므로
    여기서 또 띄우면 두 번 뜬다. notification 없이 data 만 온 메시지만 직접 띄우고, 누르면 열 링크를 data 에 싣는다. */
+/* data.tag(일정 댓글 "ev-cmt-<id>", §4.16 — 2026-10-27)가 있으면 같은 tag 알림을 하나로 겹치고 다시 울린다(renotify).
+   notification 이 실려 온 알림은 서버가 webpush.notification 에 같은 tag 를 넣어 브라우저가 겹친다 */
 messaging.onBackgroundMessage(payload => {
   if (payload.notification) return;
   const data = payload.data || {};
@@ -110,5 +112,6 @@ messaging.onBackgroundMessage(payload => {
     body: data.body || '감시 중인 회차에 빈자리가 생겼어요.',
     icon: 'icon-192.png',
     data: { link: data.link || payload.fcmOptions?.link || ROOT },
+    ...(data.tag ? { tag: data.tag, renotify: true } : {}),
   });
 });
