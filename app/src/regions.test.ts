@@ -33,8 +33,10 @@ describe('regionOf — 지역 표', () => {
   });
 
   it('아직 지역을 모르는 지점·표에 없는 지점은 기타', () => {
-    expect(regionOf('다이아에그', '미스테리인')).toBe('기타');
+    /* 미스테리인은 2026-10-23 서버가 서면(부산)으로 확인 — 이름 표에서도 부산 */
+    expect(regionOf('다이아에그', '미스테리인')).toBe('부산');
     expect(regionOf('비트포비아', '던전101')).toBe('기타');
+    expect(regionOf('아무매장', '모르는점')).toBe('기타');
     expect(regionOf('', '')).toBe('기타');
   });
 
@@ -43,8 +45,25 @@ describe('regionOf — 지역 표', () => {
     expect(regionOf('강남이스케이프', '본점')).toBe('강남');
   });
 
-  it('지역 순서', () => {
-    expect(REGIONS).toEqual(['강남', '홍대', '건대', '부산', '대구', '대전', '수원', '김포', '용인', '기타']);
+  it('지역 순서 — 서울 지역 8개(2026-10-27 서버 seoul 브랜치 14지점)는 건대 뒤', () => {
+    expect(REGIONS).toEqual(['강남', '홍대', '건대', '신촌', '신사', '성수', '잠실', '대학로', '성신여대', '노원', '영등포', '부산', '대구', '대전', '수원', '김포', '용인', '기타']);
+  });
+
+  it('서울 지역 — 서버가 준 값을 받고, 서버 값이 없으면 지점 이름 낱말로', () => {
+    setServerRegions([
+      { id: 'roomsa-daehakro', store: '룸사', branch: '대학로점', region: '대학로' },
+      { id: 'escapecity-sungshin', store: '이스케이프시티', branch: '성신여대점', region: '성신여대' },
+      { id: 'codeescape-garosu', store: '코드이스케이프', branch: '가로수길점', region: '신사' },
+    ]);
+    expect(regionOf('룸사', '대학로점')).toBe('대학로');
+    expect(regionOf('코드이스케이프', '가로수길점', 'codeescape-garosu:3')).toBe('신사');
+    expect(regionOf('아무매장', '잠실점')).toBe('잠실');
+    expect(regionOf('아무매장', '노원점')).toBe('노원');
+    expect(regionOf('아무매장', '신촌점')).toBe('신촌');
+    expect(regionOf('아무매장', '성수점')).toBe('성수');
+    expect(regionOf('아무매장', '영등포점')).toBe('영등포');
+    expect(regionOf('아무매장', '성신여대점')).toBe('성신여대');
+    expect(regionOf('아무매장', '가로수길점')).toBe('신사');
   });
 });
 
@@ -132,7 +151,7 @@ describe('서버가 준 지역(§4.4 region) — 이름 추측보다 먼저', ()
     setServerRegions([B('제로월드', '강남점', null), B('비트포비아', '던전101'), B('다이아에그', '미스테리인', '서울')]);
     expect(regionOf('제로월드', '강남점')).toBe('강남');
     expect(regionOf('비트포비아', '던전101')).toBe('기타');
-    expect(regionOf('다이아에그', '미스테리인')).toBe('기타');
+    expect(regionOf('다이아에그', '미스테리인')).toBe('부산'); // 목록 밖 값('서울')은 버리고 이름 표로
   });
 
   it('다시 받아 null 이 되면 서버 값을 지운다, 받을 때마다 번호가 오른다', () => {
