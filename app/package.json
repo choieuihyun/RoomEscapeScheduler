@@ -11,20 +11,20 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "onnxruntime-web": "^1.23.0",
+    "onnxruntime-web": "^1.30.0",
     "ppu-ocv": "^4.0.0",
-    "ppu-paddle-ocr": "^6.4.3",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "ppu-paddle-ocr": "^6.6.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "@vitejs/plugin-react": "^6.1.0",
-    "oxlint": "^1.79.0",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "oxlint": "^1.89.0",
     "typescript": "~6.0.2",
-    "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vite": "^8.3.5",
+    "vitest": "^4.1.12"
   }
 }
