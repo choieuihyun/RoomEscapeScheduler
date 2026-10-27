@@ -23,6 +23,10 @@ describe('의견 게시판(§4.15)', () => {
     expect(commentIssue(' ')).toBe('댓글을 적어 주세요.');
     expect(commentIssue('가'.repeat(300))).toBe('');
     expect(commentIssue('가'.repeat(301))).toBe('댓글은 300자까지 적을 수 있어요.');
+    /* 일정 댓글(§4.16)은 10줄까지 — 줄 수를 넘기면 그 제한도 본다(의견 댓글은 줄 제한 없음) */
+    expect(commentIssue(Array(30).fill('a').join('\n'))).toBe('');
+    expect(commentIssue(Array(10).fill('a').join('\n'), 10)).toBe('');
+    expect(commentIssue(Array(11).fill('a').join('\r\n'), 10)).toBe('댓글은 10줄까지 적을 수 있어요.');
   });
   it('거르기·정렬 — 상태로 거르고, 최신순(쓴 때) 또는 공감순(같으면 최신)', () => {
     const list = [

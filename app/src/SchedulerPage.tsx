@@ -401,7 +401,8 @@ export function SchedulerPage() {
   useEffect(() => {
     if (!meUid) return;
     let dead = false, off: (() => void) | null = null;
-    listenForegroundPush(p => { const b = bannerOf(p); if (b) showPushBanner(b); })
+    /* 일정 알림(댓글 등)이면 열려 있는 그 일정의 댓글 칸이 다시 받게 알린다(EventComments 의 'flod:event-push') */
+    listenForegroundPush(p => { const b = bannerOf(p); if (b) { showPushBanner(b); if (b.eventId !== null) dispatchEvent(new CustomEvent('flod:event-push', { detail: b.eventId })); } })
       .then(u => { if (dead) u?.(); else off = u; })
       .catch(e => console.warn('앱 안 알림 받기 실패:', e));
     return () => { dead = true; off?.(); };

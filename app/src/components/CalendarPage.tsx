@@ -143,7 +143,7 @@ function ClubRow({ ev, iso, onOpen }: { ev: EventDto; iso: string; onOpen: (ev: 
       {who.length > 0 && <span className="chip-info warn who" title={playedWhoTitle(who)}>{playedWhoLabel(who)}</span>}
       {ev.settlementTotal !== null && <span className="chip-info muted">정산</span>}
       <span className="ccr-t">{eventTitle(ev)}</span>
-      <span className="ccr-m">{when} · 참여 {peopleText(ev)}</span>
+      <span className="ccr-m">{when} · 참여 {peopleText(ev)}{(ev.commentCount ?? 0) > 0 && ` · 댓글 ${ev.commentCount}`}</span>
     </button>
   );
 }

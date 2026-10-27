@@ -364,6 +364,7 @@ export function HomePage({
                         <span className="hm-row-m">
                           <i className={'cal-dot ' + st} aria-hidden="true" />{STATUS_LABEL[st]} · {people(ev)} · <MemberLink uid={ev.createdBy.uid} name={ev.createdBy.nickname} />
                           {ev.settlementTotal !== null && <> · 정산</>}
+                          {(ev.commentCount ?? 0) > 0 && <> · 댓글 {ev.commentCount}</>}
                         </span>
                         {/* 좁은 줄이라 이름은 둘까지, 나머지는 title 로 */}
                         {who.length > 0 && <span className="hm-row-who" title={playedWhoTitle(who)}>{playedWhoLabel(who)}</span>}

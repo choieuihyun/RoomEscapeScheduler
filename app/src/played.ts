@@ -65,12 +65,16 @@ export function sourceLabel(p: Pick<PlayedDto, 'source'>): '모임 일정에서'
 /* ── 협의 도우미(§4.9 fresh-themes) ── */
 
 /* 목록 대신 보일 말. 안 모은 날(collected false)은 테마가 비어도 "열린 테마 없음"이 아니다 — 문구를 따로 둔다.
-   테마가 있으면 null(목록을 보인다). */
+   테마가 있으면 null(목록을 보인다) — 안 모은 날에 서버가 카탈로그를 실어 준 경우도(freshCatalog). */
 export function freshMessage(dto: Pick<FreshDto, 'collected' | 'themes'>): string | null {
+  if (dto.themes.length > 0) return null;
   if (!dto.collected) return '이 날은 아직 시간표를 모으지 않았어요. 가까워지면 다시 볼 수 있어요.';
-  if (dto.themes.length === 0) return '이 날 열린 테마가 없어요.';
-  return null;
+  return '이 날 열린 테마가 없어요.';
 }
+
+/* 안 모은 날의 카탈로그(§4.9 추가, 2026-10-27 사용자 요청: 2~3주 뒤 일정도 누가 해 봤는지) — 회차 없는 테마 전체라
+   보기만 한다(고르기·계산 단추 없음). 옛 서버는 안 모은 날 themes 를 비워 보내 false */
+export const freshCatalog = (dto: Pick<FreshDto, 'collected' | 'themes'>): boolean => !dto.collected && dto.themes.length > 0;
 
 /* 도우미 결과가 낡았나 — 열 때 이만큼 묵었으면 다시 가져온다(시간표는 몇 분 단위로 바뀐다) */
 export const FRESH_STALE_MS = 5 * 60_000;

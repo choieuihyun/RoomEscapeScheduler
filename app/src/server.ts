@@ -372,6 +372,8 @@ export interface EventDto {
   canManage: boolean;
   /* 정산(§4.13)이 있으면 합계, 없으면 null — 목록·칩용. 옛 서버면 빠져 오는데 normEvent 가 null 로 채운다 */
   settlementTotal: number | null;
+  /* 일정 댓글 수(§4.16) — 옛 서버면 빠져 오는데 normEvent 가 0 으로 채운다 */
+  commentCount?: number;
 }
 
 /* §4.11 에서 늘어난 필드는 옛 서버면 빠져 온다 — 정규화하지 않고 undefined 로 둔다(프로필 없음 = null 과 구별) */
@@ -393,6 +395,7 @@ export function normEvent(ev: EventDto): EventDto {
     candidates: ev.candidates ?? [],
     segments: (ev.segments ?? []).map((s) => ({ ...s, playedBy: s.playedBy ?? [] })),
     settlementTotal: ev.settlementTotal ?? null,
+    commentCount: ev.commentCount ?? 0,
   };
 }
 const evOne = async (p: Promise<EventDto>): Promise<EventDto> => normEvent(await p);
@@ -737,3 +740,21 @@ export const postFeedbackComment = (id: number, text: string, token: string): Pr
   authed(`/api/club/feedback/${id}/comments`, token, 'POST', { text });
 export const deleteFeedbackComment = (commentId: number, token: string): Promise<{ id: number; deleted: true }> =>
   authed(`/api/club/feedback/comments/${commentId}`, token, 'DELETE');
+
+/* ── 일정 댓글 (작업명세서 §4.16) ── 승인 멤버 누구나. 서버가 참여자·만든 사람·댓글 쓴 사람에게 알림(일정마다 하나로 겹침) */
+export interface EventCommentDto {
+  id: number;
+  eventId: number;
+  text: string;
+  author: Who;
+  admin: boolean;          // 쓸 때 운영진이었나
+  createdAt: string;
+  mine: boolean;
+  canDelete: boolean;
+}
+export const listEventComments = (eventId: number, token: string): Promise<EventCommentDto[]> =>
+  authed(`/api/club/events/${eventId}/comments`, token, 'GET');
+export const postEventComment = (eventId: number, text: string, token: string): Promise<EventCommentDto> =>
+  authed(`/api/club/events/${eventId}/comments`, token, 'POST', { text });
+export const deleteEventComment = (commentId: number, token: string): Promise<{ id: number; deleted: true }> =>
+  authed(`/api/club/events/comments/${commentId}`, token, 'DELETE');

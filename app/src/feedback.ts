@@ -14,9 +14,11 @@ export function feedbackIssue(text: string): string {
   if (lines(text) > 20) return '의견은 20줄까지 적을 수 있어요.';
   return '';
 }
-export function commentIssue(text: string): string {
+/* 댓글 — 1~300자. maxLines 를 주면 줄 수도 본다(일정 댓글 §4.16 은 10줄, 의견 댓글은 제한 없음) */
+export function commentIssue(text: string, maxLines = Infinity): string {
   if (!count(text)) return '댓글을 적어 주세요.';
   if (count(text) > 300) return '댓글은 300자까지 적을 수 있어요.';
+  if (lines(text) > maxLines) return `댓글은 ${maxLines}줄까지 적을 수 있어요.`;
   return '';
 }
 

@@ -11,6 +11,7 @@ import { listClubMembers, sayClub, type ClubMemberDto, type EventDto } from '../
 import { showToast } from '../toast';
 import type { UseClubEventsReturn } from '../useClubEvents';
 import type { AddedTheme } from '../scheduler/types';
+import { EventComments } from './EventComments';
 import { EventHelper } from './EventHelper';
 import { EventTalk, EventTalkDone } from './EventTalk';
 import { AvaText } from './Avatar';
@@ -368,6 +369,9 @@ export function EventPanel({ ev, club, meUid, onClose, onEdit, onCalcWindow, onP
       )}
 
       {undecided ? <div className="evp-folds">{settle}</div> : <div className="evp-folds">{settle}{talk}{helper}</div>}
+
+      {/* 일정 댓글(§4.16) — 서버가 모르면 숨는다 */}
+      <EventComments key={'evc' + ev.id} eventId={ev.id} />
 
       {showPost && <code className="evp-post" ref={postRef}>{post}</code>}
 

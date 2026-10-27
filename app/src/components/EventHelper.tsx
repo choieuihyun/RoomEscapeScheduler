@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clockLabel, dayLabel, todayKst } from '../clubEvents';
-import { freshMessage, freshStale, helperDates, noRecordNames, noRecordText } from '../played';
+import { freshCatalog, freshMessage, freshStale, helperDates, noRecordNames, noRecordText } from '../played';
 import { playedDots } from '../playedWho';
 import { REGIONS, inRegion, pageAt, pageFor, pageOf, regionCounts, type PageAt, type RegionPick } from '../regions';
 import { ago, freshThemes, isMissingApi, sayClub, toSessions, type EventDto, type FreshDto, type FreshTheme } from '../server';
@@ -130,6 +130,8 @@ export function EventHelper({ ev, onCalcThemes }: {
   const dto = slot?.err ? null : slot?.dto ?? null;
   const msg = dto ? freshMessage(dto) : null;
   const themes = dto && !msg ? dto.themes : [];
+  /* 시간표를 아직 안 모은 날 — 서버가 카탈로그(회차 없는 테마 전체)를 실어 주면 누가 해 봤는지만 보인다(고르기·계산 없음, 2026-10-27) */
+  const catalog = !!dto && freshCatalog(dto);
   /* 지역 거르기 → (서버가 세운 순서 그대로) → 20개씩. 기억한 지역이 이 날 결과에 없으면 전체를 보인다(기억은 그대로) */
   const regions = regionCounts(themes);
   const shownRegion: RegionPick = regions.some((r) => r.region === region) ? region : '전체';
@@ -160,7 +162,7 @@ export function EventHelper({ ev, onCalcThemes }: {
         <span className="evh-t">어떤 테마가 좋을까요?</span>
         {/* 접힌 줄 요약(2026-10-21) — 받은 뒤엔 테마 수(고른 지역이 있으면 그 지역 수) */}
         <span className="evh-d">
-          {dayLabel(date)} {themes.length > 0 ? `${shownRegion === '전체' ? '' : shownRegion + ' '}테마 ${inR.length}개` : '열린 회차'}{dto?.checkedAt ? ` · ${ago(dto.checkedAt)}` : ''}
+          {dayLabel(date)} {themes.length > 0 ? `${shownRegion === '전체' ? '' : shownRegion + ' '}테마 ${inR.length}개${catalog ? ' · 회차 전' : ''}` : '열린 회차'}{dto?.checkedAt ? ` · ${ago(dto.checkedAt)}` : ''}
         </span>
         <svg className="evp-fold-c" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
       </summary>
@@ -180,6 +182,7 @@ export function EventHelper({ ev, onCalcThemes }: {
           </div>
         )}
         {msg && <p className="evh-msg">{msg}</p>}
+        {catalog && <p className="evh-msg">아직 회차는 몰라요 — 누가 해 봤는지 먼저 보세요. 예약은 보통 1주 전에 열리고, 그때 회차와 시간표 계산이 나와요.</p>}
         {noRec.length > 0 && <p className="evh-norec">{noRecordText(noRec)}</p>}
         {regions.length > 1 && (
           <div className="evh-regions" role="group" aria-label="지역">
@@ -199,18 +202,23 @@ export function EventHelper({ ev, onCalcThemes }: {
             {view.items.map((t) => {
               const dots = playedDots(t.playedBy, ev.participants);
               return (
-                <li key={t.id} className={'evh-row' + (dots.some((d) => d.played) ? ' played' : '')}>
-                  <input
-                    type="checkbox" id={`evh-${ev.id}-${t.id}`} checked={ids.has(t.id)}
-                    onChange={(e) => toggle(t.id, e.target.checked)}
-                  />
-                  <label htmlFor={`evh-${ev.id}-${t.id}`} className="evh-main">
+                <li key={t.id} className={'evh-row' + (dots.some((d) => d.played) ? ' played' : '') + (catalog ? ' cat' : '')}>
+                  {/* 카탈로그(회차 전)는 고를 것이 없다 — 체크 칸·회차 줄 없이 이름·해 본 사람만 */}
+                  {!catalog && (
+                    <input
+                      type="checkbox" id={`evh-${ev.id}-${t.id}`} checked={ids.has(t.id)}
+                      onChange={(e) => toggle(t.id, e.target.checked)}
+                    />
+                  )}
+                  <label htmlFor={catalog ? undefined : `evh-${ev.id}-${t.id}`} className="evh-main">
                     <span className="evh-n">{t.name} <span className="evh-at">· {t.storeName} {t.branchName}{t.dur ? ` · ${t.dur}분` : ''}</span></span>
-                    <span className="evh-ss">
-                      {toSessions(t.sessions).map((s, i) => (
-                        <span key={s.id ?? i}>{i > 0 && ' · '}{s.soldout ? <><s>{clockLabel(s.t)}</s><span className="sr-only"> 매진</span></> : clockLabel(s.t)}</span>
-                      ))}
-                    </span>
+                    {!catalog && (
+                      <span className="evh-ss">
+                        {toSessions(t.sessions).map((s, i) => (
+                          <span key={s.id ?? i}>{i > 0 && ' · '}{s.soldout ? <><s>{clockLabel(s.t)}</s><span className="sr-only"> 매진</span></> : clockLabel(s.t)}</span>
+                        ))}
+                      </span>
+                    )}
                     <PlayedDots dots={dots} />
                   </label>
                   {/* 하고 싶어요(§4.12) — 라벨 밖에 둔다(누르면 체크가 같이 바뀌지 않게) */}
@@ -234,7 +242,7 @@ export function EventHelper({ ev, onCalcThemes }: {
           </details>
         )}
         {dto && <span className="evh-foot">우리가 시간표를 모으는 매장만 보여요.</span>}
-        {themes.length > 0 && (
+        {themes.length > 0 && !catalog && (
           <button
             type="button" className="btn-go evh-go" disabled={pickedThemes.length === 0}
             onClick={() => dto && onCalcThemes(pickedThemes.map((t) => toAdded(t, dto)))}

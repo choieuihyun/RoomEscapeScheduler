@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  freshMessage, helperDates, isPlayableName, noRecordNames, noRecordText, playedCount, playedNames, playedPerPerson, searchThemes, sourceLabel, stepsToPlayed, freshStale, FRESH_STALE_MS,
+  freshMessage, freshCatalog, helperDates, isPlayableName, noRecordNames, noRecordText, playedCount, playedNames, playedPerPerson, searchThemes, sourceLabel, stepsToPlayed, freshStale, FRESH_STALE_MS,
 } from './played';
 import type { EventDto, FreshDto, PlayedDto, ThemeRef } from './server';
 
@@ -56,6 +56,13 @@ describe('협의 도우미(§4.9 fresh-themes)', () => {
     expect(freshMessage(dto({ collected: false, themes: [] }))).not.toContain('열린 테마가 없어요');
     expect(freshMessage(dto({ collected: true, themes: [] }))).toBe('이 날 열린 테마가 없어요.');
     expect(freshMessage(dto({ themes: [theme] }))).toBeNull();
+    /* 안 모은 날에 서버가 카탈로그(회차 없는 테마 전체)를 실어 주면(§4.9 추가, 2026-10-27) 문구 없이 목록을 보인다 */
+    expect(freshMessage(dto({ collected: false, themes: [{ ...theme, sessions: [] }] }))).toBeNull();
+  });
+  it('freshCatalog — 안 모은 날 + 테마가 있으면 회차 없는 카탈로그(보기만)', () => {
+    expect(freshCatalog(dto({ collected: false, themes: [{ ...theme, sessions: [] }] }))).toBe(true);
+    expect(freshCatalog(dto({ collected: false, themes: [] }))).toBe(false);
+    expect(freshCatalog(dto({ collected: true, themes: [theme] }))).toBe(false);
   });
   it('noRecordNames — 참여자 닉네임으로, 목록에 없는 uid 는 뺀다', () => {
     const ev = { participants: [{ uid: 'a', nickname: '곰' }, { uid: 'b', nickname: '탈출왕' }] } as Pick<EventDto, 'participants'>;
