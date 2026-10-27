@@ -260,7 +260,7 @@ export function ThemePicker(p: Props) {
           )}
         </div>
         {sessions?.formDate && sessions.formDate !== date && (
-          <p className="tf-datehint">일정 날짜({md(sessions.formDate)})와 다른 날이에요. 넣으면 일정 날짜가 바뀔 수 있어요 — 바뀌면 넣은 뒤 알려 드려요.</p>
+          <p className="tf-datehint">일정 날짜({md(sessions.formDate)})와 다른 날이에요. 넣으면 일정 날짜가 바뀔 수 있고, 바뀌면 넣은 뒤 알려 드려요.</p>
         )}
 
         <div className={'tf-body' + (branch ? ' has-br' : '')}>

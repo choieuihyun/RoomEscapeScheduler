@@ -172,6 +172,8 @@ export function EventHelper({ ev, onCalcThemes }: {
         <svg className="evp-fold-c" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
       </summary>
       <div className="evh-b">
+        {/* 무엇을 보는 칸인지(2026-10-27 사용자 요청) — 기록은 각자 남긴 것이라 틀릴 수 있다 */}
+        <p className="evh-about">내가 해 본 테마, 다른 참여자가 해 본 테마를 알 수 있어요(빨간 점은 해 봄, 초록 점은 안 해 봄). 각자 남긴 기록이라 정확하지 않을 수 있으니 참고만 해 주세요.</p>
         {plan.dates.length > 1 && (
           <div className="evh-dates" role="group" aria-label="볼 날짜">
             {plan.dates.map((d) => (
@@ -187,7 +189,7 @@ export function EventHelper({ ev, onCalcThemes }: {
           </div>
         )}
         {msg && <p className="evh-msg">{msg}</p>}
-        {catalog && <p className="evh-msg">아직 회차는 몰라요 — 누가 해 봤는지 먼저 보세요. 예약은 보통 1주 전에 열리고, 그때 회차와 시간표 계산이 나와요.</p>}
+        {catalog && <p className="evh-msg">아직 회차는 몰라요. 예약은 보통 1주 전에 열리고, 그때 회차와 시간표 계산이 나와요.</p>}
         {noRec.length > 0 && <p className="evh-norec">{noRecordText(noRec)}</p>}
         {regions.length > 1 && (
           <div className="evh-regions" role="group" aria-label="지역">

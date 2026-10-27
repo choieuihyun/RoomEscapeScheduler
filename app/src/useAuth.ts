@@ -212,7 +212,7 @@ export function useAuth() {
     setId(cleanId);
     const C = await cloud().catch(() => null);
     if (!C) { setErr('로그인을 준비하지 못했어요. 인터넷 연결을 확인해 주세요.'); return; }
-    if (!C.ID_RE.test(cleanId)) { setErr('아이디 형식이 맞지 않아요 — ' + C.ID_HINT); return; }
+    if (!C.ID_RE.test(cleanId)) { setErr('아이디 형식이 맞지 않아요. ' + C.ID_HINT); return; }
     if (pw.length < 6) { setErr('비밀번호는 6자 이상으로 해 주세요.'); return; }
     setBusy(true); setErr('');
     try {

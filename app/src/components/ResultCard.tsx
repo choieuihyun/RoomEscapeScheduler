@@ -106,7 +106,7 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
             <span>전체 {hm(r.end - r.start)}</span>
             <span>이동 {moves ? `${moves}번 · ${r.moveTotal}분` : '없음'}</span>
             <span className={wait <= 30 ? 'good' : ''}>대기 {wait}분</span>
-            <span className={tight ? 'warn' : ''}>최소 대기 {r.minWait === Infinity ? '—' : r.minWait + '분'}</span>
+            <span className={tight ? 'warn' : ''}>최소 대기 {r.minWait === Infinity ? '없음' : r.minWait + '분'}</span>
           </span>
         </div>
         <div className="seqcol">
@@ -126,7 +126,7 @@ export function ResultCard({ r, rank, lo, hi, span, themeCount, teamModeOn, onCo
         <div><dt>전체 시간</dt><dd className="mono">{hm(r.end - r.start)}</dd></div>
         <div className={wait <= 30 ? 'good' : ''}><dt>대기 시간</dt><dd className="mono">{wait}분</dd></div>
         <div><dt>이동</dt><dd className="mono">{moves ? `${moves}번 · ${r.moveTotal}분` : '없음'}</dd></div>
-        <div className={tight ? 'warn' : ''}><dt>최소 대기</dt><dd className="mono">{r.minWait === Infinity ? '—' : r.minWait + '분'}</dd></div>
+        <div className={tight ? 'warn' : ''}><dt>최소 대기</dt><dd className="mono">{r.minWait === Infinity ? '없음' : r.minWait + '분'}</dd></div>
       </dl>
       {/* 막대만 옆으로 넘긴다(시간 눈금 줄도 같이). 손으로 넘겼는지는 가로 휠·키·마우스·손가락으로 실제 움직인 것만 센다 —
           세로로 화면을 넘기다 스친 것은 아니다 */}

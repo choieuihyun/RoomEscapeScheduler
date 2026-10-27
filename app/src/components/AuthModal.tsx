@@ -71,7 +71,7 @@ export function AuthModal({ auth }: { auth: UseAuthReturn }) {
           </button>
           {auth.inKakaoApp ? (
             <p className="auth-box">
-              구글 로그인은 카카오톡 안에서는 안 돼요 — 오른쪽 위 <b>⋮</b> → <b>다른 브라우저로 열기</b>를 누른 뒤
+              구글 로그인은 카카오톡 안에서는 안 돼요. 오른쪽 위 <b>⋮</b> → <b>다른 브라우저로 열기</b>를 누른 뒤
               거기서 구글로 로그인해 주세요.
             </p>
           ) : (

@@ -88,11 +88,11 @@ export async function listenForegroundPush(cb: (payload: unknown) => void): Prom
    버튼 클릭 콜백 안에서만 호출한다. about 은 거절했을 때 문구를 고른다(기본 빈자리). */
 export async function requestPushPermission(authToken: string, about: 'slot' | 'event' = 'slot'): Promise<PushResult> {
   const support = currentPushSupport();
-  if (support === 'kakao-inapp') return { ok: false, reason: '카카오톡 안에서는 알림을 받을 수 없어요 — 다른 브라우저로 열어 주세요.' };
+  if (support === 'kakao-inapp') return { ok: false, reason: '카카오톡 안에서는 알림을 받을 수 없어요. 다른 브라우저로 열어 주세요.' };
   if (support === 'ios-install') return { ok: false, reason: '아이폰은 홈 화면에 추가해야 알림이 와요.' };
   if (support === 'unsupported') return { ok: false, reason: '이 브라우저에선 알림을 받을 수 없어요.' };
   if (Notification.permission === 'denied') {
-    return { ok: false, reason: '알림이 차단돼 있어요 — 브라우저 설정에서 허용해 주세요.' };
+    return { ok: false, reason: '알림이 차단돼 있어요. 브라우저 설정에서 허용해 주세요.' };
   }
   const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
   /* 부르는 쪽에 맞는 말 — 빈자리 벨은 빈자리를, 일정 알림 안내·내 정보 "알림 켜기"는 일정 소식을 */

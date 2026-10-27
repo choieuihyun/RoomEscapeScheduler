@@ -40,7 +40,7 @@ export function moveHint(s: Scheduler): { className: string; content: React.Reac
     return { className: 'movehint', content: <>매장이 <b>{[...places][0]}</b> 한 곳이라 이동시간은 없어요.</> };
   }
   if (!m) {
-    return { className: 'movehint', content: <>매장 <b>{places.size}곳</b> — 이동시간을 <b>0분</b>으로 해 둬서 안 넣어요.</> };
+    return { className: 'movehint', content: <>매장 <b>{places.size}곳</b>이지만 이동시간을 <b>0분</b>으로 해 둬서 안 넣어요.</> };
   }
   const blank = s.themes.length - named.length;
   const ps = s.placeList;

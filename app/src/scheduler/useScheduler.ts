@@ -126,7 +126,7 @@ export function useScheduler() {
         console.warn('링크 복원 실패:', (err as Error).message);
         const fellBack = fromAutosave();
         setRunNote(
-          '이 공유 링크를 열지 못했어요 — 링크가 중간에 잘렸을 수 있어요. '
+          '이 공유 링크를 열지 못했어요. 링크가 중간에 잘렸을 수 있어요. '
           + '새로고침해도 그대로면 링크를 다시 받아 주세요.'
           + (fellBack ? ' 일단 마지막으로 작업하던 화면을 띄워 뒀어요.' : ''),
         );
@@ -221,7 +221,7 @@ export function useScheduler() {
     } catch (err) {
       const e = err as OcrError;
       const sec = Math.round((performance.now() - t0) / 1000);
-      const msg = '사진을 못 읽었어요 — 시간을 직접 넣어 주세요. (' + e.message + (e.dim ? ' · ' + e.dim : '') + ' · ' + sec + '초)';
+      const msg = '사진을 못 읽었어요. 시간을 직접 넣어 주세요. (' + e.message + (e.dim ? ' · ' + e.dim : '') + ' · ' + sec + '초)';
       setThemes(ts => ts.map(t => (t.id === id ? { ...t, err: msg, busy: '' } : t)));
     }
   }, []);

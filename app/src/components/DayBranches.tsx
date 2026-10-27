@@ -35,7 +35,7 @@ function ThemeRow({ theme, availOnly, open, onToggle }: {
       {open && (
         <div className="parsed db-sessions">
           {chips.length === 0
-            ? <span className="li-m">빈자리가 없어요{availOnly && sess.length > 0 ? ' — "빈자리만"을 끄면 매진 회차도 보여요' : ''}.</span>
+            ? <span className="li-m">빈자리가 없어요.{availOnly && sess.length > 0 ? ' "빈자리만"을 끄면 매진 회차도 보여요.' : ''}</span>
             : chips.map((x, i) => <span key={i} className={'t' + (x.soldout ? ' so' : '')}>{fmt(x.t)}</span>)}
         </div>
       )}

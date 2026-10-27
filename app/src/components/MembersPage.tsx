@@ -78,7 +78,7 @@ export function MembersPage({ ctl, meUid, onBack }: { ctl: UseMembersReturn; meU
                         <td><b><MemberLink uid={m.uid} name={memberName(m)} /></b><ProfLine p={m.profile} /></td>
                         <td>{admin ? <span className="chip-info role">운영진</span> : '멤버'}</td>
                         <td className={m.hasDevice ? 'mem-yes' : 'mem-no'}>{m.hasDevice ? '있음' : '없음'}</td>
-                        <td className="mem-sub">{formatKst(m.decidedAt).split(' ').slice(0, 2).join(' ') || '—'}</td>
+                        <td className="mem-sub">{formatKst(m.decidedAt).split(' ').slice(0, 2).join(' ') || '-'}</td>
                         <td className="mem-act">
                           {me ? <span className="mem-sub">나</span> : (<>
                             {admin

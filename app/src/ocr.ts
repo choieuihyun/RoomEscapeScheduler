@@ -70,7 +70,7 @@ function preparePaddleCanvas(file: File): Promise<PreparedCanvas> {
       URL.revokeObjectURL(url);
       const heic = /heic|heif/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || '');
       rej(new Error(heic
-        ? 'HEIC 사진은 못 읽어요 — 캡처(스크린샷)를 넣거나 JPG로 바꿔 주세요'
+        ? 'HEIC 사진은 못 읽어요. 캡처(스크린샷)를 넣거나 JPG로 바꿔 주세요'
         : '사진을 열지 못했어요 (' + (file.type || '형식 불명') + ')'));
     };
     img.src = url;
@@ -86,7 +86,7 @@ export class OcrError extends Error {
 }
 
 /* 시간 초과 판별에 쓰므로 문구를 바꿀 땐 이 상수 하나만 고친다(§4.53) */
-const TIMEOUT_MSG = '너무 오래 걸려요 — 사진을 잘라서 다시 넣어 보세요';
+const TIMEOUT_MSG = '너무 오래 걸려요. 사진을 잘라서 다시 넣어 보세요';
 
 export async function recognizeSessions(file: File, onStep: (s: string) => void): Promise<Session[]> {
   onStep('사진 읽을 준비 중…');

@@ -104,7 +104,7 @@ export function ResultsPanel({ s, onSave, onClubPost, onInsert, watchCtl }: {
         <div id="results">
           <div className="empty">
             {teamStuck
-              ? <>남은 회차로는 조합이 안 나와요. 앞 팀이 회차를 많이 가져갔을 수 있어요 — <b className="hi">마지막 팀 취소</b>나 <b className="hi">전체 초기화</b>를 눌러 보세요.</>
+              ? <>남은 회차로는 조합이 안 나와요. 앞 팀이 회차를 많이 가져갔을 수 있어요. <b className="hi">마지막 팀 취소</b>나 <b className="hi">전체 초기화</b>를 눌러 보세요.</>
               : s.options.oFixedOrder
                 /* 순서가 고정된 동안에는 "이 순서에서만 안 나온다" 가 가장 흔한 원인이다 —
                    순서 자유로 두면 도구가 알아서 찾으므로 그쪽을 먼저 권한다(§4.46). */

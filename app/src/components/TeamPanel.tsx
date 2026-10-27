@@ -37,7 +37,7 @@ export function TeamPanel({ s }: { s: Scheduler }) {
                 )}
               </div>
             ))}
-            <p className="teamnext">다음은 <b>{s.teams.length + 1} 팀</b> 차례예요 (위 회차는 빼고 계산) — 단톡방에 보낼 일정은 결과의 <b>복사</b>를 눌러 두세요.</p>
+            <p className="teamnext">다음은 <b>{s.teams.length + 1} 팀</b> 차례예요 (위 회차는 빼고 계산). 단톡방에 보낼 일정은 결과의 <b>복사</b>를 눌러 두세요.</p>
           </>
         )}
       </div>

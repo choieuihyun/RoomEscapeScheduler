@@ -19,7 +19,7 @@ export function WatchBell({ slotId, ctl, block }: { slotId: number; ctl: WatchCo
   const title = !ctl.loggedIn
     ? '로그인하면 빈자리 알림을 걸 수 있어요'
     : on ? '빈자리 알림 끄기'
-    : ctl.atLimit ? '빈자리 알림은 최대 3개까지예요 — 목록에서 하나를 지워 주세요'
+    : ctl.atLimit ? '빈자리 알림은 최대 3개까지예요. 목록에서 하나를 지워 주세요'
     : '빈자리 알림 걸기';
   return (
     <button

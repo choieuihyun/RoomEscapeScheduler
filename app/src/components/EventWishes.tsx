@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { loadGroups, useClubStore } from '../clubStore';
 import type { EventDto } from '../server';
+import { playedDots } from '../playedWho';
 import { partyWishes, placeLabel } from '../wish';
+import { PlayedDots } from './PlayedDots';
 
 /* 일정 상세 "참여자가 하고 싶은 테마"(2026-10-27 사용자 요청: 시간표보다 참여자들이 하고 싶은 테마를 바로 보기 쉽게).
    멤버들의 위시 묶음(§4.12, 같이 가요와 같은 데이터 — 서버 작업 없음)에서 이 일정 참여자가 원하는 테마만 모은다.
    테마를 정하는 중(협의 중·예약 전)일 때만 — 예약 완료면 테마가 정해진 것이라 숨긴다. 위시 API 가 없으면 아무것도 없다.
-   원하는 참여자 많은 순, 해 본 참여자는 빨간 글자로 따로(하트·"하고 싶어요" 글자는 2026-10-27 사용자 요청으로 뺐다 — 원하는 사람 닉네임만 청록으로). 5개까지, 더 있으면 펼친다. */
+   원하는 참여자 많은 순, 아래에 참여자마다 해 봤는지 점(코스와 같다)(하트·"하고 싶어요" 글자는 2026-10-27 사용자 요청으로 뺐다 — 원하는 사람 닉네임만 청록으로). 5개까지, 더 있으면 펼친다. */
 const FIRST = 5;
 
 export function EventWishes({ ev }: { ev: EventDto }) {
@@ -18,7 +20,6 @@ export function EventWishes({ ev }: { ev: EventDto }) {
 
   const list = partyWishes(club7.groups.list, ev.participants);
   const shown = all ? list : list.slice(0, FIRST);
-  const nameOf = (uid: string) => ev.participants.find((p) => p.uid === uid)?.nickname ?? '';
 
   return (
     <section className="evw" aria-labelledby={`evw-h-${ev.id}`}>
@@ -32,8 +33,9 @@ export function EventWishes({ ev }: { ev: EventDto }) {
               <span className="evw-n">{g.themeName}{placeLabel(g) && <span className="evw-at"> · {placeLabel(g)}</span>}</span>
               <span className="evw-who">
                 <span className="evw-want" title={`하고 싶어요: ${want.map((w) => w.nickname).join(', ')}`}>{want.map((w) => w.nickname).join(' · ')}</span>
-                {played.length > 0 && <span className="evw-played">해 봄 {played.map(nameOf).filter(Boolean).join(' · ')}</span>}
               </span>
+              {/* 참여자마다 이 테마를 해 봤는지(2026-10-27 사용자 요청) — 코스·도우미와 같은 점(빨강 해 봄 · 초록 안 해 봄) */}
+              <PlayedDots dots={playedDots(played, ev.participants)} />
             </li>
           ))}
         </ul>

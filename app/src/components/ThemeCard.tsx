@@ -89,7 +89,7 @@ export function ThemeCard({ theme: th, index, onChange, onRawChange, onDelete, o
   const f = all ? { shown: n, more: 0 } : fold;
   const over = th.sessions.some(s => s.t >= 24 * 60);
   const fixed = th.sessions.some(s => s.fixed);
-  const soTitle = soldIncluded ? '매진 — 계산에 넣고 있어요' : '매진 — 계산에서 빠져요';
+  const soTitle = soldIncluded ? '매진(계산에 넣고 있어요)' : '매진(계산에서 빠져요)';
   const counts = sessionCounts(th.sessions);
   const hasSo = th.sessions.some(s => s.soldout);
   /* 자정 넘김 안내는 손으로 넣은 회차만 — 예약 사이트에서 불러온 회차는 날짜를 넘긴 시각이 맞다(+1 칩으로 충분) */
