@@ -1755,8 +1755,10 @@ input.tf-q:not([type=checkbox]){margin:10px;width:calc(100% - 20px);height:36px;
 .tf-thlist{list-style:none;margin:0;padding:0;overflow:auto;flex:1;min-height:0}
 .tf-th{padding:12px 16px 14px;border-bottom:1px solid var(--line)}
 .tf-th:last-child{border-bottom:none}
-.tf-th-top{display:flex;align-items:center;gap:8px;margin-bottom:9px;min-width:0}
-.tf-th-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600;color:var(--ink)}
+.tf-th-top{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-bottom:9px;min-width:0}
+/* 테마 이름은 반드시 다 보인다(2026-10-27 사용자 요청) — 말줄임 없이 줄바꿈, 이름이 한 줄을 다 쓰고 분·해 봄·하고 싶어요는 다음 줄로 */
+.tf-th-n{min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.4;font-size:14px;font-weight:600;color:var(--ink)}
+.tf-th-pick,.tf-th-top>.tf-th-n{flex:1 1 100%}
 .tf-th-m{flex:none;font-size:12px;color:var(--ink3)}
 .tf-ss{display:flex;flex-wrap:wrap;gap:6px}
 .tf-s{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;box-sizing:border-box;border:1px solid var(--line2);border-radius:var(--r-xs);
