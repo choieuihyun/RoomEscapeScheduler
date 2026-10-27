@@ -1,6 +1,10 @@
 rules_version = '2';
 
-/* Firebase 콘솔 → Firestore Database → 규칙 에 이 내용을 그대로 붙여넣고 게시.
+/* ⚠ 이 파일은 main 푸시·CI 로 올라가지 않는다(CI 는 호스팅만 배포). 바꾸면 따로 게시하고, 게시된 규칙을 읽어 확인한다:
+ *   npx -y firebase-tools@latest deploy --only firestore:rules --project roomescapescheduler   (사용자 확인 뒤 — 운영 보안 규칙)
+ *   또는 Firebase 콘솔 → Firestore Database → 규칙 에 붙여넣고 게시.
+ * 2026-10-27 실제로 겪음: 10-19 에 구글·카카오 허용으로 고친 규칙이 게시되지 않아(콘솔은 08-21 판) 소셜 계정의
+ *   일정 저장이 "Missing or insufficient permissions" 로 막혀 있었다. 사용자가 콘솔에서 게시해 해결(배포.md §4).
  *
  * 규칙이 곧 보안이다. firebase-config.js 의 값은 공개되어도 되지만,
  * 이 규칙이 느슨하면 아무나 남의 문서를 읽고 쓸 수 있다.
