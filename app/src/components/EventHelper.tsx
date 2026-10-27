@@ -110,7 +110,7 @@ export function EventHelper({ ev, onCalcThemes }: {
   }, [page]);
 
   useServerRegions(); // 서버가 준 지점 지역(§4.4)을 받으면 다시 그린다 — 지역 계산은 아래에서 매번
-  /* 참여자가 하고 싶은 테마(2026-10-27) — 줄마다 "♥ 2명" 표시. 위시 묶음은 일정 상세의 EventWishes 가 받아 둔다 */
+  /* 참여자가 하고 싶은 테마(2026-10-27) — 줄마다 "하고 싶어요 2명" 표시(하트는 2026-10-27 사용자 요청으로 뺐다). 위시 묶음은 일정 상세의 EventWishes 가 받아 둔다 */
   const club7 = useClubStore();
   useEffect(() => { if (open && club7.wishApi !== 'missing') loadGroups().catch(() => {}); }, [open, club7.wishApi]);
   const party = club7.groups ? partyWishes(club7.groups.list, ev.participants) : [];
@@ -217,7 +217,7 @@ export function EventHelper({ ev, onCalcThemes }: {
                   )}
                   <label htmlFor={catalog ? undefined : `evh-${ev.id}-${t.id}`} className="evh-main">
                     <span className="evh-n">{t.name} <span className="evh-at">· {t.storeName} {t.branchName}{t.dur ? ` · ${t.dur}분` : ''}</span>
-                      {(() => { const n = partyWantCount(party, { themeKey: t.themeKey || t.id, themeName: t.name }); return n > 0 ? <span className="evh-want" title="참여자 중 하고 싶어요">♥ {n}명</span> : null; })()}
+                      {(() => { const n = partyWantCount(party, { themeKey: t.themeKey || t.id, themeName: t.name }); return n > 0 ? <span className="evh-want" title="참여자 중 하고 싶어요">하고 싶어요 {n}명</span> : null; })()}
                     </span>
                     {!catalog && (
                       <span className="evh-ss">
